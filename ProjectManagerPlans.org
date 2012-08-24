@@ -1,0 +1,137 @@
+#+TITLE:     ProjectManagerPlans.org
+#+AUTHOR:    Klaus Kähler Holst Thomas Alexander Gerds
+#+EMAIL:     kkho@sund.ku.dk, tagteam@sund.ku.dk
+#+DATE:      2012-02-12 Sun
+#+DESCRIPTION:
+#+KEYWORDS:
+#+LANGUAGE:  en
+#+OPTIONS:   H:3 num:t toc:t \n:nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+OPTIONS:   TeX:t LaTeX:t skip:nil d:nil todo:t pri:nil tags:not-in-toc
+#+INFOJS_OPT: view:nil toc:nil ltoc:t mouse:underline buttons:0 path:http://orgmode.org/org-info.js
+#+EXPORT_SELECT_TAGS: export
+#+EXPORT_EXCLUDE_TAGS: noexport
+#+LINK_UP:   
+#+LINK_HOME: 
+#+XSLT:
+
+* Structure
+#+begin_dot out.png -Tpng
+digraph test {
+{email phone meetings workflow} -> project;
+project -> {analysis publish workflow data};
+data -> analysis;
+analysis -> {publish};
+};
+#+end_dot
+
+** Projectmanager: one file includes a list of all projects
+
+*** Make name of this file a user-option
+    
+The file org-project-manager keeps a tree-list with project-names.
+
+#+BEGIN_SRC emacs-lisp
+(defvar org-project-manager (concat org-directory "/" ProjectManager.org)
+ "Name of the org-file which contains the projects")
+#+END_SRC
+
+*** Set the level of the projects
+
+#+BEGIN_EXAMPLE
+#+OPTION : org-project-manager-project-level = 2
+#+END_EXAMPLE
+
+
+#+BEGIN_SRC emacs-lisp
+(defvar org-project-manager-project-level 2 "headline level where titles are project names ")
+#+END_SRC
+
+*** Functions
+
+#+BEGIN_SRC emacs-lisp
+    (defun org-project-manager-toggle-project-status ()
+      "Function to toggle the status of the project, e.g. from \"active\" to \"waiting\" to \"done\""
+      (interactive)
+      ...
+      )
+#+END_SRC
+
+*** Sample file
+    
+#+BEGIN_EXAMPLE
+ * Research
+  ** xxx
+    :PROPERTIES:
+    :PATH:     ~/research/projects/
+    :PUB:      ~/public_html/research/projects/
+    :END:
+  ** yyy
+    :PROPERTIES:
+    :RPACKAGE:     yes
+    :SUBDIRS:      R, data, doc, man
+    :BUILDEXCLUDE  bootstrap, ...
+    :END:
+  ** zzz
+
+ * Admin
+  ** ååå
+  ** øøø
+ 
+ * Privat
+  ** æææ
+  ** aaa
+#+END_EXAMPLE     
+
+** Project files
+
+Each file contains information about the project, workflow, files, links, etc.
+   
+*** Magic commands
+#+BEGIN_SRC emacs-lisp
+  (defun org-project-manager-archive-file ()
+    "Function to toggle the status of a file, e.g. from \"current\" to \"old\" to \"do-not-touch-this-was-used-to-generate-results-for-a-publication\""
+    (interactive)
+    )
+#+END_SRC
+
+*** Sample file
+
+#+BEGIN_EXAMPLE
+
+** Collaborators
+ - ab@gmail.com, ...
+
+** Files 
+*** active
+*** old
+** Meetings (minutes)    
+** Documents
+** Presentations
+** Publications
+** window config
+** Emails 
+** Phone calls
+
+
+#+END_EXAMPLE
+
+* Emacs lisp code
+#+BEGIN_SRC emacs-lisp
+  (defun org-project-manager-agenda ()
+   (interactive)
+    (let ((org-agenda-files (buffer-file-name)))
+      (org-agenda)))
+#+END_SRC
+
+#+RESULTS:
+: org-project-manager-agenda
+
+* TodoList/WishList
+** Write template function: 'new-project'
+** Customize tags, properties, capture and agenda view
+** Smart archiving of data and code
+** Semimatic transclusion of emails (gnus) and attachments
+** Window configurations for each project
+** Optional: backup some or all projects (git)
+** Setting a publishing directory (with automatic push to public_html server) 
+** connect collaborators to bbdb and gnus-search
