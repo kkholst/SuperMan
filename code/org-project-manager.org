@@ -50,6 +50,7 @@
 #+LATEX_HEADER: }
 #+PROPERTY: session *R* 
 #+PROPERTY: cache yes
+#+PROPERTY: tangle yes
 #+PROPERTY: colnames yes
 :END:
 
