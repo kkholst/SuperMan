@@ -130,6 +130,8 @@ a minor-mode on top of it.
           (not (or (and (null arg) org-project-manager-minor-mode)
                    (<= (prefix-numeric-value arg) 0)))))
   (define-key org-project-manager-minor-mode-map [(meta return)] 'org-project-manager-return)
+  (define-key org-project-manager-minor-mode-map [(meta n)] 'org-project-manager-next-project)
+  (define-key org-project-manager-minor-mode-map [(meta p)] 'org-project-manager-previous-project)
   (add-hook 'find-file-hooks 
             (lambda ()
               (let ((file (buffer-file-name)))
@@ -137,95 +139,27 @@ a minor-mode on top of it.
                   (org-project-manager-minor-mode)))))
 #+END_SRC
    
-*** The project alist
+*** Dynamically updating lists 
 
+    
 #+BEGIN_SRC emacs-lisp :export code
-    (defvar org-project-manager-project-alist nil
-          "Alist of projects associating the nickname of the project
-    with information like the location of the project, the org-file, collaborators,
-    index-file, category, publishing-directory, etc.")
-    
-      (defun org-project-manager-project-list ()
-        "List the org-files assocated with the projects. "
-        (interactive)
-        (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-org x))) (if (file-exists-p f) f))) 
-                          (org-project-manager-parse-projects))))
+  (defvar org-project-manager-project-alist nil
+        "Alist of projects associating the nickname of the project
+  with information like the location of the project, the org-file, collaborators,
+  index-file, category, publishing-directory, etc.")
       
-      (defun org-project-manager-list-projects (&optional class flag)
-        (interactive)
-        ;; (org-project-manager-parse-projects)
-        (let* ((cl (or class (completing-read "Project class: " (org-project-manager-parse-categories))))
-               (projects org-project-manager-project-alist))
-          (delq nil (mapcar '(lambda (x)
-                               (let ((org-file (org-project-manager-get-org x))) 
-                               (if class
-                                   (when (and (string= (org-project-manager-get-category x) class)
-                                              org-file
-                                              (file-exists-p org-file))
-                                     org-file))))
-                            projects))))
-    
-  
-  (defvar org-project-manager-include-keywords nil
-      "Sub-list of the `org-todo-keywords' as defined locally
-  in the file `org-project-manager'.
-  
-  If nil (the default) then all projects at the level
-  `org-project-manager-project-level' are added.
-  
-  Otherwise, it should be a list of todo-keywords as they are
-  defined either globally or locally in the file
-   `org-project-manager'
-  If matched with the todo-keyword of a project, i.e. a
-  level `org-project-manager-project-level' section heading
-  in `org-project-manager' is added to the
-  `org-project-manager-project-alist' during parsing.
-  
-  For example, if set to 
-  (list \"ACTIVE\").
-  only ACTIVE projects are included.")
-  
-    (defun org-project-manager-project-include-p ()
-      "For parsing of projects:
-    
-    Decides about whether or not the project is
-    in included into the active project list.
-    
-    Compares the todo-keyword of the project description
-    in `org-project-manager' with the value of
-    `org-project-manager-include-keywords'. If matched
-    the project is added to the `org-project-manager-project-alist'."
-      (save-excursion
-        (org-back-to-heading t)
-        (and (looking-at org-todo-line-regexp)
-             (match-end 2)
-             (or (not org-project-manager-include-keywords)
-             (member (org-match-string-no-properties 2)
-                     org-project-manager-include-keywords)))))
-    
-      (defvar org-project-manager-include-keywords    '("ACTIVE")
-        "Sub-list of the `org-todo-keywords' as defined locally
-    in the file `org-project-manager'.
-    
-    If matched with the todo-keyword of a project, i.e. a
-    level `org-project-manager-project-level' section heading
-    in `org-project-manager' is added to the
-    `org-project-manager-project-alist' during parsing. Defaults to
-    \"ACTIVE\"."
-    )
-    
+            
   (defun org-project-manager-parse-projects (&optional all)
-      "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
-      (interactive)
-      (save-excursion
-        (setq org-project-manager-project-alist nil)
-        (set-buffer (find-file-noselect org-project-manager))
-        (save-buffer)
-        (goto-char (point-min))
-        (while (re-search-forward (format "^\\*\\{%d\\} " org-project-manager-project-level) nil t)
-          (when (or all (org-project-manager-project-include-p))
-            (let* ((loc (org-entry-get nil "LOCATION" 'inherit))
-                   (category (org-entry-get nil "CATEGORY" 'inherit))
+    "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
+    (interactive)
+    (save-excursion
+      (setq org-project-manager-project-alist nil)
+      (set-buffer (find-file-noselect org-project-manager))
+      (save-buffer)
+      (goto-char (point-min))
+      (while (org-project-manager-forward-project)
+          (let* ((loc (org-entry-get nil "LOCATION" 'inherit))
+                 (category (org-entry-get nil "CATEGORY" 'inherit))
                  (collab (org-entry-get nil "COLLAB" nil))
                  (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
                  (name (or (org-entry-get nil "NICKNAME" nil)
@@ -243,21 +177,44 @@ a minor-mode on top of it.
             (unless (file-name-absolute-p index)
               (setq index
                     (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-            ;; (if loc (concat (file-name-as-directory loc) name "/" index)))))
             (add-to-list 'org-project-manager-project-alist
                          (list name
                                (list (cons "location"  loc)
-                               (cons "org-file" org)
-                               (cons "index-file" index)
-                               (cons "category" category)
-                               (cons "collab" collab)
-                               (cons "publish-directory" publish-dir)))))))
-        org-project-manager-project-alist))
+                                     (cons "org-file" org)
+                                     (cons "index-file" index)
+                                     (cons "category" category)
+                                     (cons "collaborators" collab)
+                                     (cons "publish-directory" publish-dir))))))
+      org-project-manager-project-alist))
   
-  (defvar org-project-manager-current-project nil "The currently selected project.")
-  
+    (defvar org-project-manager-current-project nil "The currently selected project.")
+        
+    (defun org-project-manager-list-projects (&optional class flag)
+      (interactive)
+      ;; (org-project-manager-parse-projects)
+      (let* ((cl (or class (completing-read "Project class: " (org-project-manager-parse-categories))))
+             (projects org-project-manager-project-alist))
+        (delq nil (mapcar '(lambda (x)
+                             (let ((org-file (org-project-manager-get-org x))) 
+                               (if class
+                                   (when (and (string= (org-project-manager-get-category x) class)
+                                              org-file
+                                              (file-exists-p org-file))
+                                     org-file))))
+                          projects))))
 #+END_SRC
+*** Extracting all the org-files
 
+#+BEGIN_SRC  emacs-lisp :export code
+        
+
+
+  (defun org-project-manager-org-files (&optional update)
+          "List the org-files assocated with the projects. "
+          (interactive "P")
+          (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-org x))) (if (file-exists-p f) f))) 
+                            (if update (org-project-manager-parse-projects) org-project-manager-project-alist))))
+#+END_SRC
 *** The profile of a single project
 
 #+BEGIN_SRC emacs-lisp :export code   
@@ -396,6 +353,83 @@ sProject-name (short): ")
 
 **** TODO The capture approach
      
+** The project manager
+#+BEGIN_SRC  emacs-lisp :export code
+
+(defun org-project-manager-goto-project-manager ()
+ (interactive)
+      (find-file org-project-manager))
+
+(defun org-project-manager-project-at-point ()
+  (interactive)
+  (if (or (org-before-first-heading-p)
+  (not (org-at-heading-p))
+  (not (= org-project-manager-project-level
+            (- (match-end 0) (match-beginning 0) 1))))
+      (error "No project at point")
+    (let ((pro (org-entry-get nil "NICKNAME")))
+      (assoc pro org-project-manager-project-alist))))
+  
+
+(defun org-project-manager-return ()
+  (interactive)
+  (let* ((pro (org-project-manager-project-at-point)))
+    (delete-other-windows)
+    (split-window-horizontally 25)
+    (other-window 1)
+    (find-file (org-project-manager-get-index
+		(org-project-manager-project-at-point)))
+    (split-window-vertically 13)
+    (switch-to-buffer "*Current project*")
+    (erase-buffer)
+    (insert (car pro) "\n------------------------------\n")
+    (mapcar (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+    (other-window -1)))
+
+(defun org-project-manager-forward-project ()
+(interactive)
+(re-search-forward
+ (format "^\\*\\{%d\\} " org-project-manager-project-level) nil t))
+
+(defun org-project-manager-backward-project ()
+(interactive)
+(re-search-backward
+ (format "^\\*\\{%d\\} " org-project-manager-project-level) nil t))
+
+(defun org-project-manager-next-project (arg)
+(interactive  "p")
+(org-project-manager-forward-project)
+(org-project-manager-return))
+
+(defun org-project-manager-previous-project (arg)
+(interactive  "p")
+(org-project-manager-backward-project)
+(org-project-manager-return))
+
+(defun org-project-manager-project-orgfile-at-point ()
+    "Construct the orgfile of project at point. Return nil if
+  a) the point is not at a project
+  b) the construction of the orgile failed (needs property PROJECTORG, or both LOCATION and NICKNAME)"
+    (if (not (eq (nth 0 (org-heading-components)) org-project-manager-project-level))
+        (error "No project at point.")
+      (let* ((indexfile (org-entry-get nil "INDEX"))
+             (orgfile (org-entry-get nil "PROJECTORG"))
+             (pro (org-entry-get nil "NICKNAME"))
+             (loc (org-entry-get nil "LOCATION" 'inherit)))
+        (cond (indexfile
+               (if (file-name-absolute-p indexfile)
+                   indexfile
+                 (expand-file-name (concat (file-name-as-directory loc) pro "/" indexfile))))
+              (orgfile
+               (if (file-name-absolute-p orgfile)
+                   orgfile
+                 (expand-file-name (concat (file-name-as-directory loc) pro "/" orgfile))))
+              (t
+               (expand-file-name (concat (file-name-as-directory loc) pro
+                                         org-project-manager-org-location
+                                         pro ".org")))))))
+#+END_SRC
+
 ** Selecting projects
 *** Categories
 
@@ -434,29 +468,6 @@ the active status of projects."
     (push ?t unread-command-events)
     (push ?< unread-command-events)
     (call-interactively 'org-agenda))
-(defun org-project-manager-project-orgfile-at-point ()
-    "Construct the orgfile of project at point. Return nil if
-  a) the point is not at a project
-  b) the construction of the orgile failed (needs property PROJECTORG, or both LOCATION and NICKNAME)"
-    (if (not (eq (nth 0 (org-heading-components)) org-project-manager-project-level))
-        (error "No project at point.")
-      (let* ((indexfile (org-entry-get nil "INDEX"))
-             (orgfile (org-entry-get nil "PROJECTORG"))
-             (pro (org-entry-get nil "NICKNAME"))
-             (loc (org-entry-get nil "LOCATION" 'inherit)))
-        (cond (indexfile
-               (if (file-name-absolute-p indexfile)
-                   indexfile
-                 (expand-file-name (concat (file-name-as-directory loc) pro "/" indexfile))))
-              (orgfile
-               (if (file-name-absolute-p orgfile)
-                   orgfile
-                 (expand-file-name (concat (file-name-as-directory loc) pro "/" orgfile))))
-              (t
-               (expand-file-name (concat (file-name-as-directory loc) pro
-                                         org-project-manager-org-location
-                                         pro ".org")))))))
-  
 ;;     (defun org-project-manager-agenda ()
 ;;      (interactive)
 ;;      (let ((org-agenda-files
@@ -466,34 +477,10 @@ the active status of projects."
 ;;            (org-agenda-list)))
 
 #+END_SRC
-#+BEGIN_SRC  emacs-lisp :export code
-    (defun org-project-manager-goto-project-manager ()
-      (interactive)
-      (find-file org-project-manager))
-#+END_SRC
 
-*** Selecting project at point    
-#+BEGIN_SRC emacs-lisp :export code
-  (defun org-project-manager-project-at-point ()
-    (interactive)
-    (if (org-before-first-heading-p)
-        (message "No project at point")
-      (org-project-manager-project-orgfile-at-point)))
-  
-    (defun org-project-manager-return ()
-      (interactive)
-      (if (org-project-manager-project-at-point)
-          (org-project-manager-visit-project)
-        (org-return)))
+
     
-    (defun org-project-manager-visit-project ()
-      (interactive)
-      ;; FIXME: ask user if buffer org-project-manager needs saving
-      ;;        and/or parsing
-      (when (org-project-manager-project-at-point)
-        (find-file (org-project-manager-project-orgfile-at-point))))
-
-#+END_SRC
+  
 *** Selecting a project from the project-alist
 #+BEGIN_SRC emacs-lisp :export code    
     (defun org-project-manager-format-project (entry)
