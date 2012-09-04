@@ -65,70 +65,64 @@ in `org-project-manager'.")
                 (org-project-manager-minor-mode)))))
 
 (defvar org-project-manager-project-alist nil
-      "Alist of projects associating the nickname of the project
-with information like the location of the project, the org-file, collaborators,
-index-file, category, publishing-directory, etc.")
-    
-          
-(defun org-project-manager-parse-projects (&optional all)
-  "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
-  (interactive)
-  (save-excursion
-    (setq org-project-manager-project-alist nil)
-    (set-buffer (find-file-noselect org-project-manager))
-    (save-buffer)
-    (goto-char (point-min))
-    (while (org-project-manager-forward-project)
-        (let* ((loc (org-entry-get nil "LOCATION" 'inherit))
-               (category (org-entry-get nil "CATEGORY" 'inherit))
-               (collab (org-entry-get nil "COLLAB" nil))
-               (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
-               (name (or (org-entry-get nil "NICKNAME" nil)
-                         (nth 4 (org-heading-components))))
-               (index (or (org-entry-get nil "INDEX" nil)
-                          (let ((default-org-home
-                                  (concat (file-name-as-directory loc)
-                                          name
-                                          org-project-manager-org-location)))
-                            (make-directory default-org-home t)
-                            (concat (file-name-as-directory default-org-home) name ".org"))))
-               (org (or (org-entry-get nil "PROJECTORG")
-                        (when (string= (file-name-extension index) "org")
-                          index))))
-          (unless (file-name-absolute-p index)
-            (setq index
-                  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-          (add-to-list 'org-project-manager-project-alist
-                       (list name
-                             (list (cons "location"  loc)
-                                   (cons "org-file" org)
-                                   (cons "index-file" index)
-                                   (cons "category" category)
-                                   (cons "collaborators" collab)
-                                   (cons "publish-directory" publish-dir))))))
-    org-project-manager-project-alist))
-
+         "Alist of projects associating the nickname of the project
+   with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
+  
   (defvar org-project-manager-current-project nil "The currently selected project.")
-      
-  (defun org-project-manager-list-projects (&optional class flag)
-    (interactive)
-    ;; (org-project-manager-parse-projects)
-    (let* ((cl (or class (completing-read "Project class: " (org-project-manager-parse-categories))))
-           (projects org-project-manager-project-alist))
-      (delq nil (mapcar '(lambda (x)
-                           (let ((org-file (org-project-manager-get-org x))) 
-                             (if class
-                                 (when (and (string= (org-project-manager-get-category x) class)
-                                            org-file
-                                            (file-exists-p org-file))
-                                   org-file))))
-                        projects))))
+         
+             
+   (defun org-project-manager-parse-projects (&optional all)
+     "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
+     (interactive)
+     (save-excursion
+       (setq org-project-manager-project-alist nil)
+       (set-buffer (find-file-noselect org-project-manager))
+       (save-buffer)
+       (goto-char (point-min))
+       (while (org-project-manager-forward-project)
+           (let* ((loc (org-entry-get nil "LOCATION" 'inherit))
+                  (category (org-entry-get nil "CATEGORY" 'inherit))
+                  (collab (org-entry-get nil "COLLAB" nil))
+                  (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
+                  (name (or (org-entry-get nil "NICKNAME" nil)
+                            (nth 4 (org-heading-components))))
+                  (index (or (org-entry-get nil "INDEX" nil)
+                             (let ((default-org-home
+                                     (concat (file-name-as-directory loc)
+                                             name
+                                             org-project-manager-org-location)))
+                               (make-directory default-org-home t)
+                               (concat (file-name-as-directory default-org-home) name ".org")))))
+             (unless (file-name-absolute-p index)
+               (setq index
+                     (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+             (add-to-list 'org-project-manager-project-alist
+                          (list name
+                                (list (cons "location"  loc)
+                                      (cons "index" index)
+                                      (cons "category" category)
+                                      (cons "collaborators" collab)
+                                      (cons "publish-directory" publish-dir))))))
+       org-project-manager-project-alist))
+   
+;;     (defun org-project-manager-list-projects (&optional class)
+;;       (interactive)
+;;       (let* ((cl (or class (completing-read "Project class: " (org-project-manager-parse-categories))))
+;;              (projects org-project-manager-project-alist))
+;;         (delq nil (mapcar '(lambda (x)
+;;                              (let ((op-index (org-project-manager-get-index x))) 
+;;                                (if class
+;;                                    (when (and (string= (org-project-manager-get-category x) class)
+;;                                               op-index
+;;                                               (file-exists-p op-index))
+;;                                      op-index))))
+;;                           projects))))
 
-(defun org-project-manager-org-files (&optional update)
-        "List the org-files assocated with the projects. "
-        (interactive "P")
-        (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-org x))) (if (file-exists-p f) f))) 
-                          (if update (org-project-manager-parse-projects) org-project-manager-project-alist))))
+(defun org-project-manager-index-list (&optional update)
+          "List of project specific indexes. "
+          (interactive "P")
+          (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-index x))) (if (file-exists-p f) f))) 
+                            (if update (org-project-manager-parse-projects) org-project-manager-project-alist))))
 
 (defvar org-project-manager-org-location "/"
       "Relative to the project location this defines
@@ -166,7 +160,7 @@ in a subdirectory 'org' of the project directory.")
             (re-search-forward "^**[ \t]+ New projects" nil t))
         (let
             ((org-insert-heading-respect-content t))
-          (org-insert-subheading))
+          (org-insert-subheading 1))
       (insert
        (make-string org-project-manager-project-level
                     (string-to-char "*"))
@@ -177,76 +171,72 @@ in a subdirectory 'org' of the project directory.")
        "\n:END:\n")
       (org-set-tags-to "active"))))
 
-(setq org-project-manager-default-project-content "")
-(defvar org-project-manager-default-project-ignore "
-export
-*.html
-*.pdf
-*.png
-")     
-(defvar org-project-manager-project-directories '("analysis" "org" "data" "email" "export" "misc" "presentation" "manuscript"))
+;;(setq org-project-manager-default-project-content "")
+;;(defvar org-project-manager-default-project-ignore "
+;;export
+;;*.html
+;;*.pdf
+;;*.png
+;;")     
+;; (defvar org-project-manager-project-directories '("analysis" "org" "data" "email" "export" "misc" "presentation" "manuscript"))
+;; (defun org-project-manager-template (location nickname)
+;;  "Generate project skeleton"
+;;   (interactive "DDirectory:
+;;sProject-name (a short nickname): ")
+;;   (let* ((path (concat location "/" projectname "/"))
+;;          (cd (concat "cd " path ";"))
+;;          (file (concat path projectname ".org")))
+;;  (loop for dir in org-project-manager-project-directories
+;;         do (make-directory (concat path dir) t))
+;;     (if (not (file-exists-p file))
+;;         (append-to-file org-project-manager-default-project-content nil file)
+;;       )
+;;     (if (not (file-exists-p (concat path ".git")))
+;;       ((lambda ()       
+;;         (shell-command (concat cd "git init"))      
+;;         (append-to-file org-project-manager-default-project-ignore nil (concat path ".gitignore"))      
+;;         (shell-command (concat cd "git add *"))
+;;         ))
+;;       )
+;;     (message (concat "Created new project: " path))
+;;     )     
+;;)
 
-(defun org-project-manager-template (directory projectname)
-  "Generate project skeleton"
-   (interactive "DDirectory: 
-sProject-name (short): ")
-   (let* (my-project-cd my-proj-path my-proj-file)
-     (setq my-proj-path (concat directory "/" projectname "/"))
-     (setq my-proj-cd (concat "cd " my-proj-path ";"))
-     (setq my-proj-file (concat my-proj-path projectname ".org"))
-
-     (loop for dir in org-project-manager-project-directories
-           do (make-directory (concat my-proj-path dir) t))
-     (if (not (file-exists-p my-proj-file))
-         (append-to-file org-project-manager-default-project-content nil my-proj-file)
-       )
-     (if (not (file-exists-p (concat my-proj-path ".git")))
-         ((lambda ()       
-           (shell-command (concat my-proj-cd "git init"))      
-           (append-to-file org-project-manager-default-project-ignore nil (concat my-proj-path ".gitignore"))      
-           (shell-command (concat my-proj-cd "git add *"))
-           ))
-       )
-     (message "Created new project: " my-proj-path)                
-     )     
-)
-
-(defvar org-project-manager-default-category "Miscellaneous")
-(defun org-project-manager-add-project (nickname)
-  "Get parameters"
-  (interactive ;;"DDirectory: 
-   "sProject-name (short): ")
-  (org-project-manager-parse-categories)
-  
-  (let* ((category (completing-read
-                    "Choose a category: "
-                    org-project-manager-project-categories nil nil nil nil org-project-manager-default-category)) loc directory)
-    (save-excursion
-      (set-buffer (find-file-noselect org-project-manager))
-      (save-buffer)
-      (goto-char (point-min))
-      (re-search-forward (concat ":CATEGORY: " category))  
-      (setq loc (org-entry-get nil "LOCATION" 'inherit))
-      )  
-    (setq directory (read-directory-name
-                     "Choose location: "
-                     loc
-                     ))
-    (let (org-capture-templates)
-      (setq org-capture-templates
-            `(("p" "Project" plain (file+headline org-project-manager 
-                                                  ,category)
-               ,(concat (make-string org-project-manager-project-level
-                                     (string-to-char "*"))
-                        " ACTIVE %c%?\n:PROPERTIES:\n:NICKNAME: %c\n:END:\n")
-               )))
-      (org-project-manager-template directory nickname)
-      (kill-new nickname)
-      (org-capture nil "p")
-      (pop kill-ring)
-      )
-    )
-  )
+;;(defvar org-project-manager-default-category "Miscellaneous")
+;;(defun org-project-manager-add-project (nickname)
+;;  "Get parameters"
+;;  (interactive ;;"DDirectory: 
+;;   "sProject-name (short): ")
+;;  (org-project-manager-parse-categories)
+;;  (let* ((category (completing-read
+;;                  "Choose a category: "
+;;                  org-project-manager-project-categories nil nil nil nil org-project-manager-default-category)) loc directory)
+;;    (save-excursion
+;;      (set-buffer (find-file-noselect org-project-manager))
+;;      (save-buffer)
+;;      (goto-char (point-min))
+;;      (re-search-forward (concat ":CATEGORY: " category))  
+;;      (setq loc (org-entry-get nil "LOCATION" 'inherit))
+;;      )  
+;;    (setq directory (read-directory-name
+;;                   "Choose location: "
+;;                   loc
+;;                   ))
+;;    (let (org-capture-templates)
+;;      (setq org-capture-templates
+;;          `(("p" "Project" plain (file+headline org-project-manager 
+;;                                                ,category)
+;;             ,(concat (make-string org-project-manager-project-level
+;;                                   (string-to-char "*"))
+;;                      " ACTIVE %c%?\n:PROPERTIES:\n:NICKNAME: %c\n:END:\n")
+;;             )))
+;;      (org-project-manager-template directory nickname)
+;;      (kill-new nickname)
+;;      (org-capture nil "p")
+;;      (pop kill-ring)
+;;      )
+;;    )
+;;  )
 
 (defun org-project-manager-goto-project-manager ()
  (interactive)
@@ -275,7 +265,7 @@ sProject-name (short): ")
     (switch-to-buffer "*Current project*")
     (erase-buffer)
     (insert (car pro) "\n------------------------------\n")
-    (mapcar (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+    (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
     (other-window -1)))
 
 (defun org-project-manager-forward-project ()
@@ -298,29 +288,6 @@ sProject-name (short): ")
 (org-project-manager-backward-project)
 (org-project-manager-return))
 
-(defun org-project-manager-project-orgfile-at-point ()
-    "Construct the orgfile of project at point. Return nil if
-  a) the point is not at a project
-  b) the construction of the orgile failed (needs property PROJECTORG, or both LOCATION and NICKNAME)"
-    (if (not (eq (nth 0 (org-heading-components)) org-project-manager-project-level))
-        (error "No project at point.")
-      (let* ((indexfile (org-entry-get nil "INDEX"))
-             (orgfile (org-entry-get nil "PROJECTORG"))
-             (pro (org-entry-get nil "NICKNAME"))
-             (loc (org-entry-get nil "LOCATION" 'inherit)))
-        (cond (indexfile
-               (if (file-name-absolute-p indexfile)
-                   indexfile
-                 (expand-file-name (concat (file-name-as-directory loc) pro "/" indexfile))))
-              (orgfile
-               (if (file-name-absolute-p orgfile)
-                   orgfile
-                 (expand-file-name (concat (file-name-as-directory loc) pro "/" orgfile))))
-              (t
-               (expand-file-name (concat (file-name-as-directory loc) pro
-                                         org-project-manager-org-location
-                                         pro ".org")))))))
-
 (defvar org-project-manager-project-categories nil
 "List of categories for sorting projects.")
 
@@ -337,10 +304,9 @@ sProject-name (short): ")
   
 (defun org-project-manager-parse-categories ()
     (interactive)
-    (save-excursion
       (set-buffer (find-file-noselect org-project-manager))
       (setq org-project-manager-project-categories
-            (reverse (org-project-manager-get-buffer-props "CATEGORY")))))
+            (reverse (org-project-manager-get-buffer-props "CATEGORY"))))
 
 (defun org-project-manager-project-agenda ()
     "Show an agenda of all the projects. Useful, e.g. for toggling
@@ -353,7 +319,7 @@ the active status of projects."
 ;;     (defun org-project-manager-agenda ()
 ;;      (interactive)
 ;;      (let ((org-agenda-files
-;;             (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-org x))) (if (file-exists-p f) f))) 
+;;             (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-index x))) (if (file-exists-p f) f))) 
 ;;                               (org-project-manager-parse-projects))))
 ;;            (org-agenda-include-diary nil))
 ;;            (org-agenda-list)))
@@ -378,27 +344,23 @@ the active status of projects."
            (nickname (cdr (assoc key project-array))))
            (assoc nickname org-project-manager-project-alist)))
     
-(defun org-project-manager-switch-to-project ()
-  (interactive)
-  (if (and org-project-manager-current-project
-           (not (eq last-command 'org-project-manager-switch-to-project)))
-      (let ((index (or
-                    (org-project-manager-get-index org-project-manager-current-project)
-                    (org-project-manager-get-org org-project-manager-current-project))))
-        (find-file index)
+(defun org-project-manager-switch-to-project (&optional force)
+  (interactive "P")
+  (let ((change (or force (and (eq last-command 'org-project-manager-switch-to-project))
+                    (not org-project-manager-current-project))))
+    (if (not change)
+        (let ((index (org-project-manager-get-index org-project-manager-current-project)))
+          (find-file index)
         (message "Press the same key again to switch project"))
     (let ((pro (org-project-manager-select-project)))
       (setq org-project-manager-current-project pro)
-      (find-file (org-project-manager-get-index org-project-manager-current-project)))))
+      (find-file (org-project-manager-get-index org-project-manager-current-project))))))
 
 (defun org-project-manager-get (project el)
   (cdr (assoc el (cadr project))))
 
 (defun org-project-manager-get-index (project)
-  (cdr (assoc "index-file" (cadr project))))
-
-(defun org-project-manager-get-org (project)
-  (cdr (assoc "org-file" (cadr project))))
+  (cdr (assoc "index" (cadr project))))
 
 (defun org-project-manager-get-location (project)
   (cdr (assoc "location" (cadr project))))
@@ -417,16 +379,16 @@ the active status of projects."
     (when (and (not (string-equal pro "")) pro)
       (let* ((entry (assoc pro org-project-manager-project-alist))
         (loc (org-project-manager-get-location entry))
-        (org (org-project-manager-get-org entry))
+        (index (org-project-manager-get-index entry))
         (head (or heading "WorkFlow")))
-      (if org
-          (find-file org)
-        (error "Project " pro " does not have an org-file."))
+      (if index
+          (find-file index)
+        (error (concat "Project " pro " does not have an index.")))
       (goto-char (point-min))
       (or (re-search-forward (concat "^[*]+ " heading) nil t)
           (when create
             (insert "* " heading "\n\n")
-            (previous-line 1)))))))
+            (forward-line  -1)))))))
 
 
 (defun org-project-manager-goto-project-workflow ()
@@ -438,15 +400,15 @@ the active status of projects."
 
 (defun org-project-manager-goto-project-taskpool (&optional arg)
   (interactive)
-  (if arg (org-store-link))
+  (if arg (org-store-link nil))
   (let* ((buf (current-buffer))
          (pro (completing-read "Select project: " org-project-manager-project-alist))
          (entry (assoc pro org-project-manager-project-alist))
          (loc (org-project-manager-get-location entry))
-         (org (org-project-manager-get-org entry)))
-    (if org
-        (find-file org)
-      (error "Project " pro " does not have an org-file."))
+         (index (org-project-manager-get-index entry)))
+    (if index
+        (find-file index)
+      (error (concat "Project " pro " does not have an index.")))
     (goto-char (point-min))
     (or (re-search-forward "^[*]+ TaskPool" nil t)
         (progn
