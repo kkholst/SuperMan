@@ -58,8 +58,8 @@
 
 This document simulaneously describes and defines a project manager
 for applied statistical workflows based on the fabulous and popular
-emacs orgmode. Really it describes and automates one out of many
-possibilities to customize orgmode.
+emacs =org-mode=. Really it describes and automates one out of many
+possibilities to customize =org-mode=.
 
 * Project manager
 ** Dependencies
