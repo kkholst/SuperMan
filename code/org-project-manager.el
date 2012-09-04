@@ -137,15 +137,26 @@ in `org-project-manager'.")
   (org-project-manager-parse-categories)
   (org-project-manager-parse-projects))
 
-(defun org-project-manager-index-list (&optional not-exist-ok update)
- "Return a list of project specific indexes. Only existing files are returned unless NOT-EXIST-OK is non-nil.
+(defun org-project-manager-index-list (&optional category extension not-exist-ok update)
+ "Return a list of project specific indexes.
+Projects are filtered by CATEGORY unless CATEGORY is nil.
+Only existing files are returned unless NOT-EXIST-OK is non-nil.
+Only files ending on EXTENSION are returned unless EXTENSION is nil.
 If UPDATE is non-nil first parse the file org-project-manager."
  (interactive "P")
- (delq nil (mapcar '(lambda (x)
- (let ((f (org-project-manager-get-index x))) (if (file-exists-p f) f))) 
  (if update
- (org-project-manager-refresh)
- org-project-manager-project-alist))))
+ (org-project-manager-refresh))
+ (delq nil (mapcar '(lambda (x)
+ (let ((f (org-project-manager-get-index x)))
+       (when (and (or not-exist-ok (file-exists-p f))
+                (or (not extension)
+                    (string= extension (file-name-extension f))))
+                     f)))
+  (if category
+      (delq nil (mapcar '(lambda (p) (if (string= category (org-project-manager-get-category p))
+                           p))
+                        org-project-manager-project-alist))
+  org-project-manager-project-alist))))
 
 (defvar org-project-manager-org-location "/"
       "Relative to the project location this defines
