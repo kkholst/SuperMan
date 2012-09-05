@@ -364,41 +364,55 @@ Thus, to undo all this you may want to call 'org-project-manager-delete-project'
         (org-project-manager-return))
 
 (defun org-project-manager-git-p (dir)
-   "Test if directory DIR is under git control."
-  (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
+     "Test if directory DIR is under git control."
+    (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
+  
+  (defun org-project-manager-git-init-directory (dir)
+  "Put directory DIR under git control."
+   (if (org-project-manager-git-p dir)
+    (message (concat "Directory " dir " is under git control."))
+   (shell-command (concat "cd " dir "; git init"))
+   (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
+  
+  (defun org-project-manager-git-update-directory (dir silent)
+  "Put directory DIR under git control."
+   (let ((doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
+         (message (if silent "silent update" (read-string "Git commit message: "))))
+   (if doit
+   (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
 
-(defun org-project-manager-git-init-directory (dir)
-"Put directory DIR under git control."
- (if (org-project-manager-git-p dir)
-  (message (concat "Directory " dir " is under git control."))
- (shell-command (concat "cd " dir "; git init"))
- (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
 
-(defun org-project-manager-git-update-directory (dir silent)
-"Put directory DIR under git control."
- (let ((doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
-       (message (if silent "silent update" (read-string "Git commit message: "))))
- (if doit
- (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
+(defun org-project-manager-git-push-directory (dir silent)
+  "Put directory DIR under git control."
+   (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
+     (if doit
+         (shell-command (concat "cd " dir "; git push")))))
+  
 
 (defun org-project-manager-git-update-project (project before)
-   "Check if project needs to be put under git control and update.
+  "Check if project needs to be put under git control and update.
 If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
 "
-   (let* ((git-control (org-project-manager-get-git project))
-          (silent-p (string= (downcase git-control) "silent"))
-          (dir (org-project-manager-get-git-location project)))
-     (when (and (file-exists-p dir)
-             (string-match "yes\\|silent" (downcase git-control)))
-       (if before
-           (unless (org-project-manager-git-p dir)
-             (if (or silent-p
-                     (y-or-n-p (concat "Initialize git control at " dir "?")))
-                 (org-project-manager-git-init-directory dir)))
-         (when (and (string-match "pull" (downcase git-control))
-                    (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-           (shell-command (concat "cd " dir "; git pull \"")))
-       (org-project-manager-git-update-directory dir silent-p)))))
+  (let* ((git-control (org-project-manager-get-git project))
+         (silent-p (string= (downcase git-control) "silent"))
+         (dir (org-project-manager-get-git-location project)))
+    (when (file-exists-p dir)
+      (if before
+          ;; activating project
+          (unless (org-project-manager-git-p dir)
+            (when (or silent-p
+                      (y-or-n-p (concat "Initialize git control at " dir "?")))
+              (org-project-manager-git-init-directory dir))
+            (when (and (string-match "pull" (downcase git-control))
+                       (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
+              (shell-command (concat "cd " dir "; git pull \""))))
+        ;; deactivating project
+        (when (and (org-project-manager-git-p dir)
+                   (string-match "yes\\|silent" (downcase git-control)))
+          (org-project-manager-git-update-directory dir silent-p)
+          (when (string-match "push" (downcase git-control))
+            (org-project-manager-git-push-directory dir silent-p)
+          ))))))
 
 (defun org-project-manager-project-agenda ()
     "Show an agenda of all the projects. Useful, e.g. for toggling
@@ -452,11 +466,8 @@ Start git, if the project is under git control, and git is not up and running ye
   (save-some-buffers)
   (let* ((pro (or project
                   org-project-manager-current-project
-                  (org-project-manager-select-project)))
-         (git-control (org-project-manager-get-git project))
-         (silent-p (string= (downcase git-control) "silent"))
-         (dir (org-project-manager-get-location pro)))
-    (org-project-manager-git-update-directory dir silent-p)))
+                  (org-project-manager-select-project))))
+    (org-project-manager-git-update-project pro nil)))
 
 (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
           switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
