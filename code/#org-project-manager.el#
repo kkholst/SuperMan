@@ -153,10 +153,10 @@ If UPDATE is non-nil first parse the file org-project-manager."
                     (string= extension (file-name-extension f))))
                      f)))
   (if category
-      (delq nil (mapcar '(lambda (p) (if (string= category (org-project-manager-get-category p))
-                           p))
-                        org-project-manager-project-alist))
-  org-project-manager-project-alist))))
+      (mapcar '(lambda (p) (if (string= category (org-project-manager-get-category p))
+                           p)
+                        org-project-manager-project-alist)))
+  org-project-manager-project-alist)))
 
 (defvar org-project-manager-org-location "/"
       "Relative to the project location this defines
@@ -335,13 +335,6 @@ the active status of projects."
     (push ?t unread-command-events)
     (push ?< unread-command-events)
     (call-interactively 'org-agenda))
-;;     (defun org-project-manager-agenda ()
-;;      (interactive)
-;;      (let ((org-agenda-files
-;;             (delq nil (mapcar '(lambda (x) (let ((f (org-project-manager-get-index x))) (if (file-exists-p f) f))) 
-;;                               (org-project-manager-parse-projects))))
-;;            (org-agenda-include-diary nil))
-;;            (org-agenda-list)))
 
 (defun org-project-manager-format-project (entry)
       (let ((cat (org-project-manager-get entry "category"))
