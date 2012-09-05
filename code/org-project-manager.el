@@ -214,7 +214,7 @@ sProject-name (a short nickname): ")
   (let* ((path (concat location "/" nickname "/"))
           (cd (concat "cd " path ";"))
           (file (concat path nickname ".org")))
-  (loop for dir in org-project-manager-project-directories
+  (loop for dir in org-project-manager-project-subdirectories
            do (make-directory (concat path dir) t))
      (if (not (file-exists-p file))
          (append-to-file org-project-manager-default-project-content nil file)

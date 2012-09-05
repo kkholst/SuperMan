@@ -241,10 +241,10 @@ If UPDATE is non-nil first parse the file org-project-manager."
                     (string= extension (file-name-extension f))))
                      f)))
   (if category
-      (mapcar (lambda (p) (if (string= category (org-project-manager-get-category p))
-                           p)
-                        org-project-manager-project-alist)))
-  org-project-manager-project-alist)))
+      (delq nil (mapcar '(lambda (p) (if (string= category (org-project-manager-get-category p))
+                           p))
+                        org-project-manager-project-alist))
+  org-project-manager-project-alist))))
 #+END_SRC
 
 *** The profile of a single project
