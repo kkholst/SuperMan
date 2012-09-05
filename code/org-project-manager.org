@@ -339,7 +339,6 @@ r_env_cache
 .RData
 Rplots.p*
 _region*
-
 ")
 (defvar org-project-manager-project-subdirectories nil)
 (defun org-project-manager-template (location nickname)
