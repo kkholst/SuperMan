@@ -61,7 +61,28 @@ for applied statistical workflows based on the fabulous and popular
 emacs orgmode. Really it describes and automates one out of many
 possibilities to customize orgmode.
 
-* Project manager
+** Set up 
+
+The first thing to do 
+
+** Git support
+
+*** Requirements
+
+You need to install the program git
+
+*** Git hub
+
+To do push changes to a github repository it is usefull to set up git  
+https://help.github.com/articles/set-up-git
+and to be free of typing the username and password when doing "git push".
+
+If you use the SSH repo URL instead, SSH keys are used for
+authentication. This guide offers help generating and using an SSH key
+pair:  https://help.github.com/articles/generating-ssh-keys
+
+
+* Project manager code :noexport:
 ** Dependencies
 
 #+BEGIN_SRC emacs-lisp :export code
@@ -443,95 +464,97 @@ If UPDATE is non-nil first parse the file org-project-manager."
 ** Git control
    
 #+BEGIN_SRC emacs-lisp :export code
-          (defun org-project-manager-git-p (dir)
-             "Test if directory DIR is under git control."
-            (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
-          
-          (defun org-project-manager-git-init-directory (dir)
-          "Put directory DIR under git control."
-           (if (org-project-manager-git-p dir)
-            (message (concat "Directory " dir " is under git control."))
-           (shell-command (concat "cd " dir "; git init"))
-           (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
-          
-     (defun org-project-manager-git-update-directory (dir silent)
-          "Put directory DIR under git control."
-          (let* ((necessary (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status"))))
-                 (doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
-                 (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
-           (if doit
-           (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
+        (defun org-project-manager-git-p (dir)
+           "Test if directory DIR is under git control."
+          (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
         
+        (defun org-project-manager-git-init-directory (dir)
+        "Put directory DIR under git control."
+         (if (org-project-manager-git-p dir)
+          (message (concat "Directory " dir " is under git control."))
+         (shell-command (concat "cd " dir "; git init"))
+         (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
         
-        (defun org-project-manager-git-push-directory (dir silent)
-          "Put directory DIR under git control."
-           (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
-             (if doit
-                 (shell-command (concat "cd " dir "; git push")))))
-          
-    
-    (defun org-project-manager-git-update-project (project before)
-        "Check if project needs to be put under git control and update.
-      If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-      "
-        (let* ((git-control (downcase (org-project-manager-get-git project))))
-          (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
-            (let ((silent-p (string= git-control "silent"))
-                  (dir (org-project-manager-get-git-location project)))
-              (when (file-exists-p dir)
-                (if before
-                    ;; activating project
-                    (unless (or (org-project-manager-git-p dir) (string-match "no" git-control) (string= "" git-control))
-                  (when (or silent-p
-                            (y-or-n-p (concat "Initialize git control at " dir "?")))
-                    (org-project-manager-git-init-directory dir))
-                  (when (and (string-match "pull" git-control)
-                             (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-                    (shell-command (concat "cd " dir "; git pull \""))))
-              ;; deactivating project
-              (when (and (org-project-manager-git-p dir)
-                         (string-match "yes\\|silent" git-control))
-                (org-project-manager-git-update-directory dir silent-p)
-                (when (string-match "push" git-control)
-                  (org-project-manager-git-push-directory dir silent-p)
-                ))))))))
+   (defun org-project-manager-git-update-directory (dir silent)
+        "Put directory DIR under git control."
+      (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
+               (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
+               (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
+          (if doit
+              (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
       
-      (defvar org-project-manager-git-ignore "
-      export
-      ,*~
-      ,*.ind
-      ,*.brf
-      ,*.idx
-      ,*.ilg
-      ,*.lof
-      ,*.html
-      ,*pdfsync
-      ,*.pdf
-      ,*.png
-      ,*.ind
-      ,*.o
-      ,*.so
-      ,*.bbl
-      ,*.blg
-      ,*.bak
-      ,*.snm
-      ,*.aux
-      ,*.log
-      ,*.xref
-      ,*.idv
-      ,*.4ct
-      ,*.out
-      ,*.swp
-      ,*.nav
-      ,*.toc
-      ,*.vrb
-      ,*.dvi
-      r_env_cache
-      .Rhistory
-      .RData
-      Rplots.p*
-      _region*
-      ")
+      
+      (defun org-project-manager-git-push-directory (dir silent)
+        "Put directory DIR under git control."
+        (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+               (necessary (string-match "Your branch is ahead .*\n" status))
+               (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+          (if doit
+              (shell-command (concat "cd " dir "; git push")))))
+        
+  
+  (defun org-project-manager-git-update-project (project before)
+      "Check if project needs to be put under git control and update.
+    If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+    "
+      (let* ((git-control (downcase (org-project-manager-get-git project))))
+        (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
+          (let ((silent-p (string= git-control "silent"))
+                (dir (org-project-manager-get-git-location project)))
+            (when (file-exists-p dir)
+              (if before
+                  ;; activating project
+                  (unless (or (org-project-manager-git-p dir) (string-match "no" git-control) (string= "" git-control))
+                (when (or silent-p
+                          (y-or-n-p (concat "Initialize git control at " dir "?")))
+                  (org-project-manager-git-init-directory dir))
+                (when (and (string-match "pull" git-control)
+                           (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
+                  (shell-command (concat "cd " dir "; git pull \""))))
+            ;; deactivating project
+            (when (and (org-project-manager-git-p dir)
+                       (string-match "yes\\|silent" git-control))
+              (org-project-manager-git-update-directory dir silent-p)
+              (when (string-match "push" git-control)
+                (org-project-manager-git-push-directory dir silent-p)
+              ))))))))
+    
+    (defvar org-project-manager-git-ignore "
+    export
+    ,*~
+    ,*.ind
+    ,*.brf
+    ,*.idx
+    ,*.ilg
+    ,*.lof
+    ,*.html
+    ,*pdfsync
+    ,*.pdf
+    ,*.png
+    ,*.ind
+    ,*.o
+    ,*.so
+    ,*.bbl
+    ,*.blg
+    ,*.bak
+    ,*.snm
+    ,*.aux
+    ,*.log
+    ,*.xref
+    ,*.idv
+    ,*.4ct
+    ,*.out
+    ,*.swp
+    ,*.nav
+    ,*.toc
+    ,*.vrb
+    ,*.dvi
+    r_env_cache
+    .Rhistory
+    .RData
+    Rplots.p*
+    _region*
+    ")
 #+END_SRC   
 
 ** Hacking deft
@@ -628,55 +651,56 @@ Start git, if the project is under git control, and git is not up and running ye
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
-            switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
-            Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
-            to always prompt for new project")
-  
+    (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
+              switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
+              Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
+              to always prompt for new project")
+    
   (defun org-project-manager-switch-to-project (&optional force)
-      "Select project via 'org-project-manager-select-project', activate it
-    via 'org-project-manager-activate-project',  find the associated index file."
-                (interactive "P")
-                (let ((change (or force
-                                    org-project-manager-switch-always
-                                   (and (eq last-command 'org-project-manager-switch-to-project))
-                                  (not org-project-manager-current-project))))
-                  (if (not change)
-                      (let ((index (org-project-manager-get-index org-project-manager-current-project)))
-                        (find-file index)
-                      (message "Press the same key again to switch project"))
-                  (let ((pro (org-project-manager-select-project)))
-                    (unless (eq pro org-project-manager-current-project)
-		      (org-project-manager-activate-project pro)
-                      (org-project-manager-save-project))
-                    (find-file (org-project-manager-get-index
-                                org-project-manager-current-project))))))
-              
-  (defun org-project-manager-get (project el)
-   (cdr (assoc el (cadr project))))
-              
-  (defun org-project-manager-get-index (project)
-    (cdr (assoc "index" (cadr project))))
+        "Select project via 'org-project-manager-select-project', activate it
+      via 'org-project-manager-activate-project',  find the associated index file."
+                  (interactive "P")
+                  (let ((change (or force
+                                      org-project-manager-switch-always
+                                     (and (eq last-command 'org-project-manager-switch-to-project))
+                                    (not org-project-manager-current-project)))
+                        (curpro org-project-manager-current-project))
+                    (if (not change)
+                        (let ((index (org-project-manager-get-index org-project-manager-current-project)))
+                          (find-file index)
+                        (message "Press the same key again to switch project"))
+                    (let ((pro (org-project-manager-select-project)))
+                      (unless (eq pro curpro)
+                        (org-project-manager-save-project curpro)
+                        (org-project-manager-activate-project pro))
+                      (find-file (org-project-manager-get-index
+                                  org-project-manager-current-project))))))
+                
+    (defun org-project-manager-get (project el)
+     (cdr (assoc el (cadr project))))
+                
+    (defun org-project-manager-get-index (project)
+      (cdr (assoc "index" (cadr project))))
+    
+    (defun org-project-manager-get-git (project)
+      (or (cdr (assoc "git" (cadr project))) ""))
+    
+    (defun org-project-manager-get-git-location (project)
+      (or (cdr (assoc "git-location" (cadr project)))
+          (org-project-manager-get-location project)))
   
-  (defun org-project-manager-get-git (project)
-    (or (cdr (assoc "git" (cadr project))) ""))
-  
-  (defun org-project-manager-get-git-location (project)
-    (or (cdr (assoc "git-location" (cadr project)))
-        (org-project-manager-get-location project)))
-
-(defun org-project-manager-get-location (project)
-  (let ((loc (cdr (assoc "location" (cadr project)))))
-    (if loc 
-	(concat (file-name-as-directory
-		 loc)
-		(car project)))))
-  
-  (defun org-project-manager-get-publish-directory (project)
-    (cdr (assoc "publish-directory" (cadr project))))
-  
-  (defun org-project-manager-get-category (project)
-    (cdr (assoc "category" (cadr project))))
+  (defun org-project-manager-get-location (project)
+    (let ((loc (cdr (assoc "location" (cadr project)))))
+      (if loc 
+          (concat (file-name-as-directory
+                   loc)
+                  (car project)))))
+    
+    (defun org-project-manager-get-publish-directory (project)
+      (cdr (assoc "publish-directory" (cadr project))))
+    
+    (defun org-project-manager-get-category (project)
+      (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
