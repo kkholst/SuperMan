@@ -443,43 +443,44 @@ If UPDATE is non-nil first parse the file org-project-manager."
 ** Git control
    
 #+BEGIN_SRC emacs-lisp :export code
-    (defun org-project-manager-git-p (dir)
-       "Test if directory DIR is under git control."
-      (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
-    
-    (defun org-project-manager-git-init-directory (dir)
-    "Put directory DIR under git control."
-     (if (org-project-manager-git-p dir)
-      (message (concat "Directory " dir " is under git control."))
-     (shell-command (concat "cd " dir "; git init"))
-     (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
-    
-    (defun org-project-manager-git-update-directory (dir silent)
-    "Put directory DIR under git control."
-     (let ((doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
-           (message (if silent "silent update" (read-string "Git commit message: "))))
-     (if doit
-     (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
-  
-  
-  (defun org-project-manager-git-push-directory (dir silent)
-    "Put directory DIR under git control."
-     (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
+      (defun org-project-manager-git-p (dir)
+         "Test if directory DIR is under git control."
+        (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
+      
+      (defun org-project-manager-git-init-directory (dir)
+      "Put directory DIR under git control."
+       (if (org-project-manager-git-p dir)
+        (message (concat "Directory " dir " is under git control."))
+       (shell-command (concat "cd " dir "; git init"))
+       (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
+      
+ (defun org-project-manager-git-update-directory (dir silent)
+      "Put directory DIR under git control."
+      (let* ((doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
+           (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
        (if doit
-           (shell-command (concat "cd " dir "; git push")))))
+       (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
     
-  
+    
+    (defun org-project-manager-git-push-directory (dir silent)
+      "Put directory DIR under git control."
+       (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
+         (if doit
+             (shell-command (concat "cd " dir "; git push")))))
+      
+
 (defun org-project-manager-git-update-project (project before)
     "Check if project needs to be put under git control and update.
   If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
   "
-    (let* ((git-control (downcase (org-project-manager-get-git project)))
-           (silent-p (string= git-control "silent"))
-           (dir (org-project-manager-get-git-location project)))
-      (when (file-exists-p dir)
-        (if before
-            ;; activating project
-            (unless (or (org-project-manager-git-p dir) (string-match "no" git-control) (string= "" git-control))
+    (let* ((git-control (downcase (org-project-manager-get-git project))))
+      (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
+	(let ((silent-p (string= git-control "silent"))
+	      (dir (org-project-manager-get-git-location project)))
+	  (when (file-exists-p dir)
+	    (if before
+		;; activating project
+		(unless (or (org-project-manager-git-p dir) (string-match "no" git-control) (string= "" git-control))
               (when (or silent-p
                         (y-or-n-p (concat "Initialize git control at " dir "?")))
                 (org-project-manager-git-init-directory dir))
@@ -492,44 +493,44 @@ If UPDATE is non-nil first parse the file org-project-manager."
             (org-project-manager-git-update-directory dir silent-p)
             (when (string-match "push" git-control)
               (org-project-manager-git-push-directory dir silent-p)
-            ))))))
-
-(defvar org-project-manager-git-ignore "
-export
-*~
-*.ind
-*.brf
-*.idx
-*.ilg
-*.lof
-*.html
-*pdfsync
-*.pdf
-*.png
-*.ind
-*.o
-*.so
-*.bbl
-*.blg
-*.bak
-*.snm
-*.aux
-*.log
-*.xref
-*.idv
-*.4ct
-*.out
-*.swp
-*.nav
-*.toc
-*.vrb
-*.dvi
-r_env_cache
-.Rhistory
-.RData
-Rplots.p*
-_region*
-")
+            ))))))))
+  
+  (defvar org-project-manager-git-ignore "
+  export
+  ,*~
+  ,*.ind
+  ,*.brf
+  ,*.idx
+  ,*.ilg
+  ,*.lof
+  ,*.html
+  ,*pdfsync
+  ,*.pdf
+  ,*.png
+  ,*.ind
+  ,*.o
+  ,*.so
+  ,*.bbl
+  ,*.blg
+  ,*.bak
+  ,*.snm
+  ,*.aux
+  ,*.log
+  ,*.xref
+  ,*.idv
+  ,*.4ct
+  ,*.out
+  ,*.swp
+  ,*.nav
+  ,*.toc
+  ,*.vrb
+  ,*.dvi
+  r_env_cache
+  .Rhistory
+  .RData
+  Rplots.p*
+  _region*
+  ")
 #+END_SRC   
 
 ** Hacking deft
@@ -610,9 +611,13 @@ Start git, if the project is under git control, and git is not up and running ye
 *** Saving the current project
 
 #+BEGIN_SRC emacs-lisp :export code
+  (defvar org-project-manager-save-buffers 'save-some-buffers
+    "Function to be called to save buffers before switching project.")
   (defun org-project-manager-save-project (&optional project)
     (interactive)
-    (save-some-buffers)
+    (when (and (object-p org-project-manager-save-buffers)
+               (functionp org-project-manager-save-buffers))
+      (funcall org-project-manager-save-buffers))
     (let* ((pro (or project
                     org-project-manager-current-project
                     (org-project-manager-select-project))))
@@ -640,9 +645,9 @@ Start git, if the project is under git control, and git is not up and running ye
                         (find-file index)
                       (message "Press the same key again to switch project"))
                   (let ((pro (org-project-manager-select-project)))
-		    (if (eq pro org-project-manager-current-project)
-			(org-project-manager-activate-project pro)
-		      (org-project-manager-save-project))
+                    (unless (eq pro org-project-manager-current-project)
+		      (org-project-manager-activate-project pro)
+                      (org-project-manager-save-project))
                     (find-file (org-project-manager-get-index
                                 org-project-manager-current-project))))))
               
