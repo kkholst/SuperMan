@@ -200,28 +200,28 @@ If UPDATE is non-nil first parse the file org-project-manager."
  '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
 
 (defvar org-project-manager-default-content "" "Initial contents of org project index file.")
-               (defvar org-project-manager-project-subdirectories nil)
-
+(defvar org-project-manager-project-subdirectories nil)
+       
 (defun org-project-manager-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
 'org-project-manager-project-subdirectories' is set."
   (interactive)
   (let* ((pro (or project (assoc (org-project-manager-project-at-point 'stop) org-project-manager-project-alist)))
-         (dir (org-project-manager-get-location pro))
-         (index (org-project-manager-get-index pro)))
+	 (dir (org-project-manager-get-location pro))
+	 (index (org-project-manager-get-index pro)))
     (unless (or (file-exists-p dir) (and ask (not y-or-n-p (concat "Create directory " dir "? "))))
       (make-directory dir)
       (loop for subdir in org-project-manager-project-subdirectories
-            do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
+	    do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
     (when (not (file-exists-p index))
       (find-file index))))
-        ;; (append-to-file org-project-manager-default-content nil index)
+	;; (append-to-file org-project-manager-default-content nil index)
       ;; )))
 
 (defun org-project-manager-show-properties ()
   (let ((pop-up-windows t)
-        (obuf (current-buffer))
-        (pbuf (get-buffer "*Org project manager properties*")))
+	(obuf (current-buffer))
+	(pbuf (get-buffer "*Org project manager properties*")))
     (set-buffer pbuf)
     (erase-buffer)
     (insert "Current project categories:\n\n")
@@ -251,24 +251,35 @@ If UPDATE is non-nil first parse the file org-project-manager."
                            " ACTIVE %c%?\n:PROPERTIES:\n:NICKNAME:"
                            nickname
                            "\n:LOCATION:\n:CATEGORY:\n:INDEX:\n:GIT:\n:OTHERS:\n:END:\n"))))
-                )
-            (kill-new nickname)
-            (add-hook 'org-capture-after-finalize-hook ' org-project-manager-create-project nil 'local)
-            (add-hook 'org-capture-mode-hook ' org-project-manager-show-properties nil 'local)
+		)
+	    (kill-new nickname)
+	    (add-hook 'org-capture-after-finalize-hook ' org-project-manager-create-project nil 'local)
+	    (add-hook 'org-capture-mode-hook ' org-project-manager-show-properties nil 'local)
             (org-capture nil "p")
             (pop kill-ring)
-            )))
-                                
-            (defun org-project-manager-delete-project (&optional project)
-              (interactive)
-              (let* ((pro (or project org-project-manager-select-project))
-                     (dir (org-project-manager-get-location pro))
-                     (git (org-project-manager-get-git pro))
-                     (index (org-project-manager-get-location pro)))
-                (pop-to-buffer "*Org-project-files*")
-                (erase-buffer)
-                (insert index "\n" dir "\n" git "\n")
-                (when (yes-or-no-p (concat "Really remove project " pro "?")))))
+            ;; (remove-hook 'org-capture-after-finalize-hook ' org-project-manager-create-project)
+	    )))
+      
+                 ;;                      (org-capture-mode-hook org-capture-mode-hook)
+                 ;;                      (org-capture-before-finalize-hook org-capture-before-finalize-hook)
+                 ;;                      (org-capture-after-finalize-hook org-capture-after-finalize-hook))
+                 ;; todo: clean up empty properties 
+                 ;;                                     (add-hook 'org-capture-before-finalize-hook
+                 ;;                                                '(lambda () (message (concat "Here: " (buffer-name)))))
+                 ;;                (add-hook 'org-capture-mode-hook '(lambda () (let ((pop-up-windows t)) (pop-to-buffer "*Project manager properties*")
+                 ;;                                                                (erase-buffer) (insert org-project-manager-project-categories))))
+  
+                        
+    (defun org-project-manager-delete-project (&optional project)
+      (interactive)
+      (let* ((pro (or project org-project-manager-select-project))
+             (dir (org-project-manager-get-location pro))
+             (git (org-project-manager-get-git pro))
+             (index (org-project-manager-get-location pro)))
+        (pop-to-buffer "*Org-project-files*")
+        (erase-buffer)
+        (insert index "\n" dir "\n" git "\n")
+        (when (yes-or-no-p (concat "Really remove project " pro "?")))))
 
 (defun org-project-manager-goto-project-manager ()
     (interactive)
@@ -346,7 +357,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
      (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
   
   
-(defun org-project-manager-git-push-directory (dir silent)
+  (defun org-project-manager-git-push-directory (dir silent)
     "Put directory DIR under git control."
      (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
        (if doit
