@@ -342,19 +342,22 @@ If UPDATE is non-nil first parse the file org-project-manager."
        (shell-command (concat "cd " dir "; git init"))
        (append-to-file org-project-manager-git-ignore nil (concat dir ".gitignore"))))
       
-      (defun org-project-manager-git-update-directory (dir silent)
+ (defun org-project-manager-git-update-directory (dir silent)
       "Put directory DIR under git control."
-      (let* ((doit (or silent (y-or-n-p (concat "Update git at " dir "? "))))
-           (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
-       (if doit
-       (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
+    (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
+             (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
+             (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
+        (if doit
+            (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
     
     
     (defun org-project-manager-git-push-directory (dir silent)
       "Put directory DIR under git control."
-       (let ((doit (or silent (y-or-n-p (concat "Push git at " dir "? ")))))
-         (if doit
-             (shell-command (concat "cd " dir "; git push")))))
+      (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+             (necessary (string-match "Your branch is ahead .*\n" status))
+             (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+        (if doit
+            (shell-command (concat "cd " dir "; git push")))))
       
 
 (defun org-project-manager-git-update-project (project before)
@@ -492,22 +495,23 @@ Start git, if the project is under git control, and git is not up and running ye
             Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
             to always prompt for new project")
   
-  (defun org-project-manager-switch-to-project (&optional force)
+(defun org-project-manager-switch-to-project (&optional force)
       "Select project via 'org-project-manager-select-project', activate it
     via 'org-project-manager-activate-project',  find the associated index file."
                 (interactive "P")
                 (let ((change (or force
                                     org-project-manager-switch-always
                                    (and (eq last-command 'org-project-manager-switch-to-project))
-                                  (not org-project-manager-current-project))))
+                                  (not org-project-manager-current-project)))
+                      (curpro org-project-manager-current-project))
                   (if (not change)
                       (let ((index (org-project-manager-get-index org-project-manager-current-project)))
                         (find-file index)
                       (message "Press the same key again to switch project"))
                   (let ((pro (org-project-manager-select-project)))
-                    (unless (eq pro org-project-manager-current-project)
-                      (org-project-manager-activate-project pro)
-                      (org-project-manager-save-project))
+                    (unless (eq pro curpro)
+                      (org-project-manager-save-project curpro)
+                      (org-project-manager-activate-project pro))
                     (find-file (org-project-manager-get-index
                                 org-project-manager-current-project))))))
               
