@@ -486,8 +486,7 @@ Start git, if the project is under git control, and git is not up and running ye
              (functionp org-project-manager-save-buffers))
     (funcall org-project-manager-save-buffers))
   (let* ((pro (or project
-                  org-project-manager-current-project
-                  (org-project-manager-select-project))))
+                  org-project-manager-current-project)))
     (org-project-manager-git-update-project pro nil)))
 
 (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will

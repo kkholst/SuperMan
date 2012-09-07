@@ -63,10 +63,9 @@ possibilities to customize orgmode.
 
 ** Set up 
 
-The first thing to do 
+The first thing to do is
 
 ** Git support
-
 *** Requirements
 
 You need to install the program git
@@ -80,7 +79,6 @@ and to be free of typing the username and password when doing "git push".
 If you use the SSH repo URL instead, SSH keys are used for
 authentication. This guide offers help generating and using an SSH key
 pair:  https://help.github.com/articles/generating-ssh-keys
-
 
 * Project manager code :noexport:
 ** Dependencies
@@ -590,7 +588,6 @@ the active status of projects."
 
 #+END_SRC
 
-
 *** Selecting a project from the project-alist
 #+BEGIN_SRC emacs-lisp :export code    
       (defun org-project-manager-format-project (entry)
@@ -643,8 +640,7 @@ Start git, if the project is under git control, and git is not up and running ye
                (functionp org-project-manager-save-buffers))
       (funcall org-project-manager-save-buffers))
     (let* ((pro (or project
-                    org-project-manager-current-project
-                    (org-project-manager-select-project))))
+                    org-project-manager-current-project)))
       (org-project-manager-git-update-project pro nil)))
 #+END_SRC    
     
