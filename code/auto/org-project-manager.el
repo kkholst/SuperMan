@@ -3,8 +3,9 @@
     (LaTeX-add-labels
      "sec-1"
      "sec-1-1"
-     "sec-1-1-1"
-     "sec-1-1-2")
+     "sec-1-2"
+     "sec-1-2-1"
+     "sec-1-2-2")
     (TeX-add-symbols
      '("alert" 1)
      '("sfootnote" 1)

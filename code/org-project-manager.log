@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.15)  6 SEP 2012 15:07
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.15)  7 SEP 2012 10:46
 entering extended mode
  %&-line parsing enabled.
 **org-project-manager.tex
@@ -810,10 +810,10 @@ File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] (./org-project-manager.aux
 ) ) 
 Here is how much of TeX's memory you used:
- 8647 strings out of 493848
- 117486 string characters out of 1152823
- 192838 words of memory out of 3000000
- 11738 multiletter control sequences out of 15000+50000
+ 8650 strings out of 493848
+ 117525 string characters out of 1152823
+ 192875 words of memory out of 3000000
+ 11740 multiletter control sequences out of 15000+50000
  16784 words of font info for 49 fonts, out of 3000000 for 9000
  714 hyphenation exceptions out of 8191
  41i,5n,36p,279b,292s stack positions out of 5000i,500n,10000p,200000b,50000s
@@ -824,9 +824,9 @@ b></usr/share/texmf/fonts/type1/public/cm-super/sfss1728.pfb></usr/share/texmf/
 fonts/type1/public/cm-super/sfsx1095.pfb></usr/share/texmf/fonts/type1/public/c
 m-super/sfsx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsx1440.pfb
 >
-Output written on org-project-manager.pdf (1 page, 89896 bytes).
+Output written on org-project-manager.pdf (1 page, 90915 bytes).
 PDF statistics:
- 59 PDF objects out of 1000 (max. 8388607)
- 6 named destinations out of 1000 (max. 500000)
- 33 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 65 PDF objects out of 1000 (max. 8388607)
+ 7 named destinations out of 1000 (max. 500000)
+ 41 words of extra memory for PDF output out of 10000 (max. 10000000)
 
