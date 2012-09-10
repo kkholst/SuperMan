@@ -64,7 +64,7 @@ possibilities to customize =org-mode=.
 
 ** Set up 
 
-The first thing to do is...
+The first thing to do is.
 
 ** Git support
 *** Requirements
@@ -489,7 +489,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
                (necessary (string-match "Your branch is ahead .*\n" status))
                (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
           (if doit
-              (shell-command (concat "cd " dir "; git push")))))
+              (async-shell-command (concat "cd " dir "; git push")))))
         
   
   (defun org-project-manager-git-update-project (project before)

@@ -348,16 +348,16 @@ If UPDATE is non-nil first parse the file org-project-manager."
              (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
              (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
         (if doit
-            (shell-command (concat "cd " dir "; git add -u; git commit -m \"" message "\"")))))
+            (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
     
     
-    (defun org-project-manager-git-push-directory (dir silent)
+(defun org-project-manager-git-push-directory (dir silent)
       "Put directory DIR under git control."
       (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
              (necessary (string-match "Your branch is ahead .*\n" status))
              (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
         (if doit
-            (shell-command (concat "cd " dir "; git push")))))
+            (async-shell-command (concat "cd " dir "; git push")))))
       
 
 (defun org-project-manager-git-update-project (project before)
