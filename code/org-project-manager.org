@@ -54,7 +54,7 @@
 #+PROPERTY: tangle yes
 #+PROPERTY: colnames yes
 :END:
-
+  
 * Introduction 
 
 This document simulaneously describes and defines a project manager
@@ -64,12 +64,12 @@ possibilities to customize =org-mode=.
 
 ** Set up 
 
-The first thing to do is
+The first thing to do is...
 
 ** Git support
 *** Requirements
 
-You need to install the program git
+You need to install the program git.
 
 *** Git hub
 
