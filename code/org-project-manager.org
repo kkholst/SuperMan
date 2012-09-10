@@ -1,3 +1,4 @@
+# Project-Manager mode
 * Header 							   :noexport:
 :PROPERTIES:
 #+TITLE: An emacs-org project manager for applied statisticians
