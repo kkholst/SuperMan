@@ -482,16 +482,15 @@ If UPDATE is non-nil first parse the file org-project-manager."
           (if doit
               (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
       
-      
-  (defun org-project-manager-git-push-directory (dir silent)
-        "Put directory DIR under git control."
-        (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
-               (necessary (string-match "Your branch is ahead .*\n" status))
-               (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-          (if doit
-              (async-shell-command (concat "cd " dir "; git push")))))
-       
-    
+        
+    (defun org-project-manager-git-push-directory (dir silent)
+          "Put directory DIR under git control."
+          (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+                 (necessary (string-match "Your branch is ahead .*\n" status))
+                 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+            (if doit
+                (shell-command (concat "cd " dir "; git push")))))
+              
 (defun org-project-manager-git-update-project (project before)
     "Check if project needs to be put under git control and update.
       If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
