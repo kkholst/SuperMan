@@ -483,7 +483,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
               (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
       
       
-      (defun org-project-manager-git-push-directory (dir silent)
+  (defun org-project-manager-git-push-directory (dir silent)
         "Put directory DIR under git control."
         (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
                (necessary (string-match "Your branch is ahead .*\n" status))
