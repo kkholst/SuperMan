@@ -73,7 +73,7 @@ You need to install the program git
 
 *** Git hub
 
-To do push changes to a github repository it is usefull to set up git  
+To do push changes to a github repository it is useful to set up git  
 https://help.github.com/articles/set-up-git
 and to be free of typing the username and password when doing "git push".
 
