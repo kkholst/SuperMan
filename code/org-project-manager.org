@@ -480,7 +480,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
                (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
                (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
           (if doit
-              (shell-command (concat "cd " dir "; git add -A;git commit -m \"" message "\"")))))
+              (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
       
       
       (defun org-project-manager-git-push-directory (dir silent)
