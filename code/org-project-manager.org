@@ -492,7 +492,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
                 (shell-command (concat "cd " dir "; git push")))))
           
     
-  (defun org-project-manager-git-update-project (project before)
+(defun org-project-manager-git-update-project (project before)
     "Check if project needs to be put under git control and update.
       If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
       "
@@ -510,7 +510,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
                     (org-project-manager-git-init-directory dir)))
                   (when (and (string-match "pull" git-control)
                              (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-                    (shell-command (concat "cd " dir "; git pull \""))))
+                    (shell-command (concat "cd " dir "; git pull"))))
               ;; deactivating project
               (when (and (org-project-manager-git-p dir)
                          (string-match "yes\\|silent" git-control))
