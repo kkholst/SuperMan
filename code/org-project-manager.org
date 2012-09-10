@@ -64,7 +64,7 @@ possibilities to customize =org-mode=.
 
 ** Set up 
 
-The first thing to do is...
+The first thing to do is.
 
 ** Git support
 *** Requirements
@@ -482,6 +482,25 @@ If UPDATE is non-nil first parse the file org-project-manager."
             (if doit
                 (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
         
+<<<<<<< HEAD
+   (defun org-project-manager-git-update-directory (dir silent)
+        "Put directory DIR under git control."
+      (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
+               (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
+               (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
+          (if doit
+              (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
+      
+      
+  (defun org-project-manager-git-push-directory (dir silent)
+        "Put directory DIR under git control."
+        (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+               (necessary (string-match "Your branch is ahead .*\n" status))
+               (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+          (if doit
+              (async-shell-command (concat "cd " dir "; git push")))))
+=======
+>>>>>>> 384e046fce697ca23ddaf582fac0784e5e58e649
         
     (defun org-project-manager-git-push-directory (dir silent)
           "Put directory DIR under git control."
