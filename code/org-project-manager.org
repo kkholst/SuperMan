@@ -88,6 +88,7 @@ pair:  https://help.github.com/articles/generating-ssh-keys
 (require 'ido)
 (require 'org)  
 (require 'deft)
+(require 'workgroups)
 #+END_SRC
 
 ** Setup and maintenance
@@ -172,74 +173,79 @@ a minor-mode on top of it.
 *** Dynamically updating lists 
     
 #+BEGIN_SRC emacs-lisp :export code
-       (defvar org-project-manager-project-alist nil
-             "Alist of projects associating the nickname of the project
-       with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
-      
-      (defvar org-project-manager-current-project nil "The currently selected project.")
-             
-                 
-    (defun org-project-manager-parse-projects (&optional all)
-         "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
-         (interactive)
-         (save-excursion
-           (setq org-project-manager-project-alist nil)
-           (set-buffer (find-file-noselect org-project-manager))
-           (save-buffer)
-           (goto-char (point-min))
-           (while (org-project-manager-forward-project)
-               (let* ((loc (or (org-entry-get nil "LOCATION" 'inherit) org-project-manager-default-directory))
-                      (category (org-entry-get nil "CATEGORY" 'inherit))
-                      (others (org-entry-get nil "OTHERS" nil))
-                      (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
-                      (name (or (org-entry-get nil "NICKNAME" nil)
-                                (nth 4 (org-heading-components))))
-                      (git (org-entry-get nil "GIT" 'inherit))
-                      (index (or (org-entry-get nil "INDEX" nil)
-                                 (let ((default-org-home
-                                         (concat (file-name-as-directory loc)
-                                                 name
-                                                 org-project-manager-org-location)))
-                                   ;; (make-directory default-org-home t)
-                                   (concat (file-name-as-directory default-org-home) name ".org")))))
-                 (unless (file-name-absolute-p index)
-                   (setq index
-                         (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-                 (add-to-list 'org-project-manager-project-alist
-                              (list name
-                                    (list (cons "location"  loc)
-                                          (cons "index" index)
-                                          (cons "category" category)
-                                          (cons "others" others)
-                                          (cons "git" git)
-                                          (cons "publish-directory" publish-dir))))))
-             org-project-manager-project-alist))
-       
-    (defvar org-project-manager-project-categories nil
-  "List of categories for sorting projects.")
-  
-  (defun org-project-manager-get-buffer-props (property)
-      "Get a table of all values of PROPERTY used in the buffer, for completion."
-      (let (props)
-        (save-excursion
-          (goto-char (point-min))
-          (while (re-search-forward (concat ":" property ":") nil t)
-            (add-to-list 'props (list
-                                 (org-entry-get
-                                  nil property nil)))))
-        props))
+         (defvar org-project-manager-project-alist nil
+               "Alist of projects associating the nickname of the project
+         with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
+        
+        (defvar org-project-manager-current-project nil "The currently selected project.")
+               
+                   
+      (defun org-project-manager-parse-projects (&optional all)
+           "Parse file 'project-manager' and update 'org-project-manager-project-alist'"
+           (interactive)
+           (save-excursion
+             (setq org-project-manager-project-alist nil)
+             (set-buffer (find-file-noselect org-project-manager))
+             (save-buffer)
+             (goto-char (point-min))
+             (while (org-project-manager-forward-project)
+                 (let* ((loc (or (org-entry-get nil "LOCATION" 'inherit) org-project-manager-default-directory))
+                        (category (org-entry-get nil "CATEGORY" 'inherit))
+                        (others (org-entry-get nil "OTHERS" nil))
+                        (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
+                        (name (or (org-entry-get nil "NICKNAME" nil)
+                                  (nth 4 (org-heading-components))))
+                        (git (org-entry-get nil "GIT" 'inherit))
+                        (index (or (org-entry-get nil "INDEX" nil)
+                                   (let ((default-org-home
+                                           (concat (file-name-as-directory loc)
+                                                   name
+                                                   org-project-manager-org-location)))
+                                     ;; (make-directory default-org-home t)
+                                     (concat (file-name-as-directory default-org-home) name ".org")))))
+                   (unless (file-name-absolute-p index)
+                     (setq index
+                           (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+                   (add-to-list 'org-project-manager-project-alist
+                                (list name
+                                      (list (cons "location"  loc)
+                                            (cons "index" index)
+                                            (cons "category" category)
+                                            (cons "others" others)
+                                            (cons "git" git)
+                                            (cons "publish-directory" publish-dir))))))
+               org-project-manager-project-alist))
+         
+      (defvar org-project-manager-project-categories nil
+    "List of categories for sorting projects.")
     
-  (defun org-project-manager-parse-categories ()
+    (defun org-project-manager-get-buffer-props (property)
+        "Get a table of all values of PROPERTY used in the buffer, for completion."
+        (let (props)
+          (save-excursion
+            (goto-char (point-min))
+            (while (re-search-forward (concat ":" property ":") nil t)
+              (add-to-list 'props (list
+                                   (org-entry-get
+                                    nil property nil)))))
+          props))
+      
+    (defun org-project-manager-parse-categories ()
+        (interactive)
+          (set-buffer (find-file-noselect org-project-manager))
+          (setq org-project-manager-project-categories
+                (reverse (org-project-manager-get-buffer-props "CATEGORY"))))
+    
+    (defun org-project-manager-refresh ()
+  "Parses the categories and projects in file `org-project-manager' and also
+  updates the currently selected project."
       (interactive)
-        (set-buffer (find-file-noselect org-project-manager))
-        (setq org-project-manager-project-categories
-              (reverse (org-project-manager-get-buffer-props "CATEGORY"))))
-  
-  (defun org-project-manager-refresh ()
-    (interactive)
-    (org-project-manager-parse-categories)
-    (org-project-manager-parse-projects))
-  
+      (org-project-manager-parse-categories)
+      (org-project-manager-parse-projects)
+  (when org-project-manager-current-project
+     (setq org-project-manager-current-project
+           (assoc (car org-project-manager-current-project) org-project-manager-project-alist))))
+    
 #+END_SRC
 
 *** Lists of project-index and project-org files 
@@ -324,80 +330,91 @@ If UPDATE is non-nil first parse the file org-project-manager."
 **** COMMENT TODO The interactive approach     
      
 #+BEGIN_SRC emacs-lisp :export code
-                       (defvar org-project-manager-default-content "" "Initial contents of org project index file.")
-                       (defvar org-project-manager-project-subdirectories nil)
-        
-    
-  (defun org-project-manager-create-project (&optional project ask)
-    "Create the index file, the project directory, and subdirectories if
-      'org-project-manager-project-subdirectories' is set."
-    (interactive)
-    (let ((pro (assoc project org-project-manager-project-alist)))
-      (when pro
-        (let ((dir (org-project-manager-get-location pro))
-              (index (org-project-manager-get-index pro)))
-          (unless (or (not dir) (file-exists-p dir) (and ask (not (y-or-n-p (concat "Create directory " dir "? ")))))
-            (make-directory dir)
-            (loop for subdir in org-project-manager-project-subdirectories
-                  do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-          (when (and index (not (file-exists-p index)))
-            (unless (file-exists-p (file-name-directory index))
-              (make-directory (file-name-directory) t))
-            (find-file index))))))
-            ;; (append-to-file org-project-manager-default-content nil index)
-  ;; )))
-        
-        (defun org-project-manager-show-properties ()
-          (let ((pop-up-windows t)
-                (obuf (current-buffer))
-                (pbuf (get-buffer "*Org project manager properties*")))
-            (set-buffer pbuf)
-            (erase-buffer)
-            (insert "Current project categories:\n\n")
-            (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-project-manager-project-categories)
-            (delete-backward-char 2)
-            (insert "\n\n")
-            (pop-to-buffer pbuf)
-            (pop-to-buffer obuf)))
-      
-      (defun org-project-manager-new-project (&optional nickname category)
-                "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-                This function modifies the 'org-project-manager' and creates and visits the index file of the new project.
-                Thus, to undo all this you may want to call 'org-project-manager-delete-project'. 
-                " 
+                                   (defvar org-project-manager-default-content "" "Initial contents of org project index file.")
+                                   (defvar org-project-manager-project-subdirectories nil)
+                    
+                
+              (defun org-project-manager-create-project (&optional project ask)
+                "Create the index file, the project directory, and subdirectories if
+                  'org-project-manager-project-subdirectories' is set."
                 (interactive)
-                (org-project-manager-refresh)
-                (let ((nickname (or nickname (read-string "Project name (short) "))))
-                  ;; check if nickname exists 
-                  (while (assoc nickname org-project-manager-project-alist)
-                    (setq nickname
-                          (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-                  ;; a local capture command places the new project
-                  (let ((org-capture-templates
-                         `(("p" "Project" plain
-                          (file+headline org-project-manager "New projects")
-                          ,(concat (make-string org-project-manager-project-level (string-to-char "*"))
-                                   " ACTIVE %c%?\n:PROPERTIES:\n:NICKNAME: "
-                                   nickname
-                                   "\n:LOCATION:\n:CATEGORY:\n:INDEX:\n:GIT:\n:OTHERS:\n:END:\n"))))
-                        (org-capture-bookmark nil))
-                    (kill-new nickname)
-                    (add-hook 'org-capture-after-finalize-hook `(lambda () (org-project-manager-create-project ,nickname 'ask)) nil 'local)
-                    ;;(add-hook 'org-capture-mode-hook 'org-project-manager-show-properties nil 'local)
-                    (org-capture nil "p")
-                    (pop kill-ring)
-                    )))
-                                        
-      (defun org-project-manager-delete-project (&optional project)
-                      (interactive)
-                      (let* ((pro (or project org-project-manager-select-project))
-                             (dir (org-project-manager-get-location pro))
-                             (git (org-project-manager-get-git pro))
-                             (index (org-project-manager-get-location pro)))
-                        (pop-to-buffer "*Org-project-files*")
+                (let ((pro (assoc project org-project-manager-project-alist)))
+                  (when pro
+                    (let ((dir (org-project-manager-get-location pro))
+                          (index (org-project-manager-get-index pro)))
+                      (unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
+                        (make-directory dir)
+                        (loop for subdir in org-project-manager-project-subdirectories
+                              do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
+                      (find-file org-project-manager)
+                      (goto-char (point-min))
+                      (re-search-forward (concat (make-string org-project-manager-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
+            ;;          (when (and index (not (file-exists-p index)))
+            ;;            (unless (file-exists-p (file-name-directory index))
+            ;;              (make-directory (file-name-directory index) t))
+            ;;            (find-file index))))))
+                        ;; (append-to-file org-project-manager-default-content nil index)
+              ;; )))
+                    
+                    (defun org-project-manager-show-properties ()
+                      (let ((pop-up-windows t)
+                            (obuf (current-buffer))
+                            (pbuf (get-buffer "*Org project manager properties*")))
+                        (set-buffer pbuf)
                         (erase-buffer)
-                        (insert index "\n" dir "\n" git "\n")
-                        (when (yes-or-no-p (concat "Really remove project " pro "?")))))
+                        (insert "Current project categories:\n\n")
+                        (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-project-manager-project-categories)
+                        (delete-backward-char 2)
+                        (insert "\n\n")
+                        (pop-to-buffer pbuf)
+                        (pop-to-buffer obuf)))
+                  
+                  (defun org-project-manager-new-project (&optional nickname category)
+                            "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+                            This function modifies the 'org-project-manager' and creates and visits the index file of the new project.
+                            Thus, to undo all this you may want to call 'org-project-manager-delete-project'. 
+                            " 
+                            (interactive)
+                            (org-project-manager-refresh)
+                            (let* ((nickname (or nickname (read-string "Project name (short) ")))
+                                   category)
+                              ;; check if nickname exists 
+                              (while (assoc nickname org-project-manager-project-alist)
+                                (setq nickname
+                                      (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
+                              (setq category (or category (completing-read "Category: " (org-project-manager-parse-categories) nil nil)))
+                              ;; a local capture command places the new project
+                              (let ((org-capture-templates
+                                     `(("p" "Project" plain
+                                      (file+headline org-project-manager ,category)
+                                      ,(concat (make-string org-project-manager-project-level (string-to-char "*"))
+                                               " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
+                                               nickname
+                                               "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
+                                    (org-capture-bookmark nil))
+                                (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-project-manager-complete-property)) nil 'local)
+                                (add-hook 'org-capture-after-finalize-hook `(lambda () (org-project-manager-create-project ,nickname 'ask)) nil 'local)
+                                ;;(add-hook 'org-capture-mode-hook 'org-project-manager-show-properties nil 'local)
+                                (org-capture nil "p")
+                                )))
+    (defun org-project-manager-complete-property ()
+    (interactive)
+    (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+        (cond ((string= (downcase curprop) "index")
+              (insert (read-file-name (concat "Set " curprop ": "))))
+              ((string= (downcase curprop) "location")
+              (insert (read-directory-name (concat "Set " curprop ": ")))))))
+  
+  (defun org-project-manager-delete-project (&optional project)
+                                  (interactive)
+                                  (let* ((pro (or project org-project-manager-select-project))
+                                         (dir (org-project-manager-get-location pro))
+                                         (git (org-project-manager-get-git pro))
+                                         (index (org-project-manager-get-location pro)))
+                                    (pop-to-buffer "*Org-project-files*")
+                                    (erase-buffer)
+                                    (insert index "\n" dir "\n" git "\n")
+                                    (when (yes-or-no-p (concat "Really remove project " pro "?")))))
 #+END_SRC
 
 ** The project manager
@@ -437,7 +454,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
             (erase-buffer)
             (insert (car pro) "\n------------------------------\n")
             (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
-            (other-window -1)))
+            (other-window 1)))
         
 (defun org-project-manager-forward-project ()
       (interactive)
@@ -463,6 +480,10 @@ If UPDATE is non-nil first parse the file org-project-manager."
 ** COMMENT Git control
    
 #+BEGIN_SRC emacs-lisp :export code 
+
+(defvar org-project-manager-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
+If non-nil, git is controlled on per project basis using properties set in `org-project-manager'.")
+
   (defun org-project-manager-git-p (dir)
    "Test if directory DIR is under git control."
    (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
@@ -556,6 +577,74 @@ If UPDATE is non-nil first parse the file org-project-manager."
       ")
 #+END_SRC   
 
+** Window configuration
+
+Lets give workgroups a try (see http://www.emacswiki.org/emacs/WorkgroupsForWindows).
+
+#+BEGIN_SRC  emacs-lisp :export code
+
+(defvar org-project-manager-use-wg t "Whether to use wg to store and re-store window configurations. Set to nil to completely disable wg.
+If non-nil, wg is controlled on per project basis using properties set in `org-project-manager'.")
+
+
+(defvar org-project-manager-wg-file
+ (concat (file-name-as-directory org-project-manager-default-directory) "org-project-manager-window-config.save")
+"Where the org-project-manager saves window-configurations.")
+
+;;(defun org-project-manager-wg-load ()
+;; "Load saved window configurations"
+;; (wg-load org-project-manager-wg-file))
+
+(defun org-project-manager-wg-load ()
+ (interactive)
+ (if (file-exists-p org-project-manager-wg-file)
+ (wg-load org-project-manager-wg-file)))
+
+(defun org-project-manager-wg-save ()
+ (interactive)
+ (wg-save org-project-manager-wg-file))
+
+(defun org-project-manager-wg-create (&optional project)
+  "Create and add a new workgroup named PROJECT.
+If this already exists return nil, otherwise
+create a new workgroup from the current window configuration via
+wg-create-workgroup."
+  (interactive)
+  (let* ((wg-file org-project-manager-wg-file)
+         (pro (or project org-project-manager-current-project))
+         (op-wg-list wg-list))
+        ;; (op-wg-list (progn (org-project-manager-wg-load) wg-list)))
+   (if (not pro)
+    (message "Currently no project set")
+    (if (member (car pro) (mapcar 'wg-name op-wg-list))
+      (message "Project \"%s\" already has a window configuration." (car pro))
+    (wg-create-workgroup (car pro))
+  (wg-save wg-file)))))
+
+(defun org-project-manager-wg-update (&optional project)
+  (interactive)
+ (unless wg-list
+  (org-project-manager-wg-load))
+  (let* ((pro (or project org-project-manager-current-project))
+         (pwg (if pro (wg-get-workgroup 'name (car pro) 'quiet))))
+    (if (not pwg)
+	(message "Project \"%s\" has no window configuration." (car pro))
+          (wg-update-workgroup (wg-current-workgroup))
+	  (org-project-manager-wg-save))))
+
+(defun org-project-manager-wg-find (project)
+ (unless wg-list
+   (org-project-manager-wg-load))
+ (let* ((pro (car project))
+       (pwg (wg-get-workgroup 'name pro 'quiet)))
+  (when pwg
+      (condition-case nil
+      (wg-switch-to-workgroup pwg)
+        (error (progn (message
+                       "Already on window configuration for %s" pro)
+                      nil)))
+      (message (concat "Current project "  pro " loaded")))))   
+#+END_SRC
 ** Hacking deft
 
 #+BEGIN_SRC  emacs-lisp :export code
@@ -622,12 +711,13 @@ the active status of projects."
 IDEA: let the current project appear in the frame title or in the mode line
 
 #+BEGIN_SRC emacs-lisp :export code
-(defun org-project-manager-activate-project (project)
- "Sets the current project.
-Start git, if the project is under git control, and git is not up and running yet."
-  (setq org-project-manager-current-project project)
-  ;; maybe activate git control
-  (org-project-manager-git-update-project project 'before))
+  (defun org-project-manager-activate-project (project)
+   "Sets the current project.
+  Start git, if the project is under git control, and git is not up and running yet."
+    (setq org-project-manager-current-project project)
+    ;; maybe activate git control
+    (when org-project-manager-use-git 
+      (org-project-manager-git-update-project project 'before)))
 #+END_SRC
     
 *** Saving the current project
@@ -640,64 +730,67 @@ Start git, if the project is under git control, and git is not up and running ye
     (when (and (object-p org-project-manager-save-buffers)
                (functionp org-project-manager-save-buffers))
       (funcall org-project-manager-save-buffers))
-    (let* ((pro (or project
-                    org-project-manager-current-project)))
-      (org-project-manager-git-update-project pro nil)))
+    (let* ((pro (or project org-project-manager-current-project)))
+       (when org-project-manager-use-git 
+      (org-project-manager-git-update-project pro nil))))
 #+END_SRC    
     
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-    (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
-              switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
-              Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
-              to always prompt for new project")
-    
-  (defun org-project-manager-switch-to-project (&optional force)
-        "Select project via 'org-project-manager-select-project', activate it
-      via 'org-project-manager-activate-project',  find the associated index file."
-                  (interactive "P")
-                  (let ((change (or force
-                                      org-project-manager-switch-always
-                                     (and (eq last-command 'org-project-manager-switch-to-project))
-                                    (not org-project-manager-current-project)))
-                        (curpro org-project-manager-current-project))
-                    (if (not change)
-                        (let ((index (org-project-manager-get-index org-project-manager-current-project)))
-                          (find-file index)
-                        (message "Press the same key again to switch project"))
-                    (let ((pro (org-project-manager-select-project)))
-                      (unless (eq pro curpro)
-                        (org-project-manager-save-project curpro)
-                        (org-project-manager-activate-project pro))
-                      (find-file (org-project-manager-get-index
-                                  org-project-manager-current-project))))))
-                
-    (defun org-project-manager-get (project el)
-     (cdr (assoc el (cadr project))))
-                
-    (defun org-project-manager-get-index (project)
-      (cdr (assoc "index" (cadr project))))
-    
-    (defun org-project-manager-get-git (project)
-      (or (cdr (assoc "git" (cadr project))) ""))
-    
-    (defun org-project-manager-get-git-location (project)
-      (or (cdr (assoc "git-location" (cadr project)))
-          (org-project-manager-get-location project)))
+      (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
+                switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
+                Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
+                to always prompt for new project")
+      
+    (defun org-project-manager-switch-to-project (&optional force)
+          "Select project via 'org-project-manager-select-project', activate it
+        via 'org-project-manager-activate-project',  find the associated index file."
+                    (interactive "P")
+                    (let ((change (or force
+                                        org-project-manager-switch-always
+                                       (and (eq last-command 'org-project-manager-switch-to-project))
+                                      (not org-project-manager-current-project)))
+                          (curpro org-project-manager-current-project))
+                      (if (not change)
+                          (let ((index (org-project-manager-get-index org-project-manager-current-project)))
+                            (find-file index)
+                          (message "Press the same key again to switch project"))
+                      (let ((pro (org-project-manager-select-project)))
+                        (unless (eq pro curpro)
+                          (org-project-manager-save-project curpro)
+                          (org-project-manager-activate-project pro))
+                        (org-project-manager-find-project pro)))))
   
-  (defun org-project-manager-get-location (project)
-    (let ((loc (cdr (assoc "location" (cadr project)))))
-      (if loc 
-          (concat (file-name-as-directory
-                   loc)
-                  (car project)))))
+(defun org-project-manager-find-project (project)
+   (unless (and org-project-manager-use-wg (org-project-manager-wg-find project))
+       (find-file (org-project-manager-get-index project))))
+                  
+      (defun org-project-manager-get (project el)
+       (cdr (assoc el (cadr project))))
+                  
+      (defun org-project-manager-get-index (project)
+        (cdr (assoc "index" (cadr project))))
+      
+      (defun org-project-manager-get-git (project)
+        (or (cdr (assoc "git" (cadr project))) ""))
+      
+      (defun org-project-manager-get-git-location (project)
+        (or (cdr (assoc "git-location" (cadr project)))
+            (org-project-manager-get-location project)))
     
-    (defun org-project-manager-get-publish-directory (project)
-      (cdr (assoc "publish-directory" (cadr project))))
-    
-    (defun org-project-manager-get-category (project)
-      (cdr (assoc "category" (cadr project))))
+    (defun org-project-manager-get-location (project)
+      (let ((loc (cdr (assoc "location" (cadr project)))))
+        (if loc 
+            (concat (file-name-as-directory
+                     loc)
+                    (car project)))))
+      
+      (defun org-project-manager-get-publish-directory (project)
+        (cdr (assoc "publish-directory" (cadr project))))
+      
+      (defun org-project-manager-get-category (project)
+        (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
