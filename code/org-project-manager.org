@@ -583,7 +583,7 @@ Lets give workgroups a try (see http://www.emacswiki.org/emacs/WorkgroupsForWind
 
 #+BEGIN_SRC  emacs-lisp :export code
 
-(defvar org-project-manager-use-wg t "Whether to use wg to store and re-store window configurations. Set to nil to completely disable wg.
+(defvar org-project-manager-use-wg nil "Whether to use wg to store and re-store window configurations. Set to nil to completely disable wg.
 If non-nil, wg is controlled on per project basis using properties set in `org-project-manager'.")
 
 
