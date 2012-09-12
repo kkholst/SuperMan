@@ -260,7 +260,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
  (interactive "P")
  (if update
  (org-project-manager-refresh))
- (delq nil (mapcar '(lambda (x)
+ (delete-dups (delq nil (mapcar '(lambda (x)
  (let ((f (org-project-manager-get-index x)))
        (when (and (or not-exist-ok (file-exists-p f))
                 (or (not extension)
@@ -270,7 +270,7 @@ If UPDATE is non-nil first parse the file org-project-manager."
       (delq nil (mapcar '(lambda (p) (if (string= category (org-project-manager-get-category p))
                            p))
                         org-project-manager-project-alist))
-  org-project-manager-project-alist))))
+  org-project-manager-project-alist)))))
 #+END_SRC
 
 *** The profile of a single project
