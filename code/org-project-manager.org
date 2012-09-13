@@ -715,7 +715,7 @@ IDEA: let the current project appear in the frame title or in the mode line
 (defun org-project-manager-find-project (project)
           (let* ((index (org-project-manager-get-index project))
                 (location (org-project-manager-get-location project))
-                (org-files (org-project-manager-list-files location "\\.org$"))
+                (org-files (org-project-manager-list-files location "^[^\\.].*\\.org$"))
                 (org-agenda-sticky t) ;; to enable multiple agenda buffers
                 (split-width-threshold nil) ;; to control vertical/horizontal splitting 
                 (org-agenda-window-setup 'current-window)
