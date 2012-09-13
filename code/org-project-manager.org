@@ -684,74 +684,82 @@ IDEA: let the current project appear in the frame title or in the mode line
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-              (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
-                        switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
-                        Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
-                        to always prompt for new project")
-              
-            (defun org-project-manager-switch-to-project (&optional force)
-                  "Select project via 'org-project-manager-select-project', activate it
-                via 'org-project-manager-activate-project',  find the associated index file."
-                            (interactive "P")
-                            (let ((change (or force
-                                                org-project-manager-switch-always
-                                               (and (eq last-command 'org-project-manager-switch-to-project))
-                                              (not org-project-manager-current-project)))
-                                  (curpro org-project-manager-current-project))
-                              (if (not change)
-                                  (let ((index (org-project-manager-get-index org-project-manager-current-project)))
-                                    (find-file index)
-                                  (message "Press the same key again to switch project"))
-                              (let ((pro (org-project-manager-select-project)))
-                                (unless (eq pro curpro)
-                                  (org-project-manager-save-project curpro)
-                                  (org-project-manager-activate-project pro))
-                                (org-project-manager-find-project pro)))))
-          
-  (defun org-project-manager-find-project (project)
-      (let ((index (org-project-manager-get-index project))
+                (defvar org-project-manager-switch-always t "If nil 'org-project-manager-switch-to-project' will
+                          switch to current project unless the last command also was 'org-project-manager-switch-to-project'.
+                          Setting this variable to non-nil (the default) will force 'org-project-manager-switch-to-project'
+                          to always prompt for new project")
+                
+              (defun org-project-manager-switch-to-project (&optional force)
+                    "Select project via 'org-project-manager-select-project', activate it
+                  via 'org-project-manager-activate-project',  find the associated index file."
+                              (interactive "P")
+                              (let ((change (or force
+                                                  org-project-manager-switch-always
+                                                 (and (eq last-command 'org-project-manager-switch-to-project))
+                                                (not org-project-manager-current-project)))
+                                    (curpro org-project-manager-current-project))
+                                (if (not change)
+                                    (let ((index (org-project-manager-get-index org-project-manager-current-project)))
+                                      (find-file index)
+                                    (message "Press the same key again to switch project"))
+                                (let ((pro (org-project-manager-select-project)))
+                                  (unless (eq pro curpro)
+                                    (org-project-manager-save-project curpro)
+                                    (org-project-manager-activate-project pro))
+                                  (org-project-manager-find-project pro)))))
+
+(defun org-project-manager-list-files (dir ext)
+  (mapcar 'file-list-make-file-name
+	  (file-list-select-internal nil ext nil nil dir nil 'dont)))
+(defun org-project-manager-find-project (project)
+      (let* ((index (org-project-manager-get-index project))
             (location (org-project-manager-get-location project))
-    ;;        (agenda (org-project-manager-get-agenda project))
-    (org-agenda-custom-commands
-          `(("x" "Project agenda"
-             ((todo "TODO"  ((org-agenda-files `(,index)))))))))
+	    (org-files (org-project-manager-list-files location "\\.org$"))
+	    (split-width-threshold nil) ;; to control vertical/horizontal splitting 
+	    (org-agenda-custom-commands
+	     `(("A" "Project agenda"
+		((todo "TODO"  ((org-agenda-files
+				 (append `(,index) org-files)))))))))
     (delete-other-windows)
-    (if index (find-file index))
-   (push ?x unread-command-events)
-   (call-interactively 'org-agenda)
-   (org-agenda-redo)
-   (split-window-horizontally)
+    (when index (find-file index)
+  (push ?L unread-command-events)
+	  (call-interactively 'org-agenda))
+    (push ?A unread-command-events)
+    (call-interactively 'org-agenda)
+    (org-agenda-redo)
+    (split-window-horizontally)
     (other-window 1)
     (if location (find-file location))
   ;;  (split-window-vertically)
    (other-window 1)
-))
-                          
-  (defun org-project-manager-get (project el)
-               (cdr (assoc el (cadr project))))
-                          
-              (defun org-project-manager-get-index (project)
-                (cdr (assoc "index" (cadr project))))
+  (split-window-horizontally)
+  (find-file index)))
+                            
+    (defun org-project-manager-get (project el)
+                 (cdr (assoc el (cadr project))))
+                            
+                (defun org-project-manager-get-index (project)
+                  (cdr (assoc "index" (cadr project))))
+                
+                (defun org-project-manager-get-git (project)
+                  (or (cdr (assoc "git" (cadr project))) ""))
+                
+                (defun org-project-manager-get-git-location (project)
+                  (or (cdr (assoc "git-location" (cadr project)))
+                      (org-project-manager-get-location project)))
               
-              (defun org-project-manager-get-git (project)
-                (or (cdr (assoc "git" (cadr project))) ""))
-              
-              (defun org-project-manager-get-git-location (project)
-                (or (cdr (assoc "git-location" (cadr project)))
-                    (org-project-manager-get-location project)))
-            
-            (defun org-project-manager-get-location (project)
-              (let ((loc (cdr (assoc "location" (cadr project)))))
-                (if loc 
-                    (concat (file-name-as-directory
-                             loc)
-                            (car project)))))
-              
-              (defun org-project-manager-get-publish-directory (project)
-                (cdr (assoc "publish-directory" (cadr project))))
-              
-              (defun org-project-manager-get-category (project)
-                (cdr (assoc "category" (cadr project))))
+              (defun org-project-manager-get-location (project)
+                (let ((loc (cdr (assoc "location" (cadr project)))))
+                  (if loc 
+                      (concat (file-name-as-directory
+                               loc)
+                              (car project)))))
+                
+                (defun org-project-manager-get-publish-directory (project)
+                  (cdr (assoc "publish-directory" (cadr project))))
+                
+                (defun org-project-manager-get-category (project)
+                  (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
