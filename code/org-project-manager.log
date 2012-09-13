@@ -1,17 +1,12 @@
-This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.15)  7 SEP 2012 10:46
+This is pdfTeX, Version 3.1415926-1.40.10 (TeX Live 2009/Debian) (format=pdflatex 2012.2.14)  12 SEP 2012 22:15
 entering extended mode
  %&-line parsing enabled.
 **org-project-manager.tex
 (./org-project-manager.tex
 LaTeX2e <2009/09/24>
 Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
-yphenation, farsi, arabic, croatian, bulgarian, ukrainian, russian, czech, slov
-ak, danish, dutch, finnish, french, basque, ngerman, german, german-x-2009-06-1
-9, ngerman-x-2009-06-19, ibycus, monogreek, greek, ancientgreek, hungarian, san
-skrit, italian, latin, latvian, lithuanian, mongolian2a, mongolian, bokmal, nyn
-orsk, romanian, irish, coptic, serbian, turkish, welsh, esperanto, uppersorbian
-, estonian, indonesian, interlingua, icelandic, kurmanji, slovenian, polish, po
-rtuguese, spanish, galician, catalan, swedish, ukenglish, pinyin, loaded.
+yphenation, ngerman, german, german-x-2009-06-19, ngerman-x-2009-06-19, loaded.
+
 (/usr/share/texmf-texlive/tex/latex/base/article.cls
 Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
 (/usr/share/texmf-texlive/tex/latex/base/size11.clo
@@ -810,23 +805,21 @@ File: umsb.fd 2009/06/22 v3.00 AMS symbols B
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}] (./org-project-manager.aux
 ) ) 
 Here is how much of TeX's memory you used:
- 8650 strings out of 493848
- 117525 string characters out of 1152823
- 192875 words of memory out of 3000000
- 11740 multiletter control sequences out of 15000+50000
- 16784 words of font info for 49 fonts, out of 3000000 for 9000
- 714 hyphenation exceptions out of 8191
- 41i,5n,36p,279b,292s stack positions out of 5000i,500n,10000p,200000b,50000s
-{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}</usr/share/texmf
-/fonts/type1/public/cm-super/sfss0800.pfb></usr/share/texmf/fonts/type1/public/
-cm-super/sfss1095.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfss1200.pf
-b></usr/share/texmf/fonts/type1/public/cm-super/sfss1728.pfb></usr/share/texmf/
-fonts/type1/public/cm-super/sfsx1095.pfb></usr/share/texmf/fonts/type1/public/c
-m-super/sfsx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfsx1440.pfb
->
-Output written on org-project-manager.pdf (1 page, 90915 bytes).
+ 8624 strings out of 495021
+ 117202 string characters out of 1181035
+ 188683 words of memory out of 3000000
+ 11639 multiletter control sequences out of 15000+50000
+ 13697 words of font info for 45 fonts, out of 3000000 for 9000
+ 28 hyphenation exceptions out of 8191
+ 41i,5n,35p,279b,292s stack positions out of 5000i,500n,10000p,200000b,50000s
+ </localhome/ifsv/grb615/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecss1095.600
+pk> </localhome/ifsv/grb615/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecss0800.600
+pk> </localhome/ifsv/grb615/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecss1200.600
+pk> </localhome/ifsv/grb615/.texmf-var/fonts/pk/ljfour/jknappen/ec/ecss1728.600
+pk>
+Output written on org-project-manager.pdf (1 page, 29943 bytes).
 PDF statistics:
- 65 PDF objects out of 1000 (max. 8388607)
- 7 named destinations out of 1000 (max. 500000)
- 41 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 108 PDF objects out of 1000 (max. 8388607)
+ 2 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
