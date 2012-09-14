@@ -795,11 +795,11 @@ IDEA: let the current project appear in the frame title or in the mode line
                    (tmplist (if (require 'file-list nil t)
                                 (file-list-select-internal nil org-pman-human-readable-ext nil nil loc nil 'dont)))
                    (tmplist2 (when tmplist
-                               (file-list-select-internal tmplist "auto" nil "path" 'inverse)))
+                               (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
                    (flist (when tmplist2
                             nil
                             (file-list-sort-internal
-                               tmplist
+                               tmplist2
                                "time" nil t))))
               (when flist
                 (when (car flist)
