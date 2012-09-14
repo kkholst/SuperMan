@@ -1,4 +1,4 @@
-% Created 2012-09-14 Fri 09:40
+% Created 2012-09-14 Fri 11:04
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -90,12 +90,6 @@ until this is explained below.
 
 
     
-
-\lstset{language=Lisp}
-\begin{lstlisting}
-(setq org-pman-file "~/projects/manager.org")
-(find-file org-pman-file)
-\end{lstlisting}
 \begin{itemize}
 
 \item What is a project?\\
@@ -117,9 +111,14 @@ Projects are defined in the file \emph{org-pman-file}
 * Cat 1
 ** Subcat 1
 *** Subsubcat 1
-**** My first project
+**** Learning org (My first org-pman project)
+:PROPERTIES:
+:NICKNAME: howto-org
+:INDEX:  ~/knowhow/howto.org
+:LOCATION: ~/knowhow/
+:OTHERS: justme
+:END:
 \end{lstlisting}
-
 
 \end{itemize} % ends low level
 \subsection{Git support}

@@ -99,6 +99,13 @@ Projects are defined in the file /org-pman-file/
 :LOCATION: ~/knowhow/
 :OTHERS: justme
 :END:     
+**** Test org-pman
+:PROPERTIES:
+:NICKNAME: howto-org
+:INDEX:  ~/knowhow/howto.org
+:LOCATION: ~/knowhow/
+:OTHERS: Alphonse Quack
+:END:     
 #+END_SRC
 
 ** Git support
@@ -713,100 +720,118 @@ IDEA: let the current project appear in the frame title or in the mode line
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-    (defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
-                                    switch to current project unless the last command also was 'org-pman-switch-to-project'.
-                                    Setting this variable to non-nil (the default) will force 'org-pman-switch-to-project'
-                                    to always prompt for new project")
-                          
-    (defun org-pman-switch-to-project (&optional force)
-                              "Select project via 'org-pman-select-project', activate it
-                            via 'org-pman-activate-project',  find the associated index file."
-                                        (interactive "P")
-                                        (let ((change (or force
-                                                            org-pman-switch-always
-                                                           (and (eq last-command 'org-pman-switch-to-project))
-                                                          (not org-pman-current-project)))
-                                              (curpro org-pman-current-project))
-                                          (if (not change)
-                                              (let ((index (org-pman-get-index org-pman-current-project)))
-                                                (find-file index)
-                                              (message "Press the same key again to switch project"))
-                                          (let ((pro (org-pman-select-project)))
-                                            (unless (eq pro curpro)
-                                              (org-pman-save-project curpro)
-                                              (org-pman-activate-project pro))
-                                            (org-pman-find-project pro)))))
-          
-    (defun org-pman-list-files (dir ext)
-      (if (require 'file-list nil t)
-            (mapcar 'file-list-make-file-name
-                    (file-list-select-internal nil ext nil nil dir nil 'dont))
-        (directory-files dir nil ext t)))
-        
-    (defun org-pman-find-project (project)
-      (let* ((index (org-pman-get-index project))
-             (location (concat (org-pman-get-location project) (car project)))
-             (org-files (org-pman-list-files location "^[^\\.].*\\.org$"))
-             (org-agenda-sticky t) ;; to enable multiple agenda buffers
-             (split-width-threshold nil) ;; to control vertical/horizontal splitting 
-             (org-agenda-window-setup 'current-window)
-             (org-agenda-custom-commands
-              `(("A" "Project agenda"
-                 ((todo "TODO"  ((org-agenda-files
-                                  (append `(,index) org-files)))))))))
-        (delete-other-windows)
-        ;; index
-        (find-file index)
-        (split-window-vertically)
-        (split-window-horizontally)
-        (other-window -1)
-        (split-window-horizontally)
-        (other-window 3)
-        ;; agenda 
-        (setq org-agenda-sticky t)
-        (push ?A unread-command-events)
-        (call-interactively 'org-agenda)
-        (org-agenda-redo)
-        ;; timeline
-        (other-window 1)
-        (setq org-agenda-sticky nil)
-        (org-timeline 'yeah)
-        (other-window 1)
-        ;; dired
-        (find-file location)
-        (other-window 1)))
+            (defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
+                                            switch to current project unless the last command also was 'org-pman-switch-to-project'.
+                                            Setting this variable to non-nil (the default) will force 'org-pman-switch-to-project'
+                                            to always prompt for new project")
+                                  
+            (defun org-pman-switch-to-project (&optional force)
+                                      "Select project via 'org-pman-select-project', activate it
+                                    via 'org-pman-activate-project',  find the associated index file."
+                                                (interactive "P")
+                                                (let ((change (or force
+                                                                    org-pman-switch-always
+                                                                   (and (eq last-command 'org-pman-switch-to-project))
+                                                                  (not org-pman-current-project)))
+                                                      (curpro org-pman-current-project))
+                                                  (if (not change)
+                                                      (let ((index (org-pman-get-index org-pman-current-project)))
+                                                        (find-file index)
+                                                      (message "Press the same key again to switch project"))
+                                                  (let ((pro (org-pman-select-project)))
+                                                    (unless (eq pro curpro)
+                                                      (org-pman-save-project curpro)
+                                                      (org-pman-activate-project pro))
+                                                    (org-pman-find-project pro)))))
+                  
+            (defun org-pman-list-files (dir ext)
+              (if (require 'file-list nil t)
+                    (mapcar 'file-list-make-file-name
+                            (file-list-select-internal nil ext nil nil dir nil 'dont))
+                (directory-files dir nil ext t)))
   
-  (defun org-pman-find-recent (&optional project action)
-    (interactive)
-    (let* ((pro (or project org-pman-current-project (org-pman-select-project)))
-           (loc (org-pman-get-location)))))
-          
-    (defun org-pman-get (project el)
-                           (cdr (assoc el (cadr project))))
-                                      
-    (defun org-pman-get-index (project)
-                            (cdr (assoc "index" (cadr project))))
-                          
-    (defun org-pman-get-git (project)
-                            (or (cdr (assoc "git" (cadr project))) ""))
-                          
-    (defun org-pman-get-git-location (project)
-                            (or (cdr (assoc "git-location" (cadr project)))
-                                (concat (org-pman-get-location project) (car project))))
-                        
-(defun org-pman-get-location (project)
-      "Get the directory associated with PROJECT."
- (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-;;                (if loc 
-;;                                (concat (file-name-as-directory loc)
-;;                                        (car project)))))
-                          
-    (defun org-pman-get-publish-directory (project)
-                            (cdr (assoc "publish-directory" (cadr project))))
-                          
-    (defun org-pman-get-category (project)
-                            (cdr (assoc "category" (cadr project))))
+  (defun org-pman-layout (&optional pos)
+    (delete-other-windows)
+    (split-window-vertically)
+    (split-window-horizontally)
+    (other-window -1)
+    (split-window-horizontally)
+    (other-window 2)
+    (other-window (or pos 0)))
+                
+            (defun org-pman-find-project (project)
+              (let* ((index (org-pman-get-index project))
+                     (location (concat (org-pman-get-location project) (car project)))
+                     (org-files (org-pman-list-files location "^[^\\.].*\\.org$"))
+                     (org-agenda-sticky t) ;; to enable multiple agenda buffers
+                     (split-width-threshold nil) ;; to control vertical/horizontal splitting 
+                     (org-agenda-window-setup 'current-window)
+                     (org-agenda-custom-commands
+                      `(("A" "Project agenda"
+                         ((todo "TODO"  ((org-agenda-files
+                                          (append `(,index) org-files)))))))))
+                ;; index
+                (find-file index)
+                (org-pman-layout 1)
+                ;; agenda 
+                (setq org-agenda-sticky t)
+                (push ?A unread-command-events)
+                (call-interactively 'org-agenda)
+                (org-agenda-redo)
+                ;; timeline
+                (other-window 1)
+                (setq org-agenda-sticky nil)
+                (org-timeline 'yeah)
+                (other-window 1)
+                ;; dired
+                (find-file location)
+                (other-window 1)))
+      
+      (defvar org-pman-human-readable-ext "\\.org$\\|\\.[rR]$\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
+(defun org-pman-open-recent (&optional project action)
+          (interactive)
+          (let* ((pro (or project org-pman-current-project (org-pman-select-project)))
+                 (loc (concat (org-pman-get-location pro) (car pro)))
+                 (flist (if (require 'file-list nil t)
+                            (file-list-sort-internal 
+                             (file-list-select-internal nil org-pman-human-readable-ext nil nil loc nil 'dont)
+                             "time" nil t))))
+            (find-file (file-list-make-file-name (car flist)))
+            (setq flist (cdr flist))
+            (org-pman-layout 1)
+            (find-file (file-list-make-file-name (car flist)))
+            (setq flist (cdr flist))
+            (other-window 1)
+            (find-file (file-list-make-file-name (car flist)))
+            (setq flist (cdr flist))
+            (other-window 1)
+            (find-file (file-list-make-file-name (car flist)))))                  
+      (defun org-pman-get (project el)
+                                   (cdr (assoc el (cadr project))))
+                                              
+       (defun org-pman-get-index (project)
+                                    (cdr (assoc "index" (cadr project))))
+                                  
+            (defun org-pman-get-git (project)
+                                    (or (cdr (assoc "git" (cadr project))) ""))
+                                  
+            (defun org-pman-get-git-location (project)
+                                    (or (cdr (assoc "git-location" (cadr project)))
+                                        (concat (org-pman-get-location project) (car project))))
+                                
+        (defun org-pman-get-location (project)
+              "Get the directory associated with PROJECT."
+         (file-name-as-directory (cdr (assoc "location" (cadr project)))))
+        ;;  (let ((loc (cdr (assoc "location" (cadr project)))))
+        ;;                (if loc 
+        ;;                                (concat (file-name-as-directory loc)
+        ;;                                        (car project)))))
+                                  
+            (defun org-pman-get-publish-directory (project)
+                                    (cdr (assoc "publish-directory" (cadr project))))
+                                  
+            (defun org-pman-get-category (project)
+                                    (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
