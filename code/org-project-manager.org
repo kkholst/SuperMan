@@ -62,10 +62,22 @@ for applied statistical workflows based on the fabulous and popular
 emacs =org-mode=. Really it describes and automates one out of many
 possibilities to customize =org-mode=.
 
-** Set up 
+** Getting started
 
-The first thing to do is to define some (new) projects (see a later
-section for how to incorporate your existing projects).
+The first thing to do is to define some new projects. Obviously, you
+would rather read in your existing projects. But stay cool and read on
+until this is explained below.
+
+*** What is a project?
+    
+As in real life an org-pman project can be many different things. The
+prototype project consists of a /location/, that is a directory on
+your computer, and an index file. (Actually, only one of /index/ and
+/location/ is required.)
+
+*** How to define a project?
+
+Projects are defined in the org-pman-file 
 
 #+BEGIN_SRC org
 
@@ -101,7 +113,7 @@ pair:  https://help.github.com/articles/generating-ssh-keys
 *** The project manager file   
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pman-default-directory (file-name-as-directory org-directory) "A place for new projects.")
-(defvar org-pman (concat
+(defvar org-pman-file (concat
                                (file-name-as-directory org-directory)
                                          "Projects.org")
   "Where the org-pman defines the projects. See the manual
@@ -110,8 +122,7 @@ for structure and syntax.")
 
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pman-project-level 4
-"Subheading level at which projects are defined
-in `org-pman'.")
+"Subheading level at which projects are defined in `org-pman-file'.")
 #+END_SRC
 
 The project manager is in org-mode (major-mode). To change specific
@@ -119,33 +130,33 @@ keystrokes only in this file, the current solution is to put
 a minor-mode on top of it.
     
 #+BEGIN_SRC emacs-lisp :export code
-(defvar org-pman-minor-mode nil)
-  (make-variable-buffer-local 'org-pman-minor-mode)
-(defvar org-pman-minor-mode-map (make-sparse-keymap)
-    "Keymap used for `org-pman-minor-mode' commands.")
-  (or (assq 'org-pman-minor-mode minor-mode-map-alist)
-      (setq minor-mode-map-alist
-            (append minor-mode-map-alist
-                    (list (cons 'org-pman-minor-mode org-pman-minor-mode-map)))))
-  (or (assq 'org-pman-minor-mode minor-mode-alist)
-      (setq minor-mode-alist
-            (cons '(org-pman-minor-mode " Project") minor-mode-alist)))
-(defun org-pman-minor-mode (&optional arg)
-    "A minor mode for using org Project Manager."
-    (interactive "P")
-    ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-    (setq org-pman-minor-mode
-          (not (or (and (null arg) org-pman-minor-mode)
-                   (<= (prefix-numeric-value arg) 0))))
-    (add-hook 'after-save-hook 'org-pman-refresh nil 'local))
-  (define-key org-pman-minor-mode-map [(meta return)] 'org-pman-return)
-  (define-key org-pman-minor-mode-map [(meta n)] 'org-pman-next-project)
-  (define-key org-pman-minor-mode-map [(meta p)] 'org-pman-previous-project)
-  (add-hook 'find-file-hooks 
-            (lambda ()
-              (let ((file (buffer-file-name)))
-                (when (and file (equal file (expand-file-name org-pman)))
-                  (org-pman-minor-mode)))))
+  (defvar org-pman-minor-mode nil)
+    (make-variable-buffer-local 'org-pman-minor-mode)
+  (defvar org-pman-minor-mode-map (make-sparse-keymap)
+      "Keymap used for `org-pman-minor-mode' commands.")
+    (or (assq 'org-pman-minor-mode minor-mode-map-alist)
+        (setq minor-mode-map-alist
+              (append minor-mode-map-alist
+                      (list (cons 'org-pman-minor-mode org-pman-minor-mode-map)))))
+    (or (assq 'org-pman-minor-mode minor-mode-alist)
+        (setq minor-mode-alist
+              (cons '(org-pman-minor-mode " Project") minor-mode-alist)))
+  (defun org-pman-minor-mode (&optional arg)
+      "A minor mode for using org Project Manager."
+      (interactive "P")
+      ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
+      (setq org-pman-minor-mode
+            (not (or (and (null arg) org-pman-minor-mode)
+                     (<= (prefix-numeric-value arg) 0))))
+      (add-hook 'after-save-hook 'org-pman-refresh nil 'local))
+    (define-key org-pman-minor-mode-map [(meta return)] 'org-pman-return)
+    (define-key org-pman-minor-mode-map [(meta n)] 'org-pman-next-project)
+    (define-key org-pman-minor-mode-map [(meta p)] 'org-pman-previous-project)
+    (add-hook 'find-file-hooks 
+              (lambda ()
+                (let ((file (buffer-file-name)))
+                  (when (and file (equal file (expand-file-name org-pman-file)))
+                    (org-pman-minor-mode)))))
 #+END_SRC
    
 *** Dynamically updating lists 
@@ -163,7 +174,7 @@ a minor-mode on top of it.
              (interactive)
              (save-excursion
                (setq org-pman-project-alist nil)
-               (set-buffer (find-file-noselect org-pman))
+               (set-buffer (find-file-noselect org-pman-file))
                (save-buffer)
                (goto-char (point-min))
                (while (org-pman-forward-project)
@@ -210,7 +221,7 @@ a minor-mode on top of it.
         
   (defun org-pman-parse-categories ()
           (interactive)
-            (set-buffer (find-file-noselect org-pman))
+            (set-buffer (find-file-noselect org-pman-file))
             (setq org-pman-project-categories
                   (reverse (org-pman-get-buffer-props "CATEGORY"))))
       
@@ -299,7 +310,8 @@ If UPDATE is non-nil first parse the file org-pman."
 #+END_SRC
 
 ** Adding new projects
-**** TODO The structure template approach
+**** The structure template approach
+     CLOSED: [2012-09-14 Fri 09:01]
 #+BEGIN_SRC emacs-lisp :export code     
 (add-to-list 'org-structure-template-alist
  '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
@@ -324,7 +336,7 @@ If UPDATE is non-nil first parse the file org-pman."
 	  (make-directory dir)
 	  (loop for subdir in org-pman-project-subdirectories
 		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-	(find-file org-pman)
+	(find-file org-pman-file)
 	(goto-char (point-min))
 	(re-search-forward (concat (make-string org-pman-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
 ;;          (when (and index (not (file-exists-p index)))
@@ -364,7 +376,7 @@ If UPDATE is non-nil first parse the file org-pman."
                               ;; a local capture command places the new project
                               (let ((org-capture-templates
                                      `(("p" "Project" plain
-                                      (file+headline org-pman ,category)
+                                      (file+headline org-pman-file ,category)
                                       ,(concat (make-string org-pman-project-level (string-to-char "*"))
                                                " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
                                                nickname
@@ -399,7 +411,7 @@ If UPDATE is non-nil first parse the file org-pman."
 #+BEGIN_SRC emacs-lisp  :export code
 (defun org-pman-goto-project-manager ()
     (interactive)
-    (find-file org-pman))
+    (find-file org-pman-file))
   
 (defun org-pman-project-at-point (&optional noerror)
     "Check if point is at project heading and return the project,
@@ -610,7 +622,7 @@ wg-create-workgroup."
     "Show an agenda of all the projects. Useful, e.g. for toggling
 the active status of projects."
     (interactive)
-    (find-file org-pman)
+    (find-file org-pman-file)
     (push ?t unread-command-events)
     (push ?< unread-command-events)
     (call-interactively 'org-agenda))
@@ -684,88 +696,88 @@ IDEA: let the current project appear in the frame title or in the mode line
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-(defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
-                                switch to current project unless the last command also was 'org-pman-switch-to-project'.
-                                Setting this variable to non-nil (the default) will force 'org-pman-switch-to-project'
-                                to always prompt for new project")
-                      
-(defun org-pman-switch-to-project (&optional force)
-                          "Select project via 'org-pman-select-project', activate it
-                        via 'org-pman-activate-project',  find the associated index file."
-                                    (interactive "P")
-                                    (let ((change (or force
-                                                        org-pman-switch-always
-                                                       (and (eq last-command 'org-pman-switch-to-project))
-                                                      (not org-pman-current-project)))
-                                          (curpro org-pman-current-project))
-                                      (if (not change)
-                                          (let ((index (org-pman-get-index org-pman-current-project)))
-                                            (find-file index)
-                                          (message "Press the same key again to switch project"))
-                                      (let ((pro (org-pman-select-project)))
-                                        (unless (eq pro curpro)
-                                          (org-pman-save-project curpro)
-                                          (org-pman-activate-project pro))
-                                        (org-pman-find-project pro)))))
+  (defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
+                                  switch to current project unless the last command also was 'org-pman-switch-to-project'.
+                                  Setting this variable to non-nil (the default) will force 'org-pman-switch-to-project'
+                                  to always prompt for new project")
+                        
+  (defun org-pman-switch-to-project (&optional force)
+                            "Select project via 'org-pman-select-project', activate it
+                          via 'org-pman-activate-project',  find the associated index file."
+                                      (interactive "P")
+                                      (let ((change (or force
+                                                          org-pman-switch-always
+                                                         (and (eq last-command 'org-pman-switch-to-project))
+                                                        (not org-pman-current-project)))
+                                            (curpro org-pman-current-project))
+                                        (if (not change)
+                                            (let ((index (org-pman-get-index org-pman-current-project)))
+                                              (find-file index)
+                                            (message "Press the same key again to switch project"))
+                                        (let ((pro (org-pman-select-project)))
+                                          (unless (eq pro curpro)
+                                            (org-pman-save-project curpro)
+                                            (org-pman-activate-project pro))
+                                          (org-pman-find-project pro)))))
+        
+  (defun org-pman-list-files (dir ext)
+          (mapcar 'file-list-make-file-name
+                  (file-list-select-internal nil ext nil nil dir nil 'dont)))
       
-(defun org-pman-list-files (dir ext)
-        (mapcar 'file-list-make-file-name
-                (file-list-select-internal nil ext nil nil dir nil 'dont)))
-    
-(defun org-pman-find-project (project)
-          (let* ((index (org-pman-get-index project))
-                (location (org-pman-get-location project))
-                (org-files (org-pman-list-files location "^[^\\.].*\\.org$"))
-                (org-agenda-sticky t) ;; to enable multiple agenda buffers
-                (split-width-threshold nil) ;; to control vertical/horizontal splitting 
-                (org-agenda-window-setup 'current-window)
-                (org-agenda-custom-commands
-                 `(("A" "Project agenda"
-                    ((todo "TODO"  ((org-agenda-files
-                                     (append `(,index) org-files)))))))))
-        (delete-other-windows)
-        (find-file index)
-        (split-window-vertically)
-        (split-window-horizontally)
-        (other-window -1)
-        (split-window-horizontally)
-        (other-window 3)
-        (setq org-agenda-sticky t)
-        (push ?A unread-command-events)
-        (call-interactively 'org-agenda)
-        (org-agenda-redo)
-        (other-window 1)
-        (setq org-agenda-sticky nil)
-        (org-timeline 'yeah)
-        (other-window 1)
-        (find-file location)
-        (other-window 1)))
-      
-(defun org-pman-get (project el)
-                       (cdr (assoc el (cadr project))))
-                                  
-(defun org-pman-get-index (project)
-                        (cdr (assoc "index" (cadr project))))
+  (defun org-pman-find-project (project)
+    (let* ((index (org-pman-get-index project))
+           (location (org-pman-get-location project))
+           (org-files (org-pman-list-files location "^[^\\.].*\\.org$"))
+           (org-agenda-sticky t) ;; to enable multiple agenda buffers
+           (split-width-threshold nil) ;; to control vertical/horizontal splitting 
+           (org-agenda-window-setup 'current-window)
+           (org-agenda-custom-commands
+            `(("A" "Project agenda"
+               ((todo "TODO"  ((org-agenda-files
+                                (append `(,index) org-files)))))))))
+      (delete-other-windows)
+      (find-file index)
+      (split-window-vertically)
+      (split-window-horizontally)
+      (other-window -1)
+      (split-window-horizontally)
+      (other-window 3)
+      (setq org-agenda-sticky t)
+      (push ?A unread-command-events)
+      (call-interactively 'org-agenda)
+      (org-agenda-redo)
+      (other-window 1)
+      (setq org-agenda-sticky nil)
+      (org-timeline 'yeah)
+      (other-window 1)
+      (find-file location)
+      (other-window 1)))
+        
+  (defun org-pman-get (project el)
+                         (cdr (assoc el (cadr project))))
+                                    
+  (defun org-pman-get-index (project)
+                          (cdr (assoc "index" (cadr project))))
+                        
+  (defun org-pman-get-git (project)
+                          (or (cdr (assoc "git" (cadr project))) ""))
+                        
+  (defun org-pman-get-git-location (project)
+                          (or (cdr (assoc "git-location" (cadr project)))
+                              (org-pman-get-location project)))
                       
-(defun org-pman-get-git (project)
-                        (or (cdr (assoc "git" (cadr project))) ""))
-                      
-(defun org-pman-get-git-location (project)
-                        (or (cdr (assoc "git-location" (cadr project)))
-                            (org-pman-get-location project)))
-                    
-(defun org-pman-get-location (project)
-                      (let ((loc (cdr (assoc "location" (cadr project)))))
-                        (if loc 
-                            (concat (file-name-as-directory
-                                     loc)
-                                    (car project)))))
-                      
-(defun org-pman-get-publish-directory (project)
-                        (cdr (assoc "publish-directory" (cadr project))))
-                      
-(defun org-pman-get-category (project)
-                        (cdr (assoc "category" (cadr project))))
+  (defun org-pman-get-location (project)
+                        (let ((loc (cdr (assoc "location" (cadr project)))))
+                          (if loc 
+                              (concat (file-name-as-directory
+                                       loc)
+                                      (car project)))))
+                        
+  (defun org-pman-get-publish-directory (project)
+                          (cdr (assoc "publish-directory" (cadr project))))
+                        
+  (defun org-pman-get-category (project)
+                          (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
