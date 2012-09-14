@@ -1,4 +1,4 @@
-% Created 2012-09-12 Wed 22:15
+% Created 2012-09-14 Fri 09:40
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -70,6 +70,75 @@ basewidth={0.5em,0.4em}
 
 \maketitle
 
-  (split-window-vertically)
+\section{Introduction}
+\label{sec-1}
+
+
+This document simulaneously describes and defines a project manager
+for applied statistical workflows based on the fabulous and popular
+emacs \texttt{org-mode}. Really it describes and automates one out of many
+possibilities to customize \texttt{org-mode}.
+\subsection{Getting started}
+\label{sec-1-1}
+
+
+The first thing to do is to define some new projects. Obviously, you
+would rather read in your existing projects. But stay cool and read on
+until this is explained below.
+\subsubsection{The project manager file}
+\label{sec-1-1-1}
+
+
+    
+
+\lstset{language=Lisp}
+\begin{lstlisting}
+(setq org-pman-file "~/projects/manager.org")
+(find-file org-pman-file)
+\end{lstlisting}
+\begin{itemize}
+
+\item What is a project?\\
+\label{sec-1-1-1-1}%
+As in real life an org-pman project can be many different things. The
+prototype project consists of a \emph{location}, that is a directory on
+your computer, and an index file. (Actually, only one of \emph{index} and
+\emph{location} is required.)
+
+
+\item How to define a project?\\
+\label{sec-1-1-1-2}%
+Projects are defined in the file \emph{org-pman-file}
+(yes-you-need-to-create-this-file) in the following format.
+
+
+\lstset{language=org}
+\begin{lstlisting}
+* Cat 1
+** Subcat 1
+*** Subsubcat 1
+**** My first project
+\end{lstlisting}
+
+
+\end{itemize} % ends low level
+\subsection{Git support}
+\label{sec-1-2}
+\subsubsection{Requirements}
+\label{sec-1-2-1}
+
+
+You need to install the program git.
+\subsubsection{Git hub}
+\label{sec-1-2-2}
+
+
+To do push changes to a github repository it is useful to set up git  
+\href{https://help.github.com/articles/set-up-git}{https://help.github.com/articles/set-up-git}
+and to be free of typing the username and password when doing ``git push''.
+
+If you use the SSH repo URL instead, SSH keys are used for
+authentication. This guide offers help generating and using an SSH key
+pair:  \href{https://help.github.com/articles/generating-ssh-keys}{https://help.github.com/articles/generating-ssh-keys}
 
 \end{document}
