@@ -771,6 +771,8 @@ IDEA: let the current project appear in the frame title or in the mode line
                              ((todo "TODO"  ((org-agenda-files
                                               (append `(,index) org-files)))))))))
                     ;; index
+ 		    (setq query-to-create nil) ;; Save current, and reset after org-open-file???
+		    (setq org-link-search-must-match-exact-headline nil) ;; ---
                     (ignore-errors
                     (org-open-file index nil nil "*TODO")
                     (find-file index))
