@@ -714,7 +714,7 @@ IDEA: let the current project appear in the frame title or in the mode line
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-                         (defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
+(defvar org-pman-switch-always t "If nil 'org-pman-switch-to-project' will
                                                          switch to current project unless the last command also was 'org-pman-switch-to-project'.
                                                          Setting this variable to non-nil (the default) will force 'org-pman-switch-to-project'
                                                          to always prompt for new project")
