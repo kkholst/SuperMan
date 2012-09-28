@@ -186,80 +186,84 @@ a minor-mode on top of it.
 *** Dynamically updating lists 
     
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-pro-project-alist nil
-                 "Alist of projects associating the nickname of the project
-           with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
-          
-  (defvar org-pro-current-project nil "The currently selected project.")
+(defvar org-pro-project-alist nil
+  "Alist of projects associating the nickname of the project
+              with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
 
-  (defun org-pro-parse-projects (&optional all)
-             "Parse file 'project-manager' and update 'org-pro-project-alist'"
-             (interactive)
-             (save-excursion
-               (setq org-pro-project-alist nil)
-               (set-buffer (find-file-noselect org-pro-file))
-               (save-buffer)
-               (goto-char (point-min))
-               (while (org-pro-forward-project)
-                   (let* ((loc (replace-in-string (or (org-entry-get nil "LOCATION" 'inherit) org-pro-default-directory) "[\t ]+$" ""))
-                          (category (org-entry-get nil "CATEGORY" 'inherit))
-                          (others (org-entry-get nil "OTHERS" nil))
-                          (publish-dir (org-entry-get nil "PUBLISH" 'inherit))
-                          (name (or (org-entry-get nil "NICKNAME" nil)
-                                    (nth 4 (org-heading-components))))
-                          (git (org-entry-get nil "GIT" 'inherit))
-                          (config (org-entry-get nil "config" 'inherit))
-                          (index (or (org-entry-get nil "INDEX" nil)
-                                     (let ((default-org-home
-                                             (concat (file-name-as-directory loc)
-                                                     name
-                                                     org-pro-org-location)))
-                                       ;; (make-directory default-org-home t)
-                                       (concat (file-name-as-directory default-org-home) name ".org")))))
-                     (unless (file-name-absolute-p index)
-                       (setq index
-                             (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-                     (add-to-list 'org-pro-project-alist
-                                  (list name
-                                        (list (cons "location"  loc)
-                                              (cons "index" index)
-                                              (cons "category" category)
-                                              (cons "others" others)
-                                              (cons "git" git)
-                                              (cons "config" config)
-                                              (cons "publish-directory" publish-dir))))))
-                 org-pro-project-alist))
-           
-  (defvar org-pro-project-categories nil
-      "List of categories for sorting projects.")
-      
-  (defun org-pro-get-buffer-props (property)
-          "Get a table of all values of PROPERTY used in the buffer, for completion."
-          (let (props)
-            (save-excursion
-              (goto-char (point-min))
-              (while (re-search-forward (concat ":" property ":") nil t)
-                (add-to-list 'props (list
-                                     (org-entry-get
-                                      nil property nil)))))
-            props))
-        
-  (defun org-pro-parse-categories ()
-          (interactive)
-            (set-buffer (find-file-noselect org-pro-file))
-            (setq org-pro-project-categories
-                  (reverse (org-pro-get-buffer-props "CATEGORY"))))
-      
-  (defun org-pro-refresh ()
-    "Parses the categories and projects in file `org-pro' and also
-    updates the currently selected project."
-        (interactive)
-        (org-pro-parse-categories)
-        (org-pro-parse-projects)
-    (when org-pro-current-project
-       (setq org-pro-current-project
-             (assoc (car org-pro-current-project) org-pro-project-alist))))
-      
+(defvar org-pro-current-project nil "The currently selected project.")
+
+(defun org-pro-entry-get  (pom property &optional inherit literal-nil)
+  (let ((prop (org-entry-get pom property inherit literal-nil)))
+    (if (stringp prop) (replace-in-string prop "[ \t]+$" ""))))
+
+(defun org-pro-parse-projects (&optional all)
+  "Parse file 'project-manager' and update 'org-pro-project-alist'"
+  (interactive)
+  (save-excursion
+    (setq org-pro-project-alist nil)
+    (set-buffer (find-file-noselect org-pro-file))
+    (save-buffer)
+    (goto-char (point-min))
+    (while (org-pro-forward-project)
+      (let* ((loc (or (org-pro-entry-get nil "LOCATION" 'inherit) org-pro-default-directory))
+	     (category (org-pro-entry-get nil "CATEGORY" 'inherit))
+	     (others (org-pro-entry-get nil "OTHERS" nil))
+	     (publish-dir (org-pro-entry-get nil "PUBLISH" 'inherit))
+	     (name (or (org-pro-entry-get nil "NICKNAME" nil)
+		       (nth 4 (org-heading-components))))
+	     (git (org-pro-entry-get nil "GIT" 'inherit))
+	     (config (org-pro-entry-get nil "config" 'inherit))
+	     (index (or (org-pro-entry-get nil "INDEX" nil)
+			(let ((default-org-home
+				(concat (file-name-as-directory loc)
+					name
+					org-pro-org-location)))
+			  ;; (make-directory default-org-home t)
+			  (concat (file-name-as-directory default-org-home) name ".org")))))
+	(unless (file-name-absolute-p index)
+	  (setq index
+		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+	(add-to-list 'org-pro-project-alist
+		     (list name
+			   (list (cons "location"  loc)
+				 (cons "index" index)
+				 (cons "category" category)
+				 (cons "others" others)
+				 (cons "git" git)
+				 (cons "config" config)
+				 (cons "publish-directory" publish-dir))))))
+    org-pro-project-alist))
+
+(defvar org-pro-project-categories nil
+  "List of categories for sorting projects.")
+
+(defun org-pro-get-buffer-props (property)
+  "Get a table of all values of PROPERTY used in the buffer, for completion."
+  (let (props)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward (concat ":" property ":") nil t)
+	(add-to-list 'props (list
+			     (org-entry-get
+			      nil property nil)))))
+    props))
+
+(defun org-pro-parse-categories ()
+  (interactive)
+  (set-buffer (find-file-noselect org-pro-file))
+  (setq org-pro-project-categories
+	(reverse (org-pro-get-buffer-props "CATEGORY"))))
+
+(defun org-pro-refresh ()
+  "Parses the categories and projects in file `org-pro' and also
+       updates the currently selected project."
+  (interactive)
+  (org-pro-parse-categories)
+  (org-pro-parse-projects)
+  (when org-pro-current-project
+    (setq org-pro-current-project
+	  (assoc (car org-pro-current-project) org-pro-project-alist))))
+
 #+END_SRC
 
 *** Lists of project-index and project-org files 
