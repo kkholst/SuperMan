@@ -1076,7 +1076,7 @@ IDEA: let the current project appear in the frame title or in the mode line
 	     (nickname (car pro))
 	     (base-directory (concat (org-pro-get-location pro) (car pro)))
 	     (export-directory
-	      (concat base-directory
+	      (concat base-directory "/"
 		      org-pro-export-subdirectory))
 	     (public-directory
 	      (or (org-pro-get-publish-directory pro)
