@@ -1,5 +1,5 @@
-# Fdb version 3
-["pdflatex"] 1347613454 "org-project-manager.tex" "org-project-manager.pdf" "org-project-manager" 
+# Fdb version 2
+["pdflatex"] 1348722728 "org-project-manager.tex" "org-project-manager.pdf" "org-project-manager" 
   "/etc/texmf/tex/latex/config/color.cfg" 1254097189 802 7b8c8d72c24d795ed7720e4dfd29bff3 ""
   "/etc/texmf/tex/latex/config/graphics.cfg" 1255993321 3328 2584cfe577535f0a08f3a9717b5152ab ""
   "/usr/share/texmf-texlive/tex/context/base/supp-pdf.mkii" 1251025892 71625 fad1c4b52151c234b6873a255b0ad6b3 ""
@@ -76,11 +76,6 @@
   "/usr/share/texmf-texlive/tex/latex/wasysym/wasysym.sty" 1137111081 10611 eca9e56dd071530be0c56f0b968bbdb6 ""
   "/usr/share/texmf-texlive/tex/latex/wrapfig/wrapfig.sty" 1137111090 26220 3701aebf80ccdef248c0c20dd062fea9 ""
   "/usr/share/texmf/tex/latex/xcolor/xcolor.sty" 1193193460 55224 a43bab84e0ac5e6efcaf9a98bde73a94 ""
-  "org-project-manager.aux" 1347613455 391 8790c6de54d71c62373622833a87d694 ""
-  "org-project-manager.out" 1347613455 0 d41d8cd98f00b204e9800998ecf8427e ""
-  "org-project-manager.tex" 1347613454 4133 1b8d8a887fa84a31a361a2e3a7fe8750 ""
-  (generated)
-  "org-project-manager.log"
-  "org-project-manager.pdf"
-  "org-project-manager.out"
-  "org-project-manager.aux"
+  "org-project-manager.aux" 1348722728 391 8790c6de54d71c62373622833a87d694 ""
+  "org-project-manager.out" 1348722728 0 d41d8cd98f00b204e9800998ecf8427e ""
+  "org-project-manager.tex" 1348722728 4321 7c8a5008a3dde71623c167ba872e97a3 ""
