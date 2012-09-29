@@ -351,8 +351,8 @@ If UPDATE is non-nil first parse the file org-pro."
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-default-content "" "Initial contents of org project index file.")
 (defvar org-pro-project-subdirectories nil)
-                    
-                
+
+
 (defun org-pro-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
                   'org-pro-project-subdirectories' is set."
@@ -374,7 +374,7 @@ If UPDATE is non-nil first parse the file org-pro."
 ;;            (find-file index))))))
 ;; (append-to-file org-pro-default-content nil index)
 ;; )))
-                    
+
 (defun org-pro-show-properties ()
   (let ((pop-up-windows t)
 	(obuf (current-buffer))
@@ -387,53 +387,53 @@ If UPDATE is non-nil first parse the file org-pro."
     (insert "\n\n")
     (pop-to-buffer pbuf)
     (pop-to-buffer obuf)))
-                  
+
 (defun org-pro-new-project (&optional nickname category)
-                            "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-                            This function modifies the 'org-pro' and creates and visits the index file of the new project.
-                            Thus, to undo all this you may want to call 'org-pro-delete-project'. 
-                            " 
-                            (interactive)
-                            (org-pro-refresh)
-                            (let* ((nickname (or nickname (read-string "Project name (short) ")))
-                                   category)
-                              ;; check if nickname exists 
-                              (while (assoc nickname org-pro-project-alist)
-                                (setq nickname
-                                      (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-                              (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
-                              ;; a local capture command places the new project
-                              (let ((org-capture-templates
-                                     `(("p" "Project" plain
-                                      (file+headline org-pro-file ,category)
-                                      ,(concat (make-string org-pro-project-level (string-to-char "*"))
-                                               " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
-                                               nickname
-                                               "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
-                                    (org-capture-bookmark nil))
-                                (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
-                                (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
-                                ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
-                                (org-capture nil "p")
-                                )))
+  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+This function modifies the 'org-pro' and creates and visits the index file of the new project.
+Thus, to undo all this you may want to call 'org-pro-delete-project'. 
+" 
+  (interactive)
+  (org-pro-refresh)
+  (let* ((nickname (or nickname (read-string "Project name (short) ")))
+	 category)
+    ;; check if nickname exists 
+    (while (assoc nickname org-pro-project-alist)
+      (setq nickname
+	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
+    (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
+    ;; a local capture command places the new project
+    (let ((org-capture-templates
+	   `(("p" "Project" plain
+	      (file+headline org-pro-file ,category)
+	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
+		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
+		       nickname
+		       "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
+	  (org-capture-bookmark nil))
+      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
+      (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
+      ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
+      (org-capture nil "p")
+      )))
 (defun org-pro-complete-property ()
-    (interactive)
-    (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-        (cond ((string= (downcase curprop) "index")
-              (insert (read-file-name (concat "Set " curprop ": "))))
-              ((string= (downcase curprop) "location")
-              (insert (read-directory-name (concat "Set " curprop ": ")))))))
-  
+  (interactive)
+  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+    (cond ((string= (downcase curprop) "index")
+	   (insert (read-file-name (concat "Set " curprop ": "))))
+	  ((string= (downcase curprop) "location")
+	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
+
 (defun org-pro-delete-project (&optional project)
-;;                                  (interactive)
-                                  (let* ((pro (or project org-pro-select-project))
-                                         (dir (concat (org-pro-get-location pro) (car pro)))
-                                         (git (org-pro-get-git pro))
-                                         (index (org-pro-get-index pro)))
-                                    (pop-to-buffer "*Org-project-files*")
-                                    (erase-buffer)
-                                    (insert index "\n" dir "\n" git "\n")
-                                    (when (yes-or-no-p (concat "Really remove project " pro "?")))))
+  ;;                                  (interactive)
+  (let* ((pro (or project org-pro-select-project))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (git (org-pro-get-git pro))
+	 (index (org-pro-get-index pro)))
+    (pop-to-buffer "*Org-project-files*")
+    (erase-buffer)
+    (insert index "\n" dir "\n" git "\n")
+    (when (yes-or-no-p (concat "Really remove project " pro "?")))))
 #+END_SRC
 
 ** The project manager
@@ -608,7 +608,7 @@ splits in the current frame.
 (setq org-pro-config "INDEX / LOCATION | TIMELINE / TODO : recent.org | *R*")
 ;; could be 
 ;; (setq org-pro-config "recent.org / *R* | TODO")
-(setq org-pro-config-action-alist '(("INDEX" . (lambda (project) (find-file (org-pro-get-index project))))
+(setq org-pro-config-action-alist '(("INDEX" . org-pro-find-index)
 				    ("TODO" . org-pro-todo)
 				    ("TIMELINE" . org-pro-timeline)
 				    ("LOCATION" . org-pro-location)
@@ -620,6 +620,12 @@ splits in the current frame.
 (defvar org-pro-find-R-function
   "Function used to find *R*"
   (lambda (project) (if (get-buffer "*R*") (switch-to-buffer "*R*") (R))))
+
+(defun org-pro-find-index (project)
+  (let* ((index (org-pro-get-index project)))
+    (unless (file-exists index)
+  (make-directory (file-name-directory index 'with-parents)))
+ (find-file index)))
 
 (defun org-pro-find-thing (thing project)
   (let* ((case-fold-search t)
@@ -758,24 +764,25 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-pro-frame-title-format t
-    "If non-nil add the nickname of the active project to frame-title")
-  
-  
-  (defun org-pro-set-frame-title ()
-    (let ((old-format (cadr (split-string frame-title-format "Project:[ \t]+[^ \t]+[ \t]+"))))
+(defvar org-pro-frame-title-format t
+  "If non-nil add the nickname of the active project to frame-title")
+
+
+(defun org-pro-set-frame-title ()
+  (let* ((old-format (split-string frame-title-format "Project:[ \t]+[^ \t]+[ \t]+"))
+        (keep (if (> (length old-format) 1) (cadr old-format) (car old-format))))
     (setq frame-title-format
-          (concat "Project: " (or (car org-pro-current-project) "No active project") " " old-format))))
-  
-  (defun org-pro-activate-project (project)
-    "Sets the current project.
+          (concat "Project: " (or (car org-pro-current-project) "No active project") " " keep))))
+
+(defun org-pro-activate-project (project)
+  "Sets the current project.
             Start git, if the project is under git control, and git is not up and running yet."
-    (setq org-pro-current-project project)
-    (if org-pro-frame-title-format
-        (org-pro-set-frame-title))
-    ;; maybe activate git control
-    (when org-pro-use-git 
-      (org-pro-git-update-project project 'before)))
+  (setq org-pro-current-project project)
+  (if org-pro-frame-title-format
+      (org-pro-set-frame-title))
+  ;; maybe activate git control
+  (when org-pro-use-git 
+    (org-pro-git-update-project project 'before)))
 #+END_SRC
 
 *** Saving the current project
