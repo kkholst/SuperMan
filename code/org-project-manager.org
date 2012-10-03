@@ -127,9 +127,10 @@ pair:  https://help.github.com/articles/generating-ssh-keys
 ** Dependencies
 
 #+BEGIN_SRC emacs-lisp :export code
-(require 'ido)
 (require 'org)  
 (require 'deft)
+(require 'winner)
+(require 'ido)
 ;; (require 'workgroups)
 #+END_SRC
 
@@ -624,8 +625,8 @@ splits in the current frame.
 (defun org-pro-find-index (project)
   (let* ((index (org-pro-get-index project)))
     (unless (file-exists-p index)
-  (make-directory (file-name-directory index) 'with-parents))
- (find-file index)))
+      (make-directory (file-name-directory index) 'with-parents))
+    (find-file index)))
 
 (defun org-pro-find-thing (thing project)
   (let* ((case-fold-search t)
@@ -648,6 +649,28 @@ splits in the current frame.
   (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
 	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
     hlist))
+
+(defun org-pro-current-config ()
+  (let* ((windata (winner-win-data))
+         config
+         prev-row)
+    (while windata
+      (let* ((buf (cdr (car windata)))
+	     (pos (car (car windata)))
+;;	     (col (nth 0 pos))
+	     (row (nth 1 pos))
+	     (thing
+	      (cond 
+               ((buffer-file-name buf)
+                (replace-in-string (buffer-file-name buf) (getenv "HOME") "~"))
+		  ;;                 (get-buffer-process buf)
+		(t (buffer-name buf)))))
+	(setq config (concat config (when prev-row (if (< prev-row row) " / " " | ")) thing))
+	(setq windata (cdr windata))
+	(setq prev-row row)))
+    config))
+
+
 
 (defun org-pro-set-config-1 (&optional project config pos)
   (interactive)
