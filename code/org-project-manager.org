@@ -650,6 +650,17 @@ splits in the current frame.
 	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
     hlist))
 
+
+(defun org-pro-save-config (&optional config project)
+  (interactive)
+  (let ((conf (or config (org-pro-current-config)))
+        (pro (or project org-pro-current-project (org-pro-select-project))))
+     (when (y-or-n-p (concat "Save current window configuration for project " (car pro) "? "))
+       (find-file-other-window (concat (org-pro-get-location pro) (car pro) "/.org-pro-window-config"))
+       (goto-char (point-max))
+       (unless (looking-at "^$") (insert "\n"))
+       (insert conf))))
+
 (defun org-pro-current-config ()
   (let* ((windata (winner-win-data))
          config
@@ -663,34 +674,32 @@ splits in the current frame.
 	      (cond 
                ((buffer-file-name buf)
                 (replace-in-string (buffer-file-name buf) (getenv "HOME") "~"))
-		  ;;                 (get-buffer-process buf)
+		  ;; (get-buffer-process buf)
 		(t (buffer-name buf)))))
 	(setq config (concat config (when prev-row (if (< prev-row row) " / " " | ")) thing))
 	(setq windata (cdr windata))
 	(setq prev-row row)))
     config))
 
-
-
-(defun org-pro-set-config-1 (&optional project config pos)
-  (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (conf (or config (org-pro-get-config pro) org-pro-config))
-	 (pos (or pos org-pro-config-cycle-pos 0))
-	 (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
-	 swindow)
-    (delete-other-windows)
-    ;; save current window 
-    (setq swindow (selected-window))
-    (while window-config
-      (let ((el (car window-config)))
-	(while el
-	  (org-pro-find-thing el pro)
-	  (setq el (cdr el))
-	  (when el (split-window-vertically) (other-window 1)))
-	(setq window-config (cdr window-config))
-	(when window-config (split-window-horizontally) (other-window 1))))
-    (select-window swindow)))
+;;(defun org-pro-set-config-1 (&optional project config pos)
+;;  (interactive)
+;;  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+;;	 (conf (or config (org-pro-get-config pro) org-pro-config))
+;;	 (pos (or pos org-pro-config-cycle-pos 0))
+;;	 (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
+;;	 swindow)
+;;    (delete-other-windows)
+;;    ;; save current window 
+;;    (setq swindow (selected-window))
+;;    (while window-config
+;;      (let ((el (car window-config)))
+;;	(while el
+;;	  (org-pro-find-thing el pro)
+;;	  (setq el (cdr el))
+;;	  (when el (split-window-vertically) (other-window 1)))
+;;	(setq window-config (cdr window-config))
+;;	(when window-config (split-window-horizontally) (other-window 1))))
+;;    (select-window swindow)))
 
 (defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
 
@@ -1050,8 +1059,17 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
   
   (defun org-pro-get-index (project)
     (cdr (assoc "index" (cadr project))))
-  (defun org-pro-get-config (project)
-    (cdr (assoc "config" (cadr project))))
+
+(defun org-pro-get-config (project)
+  (let* ((config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
+	(config (when (file-exists-p config-file)
+			(save-window-excursion
+			  (find-file config-file)
+			  (replace-in-string (replace-in-string a "\n" " : ") "\n" " : "))))
+	(prop-config (cdr (assoc "config" (cadr project)))))
+	(when prop-config
+	  (setq config (concat config " : " prop-config)))
+	config))
   
   (defun org-pro-get-git (project)
     (or (cdr (assoc "git" (cadr project))) ""))
