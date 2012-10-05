@@ -606,7 +606,7 @@ can also save the number of windows and the horizontal and vertical
 splits in the current frame. 
 
 #+BEGIN_SRC  emacs-lisp :export code
-(setq org-pro-config "INDEX / LOCATION | TIMELINE / TODO : recent.org | *R*")
+(setq org-pro-config "INDEX / LOCATION | TIMELINE / TODO")
 ;; could be 
 ;; (setq org-pro-config "recent.org / *R* | TODO")
 (setq org-pro-config-action-alist '(("INDEX" . org-pro-find-index)
@@ -655,12 +655,11 @@ splits in the current frame.
   (interactive)
   (let ((conf (or config (org-pro-current-config)))
         (pro (or project org-pro-current-project (org-pro-select-project))))
-     (when (y-or-n-p (concat "Save current window configuration for project " (car pro) "? "))
        (find-file-other-window (concat (org-pro-get-location pro) (car pro) "/.org-pro-window-config"))
        (goto-char (point-max))
        (unless (looking-at "^$") (insert "\n"))
        (insert conf)
- (save-buffer))))
+ (save-buffer)))
 
 (defun org-pro-current-config ()
   (let* ((windata (winner-win-data))
@@ -703,6 +702,23 @@ splits in the current frame.
 ;;    (select-window swindow)))
 
 (defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
+
+
+(defun org-pro-get-config (project)
+  (let* ((config (or org-pro-config "INDEX"))
+         (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
+	 (filed-config (when (file-exists-p config-file)
+		   (save-window-excursion
+		     (find-file config-file)
+		     (replace-in-string (buffer-string) "\n" " : "))))
+	 (prop-config (cdr (assoc "config" (cadr project)))))
+    (if (not config)
+       (setq config prop-config)
+    (when filed-config
+      (setq config (concat config " : " filed-config)))
+    (when prop-config
+      (setq config (concat config " : " prop-config)))
+    config)))
 
 (defun org-pro-set-config (&optional project config pos)
   (interactive)
@@ -1061,21 +1077,6 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 (defun org-pro-get-index (project)
   (cdr (assoc "index" (cadr project))))
 
-(defun org-pro-get-config (project)
-  (let* ((config (or org-pro-config "INDEX"))
-         (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
-	 (filed-config (when (file-exists-p config-file)
-		   (save-window-excursion
-		     (find-file config-file)
-		     (replace-in-string (buffer-string) "\n" " : "))))
-	 (prop-config (cdr (assoc "config" (cadr project)))))
-    (if (not config)
-       (setq config prop-config)
-    (when filed-config
-      (setq config (concat config " : " filed-config)))
-    (when prop-config
-      (setq config (concat config " : " prop-config)))
-    config)))
 
 (defun org-pro-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
