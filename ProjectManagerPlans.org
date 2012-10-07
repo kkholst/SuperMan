@@ -126,12 +126,14 @@ Each file contains information about the project, workflow, files, links, etc.
 #+RESULTS:
 : org-project-manager-agenda
 
-* TodoList/WishList
-** Write template function: 'new-project'
-** Customize tags, properties, capture and agenda view
-** Smart archiving of data and code
+* TodoList/WishList*
+** DONE Write template function: 'new-project'
+  CLOSED: [2012-10-07 Sun 09:44]
+** TODO Customize tags, properties, capture and agenda view
+** TODO Smart archiving of data and code
 ** Semimatic transclusion of emails (gnus) and attachments
-** Window configurations for each project
+** DONE Window configurations for each project
+   CLOSED: [2012-10-07 Sun 09:44]
 ** Optional: backup some or all projects (git)
 ** Setting a publishing directory (with automatic push to public_html server) 
 ** connect collaborators to bbdb and gnus-search
