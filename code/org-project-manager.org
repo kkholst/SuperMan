@@ -189,7 +189,7 @@ a minor-mode on top of it.
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-project-alist nil
   "Alist of projects associating the nickname of the project
-              with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
+                with information like the location of the project, the index file, collaborators, category, publishing-directory, etc.")
 
 (defvar org-pro-current-project nil "The currently selected project.")
 
@@ -214,6 +214,7 @@ a minor-mode on top of it.
 		       (nth 4 (org-heading-components))))
 	     (git (org-pro-entry-get nil "GIT" 'inherit))
 	     (config (org-pro-entry-get nil "config" 'inherit))
+             (todo (substring-no-properties (or (org-get-todo-state) "")))
 	     (index (or (org-pro-entry-get nil "INDEX" nil)
 			(let ((default-org-home
 				(concat (file-name-as-directory loc)
@@ -232,6 +233,7 @@ a minor-mode on top of it.
 				 (cons "others" others)
 				 (cons "git" git)
 				 (cons "config" config)
+				 (cons "state" todo)
 				 (cons "publish-directory" publish-dir))))))
     org-pro-project-alist))
 
@@ -257,7 +259,7 @@ a minor-mode on top of it.
 
 (defun org-pro-refresh ()
   "Parses the categories and projects in file `org-pro' and also
-       updates the currently selected project."
+         updates the currently selected project."
   (interactive)
   (org-pro-parse-categories)
   (org-pro-parse-projects)
@@ -528,33 +530,6 @@ If UPDATE is non-nil first parse the file org-pro."
           (org-pro-return))
 #+END_SRC
 
-** Capture: Adding information to projects
-*** Choose a prefix
-#+BEGIN_SRC  emacs-lisp :export code
-(setq org-pro-capture-prefix "P")
-(add-to-list 'org-capture-templates `(,org-pro-capture-prefix "Project management"))
-#+END_SRC
-*** Capturing links 
-#+BEGIN_SRC  emacs-lisp :export code
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "l") "Add a link" plain 
- (function (lambda () (org-pro-goto-project nil "Links" 'yes))) "\n - %x%?"))
-#+END_SRC
-*** Capturing tasks
-#+BEGIN_SRC  emacs-lisp :export code
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "t") "Add a task" plain
-  (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:"))
-#+END_SRC
-*** Capturing notes
-#+BEGIN_SRC  emacs-lisp :export code
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add a note" plain
-  (function org-pro-goto-project-workflow) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:"))
-#+END_SRC
-*** Capturing documents
-#+BEGIN_SRC  emacs-lisp :export code
-;;(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add a document" plain
-;;  (function org-pro-goto-project-workflow) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:"))
-#+END_SRC
-
 ** Git control
    
 #+BEGIN_SRC emacs-lisp :export code 
@@ -637,12 +612,13 @@ can also save the number of windows and the horizontal and vertical
 splits in the current frame. 
 
 #+BEGIN_SRC  emacs-lisp :export code
-(setq org-pro-config "INDEX / FILELIST | TIMELINE / TODO")
+(setq org-pro-default-config "INDEX")
+(setq org-pro-sticky-config nil)
 
 (defvar org-pro-file-manager "file-list")
 
 ;; could be 
-;; (setq org-pro-config "recent.org / *R* | TODO")
+;; (setq org-pro-sticky-config "recent.org / *R* | TODO")
 (setq org-pro-config-action-alist '(("INDEX" . org-pro-find-index)
 				    ("TODO" . org-pro-todo)
 				    ("TIMELINE" . org-pro-timeline)
@@ -673,7 +649,8 @@ splits in the current frame.
 	      (t
 	      (switch-to-buffer (concat "*File-list-" (car project) "*"))
 	      (toggle-read-only -1)
-	      (insert "No files in project"))))
+              (erase-buffer)
+	      (insert "FILE-LIST: No files in project"))))
 	(error "file-list.el not loaded.")))
 
 
@@ -730,31 +707,12 @@ splits in the current frame.
 	  (setq prev-row row)))
       config))
 
-  ;;(defun org-pro-set-config-1 (&optional project config pos)
-  ;;  (interactive)
-  ;;  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-  ;;	 (conf (or config (org-pro-get-config pro) org-pro-config))
-  ;;	 (pos (or pos org-pro-config-cycle-pos 0))
-  ;;	 (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
-  ;;	 swindow)
-  ;;    (delete-other-windows)
-  ;;    ;; save current window 
-  ;;    (setq swindow (selected-window))
-  ;;    (while window-config
-  ;;      (let ((el (car window-config)))
-  ;;	(while el
-  ;;	  (org-pro-find-thing el pro)
-  ;;	  (setq el (cdr el))
-  ;;	  (when el (split-window-vertically) (other-window 1)))
-  ;;	(setq window-config (cdr window-config))
-  ;;	(when window-config (split-window-horizontally) (other-window 1))))
-  ;;    (select-window swindow)))
 
   (defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
 
 
   (defun org-pro-get-config (project)
-    (let* ((config (or org-pro-config "INDEX"))
+    (let* ((config (or org-pro-sticky-config org-pro-default-config "INDEX"))
 	   (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
 	   (filed-config (when (file-exists-p config-file)
 			   (save-window-excursion
@@ -773,7 +731,7 @@ splits in the current frame.
   (defun org-pro-set-config (&optional project config pos)
     (interactive)
     (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	   (conf (or config (org-pro-get-config pro) org-pro-config))
+	   (conf (or config (org-pro-get-config pro)))
 	   (pos (or pos org-pro-config-cycle-pos 0))
 	   (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
 	   (ncolumns (length window-config))
@@ -1046,13 +1004,13 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 *** Switching between projects
 
 #+BEGIN_SRC emacs-lisp :export code
-    (defun org-pro-magit (project)
-      (magit-status (concat (org-pro-get-location project) (car project))))
-    
-    (defun org-pro-location (project)
-      (let ((loc (concat (org-pro-get-location project) (car project))))
-        (find-file loc)))
-    
+(defun org-pro-magit (project)
+  (magit-status (concat (org-pro-get-location project) (car project))))
+
+(defun org-pro-location (project)
+  (let ((loc (concat (org-pro-get-location project) (car project))))
+    (find-file loc)))
+
 (defun org-pro-timeline (project)
   (let (tbuf)
     (save-window-excursion
@@ -1065,224 +1023,225 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
               (setq tbuf (get-buffer bufname))
               (toggle-read-only -1)
 	      (erase-buffer)
-              (insert "Project index file does not exist yet"))
+              (insert "TIMELINE: Project index file does not exist yet"))
           (when (get-buffer bufname)
             (kill-buffer bufname))
           (find-file index)
           (org-timeline 'yeah)
           (rename-buffer bufname)
+          (local-set-key [(return)] 'org-return)
           (setq tbuf (current-buffer)))))
-      (switch-to-buffer tbuf)))
-    
-    (defun org-pro-recent-org (project)
-      (car (org-pro-list-files
-            (concat (org-pro-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
-    
-    
-    (defun org-pro-todo (project)
-      (let (tbuf)
-        (save-window-excursion
-          (let* ((location (concat (org-pro-get-location project) (car project)))
-                 (org-files (org-pro-list-files location "^[^\\.].*\\.org$" nil))
-                 (org-agenda-sticky t) ;; to enable multiple agenda buffers
-                 (org-agenda-files org-files)
-                 (bufname (concat "*" (car project) "-todo*")))
-            (when (get-buffer bufname)
-              (kill-buffer bufname))
-            (org-todo-list org-match)
-            (rename-buffer bufname)
-            (setq tbuf (current-buffer))))
-        (switch-to-buffer tbuf)))
-    
-    (defun org-pro-find-project (project pos)
-      (org-pro-set-config project nil (or pos org-pro-config-cycle-pos 0)))
-    
-    (defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
-    (defun org-pro-open-recent (&optional project action)
-      (interactive)
-      (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-             (loc (concat (org-pro-get-location pro) (car pro)))
-             (tmplist (if (require 'file-list nil t)
-                          (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
-             (tmplist2 (when tmplist
-                         (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
-             (flist (when tmplist2
-                      nil
-                      (file-list-sort-internal
-                       tmplist2
-                       "time" nil t))))
-        (when flist
-          (when (car flist)
-            (find-file (file-list-make-file-name (car flist)))
-            (setq flist (cdr flist))
-            (org-pro-layout 1)
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))))))
-    (defun org-pro-get (project el)
-      (cdr (assoc el (cadr project))))
-    
-    (defun org-pro-get-index (project)
-      (cdr (assoc "index" (cadr project))))
-    
-    
-    (defun org-pro-get-git (project)
-      (or (cdr (assoc "git" (cadr project))) ""))
-    
-    (defun org-pro-get-git-location (project)
-      (or (cdr (assoc "git-location" (cadr project)))
-          (concat (org-pro-get-location project) (car project))))
-    
-    (defun org-pro-get-location (project)
-      "Get the directory associated with PROJECT."
-      (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-    ;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-    ;;                (if loc 
-    ;;                                (concat (file-name-as-directory loc)
-    ;;                                        (car project)))))
-    
-    (defun org-pro-get-publish-directory (project)
-      (cdr (assoc "publish-directory" (cadr project))))
-    
-    (defun org-pro-get-category (project)
-      (cdr (assoc "category" (cadr project))))
-    (defvar org-pro-switch-always t
-      "If nil 'org-pro-switch-to-project' will
+    (switch-to-buffer tbuf)))
+
+(defun org-pro-recent-org (project)
+  (car (org-pro-list-files
+	(concat (org-pro-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
+
+
+(defun org-pro-todo (project)
+  (let (tbuf)
+    (save-window-excursion
+      (let* ((location (concat (org-pro-get-location project) (car project)))
+	     (org-files (org-pro-list-files location "^[^\\.].*\\.org$" nil))
+	     (org-agenda-sticky t) ;; to enable multiple agenda buffers
+	     (org-agenda-files org-files)
+	     (bufname (concat "*" (car project) "-todo*")))
+	(when (get-buffer bufname)
+	  (kill-buffer bufname))
+	(org-todo-list org-match)
+	(rename-buffer bufname)
+	(setq tbuf (current-buffer))))
+    (switch-to-buffer tbuf)))
+
+(defun org-pro-find-project (project pos)
+  (org-pro-set-config project nil (or pos org-pro-config-cycle-pos 0)))
+
+(defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
+(defun org-pro-open-recent (&optional project action)
+  (interactive)
+  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+	 (loc (concat (org-pro-get-location pro) (car pro)))
+	 (tmplist (if (require 'file-list nil t)
+		      (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
+	 (tmplist2 (when tmplist
+		     (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
+	 (flist (when tmplist2
+		  nil
+		  (file-list-sort-internal
+		   tmplist2
+		   "time" nil t))))
+    (when flist
+      (when (car flist)
+	(find-file (file-list-make-file-name (car flist)))
+	(setq flist (cdr flist))
+	(org-pro-layout 1)
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))))))
+(defun org-pro-get (project el)
+  (cdr (assoc el (cadr project))))
+
+(defun org-pro-get-index (project)
+  (cdr (assoc "index" (cadr project))))
+
+
+(defun org-pro-get-git (project)
+  (or (cdr (assoc "git" (cadr project))) ""))
+
+(defun org-pro-get-git-location (project)
+  (or (cdr (assoc "git-location" (cadr project)))
+      (concat (org-pro-get-location project) (car project))))
+
+(defun org-pro-get-location (project)
+  "Get the directory associated with PROJECT."
+  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
+;;  (let ((loc (cdr (assoc "location" (cadr project)))))
+;;                (if loc 
+;;                                (concat (file-name-as-directory loc)
+;;                                        (car project)))))
+
+(defun org-pro-get-publish-directory (project)
+  (cdr (assoc "publish-directory" (cadr project))))
+
+(defun org-pro-get-category (project)
+  (cdr (assoc "category" (cadr project))))
+(defvar org-pro-switch-always t
+  "If nil 'org-pro-switch-to-project' will
                                        switch to current project unless the last command also was 'org-pro-switch-to-project'.
                                        Setting this variable to non-nil (the default) will force 'org-pro-switch-to-project'
                                        to always prompt for new project")
-    
-    (defun org-pro-switch-config (&optional project)
-      "Switch to the next window configuration (if any)."
-      (interactive)
-      (let* ((pro (or project org-pro-current-project))
-             (curpos (or org-pro-config-cycle-pos 0))
-             (config-list (org-pro-read-config-list
-                           (or (org-pro-get-config pro) org-pro-config))))
-        (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
-            (setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
-          (setq org-pro-config-cycle-pos 0))
-        (org-pro-find-project pro org-pro-config-cycle-pos)))
-    
-    (defun org-pro-switch (&optional arg)
-      "If ARG switch project else switch config."
-      (interactive "P")
-      (if arg
-          (org-pro-switch-to-project)
-        (org-pro-switch-config)))
-    
-    (defun org-pro-switch-to-project (&optional force)
-      "Select project via 'org-pro-select-project', activate it
+
+(defun org-pro-switch-config (&optional project)
+  "Switch to the next window configuration (if any)."
+  (interactive)
+  (let* ((pro (or project org-pro-current-project))
+	 (curpos (or org-pro-config-cycle-pos 0))
+	 (config-list (org-pro-read-config-list
+		       (org-pro-get-config pro))))
+  (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
+      (setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
+    (setq org-pro-config-cycle-pos 0))
+  (org-pro-find-project pro org-pro-config-cycle-pos)))
+
+(defun org-pro-switch (&optional arg)
+  "If ARG switch project else switch config."
+  (interactive "P")
+  (if arg
+      (org-pro-switch-to-project)
+    (org-pro-switch-config)))
+
+(defun org-pro-switch-to-project (&optional force)
+  "Select project via 'org-pro-select-project', activate it
                                                    via 'org-pro-activate-project',  find the associated index file."
-      (interactive "P")
-      (let* ((curpro org-pro-current-project)
-             (change-maybe (or force
-                               org-pro-switch-always
-                               (not org-pro-current-project)))
-             (pro (if change-maybe (org-pro-select-project) curpro))
-             (stay (eq pro curpro)))
-        (unless stay
-          (org-pro-save-project curpro)
-          (setq org-pro-config-cycle-pos 0)
-          (org-pro-activate-project pro))
-        (org-pro-find-project pro org-pro-config-cycle-pos)))
-    
-    (defun org-pro-list-files (dir ext sort-by)
-      (if (featurep 'file-list)
-          (mapcar 'file-list-make-file-name
-                  (file-list-sort-internal
-                   (file-list-select-internal nil ext nil nil dir nil 'dont)
-                   (or sort-by "time") nil t))
-        (directory-files dir nil ext t)))
-    
-    (defun org-pro-layout (&optional pos)
-      (delete-other-windows)
-      (split-window-vertically)
-      (split-window-horizontally)
-      (other-window -1)
-      (split-window-horizontally)
-      (other-window 2)
-      (other-window (or pos 0)))
-    
-    
-    (defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
-    (defun org-pro-open-recent (&optional project action)
-      (interactive)
-      (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-             (loc (concat (org-pro-get-location pro) (car pro)))
-             (tmplist (if (require 'file-list nil t)
-                          (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
-             (tmplist2 (when tmplist
-                         (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
-             (flist (when tmplist2
-                      nil
-                      (file-list-sort-internal
-                       tmplist2
-                       "time" nil t))))
-        (when flist
-          (when (car flist)
-            (find-file (file-list-make-file-name (car flist)))
-            (setq flist (cdr flist))
-            (org-pro-layout 1)
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))
-            (if (car flist)
-                (progn
-                  (find-file (file-list-make-file-name (car flist)))
-                  (setq flist (cdr flist))
-                  (other-window 1))
-              (delete-window))))))
-    (defun org-pro-get (project el)
-      (cdr (assoc el (cadr project))))
-    
-    (defun org-pro-get-index (project)
-      (cdr (assoc "index" (cadr project))))
-    
-    (defun org-pro-get-git (project)
-      (or (cdr (assoc "git" (cadr project))) ""))
-    
-    (defun org-pro-get-git-location (project)
-      (or (cdr (assoc "git-location" (cadr project)))
-          (concat (org-pro-get-location project) (car project))))
-    
-    (defun org-pro-get-location (project)
-      "Get the directory associated with PROJECT."
-      (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-    ;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-    ;;                (if loc 
-    ;;                                (concat (file-name-as-directory loc)
-    ;;                                        (car project)))))
-    
-    (defun org-pro-get-publish-directory (project)
-      (cdr (assoc "publish-directory" (cadr project))))
-    
-    (defun org-pro-get-category (project)
-      (cdr (assoc "category" (cadr project))))
+  (interactive "P")
+  (let* ((curpro org-pro-current-project)
+	 (change-maybe (or force
+			   org-pro-switch-always
+			   (not org-pro-current-project)))
+	 (pro (if change-maybe (org-pro-select-project) curpro))
+	 (stay (eq pro curpro)))
+    (unless stay
+      (org-pro-save-project curpro)
+      (setq org-pro-config-cycle-pos 0)
+      (org-pro-activate-project pro))
+    (org-pro-find-project pro org-pro-config-cycle-pos)))
+
+(defun org-pro-list-files (dir ext sort-by)
+  (if (featurep 'file-list)
+      (mapcar 'file-list-make-file-name
+	      (file-list-sort-internal
+	       (file-list-select-internal nil ext nil nil dir nil 'dont)
+	       (or sort-by "time") nil t))
+    (directory-files dir nil ext t)))
+
+(defun org-pro-layout (&optional pos)
+  (delete-other-windows)
+  (split-window-vertically)
+  (split-window-horizontally)
+  (other-window -1)
+  (split-window-horizontally)
+  (other-window 2)
+  (other-window (or pos 0)))
+
+
+(defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
+(defun org-pro-open-recent (&optional project action)
+  (interactive)
+  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+	 (loc (concat (org-pro-get-location pro) (car pro)))
+	 (tmplist (if (require 'file-list nil t)
+		      (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
+	 (tmplist2 (when tmplist
+		     (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
+	 (flist (when tmplist2
+		  nil
+		  (file-list-sort-internal
+		   tmplist2
+		   "time" nil t))))
+    (when flist
+      (when (car flist)
+	(find-file (file-list-make-file-name (car flist)))
+	(setq flist (cdr flist))
+	(org-pro-layout 1)
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))
+	(if (car flist)
+	    (progn
+	      (find-file (file-list-make-file-name (car flist)))
+	      (setq flist (cdr flist))
+	      (other-window 1))
+	  (delete-window))))))
+(defun org-pro-get (project el)
+  (cdr (assoc el (cadr project))))
+
+(defun org-pro-get-index (project)
+  (cdr (assoc "index" (cadr project))))
+
+(defun org-pro-get-git (project)
+  (or (cdr (assoc "git" (cadr project))) ""))
+
+(defun org-pro-get-git-location (project)
+  (or (cdr (assoc "git-location" (cadr project)))
+      (concat (org-pro-get-location project) (car project))))
+
+(defun org-pro-get-location (project)
+  "Get the directory associated with PROJECT."
+  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
+;;  (let ((loc (cdr (assoc "location" (cadr project)))))
+;;                (if loc 
+;;                                (concat (file-name-as-directory loc)
+;;                                        (car project)))))
+
+(defun org-pro-get-publish-directory (project)
+  (cdr (assoc "publish-directory" (cadr project))))
+
+(defun org-pro-get-category (project)
+  (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
@@ -1331,6 +1290,32 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
             (point)))))
 #+END_SRC     
 
+** Capture: Adding information to projects
+*** Choose a prefix
+#+BEGIN_SRC  emacs-lisp :export code
+(setq org-pro-capture-prefix "P")
+(add-to-list 'org-capture-templates `(,org-pro-capture-prefix "Project management"))
+#+END_SRC
+*** Capturing links 
+#+BEGIN_SRC  emacs-lisp :export code
+(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "l") "Add link" plain 
+ (function (lambda () (org-pro-goto-project nil "Links" 'yes))) "\n - %x%?"))
+#+END_SRC
+*** Capturing tasks
+#+BEGIN_SRC  emacs-lisp :export code
+(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "t") "Add task" plain
+  (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:"))
+#+END_SRC
+*** Capturing notes
+#+BEGIN_SRC  emacs-lisp :export code
+(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add note" plain
+  (function org-pro-goto-project-workflow) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:"))
+#+END_SRC
+*** Capturing documents
+#+BEGIN_SRC  emacs-lisp :export code
+(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "d") "Add document" plain
+  (function org-pro-goto-project-workflow) "\n*** DOCS [[%(read-file-name \"Document file: \")][%(read-string \"Document name: \")]] \n:PROPERTIES:\n:CaptureDate: %T\n:END:"))
+#+END_SRC
 ** Export
 *** Publishing
 
