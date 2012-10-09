@@ -1,0 +1,12 @@
+* DocCo
+** DONE Manuscripts
+*** TODO Testing <2012-10-06 Sat>
+* Notes
+* Bookmarks
+* Mailbox
+**** EMAIL: from Paul: bonjour <2012-10-06 Sat>
+    :PROPERTIES:
+    :CaptureDate: [2012-10-06 Sat]
+    :END:
+    
+#+STARTUP: hidestars
