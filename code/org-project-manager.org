@@ -272,26 +272,34 @@ a minor-mode on top of it.
 *** Lists of project-index and project-org files 
 
 #+BEGIN_SRC emacs-lisp :export code
-(defun org-pro-index-list (&optional category extension not-exist-ok update)
- "Return a list of project specific indexes.
-Projects are filtered by CATEGORY unless CATEGORY is nil.
-Only existing files are returned unless NOT-EXIST-OK is non-nil.
-Only files ending on EXTENSION are returned unless EXTENSION is nil.
-If UPDATE is non-nil first parse the file org-pro."
- (interactive "P")
- (if update
- (org-pro-refresh))
- (delete-dups (delq nil (mapcar '(lambda (x)
- (let ((f (org-pro-get-index x)))
-       (when (and (or not-exist-ok (file-exists-p f))
-                (or (not extension)
-                    (string= extension (file-name-extension f))))
-                     f)))
-  (if category
-      (delq nil (mapcar '(lambda (p) (if (string= category (org-pro-get-category p))
-                           p))
-                        org-pro-project-alist))
-  org-pro-project-alist)))))
+(defun org-pro-index-list (&optional category state extension not-exist-ok update)
+  "Return a list of project specific indexes.
+              Projects are filtered by CATEGORY unless CATEGORY is nil.
+              Projects are filtered by the todo-state regexp STATE unless STATE is nil.
+              Only existing files are returned unless NOT-EXIST-OK is non-nil.
+              Only files ending on EXTENSION are returned unless EXTENSION is nil.
+              If UPDATE is non-nil first parse the file org-pro.
+Examples:
+(org-pro-index-list nil \"ACTIVE\")
+(org-pro-index-list nil \"DONE\")
+"
+  (interactive "P")
+  (when update
+    (org-pro-refresh))
+  (let* ((testfun (lambda (p) (when (and
+				     (or (not category) (string= category (org-pro-get-category p)))
+				     (or (not state) (string-match state (org-pro-get-state p)))) p)))
+	 (palist (if (or category state)
+		     (delq nil (mapcar testfun org-pro-project-alist))
+		   org-pro-project-alist)))
+    (delete-dups (delq nil (mapcar '(lambda (x)
+				      (let ((f (org-pro-get-index x)))
+					(when (and (or not-exist-ok (file-exists-p f))
+						   (or (not extension)
+						       (string= extension (file-name-extension f))))
+					  f)))
+				   palist)))))
+  
 #+END_SRC
 
 *** The profile of a single project
@@ -1120,6 +1128,10 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 (defun org-pro-get-category (project)
   (cdr (assoc "category" (cadr project))))
+
+(defun org-pro-get-state (project)
+  (cdr (assoc "state" (cadr project))))
+
 (defvar org-pro-switch-always t
   "If nil 'org-pro-switch-to-project' will
                                        switch to current project unless the last command also was 'org-pro-switch-to-project'.
@@ -1133,10 +1145,10 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 	 (curpos (or org-pro-config-cycle-pos 0))
 	 (config-list (org-pro-read-config-list
 		       (org-pro-get-config pro))))
-  (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
-      (setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
-    (setq org-pro-config-cycle-pos 0))
-  (org-pro-find-project pro org-pro-config-cycle-pos)))
+    (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
+	(setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
+      (setq org-pro-config-cycle-pos 0))
+    (org-pro-find-project pro org-pro-config-cycle-pos)))
 
 (defun org-pro-switch (&optional arg)
   "If ARG switch project else switch config."
