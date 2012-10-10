@@ -871,6 +871,11 @@ splits in the current frame.
 	(if (deft-search-forward (car deft-filter-regexp))
 	    file)))))
 
+;; hack for new files
+(defun deft-file-mtime (file)
+  "Retrieve modified time of FILE from cache."
+  (when deft-hash-mtimes
+  (gethash file deft-hash-mtimes)))
 
 ;; copy of original def-new-file
 (defun deft-new-file-local ()
