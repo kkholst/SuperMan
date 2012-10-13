@@ -1,0 +1,32 @@
+#+STARTUP: hidestars
+* DocCo
+** DONE Manuscripts
+*** TODO Testing
+    :PROPERTIES:
+    :CaptureDate: <2012-10-06 Sat>
+    :END: 
+*** DOCS Using the org-project-manager
+    :PROPERTIES:
+    :CaptureDate: <2012-10-08 Mon>
+    :END:
+
+* Notes
+* Bookmarks
+* Mailbox
+** 2012 
+*** MAIL from Paul: bonjour <2012-10-06 Sat>
+    :PROPERTIES:
+    :CaptureDate: [2012-10-06 Sat]
+    :END:
+*** MAIL from Chris Robinson: Kino 
+:PROPERTIES:
+:CaptureDate: <2012-10-08 Mon 07:28>
+:LINK: [[gnus:nnml:privat#CAHoiPscXoR0jhngzGhfjop9LrOiN4isu77ke6CSv33GqZV%2BNJA@mail.gmail.com][Email from Chris Robinson: Kino]]
+:EmailDate: Wed, 3 Oct 2012 10:32:19 +0200
+:END:
+
+----
+Hab reserviert für vov vov. Fængt um 21:00 an (Onsdag)...
+
+Cool?
+----
