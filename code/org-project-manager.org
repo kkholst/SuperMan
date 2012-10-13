@@ -221,7 +221,7 @@ a minor-mode on top of it.
 					org-pro-org-location)))
 			  ;; (make-directory default-org-home t)
 			  (concat (file-name-as-directory default-org-home) name ".org")))))
-	(unless (file-name-absolute-p index)
+	 (unless (file-name-absolute-p index)
 	  (setq index
 		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
 	(add-to-list 'org-pro-project-alist
