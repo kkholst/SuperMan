@@ -1,6 +1,12 @@
 * DocCo
 ** DONE Manuscripts
 *** TODO Testing <2012-10-06 Sat>
+**** DOCS: profile
+    :PROPERTIES:
+    :FileName: ~/research/Projects.org
+    :GitInit: <2012-10-23 Tue>
+    :END:
+
 * Notes
 * Bookmarks
 * Mailbox
