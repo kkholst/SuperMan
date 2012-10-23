@@ -5,3 +5,7 @@
 *.log
 *.pdf
 *.html
+*_latexmk
+*_log
+auto
+.*

@@ -543,67 +543,81 @@ Examples:
 #+BEGIN_SRC emacs-lisp :export code 
 
 (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+          If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
 
 (defun org-pro-git-p (dir)
-   "Test if directory DIR is under git control."
-   (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
-          
+  "Test if directory DIR is under git control."
+  (eq 0 (shell-command (concat "cd " dir ";git rev-parse --is-inside-work-tree "))))
+
 (defun org-pro-git-init-directory (dir)
-          "Put directory DIR under git control."
-           (if (org-pro-git-p dir)
-            (message (concat "Directory " dir " is under git control."))
-           (shell-command (concat "cd " dir "; git init"))
-           (append-to-file org-pro-git-ignore nil (concat dir ".gitignore"))))
-          
+  "Put directory DIR under git control."
+  (if (org-pro-git-p dir)
+      (message (concat "Directory " dir " is under git control."))
+    (shell-command (concat "cd " dir "; git init"))
+    (append-to-file org-pro-git-ignore nil (concat dir ".gitignore"))))
+
+(defun org-pro-git-add-file (file dir)
+  "Add file FILE to git repository DIR."
+  (with-output-to-temp-buffer "*Git log*" 
+    (shell-command (concat "cd " dir "; git add " file))))
+
+;; TODO
+;;(defun org-pro-update-document-status ()
+;;  (interactive)
+;;  (org-back-to-heading t)
+;;  (let ((file (org-entry-get nil "filename"))
+;;        (old-stat (org-entry-get nil "Git-status")))
+;;    (cond (string= stat "changed"))))
+
+
 (defun org-pro-git-update-directory (dir silent)
-        "Put directory DIR under git control."
-      (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
-               (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
-               (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
-          (if doit
-              (shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
-      
-        
+  "Put directory DIR under git control."
+  (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
+	 (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
+	 (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
+    (if doit
+	(shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
+
+
 (defun org-pro-git-push-directory (dir silent)
-          "Put directory DIR under git control."
-          (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
-                 (necessary (string-match "Your branch is ahead .*\n" status))
-                 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-            (if doit
-                (shell-command (concat "cd " dir "; git push")))))
-              
+  "Put directory DIR under git control."
+  (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+	 (necessary (string-match "Your branch is ahead .*\n" status))
+	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+    (if doit
+	(shell-command (concat "cd " dir "; git push")))))
+
 (defun org-pro-git-update-project (project before)
-    "Check if project needs to be put under git control and update.
-      If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-      "
-    (let* ((git-control (downcase (org-pro-get-git project))))
-      (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
-        (let ((silent-p (string= git-control "silent"))
-              (dir (org-pro-get-git-location project)))
-          (when (file-exists-p dir)
-            (if before
-                (progn
-                ;; activating project
-                (unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
-                  (when (or silent-p
-                            (y-or-n-p (concat "Initialize git control at " dir "?")))
-                    (org-pro-git-init-directory dir)))
-                  (when (and (string-match "pull" git-control)
-                             (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-                    (shell-command (concat "cd " dir "; git pull"))))
-              ;; deactivating project
-              (when (and (org-pro-git-p dir)
-                         (string-match "yes\\|silent" git-control))
-                (org-pro-git-update-directory dir silent-p)
-                (when (string-match "push" git-control)
-                  (org-pro-git-push-directory dir silent-p)
-                  ))))))))
-      
+  "Check if project needs to be put under git control and update.
+                If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+                "
+  (let* ((git-control (downcase (org-pro-get-git project))))
+    (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
+      (let ((silent-p (string= git-control "silent"))
+	    (dir (org-pro-get-git-location project)))
+	(when (file-exists-p dir)
+	  (if before
+	      (progn
+		;; activating project
+		(unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
+		  (when (or silent-p
+			    (y-or-n-p (concat "Initialize git control at " dir "?")))
+		    (org-pro-git-init-directory dir)))
+		(when (and (string-match "pull" git-control)
+			   (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
+		  (shell-command (concat "cd " dir "; git pull"))))
+	    ;; deactivating project
+	    (when (and (org-pro-git-p dir)
+		       (string-match "yes\\|silent" git-control))
+	      (org-pro-git-update-directory dir silent-p)
+	      (when (string-match "push" git-control)
+		(org-pro-git-push-directory dir silent-p)
+		))))))))
+
 (defvar org-pro-git-ignore "*
-!*.org" "What files to include or not include.
-Default is * meaning ignore all files and
- !*.org meaning except for org files.")
+          !*.org" "What files to include or not include.
+          Default is * meaning ignore all files and
+           !*.org meaning except for org files.")
 #+END_SRC   
 
 ** Window configuration
@@ -1070,42 +1084,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
   (org-pro-set-config project nil (or pos org-pro-config-cycle-pos 0)))
 
 (defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
-(defun org-pro-open-recent (&optional project action)
-  (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro)))
-	 (tmplist (if (require 'file-list nil t)
-		      (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
-	 (tmplist2 (when tmplist
-		     (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
-	 (flist (when tmplist2
-		  nil
-		  (file-list-sort-internal
-		   tmplist2
-		   "time" nil t))))
-    (when flist
-      (when (car flist)
-	(find-file (file-list-make-file-name (car flist)))
-	(setq flist (cdr flist))
-	(org-pro-layout 1)
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))))))
+
 (defun org-pro-get (project el)
   (cdr (assoc el (cadr project))))
 
@@ -1185,80 +1164,6 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 	       (file-list-select-internal nil ext nil nil dir nil 'dont)
 	       (or sort-by "time") nil t))
     (directory-files dir nil ext t)))
-
-(defun org-pro-layout (&optional pos)
-  (delete-other-windows)
-  (split-window-vertically)
-  (split-window-horizontally)
-  (other-window -1)
-  (split-window-horizontally)
-  (other-window 2)
-  (other-window (or pos 0)))
-
-
-(defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
-(defun org-pro-open-recent (&optional project action)
-  (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro)))
-	 (tmplist (if (require 'file-list nil t)
-		      (file-list-select-internal nil org-pro-human-readable-ext nil nil loc nil 'dont)))
-	 (tmplist2 (when tmplist
-		     (file-list-select-internal tmplist "auto" "path" 'inverse nil nil t)))
-	 (flist (when tmplist2
-		  nil
-		  (file-list-sort-internal
-		   tmplist2
-		   "time" nil t))))
-    (when flist
-      (when (car flist)
-	(find-file (file-list-make-file-name (car flist)))
-	(setq flist (cdr flist))
-	(org-pro-layout 1)
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))
-	(if (car flist)
-	    (progn
-	      (find-file (file-list-make-file-name (car flist)))
-	      (setq flist (cdr flist))
-	      (other-window 1))
-	  (delete-window))))))
-(defun org-pro-get (project el)
-  (cdr (assoc el (cadr project))))
-
-(defun org-pro-get-index (project)
-  (cdr (assoc "index" (cadr project))))
-
-(defun org-pro-get-git (project)
-  (or (cdr (assoc "git" (cadr project))) ""))
-
-(defun org-pro-get-git-location (project)
-  (or (cdr (assoc "git-location" (cadr project)))
-      (concat (org-pro-get-location project) (car project))))
-
-(defun org-pro-get-location (project)
-  "Get the directory associated with PROJECT."
-  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-;;                (if loc 
-;;                                (concat (file-name-as-directory loc)
-;;                                        (car project)))))
-
-(defun org-pro-get-publish-directory (project)
-  (cdr (assoc "publish-directory" (cadr project))))
-
-(defun org-pro-get-category (project)
-  (cdr (assoc "category" (cadr project))))
 #+END_SRC
 
 *** Find specific places in a project
@@ -1331,7 +1236,8 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 *** Capturing documents
 #+BEGIN_SRC  emacs-lisp :export code
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "d") "Add document" plain
-  (function org-pro-goto-project-workflow) "\n*** DOCS [[%(read-file-name \"Document file: \")][%(read-string \"Document name: \")]] \n:PROPERTIES:\n:CaptureDate: %T\n:END:"))
+				      (function org-pro-goto-project-workflow) "\n*** DOCS [[%(read-file-name \"Document file: \")][%(read-string \"Document name: \")]] \n:PROPERTIES:\n:CaptureDate: %T\n:END:"))
+
 #+END_SRC
 ** Export
 *** Publishing
