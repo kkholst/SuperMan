@@ -1,3 +1,8 @@
+* WorkFlow
+*** DOCS [[~/emacs-genome/snps/ProjectManager/projects/demo-project/org/demo-docs.org][demo docs]] 
+:PROPERTIES:
+:CaptureDate: <2012-10-21 Sun 09:59>
+:END:
 #+STARTUP: hidestars
 * DocCo
 ** DONE Manuscripts
