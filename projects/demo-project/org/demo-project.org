@@ -1,9 +1,19 @@
+
 * WorkFlow
-*** DOCS [[~/emacs-genome/snps/ProjectManager/projects/demo-project/org/demo-docs.org][demo docs]] 
+*** DOCS bla bla 
 :PROPERTIES:
-:CaptureDate: <2012-10-21 Sun 09:59>
+:FileName: ~/emacs-genome/snps/ProjectManager/projects/demo-project/org/klaus.org
+:CaptureDate: <2012-10-23 Tue 12:48>
 :END:
-#+STARTUP: hidestars
+*** DOCS demo project  
+:PROPERTIES:
+:FileName: ~/emacs-genome/snps/ProjectManager/projects/demo-project/org/demo-project.org
+:CaptureDate: <2012-10-23 Tue 12:19>
+:GitStatus: Modified/staged last: Tue Oct 23 06:40:15 2012 +0200
+:END:
+
+
+
 * DocCo
 ** DONE Manuscripts
 *** TODO Testing
@@ -23,7 +33,7 @@
     :PROPERTIES:
     :CaptureDate: [2012-10-06 Sat]
     :END:
-*** MAIL from Chris Robinson: Kino 
+*** MAIL from Chris: Kino 
 :PROPERTIES:
 :CaptureDate: <2012-10-08 Mon 07:28>
 :LINK: [[gnus:nnml:privat#CAHoiPscXoR0jhngzGhfjop9LrOiN4isu77ke6CSv33GqZV%2BNJA@mail.gmail.com][Email from Chris Robinson: Kino]]
@@ -35,3 +45,5 @@ Hab reserviert für vov vov. Fængt um 21:00 an (Onsdag)...
 
 Cool?
 ----
+
+#+STARTUP: hidestars
