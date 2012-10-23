@@ -587,6 +587,8 @@ Examples:
              (setq status "File does not exist"))
             ((string= git-status "M")
              (setq status "Modified and staged"))
+            ((string= git-status "A")
+             (setq status "New file"))
             ((string= git-status " ")
              (setq status "Modified but unstaged"))
             ((string= git-status "C")
