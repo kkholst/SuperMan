@@ -1258,48 +1258,49 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 *** Find specific places in a project
 #+BEGIN_SRC emacs-lisp :export code
-(defun org-pro-goto-project (&optional project heading create)
-    (interactive)
-    (let ((pro 
-           (or project
-              (car (org-pro-select-project)))))
-      (when (and (not (string-equal pro "")) pro)
-        (let* ((entry (assoc pro org-pro-project-alist))
-          (index (org-pro-get-index entry))
-          (head (or heading "WorkFlow")))
+  (defun org-pro-goto-project (&optional project heading create)
+      (interactive)
+      (let ((pro 
+             (or project
+                (car (org-pro-select-project)))))
+        (when (and (not (string-equal pro "")) pro)
+          (let* ((entry (assoc pro org-pro-project-alist))
+            (index (org-pro-get-index entry))
+            (head (or heading "WorkFlow")))
+          (if index
+              (find-file index)
+            (error (concat "Project " pro " does not have an index.")))
+          (goto-char (point-min))
+          (or (re-search-forward (concat "^[*]+ " heading) nil t)
+              (when create
+                (insert "* " heading "\n\n")
+                (forward-line  -1)))))))
+    
+    
+  (defun org-pro-goto-project-workflow ()
+      (interactive)
+     (or (org-pro-goto-project nil "WorkFlow" 'create)))
+    
+    ;; (org-pro-goto-project nil "WorkFlow" t)
+    
+    
+  (defun org-pro-goto-project-taskpool (&optional arg)
+      (interactive)
+      (if arg (org-store-link nil))
+      (let* ((buf (current-buffer))
+             (pro (car (org-pro-select-project)))
+;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
+             (entry (assoc pro org-pro-project-alist))
+             (index (org-pro-get-index entry)))
         (if index
             (find-file index)
           (error (concat "Project " pro " does not have an index.")))
         (goto-char (point-min))
-        (or (re-search-forward (concat "^[*]+ " heading) nil t)
-            (when create
-              (insert "* " heading "\n\n")
-              (forward-line  -1)))))))
-  
-  
-(defun org-pro-goto-project-workflow ()
-    (interactive)
-   (or (org-pro-goto-project nil "WorkFlow" 'create)))
-  
-  ;; (org-pro-goto-project nil "WorkFlow" t)
-  
-  
-(defun org-pro-goto-project-taskpool (&optional arg)
-    (interactive)
-    (if arg (org-store-link nil))
-    (let* ((buf (current-buffer))
-           (pro (completing-read "Select project: " org-pro-project-alist))
-           (entry (assoc pro org-pro-project-alist))
-           (index (org-pro-get-index entry)))
-      (if index
-          (find-file index)
-        (error (concat "Project " pro " does not have an index.")))
-      (goto-char (point-min))
-      (or (re-search-forward "^[*]+ TaskPool" nil t)
-          (progn
-            (goto-char (point-max))
-            (insert "\n\n* TaskPool\n")
-            (point)))))
+        (or (re-search-forward "^[*]+ TaskPool" nil t)
+            (progn
+              (goto-char (point-max))
+              (insert "\n\n* TaskPool\n")
+              (point)))))
 #+END_SRC     
 
 ** Capture: Adding information to projects

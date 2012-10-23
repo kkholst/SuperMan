@@ -2,6 +2,8 @@
 *#*#
 *.aux
 *.el
+*.out
+*.tex
 *.log
 *.pdf
 *.html
