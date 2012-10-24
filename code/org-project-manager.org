@@ -1261,8 +1261,10 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
         (or (re-search-forward "^[*]+ TaskPool" nil t)
             (progn
               (goto-char (point-max))
-              (insert "\n\n* TaskPool\n")
-              (point)))))
+              (insert "\n\n* TaskPool [0/0]\n")
+              (point))) 
+        (org-end-of-line)
+))
 #+END_SRC     
 
 ** Capture: Adding information to projects
@@ -1270,6 +1272,11 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+BEGIN_SRC  emacs-lisp :export code
 (setq org-pro-capture-prefix "P")
 (add-to-list 'org-capture-templates `(,org-pro-capture-prefix "Project management") 'append)
+(defun org-pro-capture() 
+  (interactive)
+  (push (string-to-char org-pro-capture-prefix) unread-command-events)
+  (call-interactively 'org-capture)
+  )
 #+END_SRC
 *** Capturing links 
 #+BEGIN_SRC  emacs-lisp :export code
@@ -1280,6 +1287,9 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+BEGIN_SRC  emacs-lisp :export code
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "t") "Add task" plain
   (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+
+(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "c") "Add checklist item" plain
+  (function org-pro-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 #+END_SRC
 *** Capturing notes
 #+BEGIN_SRC  emacs-lisp :export code
