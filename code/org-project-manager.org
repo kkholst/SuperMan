@@ -64,9 +64,9 @@
   
 ** Getting started
    
-   The first thing to do is to define some new projects. Obviously, you
-   would rather read in your existing projects. But stay cool and read on
-   until this is explained below.
+   The first thing to do is to define some new projects. Obviously,
+   you would rather read in your existing projects. Don't worry, 
+   this is also possible and explained below.
    
 *** The project manager file
     
@@ -78,10 +78,10 @@
 
 **** What is a project?
     
-     As in real life an org-pro project can be many different things. The
-     prototype project consists of a /location/, that is a directory on
-     your computer, and an index file. (Actually, only one of /index/ and
-     /location/ is required.)
+     As in real life, a project can be many different things. The
+     prototype project consists of a /location/, that is a directory
+     on your computer, and an index file. (Actually, only one of
+     /index/ and /location/ is required.)
      
 **** How to define a project?
      
@@ -196,8 +196,8 @@ a minor-mode on top of it.
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-project-alist nil
   "Alist of projects associating the nickname of the project
-with information like the location of the project, the index file,
-collaborator names, a category, the publishing directory, etc.")
+  with information like the location of the project, the index file,
+  collaborator names, a category, the publishing directory, etc.")
 
 (defvar org-pro-current-project nil "The currently selected project.")
 
@@ -205,7 +205,7 @@ collaborator names, a category, the publishing directory, etc.")
   "List of categories for sorting projects.")
 
 (defun org-pro-entry-get  (pom property &optional inherit literal-nil)
-"Read property and remove leading and trailing whitespace."
+  "Read property and remove leading and trailing whitespace."
   (let ((prop (org-entry-get pom property inherit literal-nil)))
     (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
 
@@ -271,7 +271,7 @@ collaborator names, a category, the publishing directory, etc.")
 
 (defun org-pro-refresh ()
   "Parses the categories and projects in file `org-pro-file' and also
-         updates the currently selected project."
+           updates the currently selected project."
   (interactive)
   (org-pro-parse-categories)
   (org-pro-parse-projects)
@@ -553,7 +553,17 @@ the `org-pro-file'.")
    
 #+BEGIN_SRC emacs-lisp :export code 
 (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-           If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+                           If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+
+(setq org-pro-git-ignore "*")
+(defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
+              
+           By default we set this to '*' which means that all files are ignored.
+              
+           You think this is a bit stupid? Hehe, we can still add files via
+           the -f (force) command line switch. And we get not bothered by
+           having to filter all the unpredictable names one can give to files
+           that never should get git controlled.")
 
 (defun org-pro-git-p (dir)
   "Test if directory DIR is under git control."
@@ -568,7 +578,7 @@ the `org-pro-file'.")
     (org-pro-git-init-directory loc)
     (if (string-match loc index)
 	(org-pro-git-add-and-commit-file
-      index loc (concat "Initial commit of project " (car pro))))))
+	 index loc (concat "Initial commit of project " (car pro))))))
 
 (defun org-pro-git-init-directory (dir)
   "Put directory DIR under git control."
@@ -628,23 +638,34 @@ the `org-pro-file'.")
     (org-set-property "GitStatus" status)))
 
 
-(defun org-pro-git-add-file (file dir)
-  (shell-command (concat "cd " dir "; git add " file)))
-
+(defun org-pro-git-add-file (file project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (file (or file (read-file-name "Git add file: " dir nil t))))
+    (shell-command (concat "cd " dir "; git add -f " file))))
 
 (defun org-pro-git-add-and-commit-file (file dir &optional message)
   (shell-command (concat "cd " dir
-			 "; git add " file "; git commit -m\" "
+			 "; git add -f " file "; git commit -m\" "
 			 (or message 
 			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
 			 "\" " file)))
+
+;;(defun org-pro-buffer-file-project ()
+;; "Return the project of the current buffers file."
+;;  (let ((f (buffer-file-name (current-buffer))))
 
 (defun org-pro-git-add-file-at-point ()
   "Add or update file FILE to git repository DIR."
   (interactive)
   (let* ((file (org-pro-filename-at-point))
 	 (dir (if file (file-name-directory file))))
-    (org-pro-git-add-file file dir)))
+    (org-pro-git-add-file file
+			  (if (string= (expand-file-name (buffer-file-name))
+				       (expand-file-name (org-pro-get-index org-pro-current-project)))
+			      org-pro-current-project
+			    nil))))
 
 (defun org-pro-git-commit-file-at-point ()
   "Add or update file FILE to git repository DIR."
@@ -656,17 +677,17 @@ the `org-pro-file'.")
 
 
 
-(defun org-pro-git-update-directory (dir silent)
-  "Put directory DIR under git control."
-  (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir "; git status")))))
-	 (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
-	 (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
-    (if doit
-	(shell-command (concat "cd " dir "; git add -u;git commit -m \"" message "\"")))))
+;; (defun org-pro-git-update-directory (dir silent)
+;; "Put directory DIR under git control."
+;; (let* ((necessary (not (string-match "nothing to commit" (shell-command-to-string  (concat "cd " dir ";; git status")))))
+;; (doit (when necessary (or silent (y-or-n-p (concat "Update git at " dir "? ")))))
+;; (message (when doit (if silent "silent update" (read-string "Git commit message: ")))))
+;; (if doit
+;; (shell-command (concat "cd " dir "; git add -uf;git commit -m \"" message "\"")))))
 
 
 (defun org-pro-git-push-directory (dir silent)
-  "Put directory DIR under git control."
+  "Git push directory DIR."
   (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
 	 (necessary (string-match "Your branch is ahead .*\n" status))
 	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
@@ -675,8 +696,8 @@ the `org-pro-file'.")
 
 (defun org-pro-git-update-project (project before)
   "Check if project needs to be put under git control and update.
-                                                            If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-                                                            "
+           If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+          "
   (let* ((git-control (downcase (org-pro-get-git project))))
     (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
       (let ((silent-p (string= git-control "silent"))
@@ -700,36 +721,7 @@ the `org-pro-file'.")
 		(org-pro-git-push-directory dir silent-p)
 		))))))))
 
-(setq org-pro-git-ignore "
-*~
-*#*#
-*.aux
-*.el
-*.out
-*.tex
-*.log
-*.pdf
-*.html
-*_latexmk
-*_log
-auto
-.*
-")
-(defvar org-pro-git-ignore "
-*~
-*#*#
-*.aux
-*.el
-*.out
-*.tex
-*.log
-*.pdf
-*.html
-*_latexmk
-*_log
-auto
-.*
-" "What files to include or not include. See M-x manual-entry RET gitignore.")
+
 #+END_SRC   
 
 ** Window configuration
@@ -1201,6 +1193,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
   (cdr (assoc el (cadr project))))
 
 (defun org-pro-get-index (project)
+"Extract the index file of PROJECT."
   (cdr (assoc "index" (cadr project))))
 
 
@@ -1230,9 +1223,9 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 (defvar org-pro-switch-always t
   "If nil 'org-pro-switch-to-project' will
-                                       switch to current project unless the last command also was 'org-pro-switch-to-project'.
-                                       Setting this variable to non-nil (the default) will force 'org-pro-switch-to-project'
-                                       to always prompt for new project")
+ switch to current project unless the last command also was 'org-pro-switch-to-project'.
+ Setting this variable to non-nil (the default) will force 'org-pro-switch-to-project'
+ to always prompt for new project")
 
 (defun org-pro-switch-config (&optional project)
   "Switch to the next window configuration (if any)."
@@ -1280,51 +1273,55 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 *** Find specific places in a project
 #+BEGIN_SRC emacs-lisp :export code
-  (defun org-pro-goto-project (&optional project heading create)
-      (interactive)
-      (let ((pro 
-             (or project
-                (car (org-pro-select-project)))))
-        (when (and (not (string-equal pro "")) pro)
-          (let* ((entry (assoc pro org-pro-project-alist))
-            (index (org-pro-get-index entry))
-            (head (or heading "WorkFlow")))
-          (if index
-              (find-file index)
-            (error (concat "Project " pro " does not have an index.")))
-          (goto-char (point-min))
-          (or (re-search-forward (concat "^[*]+ " heading) nil t)
-              (when create
-                (insert "* " heading "\n\n")
-                (forward-line  -1)))))))
-    
-    
-  (defun org-pro-goto-project-workflow ()
-      (interactive)
-     (or (org-pro-goto-project nil "WorkFlow" 'create)))
-    
-    ;; (org-pro-goto-project nil "WorkFlow" t)
-    
-    
-  (defun org-pro-goto-project-taskpool (&optional arg)
-      (interactive)
-      (if arg (org-store-link nil))
-      (let* ((buf (current-buffer))
-             (pro (car (org-pro-select-project)))
-;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
-             (entry (assoc pro org-pro-project-alist))
-             (index (org-pro-get-index entry)))
-        (if index
-            (find-file index)
-          (error (concat "Project " pro " does not have an index.")))
-        (goto-char (point-min))
-        (or (re-search-forward "^[*]+ TaskPool" nil t)
-            (progn
-              (goto-char (point-max))
-              (insert "\n\n* TaskPool [0/0]\n")
-              (point))) 
-        (org-end-of-line)
-))
+(defun org-pro-goto-project (&optional project heading create)
+  (interactive)
+  (let ((pro 
+	 (or project
+	     (car (org-pro-select-project)))))
+    (when (and (not (string-equal pro "")) pro)
+      (let* ((entry (assoc pro org-pro-project-alist))
+	     (index (org-pro-get-index entry))
+	     (head (or heading "WorkFlow")))
+	(if index
+	    (find-file index)
+	  (error (concat "Project " pro " does not have an index.")))
+	(goto-char (point-min))
+	(or (re-search-forward (concat "^[*]+ " head) nil t)
+	    (when create
+	      (insert "* " head "\n\n")
+	      (forward-line  -1)))))))
+
+
+(defun org-pro-goto-project-workflow ()
+  (interactive)
+  (or (org-pro-goto-project nil "WorkFlow" 'create)))
+
+(defun org-pro-goto-project-documents ()
+  (interactive)
+  (or (org-pro-goto-project nil "Documents" 'create)))
+
+;; (org-pro-goto-project nil "WorkFlow" t)
+
+
+(defun org-pro-goto-project-taskpool (&optional arg)
+  (interactive)
+  (if arg (org-store-link nil))
+  (let* ((buf (current-buffer))
+	 (pro (car (org-pro-select-project)))
+	 ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
+	 (entry (assoc pro org-pro-project-alist))
+	 (index (org-pro-get-index entry)))
+    (if index
+	(find-file index)
+      (error (concat "Project " pro " does not have an index.")))
+    (goto-char (point-min))
+    (or (re-search-forward "^[*]+ TaskPool" nil t)
+	(progn
+	  (goto-char (point-max))
+	  (insert "\n\n* TaskPool [0/0]\n")
+	  (point))) 
+    (org-end-of-line)
+    ))
 #+END_SRC     
 
 ** Capture: Adding information to projects
@@ -1359,8 +1356,8 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 *** Capturing documents
 #+BEGIN_SRC  emacs-lisp :export code
 (add-to-list 'org-capture-templates
- `(,(concat org-pro-capture-prefix "d") "Add document" plain
- (function org-pro-goto-project-workflow) "\n*** DOCS %? \n:PROPERTIES:\n:FileName: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append) 
+	     `(,(concat org-pro-capture-prefix "d") "Add document" plain
+	       (function org-pro-goto-project-documents) "\n*** DOCS %? \n:PROPERTIES:\n:FileName: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append) 
 #+END_SRC
 ** Export
 *** Publishing
