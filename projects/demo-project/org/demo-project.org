@@ -1,15 +1,13 @@
 
 * WorkFlow
-*** DOCS bla bla 
-:PROPERTIES:
-:FileName: ~/emacs-genome/snps/ProjectManager/projects/demo-project/org/klaus.org
-:CaptureDate: <2012-10-23 Tue 12:48>
-:END:
+
 *** DOCS demo project  
 :PROPERTIES:
-:FileName: ~/emacs-genome/snps/ProjectManager/projects/demo-project/org/demo-project.org
+:FileName: [[~/emacs-genome/snps/ProjectManager/projects/demo-project/org/demo-project.org]]
 :CaptureDate: <2012-10-23 Tue 12:19>
-:GitStatus: Modified/staged last: Tue Oct 23 06:40:15 2012 +0200
+:LastCommit: Tue Oct 23 14:12:21 2012 +0200
+:GitStatus: Committed
+:GitInit:  Tue Oct 9 07:25:26 2012 +0200
 :END:
 
 
