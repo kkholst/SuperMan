@@ -553,17 +553,17 @@ the `org-pro-file'.")
 
 #+BEGIN_SRC emacs-lisp :export code 
 (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-                                     If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+                                             If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
 
 (setq org-pro-git-ignore "*")
 (defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
-                        
-                     By default we set this to '*' which means that all files are ignored.
-                        
-                     You think this is a bit stupid? Hehe, we can still add files via
-                     the -f (force) command line switch. And we get not bothered by
-                     having to filter all the unpredictable names one can give to files
-                     that never should get git controlled.")
+                                
+                             By default we set this to '*' which means that all files are ignored.
+                                
+                             You think this is a bit stupid? Hehe, we can still add files via
+                             the -f (force) command line switch. And we get not bothered by
+                             having to filter all the unpredictable names one can give to files
+                             that never should get git controlled.")
 
 (defun org-pro-git-p (dir)
   "Test if directory DIR is under git control."
@@ -601,141 +601,144 @@ the `org-pro-file'.")
 (defun org-pro-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
   (with-temp-buffer
-  (org-insert-time-stamp 
-   (date-to-time git-date-string) (not no-time))))
-  ;;      (set-time-zone-rule t) ;; Use Universal time.
-  ;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
-  ;;        (set-time-zone-rule nil))))
-  
-  (defun org-pro-git-last-commit (file)
-    (interactive)
-    (let* ((date (org-pro-read-git-date
-                  (shell-command-to-string
-                   (concat "git log --date=local -1 --pretty=format:\"%ad\" " file))))
-           (mess (shell-command-to-string
-		  (concat "git log -1 --pretty=format:\"%s\" " file))))
-      (concat date " " mess)))
-  
-  (defun org-pro-git-status-file-at-point ()
-    (interactive)
-    (let* ((file (org-pro-filename-at-point))
-	   (dir (if file (file-name-directory file)))
-	   (git-status (shell-command-to-string (concat "cd " dir "; git status --porcelain " file)))
-	   git-last-commit
-	   status)
-      (if (not (org-pro-git-p dir))
-	  (error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
-	(if (string= git-status "")
-	    (if (file-exists-p file)
-		(setq git-status "C")
-	      (setq git-status "E"))
-	  (if (string-match "^fatal" git-status)
-	      (setq git-status "")
-	    (setq git-status (substring git-status 0 1))))
-	(if (or  (string= git-status "")  (string= git-status "E"))
-	    (setq git-last-commit "")
-	  (setq git-last-commit (org-pro-git-last-commit file dir) ))
-	(cond ((string= git-status "?")
-	       (setq status "Untracked"))
-	      ((string= git-status "E")
-	       (setq status "File does not exist"))
-	      ((string= git-status "M")
-	       (setq status "Modified and staged"))
-	      ((string= git-status "A")
-	       (setq status "New file"))
-	      ((string= git-status " ")
-	       (setq status "Modified but unstaged"))
-	      ((string= git-status "C")
-	       (setq status "Committed"))
-	      (t (setq status "Unkown")))
-	(unless (org-pro-entry-get nil "GitInit")
-	  (org-set-property
-	   "GitInit"
-	   (replace-regexp-in-string
-	    "[ \n\t]*$" ""
-	    (shell-command-to-string (concat "cd " dir "; git log --pretty=format:\"%ad\" --reverse " file "  | head -1")))))
-	(unless (string= git-last-commit "")
-	  (org-set-property "LastCommit" git-last-commit))
-	(org-set-property "GitStatus" status))))
-  
-  
-  (defun org-pro-git-add-file (file project)
-    (interactive)
-    (let* ((pro (or project (org-pro-select-project)))
-	   (dir (concat (org-pro-get-location pro) (car pro)))
-	   (file (or file (read-file-name "Git add file: " dir nil t))))
-      (shell-command (concat "cd " dir "; git add -f " file))))
-  
-  (defun org-pro-git-add-and-commit-file (file dir &optional message)
-    (shell-command (concat "cd " dir
-			   "; git add -f " file "; git commit -m\" "
-			   (or message 
-			       (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
-			   "\" " file)))
-  
-  ;;(defun org-pro-buffer-file-project ()
-  ;; "Return the project of the current buffers file."
-  ;;  (let ((f (buffer-file-name (current-buffer))))
-  
-  (defun org-pro-git-add-file-at-point ()
-    "Add or update file FILE to git repository DIR."
-    (interactive)
-    (let* ((file (org-pro-filename-at-point))
-	   (dir (if file (file-name-directory file))))
-      (org-pro-git-add-file file
-			    (if (string= (expand-file-name (buffer-file-name))
-					 (expand-file-name (org-pro-get-index org-pro-current-project)))
-				org-pro-current-project
-			      nil))
-      (org-pro-git-status-file-at-point)
-      ))
-  
-  (defun org-pro-git-commit-file-at-point ()
-    "Add or update file FILE to git repository DIR."
-    (interactive)
-    (let* ((file (org-pro-filename-at-point))
-	   (dir (if file (file-name-directory file)))
-	   (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
-      (org-pro-git-add-and-commit-file file dir message)
-      (org-pro-git-status-file-at-point)))
-  
-  (defun org-pro-git-push-directory (dir silent)
-    "Git push directory DIR."
-    (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
-	   (necessary (string-match "Your branch is ahead .*\n" status))
-	   (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-      (if doit
-	  (shell-command (concat "cd " dir "; git push")))))
-  
-  
-  (defun org-pro-git-update-project (project before)
-    "Check if project needs to be put under git control and update.
-                     If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-                    "
-    (let* ((git-control (downcase (org-pro-get-git project))))
-      (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
-	(let ((silent-p (string= git-control "silent"))
-	      (dir (org-pro-get-git-location project)))
-	  (when (file-exists-p dir)
-	    (if before
-		(progn
-		  ;; activating project
-		  (unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
-		    (when (or silent-p
-			      (y-or-n-p (concat "Initialize git control at " dir "?")))
-		      (org-pro-git-init-directory dir)))
-		  (when (and (string-match "pull" git-control)
-			     (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-		    (shell-command (concat "cd " dir "; git pull"))))
-	      ;; deactivating project
-	      (when (and (org-pro-git-p dir)
-			 (string-match "yes\\|silent" git-control))
-		(org-pro-git-update-directory dir silent-p)
-		(when (string-match "push" git-control)
-		  (org-pro-git-push-directory dir silent-p)
-		  ))))))))
-  
-  
+    (org-insert-time-stamp 
+     (date-to-time git-date-string) (not no-time))))
+;;      (set-time-zone-rule t) ;; Use Universal time.
+;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
+;;        (set-time-zone-rule nil))))
+
+;; FIXME need to make this more flexible than first or last
+(defun org-pro-git-get-commit (arg file &optional dir)
+  (interactive)
+  (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
+		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
+	 (date (org-pro-read-git-date
+		(shell-command-to-string
+		 (if (string= arg "first")
+		     (concat  "cd " dir ";git log --date=local --pretty=format:\"%ad\" --reverse " file "  | head -1")
+                   (concat "git log --date=local -" arg " --pretty=format:\"%ad\" " file)))))
+	 (mess (shell-command-to-string
+		(if (string= arg "first")
+		    (concat "cd " dir ";git log --reverse --pretty=format:\"%s\" " file | head -1)
+		  (concat "git log -" arg " --pretty=format:\"%s\" " file)))))
+    (concat date " " mess)))
+
+(defun org-pro-git-status-file-at-point ()
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (dir (if file (file-name-directory file)))
+	 (git-status (shell-command-to-string (concat "cd " dir "; git status --porcelain " file)))
+	 git-last-commit
+	 status)
+    (if (not (org-pro-git-p dir))
+	(error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
+      (if (string= git-status "")
+	  (if (file-exists-p file)
+	      (setq git-status "C")
+	    (setq git-status "E"))
+	(if (string-match "^fatal" git-status)
+	    (setq git-status "")
+	  (setq git-status (substring git-status 0 1))))
+      (if (or  (string= git-status "")  (string= git-status "E"))
+	  (setq git-last-commit "")
+	(setq git-last-commit (org-pro-git-get-commit 1 file dir) ))
+      (cond ((string= git-status "?")
+	     (setq status "Untracked"))
+	    ((string= git-status "E")
+	     (setq status "File does not exist"))
+	    ((string= git-status "M")
+	     (setq status "Modified and staged"))
+	    ((string= git-status "A")
+	     (setq status "New file"))
+	    ((string= git-status " ")
+	     (setq status "Modified but unstaged"))
+	    ((string= git-status "C")
+	     (setq status "Committed"))
+	    (t (setq status "Unkown")))
+      (unless (org-pro-entry-get nil "GitInit")
+	(org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
+      (unless (string= git-last-commit "")
+	(org-set-property "LastCommit" git-last-commit))
+      (org-set-property "GitStatus" status))))
+
+
+(defun org-pro-git-add-file (file project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (file (or file (read-file-name "Git add file: " dir nil t))))
+    (shell-command (concat "cd " dir "; git add -f " file))))
+
+(defun org-pro-git-add-and-commit-file (file dir &optional message)
+  (shell-command (concat "cd " dir
+			 "; git add -f " file "; git commit -m\" "
+			 (or message 
+			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
+			 "\" " file)))
+
+;;(defun org-pro-buffer-file-project ()
+;; "Return the project of the current buffers file."
+;;  (let ((f (buffer-file-name (current-buffer))))
+
+(defun org-pro-git-add-file-at-point ()
+  "Add or update file FILE to git repository DIR."
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (dir (if file (file-name-directory file))))
+    (org-pro-git-add-file file
+			  (if (string= (expand-file-name (buffer-file-name))
+				       (expand-file-name (org-pro-get-index org-pro-current-project)))
+			      org-pro-current-project
+			    nil))
+    (org-pro-git-status-file-at-point)
+    ))
+
+(defun org-pro-git-commit-file-at-point ()
+  "Add or update file FILE to git repository DIR."
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (dir (if file (file-name-directory file)))
+	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
+    (org-pro-git-add-and-commit-file file dir message)
+    (org-pro-git-status-file-at-point)))
+
+(defun org-pro-git-push-directory (dir silent)
+  "Git push directory DIR."
+  (let* ((status (shell-command-to-string  (concat "cd " dir "; git status")))
+	 (necessary (string-match "Your branch is ahead .*\n" status))
+	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+    (if doit
+	(shell-command (concat "cd " dir "; git push")))))
+
+
+(defun org-pro-git-update-project (project before)
+  "Check if project needs to be put under git control and update.
+                             If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+                            "
+  (let* ((git-control (downcase (org-pro-get-git project))))
+    (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
+      (let ((silent-p (string= git-control "silent"))
+	    (dir (org-pro-get-git-location project)))
+	(when (file-exists-p dir)
+	  (if before
+	      (progn
+		;; activating project
+		(unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
+		  (when (or silent-p
+			    (y-or-n-p (concat "Initialize git control at " dir "?")))
+		    (org-pro-git-init-directory dir)))
+		(when (and (string-match "pull" git-control)
+			   (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
+		  (shell-command (concat "cd " dir "; git pull"))))
+	    ;; deactivating project
+	    (when (and (org-pro-git-p dir)
+		       (string-match "yes\\|silent" git-control))
+	      (org-pro-git-update-directory dir silent-p)
+	      (when (string-match "push" git-control)
+		(org-pro-git-push-directory dir silent-p)
+		))))))))
+
+
 #+END_SRC   
 
 ** Window configuration
