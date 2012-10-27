@@ -1,13 +1,1 @@
-*~
-*#*#
-*.aux
-*.el
-*.out
-*.tex
-*.log
-*.pdf
-*.html
-*_latexmk
-*_log
-auto
-.*
+*

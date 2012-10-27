@@ -607,7 +607,6 @@ the `org-pro-file'.")
 ;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
 ;;        (set-time-zone-rule nil))))
 
-;; FIXME need to make this more flexible than first or last
 (defun org-pro-git-get-commit (arg file &optional dir)
   (interactive)
   (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
@@ -619,9 +618,10 @@ the `org-pro-file'.")
                    (concat "git log --date=local -" arg " --pretty=format:\"%ad\" " file)))))
 	 (mess (shell-command-to-string
 		(if (string= arg "first")
-		    (concat "cd " dir ";git log --reverse --pretty=format:\"%s\" " file | head -1)
+		    (concat "cd " dir ";git log --reverse --pretty=format:\"%s\" " file " | head -1")
 		  (concat "git log -" arg " --pretty=format:\"%s\" " file)))))
     (concat date " " mess)))
+
 
 (defun org-pro-git-status-file-at-point ()
   (interactive)
@@ -641,7 +641,7 @@ the `org-pro-file'.")
 	  (setq git-status (substring git-status 0 1))))
       (if (or  (string= git-status "")  (string= git-status "E"))
 	  (setq git-last-commit "")
-	(setq git-last-commit (org-pro-git-get-commit 1 file dir) ))
+	(setq git-last-commit (org-pro-git-get-commit "1" file dir) ))
       (cond ((string= git-status "?")
 	     (setq status "Untracked"))
 	    ((string= git-status "E")
