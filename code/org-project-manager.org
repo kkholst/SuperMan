@@ -553,12 +553,39 @@ the `org-pro-file'.")
 
 
 #+BEGIN_SRC emacs-lisp :export code 
-    (setq org-property-set-functions-alist nil)
-  
+    (setq org-property-set-functions-alist nil)  
     (add-to-list 'org-property-set-functions-alist
                  `("GitStatus" . org-pro-git-status-file-at-point))
     (add-to-list 'org-property-set-functions-alist
                   `("LastCommit" . org-pro-git-commit-file-at-point))
+;; Insert something like this in '* Documents' section (or globally)
+;; #+COLUMNS: %20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)
+;; Default: %25ITEM %TODO %3PRIORITY %TAGS"
+(org-columns)
+(setq org-columns-default-format "%20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)")
+(org-defkey org-columns-map "\r" 'org-pro-column-action)
+(defun org-pro-column-action ()
+  (interactive)
+  (let* (
+	(prop (get-char-property (point) 'org-columns-key))
+	)
+  (cond ((string= prop "ITEM")
+;;	  (org-pro-git-status-file-at-point)
+	  (re-search-forward ":FileName:")
+	  (org-open-at-point)
+	 )
+	 ((string= prop "GitStatus")
+	  (org-pro-git-status-file-at-point)
+	  )
+	 ((string= prop "FileName")
+	  (org-columns-open-link)
+	  )
+	 ((string= prop "LastCommit")
+	  (org-pro-git-commit-file-at-point)
+	 )))
+    (org-columns-redo)
+  )
+
     
     (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
                                                  If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
