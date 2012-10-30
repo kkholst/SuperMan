@@ -799,6 +799,7 @@ capture mechanism.
 (defun org-pro-update-status ()
   (interactive)
   (save-excursion 
+    (goto-char (point-min))
     (org-columns-quit)
     (while (re-search-forward ":GitStatus:" nil t)
       (org-pro-git-status-file-at-point)
