@@ -558,35 +558,6 @@ the `org-pro-file'.")
                  `("GitStatus" . org-pro-git-status-file-at-point))
     (add-to-list 'org-property-set-functions-alist
                   `("LastCommit" . org-pro-git-commit-file-at-point))
-;; Insert something like this in '* Documents' section (or globally)
-;; #+COLUMNS: %20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)
-;; Default: %25ITEM %TODO %3PRIORITY %TAGS"
-(org-columns)
-(setq org-columns-default-format "%20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)")
-(org-defkey org-columns-map "\r" 'org-pro-column-action)
-(defun org-pro-column-action ()
-  (interactive)
-  (let* (
-	(prop (get-char-property (point) 'org-columns-key))
-	)
-  (cond ((string= prop "ITEM")
-;;	  (org-pro-git-status-file-at-point)
-          (save-excursion
-              (re-search-forward ":FileName:")
-	      (org-open-at-point)
-          ))
-	 ((string= prop "GitStatus")
-	  (org-pro-git-status-file-at-point)
-	  )
-	 ((string= prop "FileName")
-	  (org-columns-open-link)
-	  )
-	 ((string= prop "LastCommit")
-	  (org-pro-git-commit-file-at-point)
-	 )))
-    (org-columns-redo)
-  )
-
     
     (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
                                                  If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
@@ -658,50 +629,51 @@ the `org-pro-file'.")
                       (concat "git log -" arg " --pretty=format:\"%s\" " file)))))
         (concat date " " mess)))
     
-    
-    (defun org-pro-git-status-file-at-point (&rest args)
-      (interactive)
-      (let* ((file (org-pro-filename-at-point))
-             (dir (if file (file-name-directory file)))
-             (git-status (shell-command-to-string (concat "cd " dir "; git status --porcelain " file)))
-             git-last-commit
-             status)
-        (if (not (org-pro-git-p dir))
-            (error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
-          (if (string= git-status "")
-              (if (file-exists-p file)
-                  (setq git-status "C")
-                (setq git-status "E"))
-            (if (string-match "^fatal" git-status)
-                (setq git-status "")
-              (setq git-status (substring git-status 0 1))))
-          (if (or  (string= git-status "")  (string= git-status "E"))
-              (setq git-last-commit "")
-            (setq git-last-commit (org-pro-git-get-commit "1" file dir) ))
-          (cond ((string= git-status "?")
-                 (setq status "Untracked"))
-                ((string= git-status "E")
-                 (setq status "File does not exist"))
-                ((string= git-status "M")
-                 (setq status "Modified and staged"))
-                ((string= git-status "A")
-                 (setq status "New file"))
-                ((string= git-status " ")
-                 (setq status "Modified but unstaged"))
-                ((string= git-status "C")
-                 (setq status "Committed"))
-                (t (setq status "Unkown")))
-          (unless (org-pro-entry-get nil "GitInit")
-            (org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
-          (unless (string= git-last-commit "")
-            (org-set-property "LastCommit" git-last-commit))
-          (org-set-property "GitStatus" status)
-        (if args 
-           (if (string= (car args) "1") git-last-commit status))
-	   ))
-    )
-    
-    
+
+(defun org-pro-git-status-file-at-point (&rest args)
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+         (dir (if file (file-name-directory file)))
+         (git-status (shell-command-to-string (concat "cd " dir "; git status --ignored --porcelain " file)))
+         git-last-commit
+         status)
+    (if (not (org-pro-git-p dir))
+        (error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
+      (if (string= git-status "")
+          (if (file-exists-p file)
+              (setq git-status "C")
+            (setq git-status "E"))
+        (if (string-match "^fatal" git-status)
+            (setq git-status "")
+          (setq git-status (substring git-status 0 1))))
+      (if (string= git-status "!") (setq git-status "?"))
+      (if (or  (string= git-status "") (string= git-status "E") (string= git-status "?"))
+          (setq git-last-commit "")
+        (setq git-last-commit (org-pro-git-get-commit "1" file dir) ))
+      (cond ((string= git-status "?")
+             (setq status "Untracked"))
+            ((string= git-status "E")
+             (setq status "File does not exist"))
+            ((string= git-status "M")
+             (setq status "Modified and staged"))
+            ((string= git-status "A")
+             (setq status "New file"))
+            ((string= git-status " ")
+             (setq status "Modified but unstaged"))
+            ((string= git-status "C")
+             (setq status "Committed"))
+            (t (setq status "Unknown")))
+      (org-set-property "GitStatus" status)
+      (unless (or (string= git-status "E") (string= git-status "?"))
+	(unless (org-pro-entry-get nil "GitInit")
+	  (org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
+	(unless (string= git-last-commit "")
+	  (org-set-property "LastCommit" git-last-commit))
+	(if args 
+	    (if (string= (car args) "1") git-last-commit status))
+	)
+)))
+        
     (defun org-pro-git-add-file (file project)
       (interactive)
       (let* ((pro (or project (org-pro-select-project)))
@@ -782,8 +754,62 @@ the `org-pro-file'.")
     
 #+END_SRC   
 
-#+RESULTS[454e524f322362b95002a57a695a69a542f38d9d]:
-: org-pro-git-update-project
+** Column view
+
+Insert something like this in '* Documents' section (or globally)
+
+#+BEGIN_EXAMPLE
+#+COLUMNS: %20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)
+;; Default: %25ITEM %TODO %3PRIORITY %TAGS"
+#+END_EXAMPLE
+
+Right now we will set this globally. But it may be preferable to do
+this on file basis - perhaps added to each property by the appropiate
+capture mechanism.
+
+#+BEGIN_SRC emacs-lisp :export code    
+(org-columns)
+(setq org-columns-default-format "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")
+(org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(defun org-pro-column-action ()
+  (interactive)
+  (let* (
+	(prop (get-char-property (point) 'org-columns-key))
+	)
+  (cond ((string= prop "ITEM")
+;;	  (org-pro-git-status-file-at-point)
+          (save-excursion
+              (re-search-forward ":FileName:")
+	      (org-open-at-point)
+          ))
+	 ((string= prop "GitStatus")
+	  (org-pro-git-status-file-at-point)
+	  )
+	 ((string= prop "FileName")
+	  (org-columns-open-link)
+	  )
+	 ((string= prop "LastCommit")
+	  (org-pro-git-commit-file-at-point)
+	 )
+         (t (org-columns-edit-value)))
+    (org-columns-redo)
+  ))
+
+
+(defun org-pro-update-status ()
+  (interactive)
+  (save-excursion 
+    (org-columns-quit)
+    (while (re-search-forward ":GitStatus:" nil t)
+      (org-pro-git-status-file-at-point)
+      (org-end-of-line)
+      )
+    (goto-char (point-min))
+    (re-search-forward "\\* Documents")
+    (org-columns)
+    )
+)
+#+END_SRC
 
 ** Window configuration
 
