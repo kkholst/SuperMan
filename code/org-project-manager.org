@@ -553,17 +553,17 @@ the `org-pro-file'.")
 
 #+BEGIN_SRC emacs-lisp :export code 
 (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-                                             If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+                                               If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
 
 (setq org-pro-git-ignore "*")
 (defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
-                                
-                             By default we set this to '*' which means that all files are ignored.
-                                
-                             You think this is a bit stupid? Hehe, we can still add files via
-                             the -f (force) command line switch. And we get not bothered by
-                             having to filter all the unpredictable names one can give to files
-                             that never should get git controlled.")
+                                  
+                               By default we set this to '*' which means that all files are ignored.
+                                  
+                               You think this is a bit stupid? Hehe, we can still add files via
+                               the -f (force) command line switch. And we get not bothered by
+                               having to filter all the unpredictable names one can give to files
+                               that never should get git controlled.")
 
 (defun org-pro-git-p (dir)
   "Test if directory DIR is under git control."
@@ -598,16 +598,16 @@ the `org-pro-file'.")
       (if (file-exists-p file-or-link)
 	  (expand-file-name file-or-link)))))
 
-(defun org-pro-read-git-date (git-date-string &optional no-time)
+(defun org-pro-read-git-date (git-date-string &optional no-time passiv)
   "Transform git date to org-format"
   (with-temp-buffer
     (org-insert-time-stamp 
-     (date-to-time git-date-string) (not no-time))))
+     (date-to-time git-date-string) (not no-time) passiv)))
 ;;      (set-time-zone-rule t) ;; Use Universal time.
 ;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
 ;;        (set-time-zone-rule nil))))
 
-(defun org-pro-git-get-commit (arg file &optional dir)
+(defun org-pro-git-get-commit (arg file &optional dir passiv)
   (interactive)
   (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
 		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
@@ -615,7 +615,7 @@ the `org-pro-file'.")
 		(shell-command-to-string
 		 (if (string= arg "first")
 		     (concat  "cd " dir ";git log --date=local --pretty=format:\"%ad\" --reverse " file "  | head -1")
-                   (concat "git log --date=local -" arg " --pretty=format:\"%ad\" " file)))))
+		   (concat "git log --date=local -" arg " --pretty=format:\"%ad\" " file))) nil passiv))
 	 (mess (shell-command-to-string
 		(if (string= arg "first")
 		    (concat "cd " dir ";git log --reverse --pretty=format:\"%s\" " file " | head -1")
@@ -656,7 +656,7 @@ the `org-pro-file'.")
 	     (setq status "Committed"))
 	    (t (setq status "Unkown")))
       (unless (org-pro-entry-get nil "GitInit")
-	(org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
+	(org-set-property "GitInit" (org-pro-git-get-commit "first" file dir 'passiv)))
       (unless (string= git-last-commit "")
 	(org-set-property "LastCommit" git-last-commit))
       (org-set-property "GitStatus" status))))
@@ -713,8 +713,8 @@ the `org-pro-file'.")
 
 (defun org-pro-git-update-project (project before)
   "Check if project needs to be put under git control and update.
-                             If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-                            "
+                               If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+                              "
   (let* ((git-control (downcase (org-pro-get-git project))))
     (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
       (let ((silent-p (string= git-control "silent"))
@@ -733,10 +733,10 @@ the `org-pro-file'.")
 	    ;; deactivating project
 	    (when (and (org-pro-git-p dir)
 		       (string-match "yes\\|silent" git-control))
-	      (org-pro-git-update-directory dir silent-p)
-	      (when (string-match "push" git-control)
-		(org-pro-git-push-directory dir silent-p)
-		))))))))
+;;	      (org-pro-git-update-directory dir silent-p)
+;;	      (when (string-match "push" git-control)
+;;		(org-pro-git-push-directory dir silent-p)
+		)))))))
 
 
 #+END_SRC   
