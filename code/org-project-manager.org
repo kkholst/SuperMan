@@ -806,6 +806,28 @@ capture mechanism.
     (org-columns)
     )
 )
+
+(defvar org-pro-narrow-on nil)
+(make-variable-buffer-local 'org-pro-narrow-on)
+(defun org-pro-narrow-and-column () 
+  (interactive)
+  (setq org-pro-narrow-on (not org-pro-narrow-on))
+  (if org-pro-narrow-on
+      (progn 
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(org-columns)
+	(hide-subtree)
+	(show-children)
+	)
+      (progn 
+	(widen)
+	(org-columns-quit)
+	(hide-subtree))
+  ))
+
+;; (add-hook 'org-mode-hook (lambda ()
+;;			   (local-set-key (kbd "C-x c") 'org-pro-narrow-and-column)))
 #+END_SRC
 
 ** Window configuration
