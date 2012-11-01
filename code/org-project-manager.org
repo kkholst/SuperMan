@@ -1,4 +1,4 @@
- # Project-Manager mode
+# Project-Manager mode
 * Header 							   :noexport:
 :PROPERTIES:
 #+TITLE: An emacs-org project manager for applied statisticians
@@ -784,6 +784,9 @@ capture mechanism.
 	 ((string= prop "FileName")
 	  (org-columns-open-link)
 	  )
+	 ((string= prop "Other")
+	  (org-columns-open-link)
+	  )
 	 ((string= prop "LastCommit")
 	  (org-pro-git-commit-file-at-point)
 	 )
@@ -817,8 +820,9 @@ capture mechanism.
 	(org-narrow-to-subtree)
 	(goto-char (point-min))
 	(org-columns)
-	(hide-subtree)
-	(show-children)
+        (org-columns-content)
+;;	(hide-subtree)
+;;	(show-children)
 	)
       (progn 
 	(widen)
