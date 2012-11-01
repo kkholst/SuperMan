@@ -357,7 +357,7 @@ the `org-pro-file'.")
 
 (defun org-pro-fix-others ()
 "Update the others property (collaborator names) of all projects in `org-pro-file'."
-  (interactive)
+  (interactive "P")
   (set-buffer (find-file-noselect org-pro-file))
   (goto-char (point-min))
   (while (org-pro-forward-project)
@@ -598,7 +598,7 @@ the `org-pro-file'.")
     (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
 
 (defun org-pro-filename-at-point ()
-  (let* ((file-or-link (org-pro-entry-get nil "filename" nil)))
+  (let* ((file-or-link (org-pro-entry-get nil "filename" t)))
     (if (string-match org-bracket-link-regexp file-or-link)
 	(expand-file-name
 	 (org-extract-attributes
@@ -768,126 +768,170 @@ capture mechanism.
 #+BEGIN_SRC emacs-lisp :export code    
   (org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
   (org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
-  (defun org-pro-column-action ()
-    (interactive)
-    (let* (
-          (prop (get-char-property (point) 'org-columns-key))
-          )
-    (cond ((string= prop "ITEM")
-  ;;        (org-pro-git-status-file-at-point)
-            (save-excursion
-                (org-narrow-to-element)
-                (if (re-search-forward ":FileName:" nil t)
-                (progn 
-                  (widen)
-                  (org-open-at-point)
-                  )
-                (if (re-search-forward ":Hash:" nil t)
+  (org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
+  (org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
+                                     (interactive)
+                                     (if (org-pro-entry-get nil "columns" nil)
+                                         (org-pro-update-status)
+  
+                                     (org-pro-git-status-file-at-point)     
+                                       )
+                                     (org-columns-redo)))
+      (org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
+      (defun org-pro-column-action ()
+        (interactive)
+        (let* (
+              (prop (get-char-property (point) 'org-columns-key))
+              )
+        (cond ((string= prop "ITEM")
+      ;;        (org-pro-git-status-file-at-point)
+                (save-excursion
+                    (org-narrow-to-element)
+                    (if (re-search-forward ":Hash:" nil t)
+                        (progn 
+                          (widen)
+                          (org-pro-git-revision-at-point)))
+                    (if (re-search-forward ":FileName:" nil t)
                     (progn 
                       (widen)
-                      (org-pro-git-revision-at-point)))
-                (widen)) 
-            ))
-           ((string= prop "GitStatus")
-            (org-pro-git-status-file-at-point)
-            )
-           ((string= prop "FileName")
-            (org-columns-open-link)
-            )
-           ((string= prop "Other")
-            (org-columns-open-link)
-            )
-           ((string= prop "Hash")
-            (org-pro-git-revision-at-revision)
-            )
-           ((string= prop "LastCommit")
-            (org-pro-git-commit-file-at-point)
-           )
-           (t (org-columns-edit-value)))
-      (org-columns-redo)
-    ))
-  
-  
-  (defun org-pro-update-status ()
-    (interactive)
-    (save-excursion 
-      (goto-char (point-min))
-      (org-columns-quit)
-      (while (re-search-forward ":GitStatus:" nil t)
-        (org-pro-git-status-file-at-point)
-        (org-end-of-line)
-        )
-      (goto-char (point-min))
-      (re-search-forward "\\* Documents")
-      (org-columns)
-      )
-  )
-  
-  (defvar org-pro-view nil)
-  (make-variable-buffer-local 'org-pro-view)
-  (defun org-pro-view (&optional status) 
-    (interactive)
-    (setq org-pro-view (or status (not org-pro-view)))
-    (if org-pro-view
-        (progn 
-          (org-narrow-to-subtree)
+                      (org-open-at-point)
+                      )
+                    (widen)) 
+                ))
+               ((string= prop "GitStatus")
+                (org-pro-git-status-file-at-point)
+                )
+               ((string= prop "Decoration")
+                (org-pro-git-tag-at-point)
+                )
+               ((string= prop "FileName")
+                (org-columns-open-link)
+                )
+               ((string= prop "Other")
+                (org-columns-open-link)
+                )
+               ((string= prop "Hash")
+                (org-pro-git-revision-at-revision)
+                )
+               ((string= prop "LastCommit")
+                (org-pro-git-commit-file-at-point)
+               )
+               (t (org-columns-edit-value)))
+          (org-columns-redo)
+        ))
+      
+      
+      (defun org-pro-update-status ()
+        (interactive)
+        (save-excursion 
           (goto-char (point-min))
-          (org-columns)
-          (org-columns-content)
-          )
-        (progn 
-          (widen)
           (org-columns-quit)
-          (hide-subtree))
+          (while (re-search-forward ":GitStatus:" nil t)
+            (org-pro-git-status-file-at-point)
+            (org-end-of-line)
+            )
+          (goto-char (point-min))
+          (re-search-forward "\\* Documents" nil t)
+          (org-columns)
+          )
+      )
+      
+      (defvar org-pro-view nil)
+      (make-variable-buffer-local 'org-pro-view)
+      (defun org-pro-view (&optional status) 
+        (interactive)
+        (setq org-pro-view (or status (not org-pro-view)))
+        (if org-pro-view
+            (progn 
+              (org-narrow-to-subtree)
+              (goto-char (point-min))
+              (org-columns)
+              (org-columns-content)
+              )
+            (progn 
+              (widen)
+              (org-columns-quit)
+              (hide-subtree))
+        ))
+      
+      ;; (add-hook 'org-mode-hook (lambda ()
+      ;;                         (local-set-key (kbd "C-x c") 'org-pro-view)))
+    
+    
+    (defvar org-pro-log-limit 500)
+    (defun org-pro-git-log-at-point (&optional file)
+      (interactive)
+      (widen)
+      (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
+        (setq myfile (file-relative-name (or file  
+               (org-pro-filename-at-point))))
+        (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
+        (setq gitlog
+            (split-string (substring 
+             (shell-command-to-string 
+              (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
+                  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
+             0 -1) "\n"))
+      ;;  (generate-new-buffer "*org-pro-git-scratch*")
+      (switch-to-buffer "*org-pro-git-scratch*")
+      (org-columns-quit)
+      (erase-buffer)
+      (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
+      (setq result "")
+      (loop for x in gitlog
+            do 
+            (setq val (delete "" (split-string x "#&#")))
+            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
+            (setq result (concat result item)))
+      (insert-string result)
+      (org-mode)
+      (org-columns)
+      (org-columns-content)
+      (goto-char (point-min))
     ))
+    
+    
+    (defun org-pro-git-tag-at-point (&optional tag)
+      "Set git tag"
+      (interactive)
+        (let ((myhash (org-pro-entry-get nil "hash" nil))
+              (mytag  (org-pro-entry-get nil "decoration" nil))
+              (mypath  (org-pro-entry-get nil "gitpath" t))
+              (tag (read-string "Tag (empty to clear): "))
+              )
+       (if (string-equal tag "")
+         (progn 
+           (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
+           (shell-command (concat "cd " mypath "; git tag -d " mytag))
+         )
+         (shell-command (concat "cd " mypath "; git tag -a " tag " " myhash " -m \"\"")))
+       ) 
+        (save-excursion
+          (goto-char (point-min))
+          (org-pro-git-log-at-point)
+          )
+    )
+    
+    (defun org-pro-git-revision-at-point ()
+      (interactive)
+      (let ((myhash (org-pro-entry-get nil "hash" nil))
+            (myfile (org-pro-entry-get nil "filename" t))  
+            (mypath (org-pro-entry-get nil "gitpath" t))  
+            (mystr))
+        (setq mystr (shell-command-to-string 
+                     (concat "cd " mypath "; git show " myhash ":" myfile)))
+        (switch-to-buffer-other-window (concat myfile "." myhash))
+        (text-mode)
+        (erase-buffer)  
+        (insert-string mystr)
+     ;;   (goto-char (point-min))
+     ))
   
-  ;; (add-hook 'org-mode-hook (lambda ()
-  ;;                         (local-set-key (kbd "C-x c") 'org-pro-view)))
-
-
-(defun org-pro-git-log-at-point (&optional file)
-  (interactive)
-  (widen)
-  (let ((gitlog) (result) (item) (val) (myfile))
-    (setq myfile (or file  
-	  (file-relative-name (org-pro-filename-at-point))))
-    (setq gitlog
-	(split-string (substring 
-	 (shell-command-to-string 
-	  (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an\" --date short -- " myfile))
-	 0 -1) "\n"))
-  ;;  (generate-new-buffer "*org-pro-git-scratch*")
-  (switch-to-buffer "*org-pro-git-scratch*")
-  (org-columns-quit)
-  (erase-buffer)
-  (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %8Hash \n:FILE: " myfile "\n:END:\n"))
-  (setq result "")
-  (loop for x in gitlog
-	do 
-	(setq val (delete "" (split-string x "#&#")))
-	(setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:END:\n"))
-	(setq result (concat result item)))
-  (insert-string result)
-  (org-mode)
-  (org-columns)
-  (org-columns-content)
-  (goto-char (point-min))
-))
-
-
-(defun org-pro-git-revision-at-point ()
-  (interactive)
-  (let ((myhash (org-pro-entry-get nil "hash" nil))
-	(myfile (org-pro-entry-get nil "file" t))  
-	(mystr))
-    (setq mystr (shell-command-to-string 
-		 (concat "git show " myhash ":" myfile)))
-    (switch-to-buffer-other-window (concat myfile "." myhash))
-    (erase-buffer)  
-    (insert-string mystr)
-    (goto-char (point-min))))
-
+    
 #+END_SRC
+
+#+RESULTS[e36ae81b63d6874a18e8e715f152ccf924533133]:
+: org-pro-git-revision-at-point
 
 ** Window configuration
 
