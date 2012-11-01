@@ -130,6 +130,8 @@ Each file contains information about the project, workflow, files, links, etc.
 ** DONE Write template function: 'new-project'
   CLOSED: [2012-10-07 Sun 09:44]
 ** TODO Customize tags, properties, capture and agenda view
+** TODO Publish system
+** TODO Adding projects (partially broken)
 ** TODO Smart archiving of data and code
 ** Semimatic transclusion of emails (gnus) and attachments
 ** DONE Window configurations for each project
