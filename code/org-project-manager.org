@@ -132,6 +132,7 @@ pair:  https://help.github.com/articles/generating-ssh-keys
 (require 'winner)
 (require 'ido)
 (require 'org-colview)
+(require 'browse-url)
 ;; (require 'workgroups)
 #+END_SRC
 
@@ -375,121 +376,121 @@ the `org-pro-file'.")
 **** The interactive approach     
      
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-pro-default-content "" "Initial contents of org project index file.")
-  (defvar org-pro-project-subdirectories nil)
-  (defun org-pro-create-project (&optional project ask)
-    "Create the index file, the project directory, and subdirectories if
+(defvar org-pro-default-content "" "Initial contents of org project index file.")
+(defvar org-pro-project-subdirectories nil)
+(defun org-pro-create-project (&optional project ask)
+  "Create the index file, the project directory, and subdirectories if
                                   'org-pro-project-subdirectories' is set."
-    (interactive)
-    (let ((pro (assoc project org-pro-project-alist)))
-      (when pro
-        (let ((dir (concat (org-pro-get-location pro) (car pro)))
-              (index (org-pro-get-index pro)))
-          (when (and index (not (file-exists-p index)))
-            (unless (file-exists-p (file-name-directory index))
-              (make-directory (file-name-directory index) t))
-            (find-file index))
-          ;; (append-to-file org-pro-default-content nil index)
-          (unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
-            (make-directory dir)
-            (loop for subdir in org-pro-project-subdirectories
-                  do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-          (find-file org-pro-file)
-          (goto-char (point-min))
-          (re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
-  
-  
-  (defun org-pro-move-project (&optional project)
-    (interactive)
-    (let* ((pro (or project (org-pro-select-project)))
-           (index (org-pro-get-index pro))
-           (dir (concat (org-pro-get-location pro) (car pro)))
-           (target  (read-directory-name (concat "Move all files below " dir " to: " )))
-           (new-index (unless (string-match dir (file-name-directory index))
-                        (read-file-name (concat "Move " index " to ")))))
-      (if (string= (file-name-as-directory target) target)
-          (setq target (concat target (file-name-nondirectory dir))))
-      (unless (file-exists-p (file-name-directory target)) (make-directory (file-name-directory target)))
-      (when (yes-or-no-p (concat "Move " dir " to " target "? "))
-        (rename-file dir target)
-        (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
-            (rename-file index new-index))
-        (org-pro-goto-profile pro)
-        (org-set-property "LOCATION" (file-name-directory target))
-        (org-set-property "INDEX" (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
-        (save-buffer))))
-  
-  
-  (defun org-pro-delete-project (&optional project)
-    (interactive)
-    (let* ((pro (or project (org-pro-select-project)))
-           (dir (concat (org-pro-get-location pro) (car pro)))
-           (index (org-pro-get-index pro)))
-      (pop-to-buffer "*Org-project-files*")
-      (erase-buffer)
-      (insert index "\n" dir "\n")
-      (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
-        (when (file-exists-p dir) (move-file-to-trash dir))
-        (when (file-exists-p index) (move-file-to-trash index))
-        (find-file org-pro-file)
-        (goto-char (point-min))
-        (re-search-forward (concat "*[ \t]+.*" (car pro)) nil t)
-        (org-mark-subtree)
+  (interactive)
+  (let ((pro (assoc project org-pro-project-alist)))
+    (when pro
+      (let ((dir (concat (org-pro-get-location pro) (car pro)))
+	    (index (org-pro-get-index pro)))
+	(when (and index (not (file-exists-p index)))
+	  (unless (file-exists-p (file-name-directory index))
+	    (make-directory (file-name-directory index) t))
+	  (find-file index))
+	;; (append-to-file org-pro-default-content nil index)
+	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
+	  (make-directory dir)
+	  (loop for subdir in org-pro-project-subdirectories
+		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
+	(find-file org-pro-file)
+	(goto-char (point-min))
+	(re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
+
+
+(defun org-pro-move-project (&optional project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (index (org-pro-get-index pro))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (target  (read-directory-name (concat "Move all files below " dir " to: " )))
+	 (new-index (unless (string-match dir (file-name-directory index))
+		      (read-file-name (concat "Move " index " to ")))))
+    (if (string= (file-name-as-directory target) target)
+	(setq target (concat target (file-name-nondirectory dir))))
+    (unless (file-exists-p (file-name-directory target)) (make-directory (file-name-directory target)))
+    (when (yes-or-no-p (concat "Move " dir " to " target "? "))
+      (rename-file dir target)
+      (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
+	  (rename-file index new-index))
+      (org-pro-goto-profile pro)
+      (org-set-property "LOCATION" (file-name-directory target))
+      (org-set-property "INDEX" (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
+      (save-buffer))))
+
+
+(defun org-pro-delete-project (&optional project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (index (org-pro-get-index pro)))
+    (pop-to-buffer "*Org-project-files*")
+    (erase-buffer)
+    (insert index "\n" dir "\n")
+    (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
+      (when (file-exists-p dir) (move-file-to-trash dir))
+      (when (file-exists-p index) (move-file-to-trash index))
+      (find-file org-pro-file)
+      (goto-char (point-min))
+      (re-search-forward (concat ":NICKNAME:.*" (car pro)) nil t)
+      (org-mark-subtree)
       (when (yes-or-no-p (concat "Is this project entry to be deleted " (car pro) "?"))
         (kill-region (region-beginning) (region-end))))))
-  
-  
-  (defun org-pro-new-project (&optional nickname category)
-    "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+
+
+(defun org-pro-new-project (&optional nickname category)
+  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
                 This function modifies the 'org-pro' and creates and visits the index file of the new project.
                 Thus, to undo all this you may want to call 'org-pro-delete-project'. 
                 " 
-    (interactive)
-    (org-pro-refresh)
-    (let* ((nickname (or nickname (read-string "Project name (short) ")))
-           category)
-      ;; check if nickname exists 
-      (while (assoc nickname org-pro-project-alist)
-        (setq nickname
-              (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-      (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
-      ;; a local capture command places the new project
-      (let ((org-capture-templates
-             `(("p" "Project" plain
-                (file+headline org-pro-file ,category)
-                ,(concat (make-string org-pro-project-level (string-to-char "*"))
-                         " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
-                         nickname
-                         "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
-            (org-capture-bookmark nil))
-        (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
-        (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
-        ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
-        (org-capture nil "p")
-        )))
-  
-  
-  (defun org-pro-show-properties ()
-    (let ((pop-up-windows t)
-          (obuf (current-buffer))
-          (pbuf (get-buffer "*Org project manager properties*")))
-      (set-buffer pbuf)
-      (erase-buffer)
-      (insert "Current project categories:\n\n")
-      (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-pro-project-categories)
-      (delete-backward-char 2)
-      (insert "\n\n")
-      (pop-to-buffer pbuf)
-      (pop-to-buffer obuf)))
-  
-  
-  (defun org-pro-complete-property ()
-    (interactive)
-    (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-      (cond ((string= (downcase curprop) "index")
-             (insert (read-file-name (concat "Set " curprop ": "))))
-            ((string= (downcase curprop) "location")
-             (insert (read-directory-name (concat "Set " curprop ": ")))))))
+  (interactive)
+  (org-pro-refresh)
+  (let* ((nickname (or nickname (read-string "Project name (short) ")))
+	 category)
+    ;; check if nickname exists 
+    (while (assoc nickname org-pro-project-alist)
+      (setq nickname
+	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
+    (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
+    ;; a local capture command places the new project
+    (let ((org-capture-templates
+	   `(("p" "Project" plain
+	      (file+headline org-pro-file ,category)
+	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
+		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
+		       nickname
+		       "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
+	  (org-capture-bookmark nil))
+      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
+      (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
+      ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
+      (org-capture nil "p")
+      )))
+
+
+(defun org-pro-show-properties ()
+  (let ((pop-up-windows t)
+	(obuf (current-buffer))
+	(pbuf (get-buffer "*Org project manager properties*")))
+    (set-buffer pbuf)
+    (erase-buffer)
+    (insert "Current project categories:\n\n")
+    (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-pro-project-categories)
+    (delete-backward-char 2)
+    (insert "\n\n")
+    (pop-to-buffer pbuf)
+    (pop-to-buffer obuf)))
+
+
+(defun org-pro-complete-property ()
+  (interactive)
+  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+    (cond ((string= (downcase curprop) "index")
+	   (insert (read-file-name (concat "Set " curprop ": "))))
+	  ((string= (downcase curprop) "location")
+	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
 #+END_SRC
 
 ** The project manager
@@ -774,168 +775,168 @@ this on file basis - perhaps added to each property by the appropiate
 capture mechanism.
 
 #+BEGIN_SRC emacs-lisp :export code    
-  (org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
-                                     (interactive)
-                                     (if (org-pro-entry-get nil "columns" nil)
-                                         (org-pro-update-status)
-  
+(org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
+				   (interactive)
+				   (if (org-pro-entry-get nil "columns" nil)
+				       (org-pro-update-status)
+				     
                                      (org-pro-git-status-file-at-point)     
-                                       )
-                                     (org-columns-redo)))
-      (org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
-      (defun org-pro-column-action ()
-        (interactive)
-        (let* (
-              (prop (get-char-property (point) 'org-columns-key))
-              )
-        (cond ((string= prop "ITEM")
-      ;;        (org-pro-git-status-file-at-point)
-                (save-excursion
-                    (org-narrow-to-element)
-                    (if (re-search-forward ":Hash:" nil t)
-                        (progn 
-                          (widen)
-                          (org-pro-git-revision-at-point)))
-                    (if (re-search-forward ":FileName:" nil t)
-                    (progn 
-                      (widen)
-                      (org-open-at-point)
-                      )
-                    (widen)) 
-                ))
-               ((string= prop "GitStatus")
-                (org-pro-git-status-file-at-point)
-                )
-               ((string= prop "Decoration")
-                (org-pro-git-tag-at-point)
-                )
-               ((string= prop "FileName")
-                (org-columns-open-link)
-                )
-               ((string= prop "Other")
-                (org-columns-open-link)
-                )
-               ((string= prop "Hash")
-                (org-pro-git-revision-at-revision)
-                )
-               ((string= prop "LastCommit")
-                (org-pro-git-commit-file-at-point)
-               )
-               (t (org-columns-edit-value)))
-          (org-columns-redo)
-        ))
-      
-      
-      (defun org-pro-update-status ()
-        (interactive)
-        (save-excursion 
-          (goto-char (point-min))
-          (org-columns-quit)
-          (while (re-search-forward ":GitStatus:" nil t)
-            (org-pro-git-status-file-at-point)
-            (org-end-of-line)
-            )
-          (goto-char (point-min))
-          (re-search-forward "\\* Documents" nil t)
-          (org-columns)
-          )
-      )
-      
-      (defvar org-pro-view nil)
-      (make-variable-buffer-local 'org-pro-view)
-      (defun org-pro-view (&optional status) 
-        (interactive)
-        (setq org-pro-view (or status (not org-pro-view)))
-        (if org-pro-view
-            (progn 
-              (org-narrow-to-subtree)
-              (goto-char (point-min))
-              (org-columns)
-              (org-columns-content)
-              )
-            (progn 
-              (widen)
-              (org-columns-quit)
-              (hide-subtree))
-        ))
-      
-      ;; (add-hook 'org-mode-hook (lambda ()
-      ;;                         (local-set-key (kbd "C-x c") 'org-pro-view)))
-    
-    
-    (defvar org-pro-log-limit 500)
-    (defun org-pro-git-log-at-point (&optional file)
-      (interactive)
-      (widen)
-      (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
-        (setq myfile (file-relative-name (or file  
-               (org-pro-filename-at-point))))
-        (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
-        (setq gitlog
-            (split-string (substring 
-             (shell-command-to-string 
-              (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
-                  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
-             0 -1) "\n"))
-      ;;  (generate-new-buffer "*org-pro-git-scratch*")
-      (switch-to-buffer "*org-pro-git-scratch*")
-      (org-columns-quit)
-      (erase-buffer)
-      (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
-      (setq result "")
-      (loop for x in gitlog
-            do 
-            (setq val (delete "" (split-string x "#&#")))
-            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
-            (setq result (concat result item)))
-      (insert-string result)
-      (org-mode)
-      (org-columns)
-      (org-columns-content)
-      (goto-char (point-min))
+				     )
+				   (org-columns-redo)))
+(org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
+(defun org-pro-column-action ()
+  (interactive)
+  (let* (
+	 (prop (get-char-property (point) 'org-columns-key))
+	 )
+    (cond ((string= prop "ITEM")
+	   ;;        (org-pro-git-status-file-at-point)
+	   (save-excursion
+	     (org-narrow-to-element)
+	     (if (re-search-forward ":Hash:" nil t)
+		 (progn 
+		   (widen)
+		   (org-pro-git-revision-at-point)))
+	     (if (re-search-forward ":FileName:" nil t)
+		 (progn 
+		   (widen)
+		   (org-open-at-point)
+		   )
+	       (widen)) 
+	     ))
+	  ((string= prop "GitStatus")
+	   (org-pro-git-status-file-at-point)
+	   )
+	  ((string= prop "Decoration")
+	   (org-pro-git-tag-at-point)
+	   )
+	  ((string= prop "FileName")
+	   (org-columns-open-link)
+	   )
+	  ((string= prop "Other")
+	   (org-columns-open-link)
+	   )
+	  ((string= prop "Hash")
+	   (org-pro-git-revision-at-revision)
+	   )
+	  ((string= prop "LastCommit")
+	   (org-pro-git-commit-file-at-point)
+	   )
+	  (t (org-columns-edit-value)))
+    (org-columns-redo)
     ))
-    
-    
-    (defun org-pro-git-tag-at-point (&optional tag)
-      "Set git tag"
-      (interactive)
-        (let ((myhash (org-pro-entry-get nil "hash" nil))
-              (mytag  (org-pro-entry-get nil "decoration" nil))
-              (mypath  (org-pro-entry-get nil "gitpath" t))
-              (tag (read-string "Tag (empty to clear): "))
-              )
-       (if (string-equal tag "")
-         (progn 
-           (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
-           (shell-command (concat "cd " mypath "; git tag -d " mytag))
-         )
-         (shell-command (concat "cd " mypath "; git tag -a " tag " " myhash " -m \"\"")))
-       ) 
-        (save-excursion
-          (goto-char (point-min))
-          (org-pro-git-log-at-point)
-          )
+
+
+(defun org-pro-update-status ()
+  (interactive)
+  (save-excursion 
+    (goto-char (point-min))
+    (org-columns-quit)
+    (while (re-search-forward ":GitStatus:" nil t)
+      (org-pro-git-status-file-at-point)
+      (org-end-of-line)
+      )
+    (goto-char (point-min))
+    (re-search-forward "\\* Documents" nil t)
+    (org-columns)
     )
-    
-    (defun org-pro-git-revision-at-point ()
-      (interactive)
-      (let ((myhash (org-pro-entry-get nil "hash" nil))
-            (myfile (org-pro-entry-get nil "filename" t))  
-            (mypath (org-pro-entry-get nil "gitpath" t))  
-            (mystr))
-        (setq mystr (shell-command-to-string 
-                     (concat "cd " mypath "; git show " myhash ":" myfile)))
-        (switch-to-buffer-other-window (concat myfile "." myhash))
-        (text-mode)
-        (erase-buffer)  
-        (insert-string mystr)
-     ;;   (goto-char (point-min))
-     ))
-  
-    
+  )
+
+(defvar org-pro-view nil)
+(make-variable-buffer-local 'org-pro-view)
+(defun org-pro-view (&optional status) 
+  (interactive)
+  (setq org-pro-view (or status (not org-pro-view)))
+  (if org-pro-view
+      (progn 
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(org-columns)
+	(org-columns-content)
+	)
+    (progn 
+      (widen)
+      (org-columns-quit)
+      (hide-subtree))
+    ))
+
+;; (add-hook 'org-mode-hook (lambda ()
+;;                         (local-set-key (kbd "C-x c") 'org-pro-view)))
+
+
+(defvar org-pro-log-limit 500)
+(defun org-pro-git-log-at-point (&optional file)
+  (interactive)
+  (widen)
+  (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
+    (setq myfile (file-relative-name (or file  
+					 (org-pro-filename-at-point))))
+    (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
+    (setq gitlog
+	  (split-string (substring 
+			 (shell-command-to-string 
+			  (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
+				  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
+			 0 -1) "\n"))
+    ;;  (generate-new-buffer "*org-pro-git-scratch*")
+    (switch-to-buffer "*org-pro-git-scratch*")
+    (org-columns-quit)
+    (erase-buffer)
+    (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
+    (setq result "")
+    (loop for x in gitlog
+	  do 
+	  (setq val (delete "" (split-string x "#&#")))
+	  (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
+	  (setq result (concat result item)))
+    (insert-string result)
+    (org-mode)
+    (org-columns)
+    (org-columns-content)
+    (goto-char (point-min))
+    ))
+
+
+(defun org-pro-git-tag-at-point (&optional tag)
+  "Set git tag"
+  (interactive)
+  (let ((myhash (org-pro-entry-get nil "hash" nil))
+	(mytag  (org-pro-entry-get nil "decoration" nil))
+	(mypath  (org-pro-entry-get nil "gitpath" t))
+	(tag (read-string "Tag (empty to clear): "))
+	)
+    (if (string-equal tag "")
+	(progn 
+	  (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
+	  (shell-command (concat "cd " mypath "; git tag -d " mytag))
+	  )
+      (shell-command (concat "cd " mypath "; git tag -a " tag " " myhash " -m \"\"")))
+    ) 
+  (save-excursion
+    (goto-char (point-min))
+    (org-pro-git-log-at-point)
+    )
+  )
+
+(defun org-pro-git-revision-at-point ()
+  (interactive)
+  (let ((myhash (org-pro-entry-get nil "hash" nil))
+	(myfile (org-pro-entry-get nil "filename" t))  
+	(mypath (org-pro-entry-get nil "gitpath" t))  
+	(mystr))
+    (setq mystr (shell-command-to-string 
+		 (concat "cd " mypath "; git show " myhash ":" myfile)))
+    (switch-to-buffer-other-window (concat myfile "." myhash))
+    (text-mode)
+    (erase-buffer)  
+    (insert-string mystr)
+    ;;   (goto-char (point-min))
+    ))
+
+
 #+END_SRC
 
 #+RESULTS[e36ae81b63d6874a18e8e715f152ccf924533133]:
@@ -1490,53 +1491,63 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 *** Find specific places in a project
 #+BEGIN_SRC emacs-lisp :export code
-  (defun org-pro-goto-project (&optional project heading create props)
-    (interactive)
-    (let ((pro 
-           (or project
-               (car (org-pro-select-project)))))
-      (when (and (not (string-equal pro "")) pro)
-        (let* ((entry (assoc pro org-pro-project-alist))
-               (index (org-pro-get-index entry))
-               (head (or heading "WorkFlow")))
-          (if index
-              (find-file index)
-            (error (concat "Project " pro " does not have an index.")))
-          (goto-char (point-min))
-          (or (re-search-forward (concat "^[*]+ " head) nil t)
-              (when create
-                (insert "* " head "\n" (if props (concat ":PROPERTIES:\n" props "\n:END:\n") ""))))))))
-  
-  
-  (defun org-pro-goto-project-workflow ()
-    (interactive)
-    (or (org-pro-goto-project nil "WorkFlow" 'create)))
-  
-  (defun org-pro-goto-project-documents (&optional narrow)
-    (interactive)
-    (or (org-pro-goto-project nil "Documents" 'create ":COLUMNS: %20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)"))
-    (if narrow (org-pro-view t))
-  )
-  
-  (defun org-pro-goto-project-taskpool (&optional arg)
-    (interactive)
-    (if arg (org-store-link nil))
-    (let* ((buf (current-buffer))
-           (pro (car (org-pro-select-project)))
-           ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
-           (entry (assoc pro org-pro-project-alist))
-           (index (org-pro-get-index entry)))
-      (if index
-          (find-file index)
-        (error (concat "Project " pro " does not have an index.")))
-      (goto-char (point-min))
-      (or (re-search-forward "^[*]+ TaskPool" nil t)
-          (progn
-            (goto-char (point-max))
-            (insert "\n\n* TaskPool [0/0]\n")
-            (point))) 
-      (org-end-of-line)
-      ))
+(defun org-pro-goto-project (&optional project heading create prop-alist)
+  (interactive)
+  (let ((pro 
+	 (or project
+	     (car (org-pro-select-project)))))
+    (when (and (not (string-equal pro "")) pro)
+      (let* ((entry (assoc pro org-pro-project-alist))
+	     (index (org-pro-get-index entry))
+	     (head (or heading (read-string "Goto heading: "))))
+	(if index
+	    (find-file index)
+	  (error (concat "Project " pro " does not have an index.")))
+	(goto-char (point-min))
+	(cond ((re-search-forward
+		(format org-complex-heading-regexp-format (regexp-quote head))
+		nil t))
+	      (create
+	       (insert "* " head "\n"))
+	      (t (error (concat "Heading " head " not found in index file of " pro))))
+        (org-show-entry)	
+	(if prop-alist (mapcar (lambda (p)
+				 (unless (org-entry-get nil (car p))
+				   (org-set-property (car p) (car (cdr p))))) prop-alist))
+	(re-search-forward ":END:" nil t)
+	(end-of-line)
+	(forward-line)
+	(unless (looking-at "^[ \t]*$") (insert "\n"))))))
+
+
+(defun org-pro-goto-project-workflow ()
+  (interactive)
+  (or (org-pro-goto-project nil "WorkFlow" 'create)))
+
+(defun org-pro-goto-project-documents (&optional narrow)
+  (interactive)
+  (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
+      (if narrow (org-pro-view t))))
+
+(defun org-pro-goto-project-taskpool (&optional arg)
+  (interactive)
+  (if arg (org-store-link nil))
+  (let* ((buf (current-buffer))
+	 (pro (car (org-pro-select-project)))
+	 ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
+	 (entry (assoc pro org-pro-project-alist))
+	 (index (org-pro-get-index entry)))
+    (if index
+	(find-file index)
+      (error (concat "Project " pro " does not have an index.")))
+    (goto-char (point-min))
+    (or (re-search-forward "^[*]+ TaskPool" nil t)
+	(progn
+	  (goto-char (point-max))
+	  (insert "\n\n* TaskPool [0/0]\n")
+	  (point))) 
+    (org-end-of-line)
+    ))
 #+END_SRC     
 
 #+RESULTS[0a54caeb762f25632636a46f3732ab516a0c9e87]:
@@ -1583,25 +1594,22 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-export-subdirectory "export")
 (defvar org-pro-public-directory "~/public_html/")
+(defvar org-pro-public-server "" "Place on the web where pages are published.")
 
-(defun org-pro-browse-this-file ()
-  (interactive)
-  (let* ((bf (buffer-file-name (current-buffer))))
-    (message (concat "file:///" (file-name-sans-extension bf) ".html"))
-    (browse-url (concat "file:///" (file-name-sans-extension bf) ".html"))))
-
-
-(defvar org-pro-public-server-home "" "Place on the web where pages are published.")
-(defun org-pro-browse-public-version ()
-  (interactive)
+(defun org-pro-browse-this-file (&optional arg)
+  "Browse the html version of the current file using `browse-url'. If
+        prefix arg is given, then browse the corresponding file on the org-pro-public-server"
+  (interactive "P")
   (let* ((bf (buffer-file-name (current-buffer)))
-	 (html-file
-	  (concat (replace-regexp-in-string
-		   (expand-file-name org-pro-public-directory)
-		   org-pro-public-server-home
-		   (file-name-sans-extension bf))
-		  ".html")))
+	 (html-file (if arg
+			(concat (replace-regexp-in-string
+				 (expand-file-name org-pro-public-directory)
+				 org-pro-public-server-home
+				 (file-name-sans-extension bf))
+				".html")
+		      (concat "file:///" (file-name-sans-extension bf) ".html"))))
     ;; fixme org-pro-browse-file-hook (e.g. to synchronize with public server)
+    (message html-file)
     (browse-url html-file)))
 
 
