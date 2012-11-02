@@ -779,10 +779,14 @@ capture mechanism.
   (org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
   (org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
                                      (interactive)
-                                     (if (org-pro-entry-get nil "columns" nil)
-                                         (org-pro-update-status)
-  
-                                     (org-pro-git-status-file-at-point)     
+                                     (if (org-pro-entry-get nil "hash" nil)
+                                         (org-pro-git-revision-at-point t)
+                                         (progn 
+                                           (if (org-pro-entry-get nil "columns" nil)
+                                               (org-pro-update-status)                                           
+                                             (org-pro-git-status-file-at-point)     
+                                             )
+                                           )
                                        )
                                      (org-columns-redo)))
       (org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
@@ -919,26 +923,33 @@ capture mechanism.
           (org-pro-git-log-at-point)
           )
     )
-    
-    (defun org-pro-git-revision-at-point ()
-      (interactive)
-      (let ((myhash (org-pro-entry-get nil "hash" nil))
-            (myfile (org-pro-entry-get nil "filename" t))  
-            (mypath (org-pro-entry-get nil "gitpath" t))  
-            (mystr))
-        (setq mystr (shell-command-to-string 
-                     (concat "cd " mypath "; git show " myhash ":" myfile)))
-        (switch-to-buffer-other-window (concat myfile "." myhash))
-        (text-mode)
-        (erase-buffer)  
-        (insert-string mystr)
-     ;;   (goto-char (point-min))
-     ))
+  
+  (defun org-pro-git-revision-at-point (&optional diff)
+    (interactive)
+    (let ((myhash (org-pro-entry-get nil "hash" nil))
+          (myfile (org-pro-entry-get nil "filename" t))  
+          (mypath (org-pro-entry-get nil "gitpath" t))
+          (fileabs)(filehash)
+          (mystr))
+      (setq fileabs (concat mypath myfile))
+      (setq filehash (concat myfile "." myhash))
+      (setq mystr (shell-command-to-string 
+                   (concat "cd " mypath "; git show " myhash ":" myfile)))
+      (if diff (progn 
+                 (find-file fileabs)))
+                 ;;(set-buffer (find-file-noselect fileabs))))
+      (switch-to-buffer-other-window filehash)
+      (text-mode)
+      (erase-buffer)  
+      (insert-string mystr)
+      (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))
+      ))
+  
   
     
 #+END_SRC
 
-#+RESULTS[e36ae81b63d6874a18e8e715f152ccf924533133]:
+#+RESULTS[a9d3552e32983262b0035c1b310548054498d964]:
 : org-pro-git-revision-at-point
 
 ** Window configuration
