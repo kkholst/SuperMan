@@ -755,12 +755,12 @@ the `org-pro-file'.")
 	    ;; deactivating project
 	    (when (and (org-pro-git-p dir)
 		       (string-match "yes\\|silent" git-control))
-		)))))))
+	      )))))))
 
 
 #+END_SRC   
 
-** Column view
+*** Exploiting column view
 
 Insert something like this in '* Documents' section (or globally)
 
@@ -774,179 +774,180 @@ this on file basis - perhaps added to each property by the appropiate
 capture mechanism.
 
 #+BEGIN_SRC emacs-lisp :export code    
-  (org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
-  (org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
-                                     (interactive)
-                                     (if (org-pro-entry-get nil "hash" nil)
-                                         (org-pro-git-revision-at-point t)
-                                         (progn 
-                                           (if (org-pro-entry-get nil "columns" nil)
-                                               (org-pro-update-status)                                           
-                                             (org-pro-git-status-file-at-point)     
-                                             )
-                                           )
-                                       )
-                                     (org-columns-redo)))
-      (org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
-      (defun org-pro-column-action ()
-        (interactive)
-        (let* (
-              (prop (get-char-property (point) 'org-columns-key))
-              )
-        (cond ((string= prop "ITEM")
-      ;;        (org-pro-git-status-file-at-point)
-                (save-excursion
-                    (org-narrow-to-element)
-                    (if (re-search-forward ":Hash:" nil t)
-                        (progn 
-                          (widen)
-                          (org-pro-git-revision-at-point)))
-                    (if (re-search-forward ":FileName:" nil t)
-                    (progn 
-                      (widen)
-                      (org-open-at-point)
-                      )
-                    (widen)) 
-                ))
-               ((string= prop "GitStatus")
-                (org-pro-git-status-file-at-point)
-                )
-               ((string= prop "Decoration")
-                (org-pro-git-tag-at-point)
-                )
-               ((string= prop "FileName")
-                (org-columns-open-link)
-                )
-               ((string= prop "Other")
-                (org-columns-open-link)
-                )
-               ((string= prop "Hash")
-                (org-pro-git-revision-at-revision)
-                )
-               ((string= prop "LastCommit")
-                (org-pro-git-commit-file-at-point)
-               )
-               (t (org-columns-edit-value)))
-          (org-columns-redo)
-        ))
-      
-      
-      (defun org-pro-update-status ()
-        (interactive)
-        (save-excursion 
-          (goto-char (point-min))
-          (org-columns-quit)
-          (while (re-search-forward ":GitStatus:" nil t)
-            (org-pro-git-status-file-at-point)
-            (org-end-of-line)
-            )
-          (goto-char (point-min))
-          (re-search-forward "\\* Documents" nil t)
-          (org-columns)
-          )
+(org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
+				   (interactive)
+				   (if (org-pro-entry-get nil "hash" nil)
+				       (org-pro-git-revision-at-point t)
+				     (progn 
+				       (if (org-pro-entry-get nil "columns" nil)
+					   (org-pro-update-status)                                           
+					 (org-pro-git-status-file-at-point)     
+					 )
+				       )
+				     )
+				   (org-columns-redo)))
+
+(org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
+
+(defun org-pro-column-action ()
+  (interactive)
+  (let* (
+	 (prop (get-char-property (point) 'org-columns-key))
+	 )
+    (cond ((string= prop "ITEM")
+	   ;;        (org-pro-git-status-file-at-point)
+	   (save-excursion
+	     (org-narrow-to-element)
+	     (if (re-search-forward ":Hash:" nil t)
+		 (progn 
+		   (widen)
+		   (org-pro-git-revision-at-point)))
+	     (if (re-search-forward ":FileName:" nil t)
+		 (progn 
+		   (widen)
+		   (org-open-at-point)
+		   )
+	       (widen)) 
+	     ))
+	  ((string= prop "GitStatus")
+	   (org-pro-git-status-file-at-point)
+	   )
+	  ((string= prop "Decoration")
+	   (org-pro-git-tag-at-point)
+	   )
+	  ((string= prop "FileName")
+	   (org-columns-open-link)
+	   )
+	  ((string= prop "Other")
+	   (org-columns-open-link)
+	   )
+	  ((string= prop "Hash")
+	   (org-pro-git-revision-at-revision)
+	   )
+	  ((string= prop "LastCommit")
+	   (org-pro-git-commit-file-at-point)
+	   )
+	  (t (org-columns-edit-value)))
+    (org-columns-redo)))
+
+
+(defun org-pro-update-status ()
+  (interactive)
+  (save-excursion 
+    (goto-char (point-min))
+    (org-columns-quit)
+    (while (re-search-forward ":GitStatus:" nil t)
+      (org-pro-git-status-file-at-point)
+      (org-end-of-line)
       )
-      
-      (defvar org-pro-view nil)
-      (make-variable-buffer-local 'org-pro-view)
-      (defun org-pro-view (&optional status) 
-        (interactive)
-        (setq org-pro-view (or status (not org-pro-view)))
-        (if org-pro-view
-            (progn 
-              (org-narrow-to-subtree)
-              (goto-char (point-min))
-              (org-columns)
-              (org-columns-content)
-              )
-            (progn 
-              (widen)
-              (org-columns-quit)
-              (hide-subtree))
-        ))
-      
-      ;; (add-hook 'org-mode-hook (lambda ()
-      ;;                         (local-set-key (kbd "C-x c") 'org-pro-view)))
-    
-    
-    (defvar org-pro-log-limit 500)
-    (defun org-pro-git-log-at-point (&optional file)
-      (interactive)
-      (widen)
-      (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
-        (setq myfile (file-relative-name (or file  
-               (org-pro-filename-at-point))))
-        (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
-        (setq gitlog
-            (split-string (substring 
-             (shell-command-to-string 
-              (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
-                  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
-             0 -1) "\n"))
-      ;;  (generate-new-buffer "*org-pro-git-scratch*")
-      (switch-to-buffer "*org-pro-git-scratch*")
-      (org-columns-quit)
-      (erase-buffer)
-      (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
-      (setq result "")
-      (loop for x in gitlog
-            do 
-            (setq val (delete "" (split-string x "#&#")))
-            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
-            (setq result (concat result item)))
-      (insert-string result)
-      (org-mode)
-      (org-columns)
-      (org-columns-content)
-      (goto-char (point-min))
-    ))
-    
-    
-    (defun org-pro-git-tag-at-point (&optional tag)
-      "Set git tag"
-      (interactive)
-        (let ((myhash (org-pro-entry-get nil "hash" nil))
-              (mytag  (org-pro-entry-get nil "decoration" nil))
-              (mypath  (org-pro-entry-get nil "gitpath" t))
-              (tag (read-string "Tag (empty to clear): "))
-              )
-       (if (string-equal tag "")
-         (progn 
-           (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
-           (shell-command (concat "cd " mypath "; git tag -d " mytag))
-         )
-         (shell-command (concat "cd " mypath "; git tag -a " tag " " myhash " -m \"\"")))
-       ) 
-        (save-excursion
-          (goto-char (point-min))
-          (org-pro-git-log-at-point)
-          )
+    (goto-char (point-min))
+    (re-search-forward "\\* Documents" nil t)
+    (org-columns)
     )
-  
-  (defun org-pro-git-revision-at-point (&optional diff)
-    (interactive)
-    (let ((myhash (org-pro-entry-get nil "hash" nil))
-          (myfile (org-pro-entry-get nil "filename" t))  
-          (mypath (org-pro-entry-get nil "gitpath" t))
-          (fileabs)(filehash)
-          (mystr))
-      (setq fileabs (concat mypath myfile))
-      (setq filehash (concat myfile "." myhash))
-      (setq mystr (shell-command-to-string 
-                   (concat "cd " mypath "; git show " myhash ":" myfile)))
-      (if diff (progn 
-                 (find-file fileabs)))
-                 ;;(set-buffer (find-file-noselect fileabs))))
-      (switch-to-buffer-other-window filehash)
-      (text-mode)
-      (erase-buffer)  
-      (insert-string mystr)
-      (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))
-      ))
-  
-  
-    
+  )
+
+(defvar org-pro-view-mode nil)
+(make-variable-buffer-local 'org-pro-view-mode)
+(defun org-pro-view-mode (&optional status) 
+  (interactive)
+  (setq org-pro-view-mode (or status (not org-pro-view-mode)))
+  (if org-pro-view-mode
+      (progn 
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(org-columns)
+	(org-columns-content)
+	)
+    (progn 
+      (widen)
+      (org-columns-quit)
+      (hide-subtree))
+    ))
+
+;; (add-hook 'org-mode-hook (lambda ()
+;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
+
+
+(defvar org-pro-log-limit 500)
+(defun org-pro-git-log-at-point (&optional file)
+  (interactive)
+  (widen)
+  (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
+    (setq myfile (file-relative-name (or file  
+					 (org-pro-filename-at-point))))
+    (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
+    (setq gitlog
+	  (split-string (substring 
+			 (shell-command-to-string 
+			  (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
+				  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
+			 0 -1) "\n"))
+    ;;  (generate-new-buffer "*org-pro-git-scratch*")
+    (switch-to-buffer "*org-pro-git-scratch*")
+    (org-columns-quit)
+    (erase-buffer)
+    (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
+    (setq result "")
+    (loop for x in gitlog
+	  do 
+	  (setq val (delete "" (split-string x "#&#")))
+	  (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
+	  (setq result (concat result item)))
+    (insert-string result)
+    (org-mode)
+    (org-columns)
+    (org-columns-content)
+    (goto-char (point-min))
+    ))
+
+
+(defun org-pro-git-tag-at-point (&optional tag)
+  "Set git tag"
+  (interactive)
+  (let ((myhash (org-pro-entry-get nil "hash" nil))
+	(mytag  (org-pro-entry-get nil "decoration" nil))
+	(mypath  (org-pro-entry-get nil "gitpath" t))
+	(tag (read-string "Tag (empty to clear): "))
+	)
+    (if (string-equal tag "")
+	(progn 
+	  (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
+	  (shell-command (concat "cd " mypath "; git tag -d " mytag))
+	  )
+      (shell-command (concat "cd " mypath "; git tag -a " tag " " myhash " -m \"\"")))
+    ) 
+  (save-excursion
+    (goto-char (point-min))
+    (org-pro-git-log-at-point)
+    )
+  )
+
+(defun org-pro-git-revision-at-point (&optional diff)
+  (interactive)
+  (let ((myhash (org-pro-entry-get nil "hash" nil))
+	(myfile (org-pro-entry-get nil "filename" t))  
+	(mypath (org-pro-entry-get nil "gitpath" t))
+	(fileabs)(filehash)
+	(mystr))
+    (setq fileabs (concat mypath myfile))
+    (setq filehash (concat myfile "." myhash))
+    (setq mystr (shell-command-to-string 
+		 (concat "cd " mypath "; git show " myhash ":" myfile)))
+    (if diff (progn 
+	       (find-file fileabs)))
+    ;;(set-buffer (find-file-noselect fileabs))))
+    (switch-to-buffer-other-window filehash)
+    (text-mode)
+    (erase-buffer)  
+    (insert-string mystr)
+    (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))
+    ))
+
+
+
 #+END_SRC
 
 #+RESULTS[a9d3552e32983262b0035c1b310548054498d964]:
@@ -977,6 +978,7 @@ splits in the current frame.
 				    ("TODO" . org-pro-todo)
 				    ("TIMELINE" . org-pro-timeline)
 				    ("LOCATION" . org-pro-location)
+				    ("DOCUMENTS" . org-pro-view-documents)
 				    ("FILELIST" . org-pro-file-list)
 				    ("magit" . org-pro-magit)
 				    ("recent.org" . org-pro-recent-org)
@@ -996,115 +998,123 @@ splits in the current frame.
       (make-directory (file-name-directory index) 'with-parents))
     (find-file index)))
 
+
+(defun org-pro-view-documents (&optional project)
+ (interactive)
+ (let ((pro (or project (org-pro-select-project)))
+       (org-pro-view-mode t))
+  (org-pro-goto-project (car pro) "Documents")
+  (org-pro-view-mode t)))
+
 (defun org-pro-file-list (project)
   (if (featurep 'file-list)
       (let ((loc (concat (org-pro-get-location project) (car project))))
 	(cond ((file-list-select-internal nil "." nil nil loc (concat "*File-list-" (car project) "*")))
 	      (t
-	      (switch-to-buffer (concat "*File-list-" (car project) "*"))
-	      (toggle-read-only -1)
-              (erase-buffer)
-	      (insert "FILE-LIST: No files in project"))))
-	(error "file-list.el not loaded.")))
+	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
+	       (toggle-read-only -1)
+	       (erase-buffer)
+	       (insert "FILE-LIST: No files in project"))))
+    (error "file-list.el not loaded.")))
 
 
-  (defun org-pro-find-thing (thing project)
-    (let* ((case-fold-search t)
-	   (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  (car thing))
-			       org-pro-config-action-alist))))
-      (cond ((functionp action) (funcall action project))
-	    ((and (car thing) (file-name-directory (car thing)))
-	     (find-file (expand-file-name
-			 (car thing) (concat (org-pro-get-location project) (car project)))))
-	    (t (switch-to-buffer (car thing))))))
+(defun org-pro-find-thing (thing project)
+  (let* ((case-fold-search t)
+	 (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  (car thing))
+			     org-pro-config-action-alist))))
+    (cond ((functionp action) (funcall action project))
+	  ((and (car thing) (file-name-directory (car thing)))
+	   (find-file (expand-file-name
+		       (car thing) (concat (org-pro-get-location project) (car project)))))
+	  (t (switch-to-buffer (car thing))))))
 
-  (defun org-pro-read-config-list (string)
-    ;; return a list of lists with vertical splits 
-    ;; where each element can have horizontal splits
-    (split-string string "[ \t]+:[ \t]+"))
+(defun org-pro-read-config-list (string)
+  ;; return a list of lists with vertical splits 
+  ;; where each element can have horizontal splits
+  (split-string string "[ \t]+:[ \t]+"))
 
-  (defun org-pro-read-config (config &optional pos)
-    ;; return a list with horizontal splits 
-    ;; where each element can have vertical splits
-    (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
-	   (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
-      hlist))
-
-
-  (defun org-pro-save-config (&optional config project)
-    (interactive)
-    (let ((conf (or config (org-pro-current-config)))
-	  (pro (or project org-pro-current-project (org-pro-select-project))))
-      (find-file-other-window (concat (org-pro-get-location pro) (car pro) "/.org-pro-window-config"))
-      (goto-char (point-max))
-      (unless (looking-at "^$") (insert "\n"))
-      (insert conf)
-      (save-buffer)))
-
-  (defun org-pro-current-config ()
-    (let* ((windata (winner-win-data))
-	   config
-	   prev-row)
-      (while windata
-	(let* ((buf (cdr (car windata)))
-	       (pos (car (car windata)))
-	       ;;	     (col (nth 0 pos))
-	       (row (nth 1 pos))
-	       (thing
-		(cond 
-		 ((buffer-file-name buf)
-		  (replace-regexp-in-string (getenv "HOME") "~"  (buffer-file-name buf)))
-		 ;; (get-buffer-process buf)
-		 (t (buffer-name buf)))))
-	  (setq config (concat config (when prev-row (if (< prev-row row) " / " " | ")) thing))
-	  (setq windata (cdr windata))
-	  (setq prev-row row)))
-      config))
+(defun org-pro-read-config (config &optional pos)
+  ;; return a list with horizontal splits 
+  ;; where each element can have vertical splits
+  (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
+	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
+    hlist))
 
 
-  (defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
+(defun org-pro-save-config (&optional config project)
+  (interactive)
+  (let ((conf (or config (org-pro-current-config)))
+	(pro (or project org-pro-current-project (org-pro-select-project))))
+    (find-file-other-window (concat (org-pro-get-location pro) (car pro) "/.org-pro-window-config"))
+    (goto-char (point-max))
+    (unless (looking-at "^$") (insert "\n"))
+    (insert conf)
+    (save-buffer)))
+
+(defun org-pro-current-config ()
+  (let* ((windata (winner-win-data))
+	 config
+	 prev-row)
+    (while windata
+      (let* ((buf (cdr (car windata)))
+	     (pos (car (car windata)))
+	     ;;	     (col (nth 0 pos))
+	     (row (nth 1 pos))
+	     (thing
+	      (cond 
+	       ((buffer-file-name buf)
+		(replace-regexp-in-string (getenv "HOME") "~"  (buffer-file-name buf)))
+	       ;; (get-buffer-process buf)
+	       (t (buffer-name buf)))))
+	(setq config (concat config (when prev-row (if (< prev-row row) " / " " | ")) thing))
+	(setq windata (cdr windata))
+	(setq prev-row row)))
+    config))
 
 
-  (defun org-pro-get-config (project)
-    (let* ((config (or org-pro-sticky-config org-pro-default-config "INDEX"))
-	   (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
-	   (filed-config (when (file-exists-p config-file)
-			   (save-window-excursion
-			     (find-file config-file)
-			     (replace-regexp-in-string "\n" " : "  (replace-regexp-in-string "[\n\t ]+$" "" (buffer-string))))))
-	   (prop-config (cdr (assoc "config" (cadr project)))))
-      (if (not config)
-	  (setq config prop-config)
-	(when filed-config
-	  (setq config (concat config " : " filed-config)))
-	(when prop-config
-	  (setq config (concat config " : " prop-config)))
-	config)))
+(defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
 
 
-  (defun org-pro-set-config (&optional project config pos)
-    (interactive)
-    (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	   (conf (or config (org-pro-get-config pro)))
-	   (pos (or pos org-pro-config-cycle-pos 0))
-	   (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
-	   (ncolumns (length window-config))
-	   top-windows)
-      ;;(message conf)
-      (delete-other-windows)
-      (setq top-windows (list (selected-window)))
-      (loop for n from 1 to (- ncolumns 1) do
-	    (split-window-horizontally)
-	    (other-window 1)
-	    (setq top-windows (append top-windows (list (selected-window)))))
-      (loop for n from 0 to (- ncolumns 1) do 
-	    (select-window (nth n top-windows))
-	    (let ((el (nth n window-config)))
-	      (while el
-		(org-pro-find-thing el pro)
-		(setq el (cdr el))
-		(when el (split-window-vertically) (other-window 1)))))
-      (select-window (nth 0 top-windows))))
+(defun org-pro-get-config (project)
+  (let* ((config (or org-pro-sticky-config org-pro-default-config "INDEX"))
+	 (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
+	 (filed-config (when (file-exists-p config-file)
+			 (save-window-excursion
+			   (find-file config-file)
+			   (replace-regexp-in-string "\n" " : "  (replace-regexp-in-string "[\n\t ]+$" "" (buffer-string))))))
+	 (prop-config (cdr (assoc "config" (cadr project)))))
+    (if (not config)
+	(setq config prop-config)
+      (when filed-config
+	(setq config (concat config " : " filed-config)))
+      (when prop-config
+	(setq config (concat config " : " prop-config)))
+      config)))
+
+
+(defun org-pro-set-config (&optional project config pos)
+  (interactive)
+  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+	 (conf (or config (org-pro-get-config pro)))
+	 (pos (or pos org-pro-config-cycle-pos 0))
+	 (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
+	 (ncolumns (length window-config))
+	 top-windows)
+    ;;(message conf)
+    (delete-other-windows)
+    (setq top-windows (list (selected-window)))
+    (loop for n from 1 to (- ncolumns 1) do
+	  (split-window-horizontally)
+	  (other-window 1)
+	  (setq top-windows (append top-windows (list (selected-window)))))
+    (loop for n from 0 to (- ncolumns 1) do 
+	  (select-window (nth n top-windows))
+	  (let ((el (nth n window-config)))
+	    (while el
+	      (org-pro-find-thing el pro)
+	      (setq el (cdr el))
+	      (when el (split-window-vertically) (other-window 1)))))
+    (select-window (nth 0 top-windows))))
 #+END_SRC
 
 ** Hacking deft
@@ -1536,7 +1546,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 (defun org-pro-goto-project-documents (&optional narrow)
   (interactive)
   (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
-      (if narrow (org-pro-view t))))
+      (if narrow (org-pro-view-mode t))))
   
   (defun org-pro-goto-project-taskpool (&optional arg)
     (interactive)
