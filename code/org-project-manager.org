@@ -1547,6 +1547,16 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
   (interactive)
   (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
       (if narrow (org-pro-view-mode t))))
+
+(defun org-pro-insert-list-files (&optional postfix)
+(interactive)
+(let ((myfiles (org-pro-list-files "." 
+                                   (or postfix (concat (read-string "Postfix: ") "$")) nil)))
+  (insert-string "\n")
+    (loop for x in myfiles
+          do 
+          (insert-string (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:FileName: [[" (file-relative-name x) "]]\n:END:\n")))
+))
   
   (defun org-pro-goto-project-taskpool (&optional arg)
     (interactive)
