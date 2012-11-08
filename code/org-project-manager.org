@@ -494,69 +494,79 @@ the `org-pro-file'.")
 #+END_SRC
 
 ** The project manager
+   
 #+BEGIN_SRC emacs-lisp  :export code
-(defun org-pro-goto-project-manager ()
-  (interactive)
-  (find-file org-pro-file))
-
-(defun org-pro-project-at-point (&optional noerror)
-  "Check if point is at project heading and return the project,
-        i.e. its entry from the 'org-pro-project-alist'.
-        Otherwise return error or nil if NOERROR is non-nil. "
-  (interactive)
-  ;; (org-back-to-heading)
-  (if (or (org-before-first-heading-p)
-	  (not (org-at-heading-p))
-	  (not (= org-pro-project-level
-		  (- (match-end 0) (match-beginning 0) 1))))
-      (if noerror nil
-	(error "No project at point"))
-    (or (org-entry-get nil "NICKNAME")
-	(progn (org-pro-set-nickname)
-	       (save-buffer) ;; to update the project-alist
-	       (org-entry-get nil "NICKNAME")))))
-
-(defun org-pro-goto-profile (project)
-  (let ((case-fold-search t))
-    (find-file org-pro-file)
-    (goto-char (point-min))
-    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
-	(error (concat "Cannot locate project " (car project))))))
-
-(defun org-pro-return ()
-  (interactive)
-  (let* ((pro (assoc (org-pro-project-at-point)
-		     org-pro-project-alist)))
-    (delete-other-windows)
-    (split-window-horizontally 25)
-    (other-window 1)
-    (find-file (org-pro-get-index pro))
-    (split-window-vertically 13)
-    (switch-to-buffer "*Current project*")
-    (erase-buffer)
-    (insert (car pro) "\n------------------------------\n")
-    (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
-    (other-window 1)))
-
-(defun org-pro-forward-project ()
-  (interactive)
-  (re-search-forward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-backward-project ()
-  (interactive)
-  (re-search-backward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-next-project (arg)
-  (interactive  "p")
-  (org-pro-forward-project)
-  (org-pro-return))
-
-(defun org-pro-previous-project (arg)
-  (interactive  "p")
-  (org-pro-backward-project)
-  (org-pro-return))
+  (defun org-pro-goto-project-manager ()
+    (interactive)
+    (find-file org-pro-file))
+  
+ (defun org-pro-super-manager ()
+    "Returns a super project for project management"
+    `("SuperManager"
+      (("location" . ,org-pro-default-directory)
+           ("index" . ,org-pro-file)
+           ("category" . "Super")
+           ("state" . "ACTIVE")
+           ("config" . "INDEX | AGENDA / TODO"))))
+  
+  (defun org-pro-project-at-point (&optional noerror)
+    "Check if point is at project heading and return the project,
+                  i.e. its entry from the 'org-pro-project-alist'.
+                  Otherwise return error or nil if NOERROR is non-nil. "
+    (interactive)
+    ;; (org-back-to-heading)
+    (if (or (org-before-first-heading-p)
+            (not (org-at-heading-p))
+            (not (= org-pro-project-level
+                    (- (match-end 0) (match-beginning 0) 1))))
+        (if noerror nil
+          (error "No project at point"))
+      (or (org-entry-get nil "NICKNAME")
+          (progn (org-pro-set-nickname)
+                 (save-buffer) ;; to update the project-alist
+                 (org-entry-get nil "NICKNAME")))))
+  
+  (defun org-pro-goto-profile (project)
+    (let ((case-fold-search t))
+      (find-file org-pro-file)
+      (goto-char (point-min))
+      (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
+          (error (concat "Cannot locate project " (car project))))))
+  
+  (defun org-pro-return ()
+    (interactive)
+    (let* ((pro (assoc (org-pro-project-at-point)
+                       org-pro-project-alist)))
+      (delete-other-windows)
+      (split-window-horizontally 25)
+      (other-window 1)
+      (find-file (org-pro-get-index pro))
+      (split-window-vertically 13)
+      (switch-to-buffer "*Current project*")
+      (erase-buffer)
+      (insert (car pro) "\n------------------------------\n")
+      (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+      (other-window 1)))
+  
+  (defun org-pro-forward-project ()
+    (interactive)
+    (re-search-forward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-backward-project ()
+    (interactive)
+    (re-search-backward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-next-project (arg)
+    (interactive  "p")
+    (org-pro-forward-project)
+    (org-pro-return))
+  
+  (defun org-pro-previous-project (arg)
+    (interactive  "p")
+    (org-pro-backward-project)
+    (org-pro-return))
 #+END_SRC
 
 ** Git control
@@ -865,8 +875,7 @@ capture mechanism.
     (progn 
       (widen)
       (org-columns-quit)
-      (hide-subtree))
-    ))
+      (hide-subtree))))
 
 ;; (add-hook 'org-mode-hook (lambda ()
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
@@ -997,7 +1006,10 @@ splits in the current frame.
       (unless (file-exists-p (file-name-directory index))
 	(make-directory (file-name-directory index) 'with-parents))
       (make-directory (file-name-directory index) 'with-parents))
-    (find-file index)))
+    (find-file index)
+   ;; FIXME: this should to be removed when document-view is
+   ;; in a different buffer
+    (org-pro-view-mode nil)))
 
 
 (defun org-pro-view-documents (&optional project)
@@ -1017,7 +1029,6 @@ splits in the current frame.
 	       (erase-buffer)
 	       (insert "FILE-LIST: No files in project"))))
     (error "file-list.el not loaded.")))
-
 
 (defun org-pro-find-thing (thing project)
   (let* ((case-fold-search t)
@@ -1633,25 +1644,25 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-export-subdirectory "export")
 (defvar org-pro-public-directory "~/public_html/")
+(defvar org-pro-public-server "" "Place on the web where pages are published.")
 
-(defun org-pro-browse-this-file ()
-  (interactive)
-  (let* ((bf (buffer-file-name (current-buffer))))
-    (message (concat "file:///" (file-name-sans-extension bf) ".html"))
-    (browse-url (concat "file:///" (file-name-sans-extension bf) ".html"))))
-
-
-(defvar org-pro-public-server-home "" "Place on the web where pages are published.")
-(defun org-pro-browse-public-version ()
-  (interactive)
+(defun org-pro-browse-this-file (&optional arg)
+  "Browse the html version of the current file using `browse-url'. If
+        prefix arg is given, then browse the corresponding file on the org-pro-public-server"
+  (interactive "P")
   (let* ((bf (buffer-file-name (current-buffer)))
-	 (html-file
-	  (concat (replace-regexp-in-string
-		   (expand-file-name org-pro-public-directory)
-		   org-pro-public-server-home
-		   (file-name-sans-extension bf))
-		  ".html")))
+	 (server-home (if (and arg (not org-pro-public-server-home))
+			  (read-string "Specify address on server: " "http://")
+			org-pro-public-server-home))
+         (html-file (if arg
+                        (concat (replace-regexp-in-string
+                                 (expand-file-name org-pro-public-directory)
+                                 server-home
+                                 (file-name-sans-extension bf))
+                                ".html")
+                      (concat "file:///" (file-name-sans-extension bf) ".html"))))
     ;; fixme org-pro-browse-file-hook (e.g. to synchronize with public server)
+    (message html-file)
     (browse-url html-file)))
 
 
