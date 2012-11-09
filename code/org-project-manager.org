@@ -1679,7 +1679,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 		       :base-directory
 		       ,export-directory
 		       :base-extension
-		       "html\\|png\\|jpg\\|org\\|pdf"
+		       "html\\|png\\|jpg\\|org\\|pdf\\|R"
 		       :publishing-directory
 		       ,public-directory
 		       :recursive t
