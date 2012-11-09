@@ -375,187 +375,198 @@ the `org-pro-file'.")
 **** The interactive approach     
      
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-pro-default-content "" "Initial contents of org project index file.")
-  (defvar org-pro-project-subdirectories nil)
-  (defun org-pro-create-project (&optional project ask)
-    "Create the index file, the project directory, and subdirectories if
+(defvar org-pro-default-content "" "Initial contents of org project index file.")
+(defvar org-pro-project-subdirectories nil)
+(defun org-pro-create-project (&optional project ask)
+  "Create the index file, the project directory, and subdirectories if
                                   'org-pro-project-subdirectories' is set."
-    (interactive)
-    (let ((pro (assoc project org-pro-project-alist)))
-      (when pro
-        (let ((dir (concat (org-pro-get-location pro) (car pro)))
-              (index (org-pro-get-index pro)))
-          (when (and index (not (file-exists-p index)))
-            (unless (file-exists-p (file-name-directory index))
-              (make-directory (file-name-directory index) t))
-            (find-file index))
-          ;; (append-to-file org-pro-default-content nil index)
-          (unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
-            (make-directory dir)
-            (loop for subdir in org-pro-project-subdirectories
-                  do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-          (find-file org-pro-file)
-          (goto-char (point-min))
-          (re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
-  
-  
-  (defun org-pro-move-project (&optional project)
-    (interactive)
-    (let* ((pro (or project (org-pro-select-project)))
-           (index (org-pro-get-index pro))
-           (dir (concat (org-pro-get-location pro) (car pro)))
-           (target  (read-directory-name (concat "Move all files below " dir " to: " )))
-           (new-index (unless (string-match dir (file-name-directory index))
-                        (read-file-name (concat "Move " index " to ")))))
-      (if (string= (file-name-as-directory target) target)
-          (setq target (concat target (file-name-nondirectory dir))))
-      (unless (file-exists-p (file-name-directory target)) (make-directory (file-name-directory target)))
-      (when (yes-or-no-p (concat "Move " dir " to " target "? "))
-        (rename-file dir target)
-        (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
-            (rename-file index new-index))
-        (org-pro-goto-profile pro)
-        (org-set-property "LOCATION" (file-name-directory target))
-        (org-set-property "INDEX" (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
-        (save-buffer))))
-  
-  
-  (defun org-pro-delete-project (&optional project)
-    (interactive)
-    (let* ((pro (or project (org-pro-select-project)))
-           (dir (concat (org-pro-get-location pro) (car pro)))
-           (index (org-pro-get-index pro)))
-      (pop-to-buffer "*Org-project-files*")
-      (erase-buffer)
-      (insert index "\n" dir "\n")
-      (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
-        (when (file-exists-p dir) (move-file-to-trash dir))
-        (when (file-exists-p index) (move-file-to-trash index))
-        (find-file org-pro-file)
-        (goto-char (point-min))
-        (re-search-forward (concat "*[ \t]+.*" (car pro)) nil t)
-        (org-mark-subtree)
-      (when (yes-or-no-p (concat "Is this project entry to be deleted " (car pro) "?"))
-        (kill-region (region-beginning) (region-end))))))
-  
-  
-  (defun org-pro-new-project (&optional nickname category)
-    "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+  (interactive)
+  (let ((pro (assoc project org-pro-project-alist)))
+    (when pro
+      (let ((dir (concat (org-pro-get-location pro) (car pro)))
+	    (index (org-pro-get-index pro)))
+	(when (and index (not (file-exists-p index)))
+	  (unless (file-exists-p (file-name-directory index))
+	    (make-directory (file-name-directory index) t))
+	  (find-file index))
+	;; (append-to-file org-pro-default-content nil index)
+	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
+	  (make-directory dir)
+	  (loop for subdir in org-pro-project-subdirectories
+		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
+	(find-file org-pro-file)
+	(goto-char (point-min))
+	(re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
+
+
+(defun org-pro-move-project (&optional project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (index (org-pro-get-index pro))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (target  (read-directory-name (concat "Move all files below " dir " to: " )))
+	 (new-index (unless (string-match dir (file-name-directory index))
+		      (read-file-name (concat "Move " index " to ")))))
+    (if (string= (file-name-as-directory target) target)
+	(setq target (concat target (file-name-nondirectory dir))))
+    (unless (file-exists-p (file-name-directory target)) (make-directory (file-name-directory target)))
+    (when (yes-or-no-p (concat "Move " dir " to " target "? "))
+      (rename-file dir target)
+      (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
+	  (rename-file index new-index))
+      (org-pro-goto-profile pro)
+      (org-set-property "LOCATION" (file-name-directory target))
+      (org-set-property "INDEX" (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
+      (save-buffer))))
+
+
+(defun org-pro-delete-project (&optional project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+         (dir (concat (org-pro-get-location pro) (car pro)))
+         (index (org-pro-get-index pro)))
+    (pop-to-buffer "*Org-project-files*")
+    (erase-buffer)
+    (insert index "\n" dir "\n")
+    (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
+      (when (file-exists-p dir) (move-file-to-trash dir))
+      (when (file-exists-p index) (move-file-to-trash index))
+      (find-file org-pro-file)
+      (goto-char (point-min))
+      (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car pro)) nil t)
+      ;; (org-show-subtree)
+      ;; (org-mark-element)
+      (message "If you delete this entry and then save the buffer, the project will disappear from the project-alist"))))
+;; (when (yes-or-no-p (concat "Is this project entry to be deleted " (car pro) "?"))
+;; (kill-region (region-beginning) (region-end))))))  
+
+(defun org-pro-new-project (&optional nickname category)
+  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
                 This function modifies the 'org-pro' and creates and visits the index file of the new project.
                 Thus, to undo all this you may want to call 'org-pro-delete-project'. 
                 " 
-    (interactive)
-    (org-pro-refresh)
-    (let* ((nickname (or nickname (read-string "Project name (short) ")))
-           category)
-      ;; check if nickname exists 
-      (while (assoc nickname org-pro-project-alist)
-        (setq nickname
-              (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-      (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
-      ;; a local capture command places the new project
-      (let ((org-capture-templates
-             `(("p" "Project" plain
-                (file+headline org-pro-file ,category)
-                ,(concat (make-string org-pro-project-level (string-to-char "*"))
-                         " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
-                         nickname
-                         "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
-            (org-capture-bookmark nil))
-        (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
-        (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
-        ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
-        (org-capture nil "p")
-        )))
-  
-  
-  (defun org-pro-show-properties ()
-    (let ((pop-up-windows t)
-          (obuf (current-buffer))
-          (pbuf (get-buffer "*Org project manager properties*")))
-      (set-buffer pbuf)
-      (erase-buffer)
-      (insert "Current project categories:\n\n")
-      (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-pro-project-categories)
-      (delete-backward-char 2)
-      (insert "\n\n")
-      (pop-to-buffer pbuf)
-      (pop-to-buffer obuf)))
-  
-  
-  (defun org-pro-complete-property ()
-    (interactive)
-    (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-      (cond ((string= (downcase curprop) "index")
-             (insert (read-file-name (concat "Set " curprop ": "))))
-            ((string= (downcase curprop) "location")
-             (insert (read-directory-name (concat "Set " curprop ": ")))))))
+  (interactive)
+  (org-pro-refresh)
+  (let* ((nickname (or nickname (read-string "Project name (short) ")))
+	 category)
+    ;; check if nickname exists 
+    (while (assoc nickname org-pro-project-alist)
+      (setq nickname
+	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
+    (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
+    ;; a local capture command places the new project
+    (let ((org-capture-templates
+	   `(("p" "Project" plain
+	      (file+headline org-pro-file ,category)
+	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
+		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
+		       nickname
+		       "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
+	  (org-capture-bookmark nil))
+      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
+      (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
+      ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
+      (org-capture nil "p")
+      )))
+
+
+(defun org-pro-show-properties ()
+  (let ((pop-up-windows t)
+	(obuf (current-buffer))
+	(pbuf (get-buffer "*Org project manager properties*")))
+    (set-buffer pbuf)
+    (erase-buffer)
+    (insert "Current project categories:\n\n")
+    (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-pro-project-categories)
+    (delete-backward-char 2)
+    (insert "\n\n")
+    (pop-to-buffer pbuf)
+    (pop-to-buffer obuf)))
+
+
+(defun org-pro-complete-property ()
+  (interactive)
+  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+    (cond ((string= (downcase curprop) "index")
+	   (insert (read-file-name (concat "Set " curprop ": "))))
+	  ((string= (downcase curprop) "location")
+	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
 #+END_SRC
 
 ** The project manager
+   
 #+BEGIN_SRC emacs-lisp  :export code
-(defun org-pro-goto-project-manager ()
-  (interactive)
-  (find-file org-pro-file))
-
-(defun org-pro-project-at-point (&optional noerror)
-  "Check if point is at project heading and return the project,
-        i.e. its entry from the 'org-pro-project-alist'.
-        Otherwise return error or nil if NOERROR is non-nil. "
-  (interactive)
-  ;; (org-back-to-heading)
-  (if (or (org-before-first-heading-p)
-	  (not (org-at-heading-p))
-	  (not (= org-pro-project-level
-		  (- (match-end 0) (match-beginning 0) 1))))
-      (if noerror nil
-	(error "No project at point"))
-    (or (org-entry-get nil "NICKNAME")
-	(progn (org-pro-set-nickname)
-	       (save-buffer) ;; to update the project-alist
-	       (org-entry-get nil "NICKNAME")))))
-
-(defun org-pro-goto-profile (project)
-  (let ((case-fold-search t))
-    (find-file org-pro-file)
-    (goto-char (point-min))
-    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
-	(error (concat "Cannot locate project " (car project))))))
-
-(defun org-pro-return ()
-  (interactive)
-  (let* ((pro (assoc (org-pro-project-at-point)
-		     org-pro-project-alist)))
-    (delete-other-windows)
-    (split-window-horizontally 25)
-    (other-window 1)
-    (find-file (org-pro-get-index pro))
-    (split-window-vertically 13)
-    (switch-to-buffer "*Current project*")
-    (erase-buffer)
-    (insert (car pro) "\n------------------------------\n")
-    (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
-    (other-window 1)))
-
-(defun org-pro-forward-project ()
-  (interactive)
-  (re-search-forward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-backward-project ()
-  (interactive)
-  (re-search-backward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-next-project (arg)
-  (interactive  "p")
-  (org-pro-forward-project)
-  (org-pro-return))
-
-(defun org-pro-previous-project (arg)
-  (interactive  "p")
-  (org-pro-backward-project)
-  (org-pro-return))
+  (defun org-pro-goto-project-manager ()
+    (interactive)
+    (find-file org-pro-file))
+  
+ (defun org-pro-super-manager ()
+    "Returns a super project for project management"
+    `("SuperManager"
+      (("location" . ,org-pro-default-directory)
+           ("index" . ,org-pro-file)
+           ("category" . "Super")
+           ("state" . "ACTIVE")
+           ("config" . "INDEX | AGENDA / TODO"))))
+  
+  (defun org-pro-project-at-point (&optional noerror)
+    "Check if point is at project heading and return the project,
+                  i.e. its entry from the 'org-pro-project-alist'.
+                  Otherwise return error or nil if NOERROR is non-nil. "
+    (interactive)
+    ;; (org-back-to-heading)
+    (if (or (org-before-first-heading-p)
+            (not (org-at-heading-p))
+            (not (= org-pro-project-level
+                    (- (match-end 0) (match-beginning 0) 1))))
+        (if noerror nil
+          (error "No project at point"))
+      (or (org-entry-get nil "NICKNAME")
+          (progn (org-pro-set-nickname)
+                 (save-buffer) ;; to update the project-alist
+                 (org-entry-get nil "NICKNAME")))))
+  
+  (defun org-pro-goto-profile (project)
+    (let ((case-fold-search t))
+      (find-file org-pro-file)
+      (goto-char (point-min))
+      (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
+          (error (concat "Cannot locate project " (car project))))))
+  
+  (defun org-pro-return ()
+    (interactive)
+    (let* ((pro (assoc (org-pro-project-at-point)
+                       org-pro-project-alist)))
+      (delete-other-windows)
+      (split-window-horizontally 25)
+      (other-window 1)
+      (find-file (org-pro-get-index pro))
+      (split-window-vertically 13)
+      (switch-to-buffer "*Current project*")
+      (erase-buffer)
+      (insert (car pro) "\n------------------------------\n")
+      (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+      (other-window 1)))
+  
+  (defun org-pro-forward-project ()
+    (interactive)
+    (re-search-forward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-backward-project ()
+    (interactive)
+    (re-search-backward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-next-project (arg)
+    (interactive  "p")
+    (org-pro-forward-project)
+    (org-pro-return))
+  
+  (defun org-pro-previous-project (arg)
+    (interactive  "p")
+    (org-pro-backward-project)
+    (org-pro-return))
 #+END_SRC
 
 ** Git control
@@ -864,8 +875,7 @@ capture mechanism.
     (progn 
       (widen)
       (org-columns-quit)
-      (hide-subtree))
-    ))
+      (hide-subtree))))
 
 ;; (add-hook 'org-mode-hook (lambda ()
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
@@ -996,7 +1006,10 @@ splits in the current frame.
       (unless (file-exists-p (file-name-directory index))
 	(make-directory (file-name-directory index) 'with-parents))
       (make-directory (file-name-directory index) 'with-parents))
-    (find-file index)))
+    (find-file index)
+   ;; FIXME: this should to be removed when document-view is
+   ;; in a different buffer
+    (org-pro-view-mode nil)))
 
 
 (defun org-pro-view-documents (&optional project)
@@ -1016,7 +1029,6 @@ splits in the current frame.
 	       (erase-buffer)
 	       (insert "FILE-LIST: No files in project"))))
     (error "file-list.el not loaded.")))
-
 
 (defun org-pro-find-thing (thing project)
   (let* ((case-fold-search t)
@@ -1118,6 +1130,14 @@ splits in the current frame.
 #+END_SRC
 
 ** Hacking deft
+
+*** TODO Fix problems with local hash
+
+To achieve multiple defts, we made variables deft-hash-* buffer
+local. When a file is entered this way and then saved, a hook tries to
+update the deft-hash-* tables. This does currently not work
+because the variables are local to the *deft* buffer.
+
 
 #+BEGIN_SRC  emacs-lisp :export code
 ;; Hack to search project index files
@@ -1509,54 +1529,55 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
     (directory-files dir nil ext t)))
 #+END_SRC
 
-*** Find specific places in a project
+** Find specific places in a project
 #+BEGIN_SRC emacs-lisp :export code
-(defun org-pro-goto-project (&optional project heading create prop-alist)
-  (interactive)
-  (let ((pro 
-	 (or project
-	     (car (org-pro-select-project)))))
-    (when (and (not (string-equal pro "")) pro)
-      (let* ((entry (assoc pro org-pro-project-alist))
-	     (index (org-pro-get-index entry))
-	     (head (or heading (read-string "Goto heading: "))))
-	(if index
-	    (find-file index)
-	  (error (concat "Project " pro " does not have an index.")))
-	(goto-char (point-min))
-	(cond ((re-search-forward
-		(format org-complex-heading-regexp-format (regexp-quote head))
-		nil t))
-	      (create
-	       (insert "* " head "\n"))
-	      (t (error (concat "Heading " head " not found in index file of " pro))))
-        (org-show-entry)	
-	(if prop-alist (mapcar (lambda (p)
-				 (unless (org-entry-get nil (car p))
-				   (org-set-property (car p) (car (cdr p))))) prop-alist))
-	(re-search-forward ":END:" nil t)
-	(end-of-line)
-	(forward-line)
-	(unless (looking-at "^[ \t]*$") (insert "\n"))))))  
+  (defun org-pro-goto-project (&optional project heading create prop-alist)
+    (interactive)
+    (let ((pro 
+           (or project
+               (car (org-pro-select-project)))))
+      (when (and (not (string-equal pro "")) pro)
+        (let* ((entry (assoc pro org-pro-project-alist))
+               (index (org-pro-get-index entry))
+               (head (or heading (read-string "Goto heading: "))))
+          (if index
+              (find-file index)
+            (error (concat "Project " pro " does not have an index.")))
+          (goto-char (point-min))
+          (cond ((re-search-forward
+                  (format org-complex-heading-regexp-format (regexp-quote head))
+                  nil t))
+                (create
+                 (insert "* " head "\n")
+                 (forward-line -1))
+                (t (error (concat "Heading " head " not found in index file of " pro))))
+          (org-show-entry)        
+          (if prop-alist (mapcar (lambda (p)
+                                   (unless (org-entry-get nil (car p))
+                                     (org-set-property (car p) (car (cdr p))))) prop-alist))
+          (re-search-forward ":END:" nil t)
+          (end-of-line)
+          (forward-line)
+          (unless (looking-at "^[ \t]*$") (insert "\n"))))))  
   
   (defun org-pro-goto-project-workflow ()
     (interactive)
     (or (org-pro-goto-project nil "WorkFlow" 'create)))
   
-(defun org-pro-goto-project-documents (&optional narrow)
-  (interactive)
-  (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
-      (if narrow (org-pro-view-mode t))))
-
-(defun org-pro-insert-list-files (&optional postfix)
-(interactive)
-(let ((myfiles (org-pro-list-files "." 
-                                   (or postfix (concat (read-string "Postfix: ") "$")) nil)))
-  (insert-string "\n")
-    (loop for x in myfiles
-          do 
-          (insert-string (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:FileName: [[" (file-relative-name x) "]]\n:END:\n")))
-))
+  (defun org-pro-goto-project-documents (&optional narrow)
+    (interactive)
+    (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
+        (if narrow (org-pro-view-mode t))))
+  
+  (defun org-pro-insert-list-files (&optional postfix)
+    (interactive)
+    (let ((myfiles (org-pro-list-files "." 
+                                       (or postfix (concat (read-string "Postfix: ") "$")) nil)))
+      (insert-string "\n")
+      (loop for x in myfiles
+            do 
+            (insert-string (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:FileName: [[" (file-relative-name x) "]]\n:END:\n")))
+      ))
   
   (defun org-pro-goto-project-taskpool (&optional arg)
     (interactive)
@@ -1623,25 +1644,25 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+BEGIN_SRC emacs-lisp :export code
 (defvar org-pro-export-subdirectory "export")
 (defvar org-pro-public-directory "~/public_html/")
+(defvar org-pro-public-server "" "Place on the web where pages are published.")
 
-(defun org-pro-browse-this-file ()
-  (interactive)
-  (let* ((bf (buffer-file-name (current-buffer))))
-    (message (concat "file:///" (file-name-sans-extension bf) ".html"))
-    (browse-url (concat "file:///" (file-name-sans-extension bf) ".html"))))
-
-
-(defvar org-pro-public-server-home "" "Place on the web where pages are published.")
-(defun org-pro-browse-public-version ()
-  (interactive)
+(defun org-pro-browse-this-file (&optional arg)
+  "Browse the html version of the current file using `browse-url'. If
+        prefix arg is given, then browse the corresponding file on the org-pro-public-server"
+  (interactive "P")
   (let* ((bf (buffer-file-name (current-buffer)))
-	 (html-file
-	  (concat (replace-regexp-in-string
-		   (expand-file-name org-pro-public-directory)
-		   org-pro-public-server-home
-		   (file-name-sans-extension bf))
-		  ".html")))
+	 (server-home (if (and arg (not org-pro-public-server-home))
+			  (read-string "Specify address on server: " "http://")
+			org-pro-public-server-home))
+         (html-file (if arg
+                        (concat (replace-regexp-in-string
+                                 (expand-file-name org-pro-public-directory)
+                                 server-home
+                                 (file-name-sans-extension bf))
+                                ".html")
+                      (concat "file:///" (file-name-sans-extension bf) ".html"))))
     ;; fixme org-pro-browse-file-hook (e.g. to synchronize with public server)
+    (message html-file)
     (browse-url html-file)))
 
 
