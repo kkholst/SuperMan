@@ -123,7 +123,7 @@ If you use the SSH repo URL instead, SSH keys are used for
 authentication. This guide offers help generating and using an SSH key
 pair:  https://help.github.com/articles/generating-ssh-keys
 
-* Project manager code :noexport:
+* Project manager code 						   :noexport:
 ** Dependencies
 
 #+BEGIN_SRC emacs-lisp :export code
@@ -786,9 +786,11 @@ capture mechanism.
 
 #+BEGIN_SRC emacs-lisp :export code    
 (org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
-(org-defkey org-columns-map "l" 'org-pro-git-log-at-point) ;; Return is not used anyway in column mode
-(org-defkey org-columns-map "t" 'org-pro-git-tag-at-point) ;; Return is not used anyway in column mode
-(org-defkey org-columns-map "u" '(lambda () ;; Return is not used anyway in column mode
+(org-defkey org-columns-map "l" 'org-pro-git-log-at-point) 
+(org-defkey org-columns-map "S" 'org-pro-git-search-at-point)
+(org-defkey org-columns-map "b" 'org-pro-git-blame-at-point)
+(org-defkey org-columns-map "t" 'org-pro-git-tag-at-point)
+(org-defkey org-columns-map "u" '(lambda () 
 				   (interactive)
 				   (if (org-pro-entry-get nil "hash" nil)
 				       (org-pro-git-revision-at-point t)
@@ -860,39 +862,48 @@ capture mechanism.
     )
   )
 
-(defvar org-pro-view-mode nil)
-(make-variable-buffer-local 'org-pro-view-mode)
+;; (defvar org-pro-view-mode nil)
+;; (make-variable-buffer-local 'org-pro-view-mode)
 (defun org-pro-view-mode (&optional status) 
   (interactive)
-  (setq org-pro-view-mode (or status (not org-pro-view-mode)))
-  (if org-pro-view-mode
-      (progn 
-	(org-narrow-to-subtree)
-	(goto-char (point-min))
-	(org-columns)
-	(org-columns-content)
-	)
-    (progn 
-      (widen)
-      (org-columns-quit)
-      (hide-subtree))))
+  (let ((viewbuf "*org-pro-view-buffer*"))
+    ;; (setq org-pro-view-mode (or status (not org-pro-view-mode)))
+    (save-excursion 
+    (if (get-buffer viewbuf) (progn
+			       (switch-to-buffer viewbuf)
+			       (org-columns-quit)
+			       (kill-buffer viewbuf))
+      )
+    ) 
+    (make-indirect-buffer (buffer-name) viewbuf)
+    (switch-to-buffer viewbuf)
+    (org-mode)
+    (org-narrow-to-subtree)
+    (goto-char (point-min))
+    (message "hallo")
+    (org-columns-content)
+    (org-columns-quit)
+    (org-columns)
+    )
+)
 
 ;; (add-hook 'org-mode-hook (lambda ()
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
 
 
 (defvar org-pro-log-limit 500)
-(defun org-pro-git-log-at-point (&optional file)
+(defun org-pro-git-log-at-point (&optional file searchstring)
   (interactive)
   (widen)
-  (let ((gitlog) (result) (item) (val) (myfile) (gitpath))
+  (let ((gitlog) (result) (item) (val) (myfile) (gitpath) (gitsearch))
     (setq myfile (file-relative-name (or file  
 					 (org-pro-filename-at-point))))
+    (setq gitsearch (if searchstring (concat " -G" searchstring) ""))
     (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
     (setq gitlog
 	  (split-string (substring 
 			 (shell-command-to-string 
-			  (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " 
+			  (concat "git log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " "
 				  (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) "-- " myfile))
 			 0 -1) "\n"))
     ;;  (generate-new-buffer "*org-pro-git-scratch*")
@@ -912,6 +923,11 @@ capture mechanism.
     (org-columns-content)
     (goto-char (point-min))
     ))
+
+(defun org-pro-git-search-at-point (&optional file)
+   (interactive)
+   (org-pro-git-log-at-point file (read-string "Search string: "))
+)
 
 
 (defun org-pro-git-tag-at-point (&optional tag)
@@ -943,25 +959,20 @@ capture mechanism.
 	(fileabs)(filehash)
 	(mystr))
     (setq fileabs (concat mypath myfile))
-    (setq filehash (concat myfile "." myhash))
+    (setq filehash (concat myhash "_" myfile))
     (setq mystr (shell-command-to-string 
 		 (concat "cd " mypath "; git show " myhash ":" myfile)))
     (if diff (progn 
 	       (find-file fileabs)))
     ;;(set-buffer (find-file-noselect fileabs))))
     (switch-to-buffer-other-window filehash)
-    (text-mode)
+;;    (text-mode)
     (erase-buffer)  
     (insert-string mystr)
     (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))
     ))
 
-
-
 #+END_SRC
-
-#+RESULTS[a9d3552e32983262b0035c1b310548054498d964]:
-: org-pro-git-revision-at-point
 
 ** Window configuration
 
