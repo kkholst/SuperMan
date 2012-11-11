@@ -1092,7 +1092,8 @@ splits in the current frame.
     (find-file index)
    ;; FIXME: this should to be removed when document-view is
    ;; in a different buffer
-    (org-pro-view-mode nil)))
+;;    (org-pro-view-mode nil)))
+))
 
 
 (defun org-pro-view-documents (&optional project)
@@ -1211,6 +1212,9 @@ splits in the current frame.
 	      (when el (split-window-vertically) (other-window 1)))))
     (select-window (nth 0 top-windows))))
 #+END_SRC
+
+#+RESULTS[b57ef5df5608d864778907d018334d7e09c67f95]:
+: org-pro-set-config
 
 ** Hacking deft
 
