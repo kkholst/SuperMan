@@ -127,12 +127,12 @@ pair:  https://help.github.com/articles/generating-ssh-keys
 ** Dependencies
 
 #+BEGIN_SRC emacs-lisp :export code
-(require 'org)  
-(require 'deft)
-(require 'winner)
-(require 'ido)
-(require 'org-colview)
-;; (require 'workgroups)
+  (require 'org)  
+  (require 'deft)
+  (require 'winner)
+  (require 'ido)
+  (require 'org-colview)
+  ;; (require 'workgroups)
 #+END_SRC
 
 ** Setup and maintenance
@@ -159,37 +159,37 @@ keystrokes differently in this file, the current solution is to put
 a minor-mode on top of it.
     
 #+BEGIN_SRC emacs-lisp :export code
-  (defvar org-pro-minor-mode nil)
-  (make-variable-buffer-local 'org-pro-minor-mode)
-  (defvar org-pro-minor-mode-map (make-sparse-keymap)
-    "Keymap used for `org-pro-minor-mode' commands.")
-  
-  (or (assq 'org-pro-minor-mode minor-mode-map-alist)
-      (setq minor-mode-map-alist
-            (append minor-mode-map-alist
-                    (list (cons 'org-pro-minor-mode org-pro-minor-mode-map)))))
-  (or (assq 'org-pro-minor-mode minor-mode-alist)
-      (setq minor-mode-alist
-            (cons '(org-pro-minor-mode " Project") minor-mode-alist)))
-  
-  (defun org-pro-minor-mode (&optional arg)
-    "A minor mode for using org Project Manager."
-    (interactive "P")
-    ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-    (setq org-pro-minor-mode
-          (not (or (and (null arg) org-pro-minor-mode)
-                   (<= (prefix-numeric-value arg) 0))))    
-    (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
-  
-  (define-key org-pro-minor-mode-map [(meta return)] 'org-pro-return)
-  (define-key org-pro-minor-mode-map [(meta n)] 'org-pro-next-project)
-  (define-key org-pro-minor-mode-map [(meta p)] 'org-pro-previous-project)
-  
-  (add-hook 'find-file-hooks 
-            (lambda ()
-              (let ((file (buffer-file-name)))
-                (when (and file (equal file (expand-file-name org-pro-file)))
-                  (org-pro-minor-mode)))))
+(defvar org-pro-minor-mode nil)
+(make-variable-buffer-local 'org-pro-minor-mode)
+(defvar org-pro-minor-mode-map (make-sparse-keymap)
+  "Keymap used for `org-pro-minor-mode' commands.")
+
+(or (assq 'org-pro-minor-mode minor-mode-map-alist)
+    (setq minor-mode-map-alist
+	  (append minor-mode-map-alist
+		  (list (cons 'org-pro-minor-mode org-pro-minor-mode-map)))))
+(or (assq 'org-pro-minor-mode minor-mode-alist)
+    (setq minor-mode-alist
+	  (cons '(org-pro-minor-mode " Project") minor-mode-alist)))
+
+(defun org-pro-minor-mode (&optional arg)
+  "A minor mode for using org Project Manager."
+  (interactive "P")
+  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
+  (setq org-pro-minor-mode
+	(not (or (and (null arg) org-pro-minor-mode)
+		 (<= (prefix-numeric-value arg) 0))))    
+  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+
+(define-key org-pro-minor-mode-map [(meta return)] 'org-pro-return)
+(define-key org-pro-minor-mode-map [(meta n)] 'org-pro-next-project)
+(define-key org-pro-minor-mode-map [(meta p)] 'org-pro-previous-project)
+
+(add-hook 'find-file-hooks 
+	  (lambda ()
+	    (let ((file (buffer-file-name)))
+	      (when (and file (equal file (expand-file-name org-pro-file)))
+		(org-pro-minor-mode)))))
 #+END_SRC
    
 *** Dynamically updating lists 
@@ -572,261 +572,239 @@ the `org-pro-file'.")
 ** Git control
 
 #+BEGIN_SRC emacs-lisp :export code 
-    (defvar org-pro-cmd-git "git")
-    
-  (defun org-pro-help-mode ()
-    (interactive)
-    (split-window-vertically)  
-    (other-window 1)
-    (switch-to-buffer org-pro-helpbuf)
-    (toggle-read-only -1)
-    (erase-buffer)
-    (insert-string "'<ret>':\t\t Open file (or revision) at point\n")
-    (insert-string "'l':    \t\t Show git log\n")
-    (insert-string "'L':    \t\t Show git log for tagged revisions\n")
-    (insert-string "'u':    \t\t Update git status\n")
-    (insert-string "'b':    \t\t Blame\n")
-    (insert-string "'S':    \t\t Search for revision containing a regular expression\n")
-    (insert-string "'D':    \t\t Show difference between revision at point and HEAD\n")
-    (insert-string "'h':    \t\t Open this help window\n")
-    (insert-string "'t':    \t\t Alter tag (empty string to remove)\n")
-    (insert-string "'q':    \t\t Quit view mode\n")
-    (toggle-read-only 1)
-    (other-window -1) 
-  )
-    
-        (org-defkey org-columns-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
-        (org-defkey org-columns-map "l" 'org-pro-git-log-at-point) 
-        (org-defkey org-columns-map "L" (lambda () (interactive) (org-pro-git-log-at-point nil nil t)))
-        (org-defkey org-columns-map "S" 'org-pro-git-search-at-point)
-        (org-defkey org-columns-map "b" 'org-pro-git-blame-at-point)
-        (org-defkey org-columns-map "t" 'org-pro-git-tag-at-point)
-        (org-defkey org-columns-map "h" 'org-pro-help-mode)
-        (org-defkey org-columns-map "D" (lambda () (interactive) (org-pro-git-revision-at-point t)))
+(defvar org-pro-cmd-git "git")
 
-        (org-defkey org-columns-map "q" (lambda ()          
-                                          (interactive)
-                                          (org-columns-quit)
-                                          (if (string= (buffer-name) org-pro-viewbuf) (kill-buffer org-pro-viewbuf))
-                                          (if (buffer-exists org-pro-helpbuf) (kill-buffer org-pro-helpbuf))
-                                          (delete-frame)
-                                          ))
-    
-        (org-defkey org-columns-map "u" '(lambda () 
-                                           (interactive)
-                                           (if (org-pro-entry-get nil "hash" nil)
-                                               (org-pro-git-revision-at-point t)
-                                             (progn 
-                                               (if (org-pro-entry-get nil "columns" nil)
-                                                   (org-pro-update-status)                                           
-                                                 (org-pro-git-status-file-at-point)     
-                                                 )
-                                               )
-                                             )
-                                           (org-columns-redo)))
-        (org-defkey org-columns-map "C" '(lambda () (interactive)(org-pro-git-commit-file-at-point)(org-columns-redo)))
-    
-    
-    (setq org-property-set-functions-alist nil)  
-    (add-to-list 'org-property-set-functions-alist
-                 `("GitStatus" . org-pro-git-status-file-at-point))
-    (add-to-list 'org-property-set-functions-alist
-                 `("LastCommit" . org-pro-git-commit-file-at-point))
-    
-    (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-                                                       If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
-    
-    (setq org-pro-git-ignore "*")
-    (defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
-                                          
-                                       By default we set this to '*' which means that all files are ignored.
-                                          
-                                       You think this is a bit stupid? Hehe, we can still add files via
-                                       the -f (force) command line switch. And we get not bothered by
-                                       having to filter all the unpredictable names one can give to files
-                                       that never should get git controlled.")
-    
-    (defun org-pro-git-p (dir)
-      "Test if directory DIR is under git control."
-      (eq 0 (shell-command (concat "cd " dir ";" org-pro-cmd-git " rev-parse --is-inside-work-tree "))))
-    
-    (defun org-pro-git-init-project (&optional pro)
-      "Put project under git control."
-      (interactive)
-      (let* ((pro (or pro (org-pro-select-project)))
-             (index (org-pro-get-index pro))
-             (loc (concat (org-pro-get-location pro) (car pro))))
-        (if (not index)
-            (error (concat "Trying to org-pro-git-init-project: Project " (car pro) " has no index file."))
-          (org-pro-git-init-directory loc)
-          (if (string-match loc index)
-              (org-pro-git-add-and-commit-file
-               index loc (concat "Initial commit of project " (car pro)))))))
-    
-    (defun org-pro-git-init-directory (dir)
-      "Put directory DIR under git control."
-      (if (org-pro-git-p dir)
-          (message (concat "Directory " dir " is under git control."))
-        (shell-command (concat "cd " dir ";" org-pro-cmd-git " init"))
-        (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
-    
-    (defun org-pro-filename-at-point ()
-      (let* ((file-or-link (org-pro-entry-get nil "filename" t)))
-        (if (string-match org-bracket-link-regexp file-or-link)
-            (expand-file-name
-             (org-extract-attributes
-              (org-link-unescape (org-match-string-no-properties 1 file-or-link))))
-          (if (file-exists-p file-or-link)
-              (expand-file-name file-or-link)))))
-    
-    (defun org-pro-read-git-date (git-date-string &optional no-time)
-      "Transform git date to org-format"
-      (with-temp-buffer
-        (org-insert-time-stamp 
-         (date-to-time git-date-string) (not no-time))))
-    ;;      (set-time-zone-rule t) ;; Use Universal time.
-    ;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
-    ;;        (set-time-zone-rule nil))))
-    
-    (defun org-pro-git-get-commit (arg file &optional dir)
-      (interactive)
-      (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
-                        (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
-             (date (org-pro-read-git-date
-                    (shell-command-to-string
-                     (if (string= arg "first")
-                         (concat  "cd " dir ";" org-pro-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- " file "  | head -1")
-                       (concat org-pro-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file)))))
-             (mess (shell-command-to-string
-                    (if (string= arg "first")
-                        (concat "cd " dir ";" org-pro-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
-                      (concat org-pro-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
-        (concat date " " mess)))
-    
-    
-    (defun org-pro-git-status-file-at-point (&rest args)
-      (interactive)
-      (let* ((file (org-pro-filename-at-point))
-             (dir (if file (file-name-directory file)))
-             (git-status (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " status --ignored --porcelain " file)))
-             git-last-commit
-             status)
-        (if (not (org-pro-git-p dir))
-            (error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
-          (if (string= git-status "")
-              (if (file-exists-p file)
-                  (setq git-status "C")
-                (setq git-status "E"))
-            (if (string-match "^fatal" git-status)
-                (setq git-status "")
-              (setq git-status (substring git-status 0 1))))
-          (if (string= git-status "!") (setq git-status "?"))
-          (if (or  (string= git-status "") (string= git-status "E") (string= git-status "?"))
-              (setq git-last-commit "")
-            (setq git-last-commit (org-pro-git-get-commit "1" file dir) ))
-          (cond ((string= git-status "?")
-                 (setq status "Untracked"))
-                ((string= git-status "E")
-                 (setq status "File does not exist"))
-                ((string= git-status "M")
-                 (setq status "Modified and staged"))
-                ((string= git-status "A")
-                 (setq status "New file"))
-                ((string= git-status " ")
-                 (setq status "Modified but unstaged"))
-                ((string= git-status "C")
-                 (setq status "Committed"))
-                (t (setq status "Unknown")))
-          (org-set-property "GitStatus" status)
-          (unless (or (string= git-status "E") (string= git-status "?"))
-            (unless (org-pro-entry-get nil "GitInit")
-              (org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
-            (unless (string= git-last-commit "")
-              (org-set-property "LastCommit" git-last-commit))
-            (if args 
-                (if (string= (car args) "1") git-last-commit status))
-            )
-          )))
-    
-    (defun org-pro-git-add-file (file project)
-      (interactive)
-      (let* ((pro (or project (org-pro-select-project)))
-             (dir (concat (org-pro-get-location pro) (car pro)))
-             (file (or file (read-file-name "Git add file: " dir nil t))))
-        (shell-command (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
-    
-    (defun org-pro-git-add-and-commit-file (file dir &optional message)
-      (shell-command (concat "cd " dir
-                             ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\" "
-                             (or message 
-                                 (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
-                             "\" " file)))
-    
-    ;;(defun org-pro-buffer-file-project ()
-    ;; "Return the project of the current buffers file."
-    ;;  (let ((f (buffer-file-name (current-buffer))))
-    
-    (defun org-pro-git-add-file-at-point ()
-      "Add or update file FILE to git repository DIR."
-      (interactive)
-      (let* ((file (org-pro-filename-at-point))
-             (dir (if file (file-name-directory file))))
-        (org-pro-git-add-file file
-                              (if (string= (expand-file-name (buffer-file-name))
-                                           (expand-file-name (org-pro-get-index org-pro-current-project)))
-                                  org-pro-current-project
-                                nil))
-        (org-pro-git-status-file-at-point "1")
-        ))
-    
-    (defun org-pro-git-commit-file-at-point (&rest args)
-      "Add or update file FILE to git repository DIR."
-      (interactive)
-      (let* ((file (org-pro-filename-at-point))
-             (dir (if file (file-name-directory file)))
-             (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
-        (org-pro-git-add-and-commit-file file dir message)
-        (org-pro-git-status-file-at-point "1")
-        ))
-    
-    (defun org-pro-git-push-directory (dir silent)
-      "Git push directory DIR."
-      (let* ((status (shell-command-to-string  (concat "cd " dir ";" org-pro-cmd-git " status")))
-             (necessary (string-match "Your branch is ahead .*\n" status))
-             (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-        (if doit
-            (shell-command (concat "cd " dir ";" org-pro-cmd-git " push")))))
-    
-    
-    (defun org-pro-git-update-project (project before)
-      "Check if project needs to be put under git control and update.
-                                       If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-                                      "
-      (let* ((git-control (downcase (org-pro-get-git project))))
-        (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
-          (let ((silent-p (string= git-control "silent"))
-                (dir (org-pro-get-git-location project)))
-            (when (file-exists-p dir)
-              (if before
-                  (progn
-                    ;; activating project
-                    (unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
-                      (when (or silent-p
-                                (y-or-n-p (concat "Initialize git control at " dir "?")))
-                        (org-pro-git-init-directory dir)))
-                    (when (and (string-match "pull" git-control)
-                               (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-                      (shell-command (concat "cd " dir ";" org-pro-cmd-git " pull"))))
-                ;; deactivating project
-                (when (and (org-pro-git-p dir)
-                           (string-match "yes\\|silent" git-control))
-                  )))))))
-    
-    
+(defun org-pro-help-mode ()
+  (interactive)
+  (split-window-vertically)  
+  (other-window 1)
+  (switch-to-buffer org-pro-helpbuf)
+  (toggle-read-only -1)
+  (erase-buffer)
+  (insert "'<ret>':\t\t Open file (or revision) at point\n")
+  (insert "'l':    \t\t Show git log\n")
+  (insert "'L':    \t\t Show git log for tagged revisions\n")
+  (insert "'u':    \t\t Update git status\n")
+  (insert "'b':    \t\t Blame\n")
+  (insert "'S':    \t\t Search for revision containing a regular expression\n")
+  (insert "'D':    \t\t Show difference between revision at point and HEAD\n")
+  (insert "'h':    \t\t Open this help window\n")
+  (insert "'t':    \t\t Alter tag (empty string to remove)\n")
+  (insert "'q':    \t\t Quit view mode\n")
+  (toggle-read-only 1)
+  (other-window -1))
+
+
+;; (setq org-property-set-functions-alist nil)  
+(add-to-list 'org-property-set-functions-alist
+	     `("GitStatus" . org-pro-git-status-file-at-point))
+(add-to-list 'org-property-set-functions-alist
+	     `("LastCommit" . org-pro-git-commit-file-at-point))
+
+(defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
+                                                                   If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
+
+(setq org-pro-git-ignore "*")
+(defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
+                                                      
+                                                   By default we set this to '*' which means that all files are ignored.
+                                                      
+                                                   You think this sounds like a stupid idea? Hehe, we can still add files via
+                                                   the -f (force) command line switch. And we get not bothered by
+                                                   having to filter all the unpredictable names one can give to files
+                                                   that never should get git controlled.")
+
+(defun org-pro-git-p (dir)
+  "Test if directory DIR is under git control."
+  (eq 0 (shell-command (concat "cd " dir ";" org-pro-cmd-git " rev-parse --is-inside-work-tree "))))
+
+(defun org-pro-git-toplevel (file)
+  "Find the toplevel directory DIR is under git control."
+  (let ((dir (if (file-directory-p file) file (file-name-directory file))))
+    (if (org-pro-git-p dir)
+        (replace-regexp-in-string "\n" "" (shell-command-to-string (concat "cd " dir "; git rev-parse --show-toplevel "))))))
+
+(defun org-pro-git-init-project (&optional pro)
+  "Put project under git control."
+  (interactive)
+  (let* ((pro (or pro (org-pro-select-project)))
+	 (index (org-pro-get-index pro))
+	 (loc (concat (org-pro-get-location pro) (car pro))))
+    (if (not index)
+	(error (concat "Trying to org-pro-git-init-project: Project " (car pro) " has no index file."))
+      (org-pro-git-init-directory loc)
+      (if (string-match loc index)
+	  (org-pro-git-add-and-commit-file
+	   index loc (concat "Initial commit of project " (car pro)))))))
+
+(defun org-pro-git-init-directory (dir)
+  "Put directory DIR under git control."
+  (if (org-pro-git-p dir)
+      (message (concat "Directory " dir " is under git control."))
+    (shell-command (concat "cd " dir ";" org-pro-cmd-git " init"))
+    (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
+
+(defun org-pro-filename-at-point ()
+  (let* ((file-or-link (org-pro-entry-get nil "filename" t)))
+    (if (string-match org-bracket-link-regexp file-or-link)
+	(expand-file-name
+	 (org-extract-attributes
+	  (org-link-unescape (org-match-string-no-properties 1 file-or-link))))
+      (if (file-exists-p file-or-link)
+	  (expand-file-name file-or-link)))))
+
+(defun org-pro-read-git-date (git-date-string &optional no-time)
+  "Transform git date to org-format"
+  (with-temp-buffer
+    (org-insert-time-stamp 
+     (date-to-time git-date-string) (not no-time))))
+;;      (set-time-zone-rule t) ;; Use Universal time.
+;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
+;;        (set-time-zone-rule nil))))
+
+(defun org-pro-git-get-commit (arg file &optional dir)
+  (interactive)
+  (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
+		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
+	 (date (org-pro-read-git-date
+		(shell-command-to-string
+		 (if (string= arg "first")
+		     (concat  "cd " dir ";" org-pro-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- " file "  | head -1")
+		   (concat org-pro-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file)))))
+	 (mess (shell-command-to-string
+		(if (string= arg "first")
+		    (concat "cd " dir ";" org-pro-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
+		  (concat org-pro-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
+    (concat date " " mess)))
+
+(defun org-pro-git-status-file-at-point ()
+  (interactive)
+  (org-pro-git-get-status (org-pro-filename-at-point)))
+
+(defun org-pro-git-get-status (file)
+  "Determine the git status of file FILE"
+  (interactive)
+  (let* ((file (or file (read-file-name "Get git status for file: ")))
+	 (dir (if file (file-name-directory file)))
+	 (git-status (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " status --ignored --porcelain " file)))
+	 git-last-commit
+	 label)
+    (if (not (org-pro-git-p dir))
+	(error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
+      (if (string= git-status "")
+	  (if (file-exists-p file)
+	      (setq git-status "C")
+	    (setq git-status "E"))
+	(if (string-match "^fatal" git-status)
+	    (setq git-status "")
+	  (setq git-status (substring git-status 0 1))))
+      (if (string= git-status "!") (setq git-status "?"))
+      (if (or  (string= git-status "") (string= git-status "E") (string= git-status "?"))
+	  (setq git-last-commit "")
+	(setq git-last-commit (org-pro-git-get-commit "1" file dir)))
+      (cond ((string= git-status "?")
+	     (setq label "Untracked"))
+	    ((string= git-status "E")
+	     (setq label "File does not exist"))
+	    ((string= git-status "M")
+	     (setq label "Modified and staged"))
+	    ((string= git-status "A")
+	     (setq label "New file"))
+	    ((string= git-status " ")
+	     (setq label "Modified but unstaged"))
+	    ((string= git-status "C")
+	     (setq label "Committed"))
+	    (t (setq label "Unknown")))
+      (list git-status label git-last-commit))))
+
+(defun org-pro-git-set-status-at-point ()
+  (let* ((file (org-pro-filename-at-point))
+	 (statlist (org-pro-git-get-status file))
+	 (last-commit (nth 2 statlist))
+	 (git-status (nth 0 statlist))
+	 (git-label (nth 1 statlist)))
+    (org-set-property "GitStatus" git-label)
+    (unless (or (string= git-status "E") (string= git-status "?"))
+      (unless (org-pro-entry-get nil "GitInit")
+	(org-set-property "GitInit" (org-pro-git-get-commit "first" file)))
+      (unless (string= last-commit "")
+	(org-set-property "LastCommit" last-commit)))))
+
+
+(defun org-pro-git-add-file (file project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (file (or file (read-file-name "Git add file: " dir nil t))))
+    (shell-command (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
+
+(defun org-pro-git-add-and-commit-file (file dir &optional message)
+  (shell-command (concat "cd " dir
+			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\" "
+			 (or message 
+			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
+			 "\" " file)))
+
+;;(defun org-pro-buffer-file-project ()
+;; "Return the project of the current buffers file."
+;;  (let ((f (buffer-file-name (current-buffer))))
+
+(defun org-pro-git-add-file-at-point ()
+  "Add or update file FILE to git repository DIR."
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (dir (if file (file-name-directory file))))
+    (org-pro-git-add-file file
+			  (if (string= (expand-file-name (buffer-file-name))
+				       (expand-file-name (org-pro-get-index org-pro-current-project)))
+			      org-pro-current-project
+			    nil))
+    (org-pro-git-set-status-at-point)))
+
+(defun org-pro-git-commit-file-at-point (&rest args)
+  "Add or update file FILE to git repository DIR."
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (dir (if file (file-name-directory file)))
+	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
+    (org-pro-git-add-and-commit-file file dir message)
+    (org-pro-git-set-status-at-point)))
+
+(defun org-pro-git-push-directory (dir silent)
+  "Git push directory DIR."
+  (let* ((status (shell-command-to-string  (concat "cd " dir ";" org-pro-cmd-git " status")))
+	 (necessary (string-match "Your branch is ahead .*\n" status))
+	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+    (if doit
+	(shell-command (concat "cd " dir ";" org-pro-cmd-git " push")))))
+
+
+(defun org-pro-git-update-project (project before)
+  "Check if project needs to be put under git control and update.
+                                                   If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
+                                                  "
+  (let* ((git-control (downcase (org-pro-get-git project))))
+    (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
+      (let ((silent-p (string= git-control "silent"))
+	    (dir (org-pro-get-git-location project)))
+	(when (file-exists-p dir)
+	  (if before
+	      (progn
+		;; activating project
+		(unless (or (org-pro-git-p dir) (string-match "no" git-control) (string= "" git-control))
+		  (when (or silent-p
+			    (y-or-n-p (concat "Initialize git control at " dir "?")))
+		    (org-pro-git-init-directory dir)))
+		(when (and (string-match "pull" git-control)
+			   (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
+		  (shell-command (concat "cd " dir ";" org-pro-cmd-git " pull"))))
+	    ;; deactivating project
+	    (when (and (org-pro-git-p dir)
+		       (string-match "yes\\|silent" git-control))
+	      )))))))
+
+
 #+END_SRC   
-
-#+RESULTS[0dd16cc781a4945e403eff5045384b7ce874252b]:
-: org-pro-git-update-project
 
 *** Exploiting column view
 
@@ -842,214 +820,197 @@ this on file basis - perhaps added to each property by the appropiate
 capture mechanism.
 
 #+BEGIN_SRC emacs-lisp :export code    
-  
-  ;; (defadvice switch-to-buffer (around interactive-normal-mode activate)
-  ;;   "When called interactively to create a new buffer not 
-  ;;  visiting a file, temporarily bind `buffer-file-name' and call
-  ;;  `normal-mode'."
-  ;;     (let ((existing-buffer (get-buffer (ad-get-arg 0))))
-  ;;       ad-do-it
-  ;;       (when (and (interactive-p)
-  ;;                  (null existing-buffer)
-  ;;                  (null buffer-file-name))
-  ;;         (let ((buffer-file-name (expand-file-name (buffer-name))))
-  ;;           (normal-mode)))))
-  
-  
-  (defun org-pro-column-action ()
-    (interactive)
-    (let* (
-           (prop (get-char-property (point) 'org-columns-key))
-           (tempstr) (tempfrm)
-           )
-      (cond ((string= prop "ITEM")
-             (org-narrow-to-element)
-             (setq tempfrm (selected-frame))
-               (if (re-search-forward ":Hash:" nil t)
-                   (progn 
-                     (widen)
-                     (org-pro-git-revision-at-point)
-                     (setq tempstr (buffer-name))
-                     (delete-frame tempfrm)
-                     (switch-to-buffer tempstr)
-                     (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))
-                     ))
-               (if (re-search-forward ":FileName:" nil t)
-                   (progn 
-                     (widen)
-                     (setq tempstr (file-name-nondirectory (org-pro-filename-at-point)))
-                     (org-open-at-point-global)
-                     (delete-frame tempfrm)
-                     (switch-to-buffer tempstr)
-                     )
-                 (widen))
-                 )
-            ((string= prop "GitStatus")
-             (org-pro-git-status-file-at-point)
-             (org-columns-redo)
-             )
-            ((string= prop "Decoration")
-             (org-pro-git-tag-at-point)
-             (org-columns-redo)
-             )
-            ((string= prop "FileName")    
-             (org-columns-open-link)
-             )
-            ((string= prop "Other")
-             (org-columns-open-link)
-             )
-            ((string= prop "Hash")
-             (org-pro-git-revision-at-revision)
-             )
-            ((string= prop "LastCommit")
-             (org-pro-git-commit-file-at-point)
-             (org-columns-redo)
-             )
-            (t (org-columns-edit-value)))    
-  ))
-  
-  (defun org-pro-update-status ()
-    (interactive)
-    (save-excursion 
-      (goto-char (point-min))
-      (org-columns-quit)
-      (while (re-search-forward ":GitStatus:" nil t)
-        (org-pro-git-status-file-at-point)
-        (org-end-of-line)
-        )
-      (goto-char (point-min))
-      (re-search-forward "\\* Documents" nil t)
-      (org-columns)
-      )
-    )
-  
-  
-  (defvar org-pro-help-always-on t)
-  (defvar org-pro-viewbuf "*org-pro-view-buffer*")
-  (defvar org-pro-helpbuf "*org-pro-help-buffer*")
-  (defvar org-pro-scratchbuf "*org-pro-git-scratch*")
-  (defvar org-pro-viewframename "Project Manager View Frame")
-  ;; (defvar org-pro-view-mode nil)
-  ;; (make-variable-buffer-local 'org-pro-view-mode)
-  (defun org-pro-view-mode (&optional status) 
-    (interactive)
-    (let ()
-      ;; (setq org-pro-view-mode (or status (not org-pro-view-mode)))
-      (if (buffer-exists org-pro-viewbuf) (progn
-                                 (switch-to-buffer org-pro-viewbuf)
-                                 (org-columns-quit)
-                                 (kill-buffer org-pro-viewbuf))
-        )
-     
-      ;; (mapcar (lambda (element)
-      ;;          (let ((key (car element)))
-      ;;            (string= org-pro-viewframename key)))
-      ;;         (make-frame-names-alist))
-    
-      (select-frame (make-frame `((name . ,org-pro-viewframename))))
-      (set-frame-size (selected-frame) 90 60)
-      (make-indirect-buffer (buffer-name) org-pro-viewbuf)
-      (switch-to-buffer org-pro-viewbuf)
-  ;;    (add-hook 'kill-buffer-hook (lambda () 
-  ;;                                (if (get-buffer org-pro-helpbuf) (kill-buffer org-pro-helpbuf))) t)
-      (org-mode)
-      (org-pro-minor-mode)
-      (org-narrow-to-subtree)
-      (goto-char (point-min))
-      (org-columns-content)
-      (org-columns-quit)
-      (org-columns)
-      (if org-pro-help-always-on (org-pro-help-mode))
-      ))
-  
-  
-  ;; (add-hook 'org-mode-hook (lambda ()
-  ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
-  
-  
-  (defvar org-pro-log-limit 500)
-  (defun org-pro-git-log-at-point (&optional file searchstring decorationonly)
-    (interactive)
+
+;; (defadvice switch-to-buffer (around interactive-normal-mode activate)
+;;   "When called interactively to create a new buffer not 
+;;  visiting a file, temporarily bind `buffer-file-name' and call
+;;  `normal-mode'."
+;;     (let ((existing-buffer (get-buffer (ad-get-arg 0))))
+;;       ad-do-it
+;;       (when (and (interactive-p)
+;;                  (null existing-buffer)
+;;                  (null buffer-file-name))
+;;         (let ((buffer-file-name (expand-file-name (buffer-name))))
+;;           (normal-mode)))))
+
+
+(defun org-pro-column-action ()
+  (interactive)
+  (let* ((prop (get-char-property (point) 'org-columns-key))
+	 (tempstr) (tempfrm))
+    (cond ((string= prop "ITEM")
+	   (org-narrow-to-element)
+	   (if (re-search-forward ":Hash:" nil t)
+	       (progn 
+		 (widen)
+		 (org-pro-git-revision-at-point)
+		 (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))))
+	   (if (re-search-forward ":FileName:" nil t)
+	       (progn 
+		 (widen)
+		 (org-open-at-point-global)
+		 (widen))))
+	  ((string= prop "GitStatus")
+	   (nth 1 (org-pro-git-status-file-at-point))
+	   (org-columns-redo))
+	  ((string= prop "Decoration")
+	   (org-pro-git-tag-at-point)
+	   (org-columns-redo))
+	  ((string= prop "FileName")    
+	   (org-columns-open-link))
+	  ((string= prop "Other")
+	   (org-columns-open-link))
+	  ((string= prop "Hash")
+	   (org-pro-git-revision-at-revision))
+	  ((string= prop "LastCommit")
+	   (org-pro-git-commit-file-at-point)
+	   (org-columns-redo))
+	  (t (org-columns-edit-value)))))
+
+(defun org-pro-update-status ()
+  (interactive)
+  (save-excursion 
+    (goto-char (point-min))
+    (org-columns-quit)
+    (while (re-search-forward ":GitStatus:" nil t)
+      (org-pro-git-set-status-at-point)
+      (org-end-of-line))
+    (goto-char (point-min))
+    (re-search-forward "\\* Documents" nil t)
+    (org-columns)))
+
+(defvar org-pro-help-always-on t)
+;;(defvar org-pro-viewbuf "*org-pro-view-buffer*")
+(defvar org-pro-helpbuf "*org-pro-help-buffer*")
+;; (defvar org-pro-scratchbuf "*org-pro-git-scratch*")
+(defvar org-pro-viewframename "Project Manager View Frame")
+;; (defvar org-pro-view-mode nil)
+;; (make-variable-buffer-local 'org-pro-view-mode)
+
+(defvar org-pro-view-mode-map (make-sparse-keymap)
+  "Keymap used for `org-pro-view-mode' commands.")
+(define-minor-mode org-pro-view-mode 
+  "Toggle org projectmanager document view mode.
+          With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
+          turn it off.
+          
+          Enabling org-pro-view mode electrifies the column view for documents
+          for git and other actions like commit, history search and pretty log-view."
+  :lighter " pro"
+  :group 'org
+  :keymap 'org-pro-view-mode-map)
+
+(define-key org-pro-view-mode-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(define-key org-pro-view-mode-map "l" 'org-pro-git-log-at-point) 
+(define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point nil nil t)))
+(define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
+(define-key org-pro-view-mode-map "b" 'org-pro-git-blame-at-point)
+(define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
+(define-key org-pro-view-mode-map "h" 'org-pro-help-mode)
+(define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point t)))
+(define-key org-pro-view-mode-map "q" (lambda ()          
+					(interactive)
+					(org-columns-quit)))
+;; (if (string= (buffer-name) org-pro-viewbuf) (kill-buffer org-pro-viewbuf))
+;;(if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
+(define-key org-pro-view-mode-map "u" '(lambda () 
+					 (interactive)
+					 (if (org-pro-entry-get nil "hash" nil)
+					     (org-pro-git-revision-at-point t)
+					   (progn 
+					     (if (org-pro-entry-get nil "columns" nil)
+						 (org-pro-update-status)                                           
+					       (org-pro-git-set-status-at-point))))))
+(define-key org-pro-view-mode-map "C" '(org-pro-git-commit-file-at-point))
+
+
+(defun org-pro-view-documents (&optional project)
+  (interactive)
+  (let* ((pro (or project (org-pro-select-project)))
+	 index-buf
+	 (view-buf (concat "*" (car pro) "-documents*")))
+    (org-pro-goto-project (car pro) "Documents")
+    (setq index-buf (current-buffer))
+    (org-narrow-to-subtree)
+    (unless (get-buffer view-buf)
+      (make-indirect-buffer index-buf view-buf t))
     (widen)
-    (let ((gitlog) (result) (item) (val) (myfile) (gitpath) (gitsearch))
-      (setq myfile (file-relative-name (or file  
-                                           (org-pro-filename-at-point))))
-      (setq gitsearch (if searchstring (concat " -G" searchstring) ""))
-      (setq gitpath (replace-regexp-in-string myfile "" (expand-file-name myfile)))
-      (setq gitlog
-            (split-string (substring 
-                           (shell-command-to-string 
-                            (concat org-pro-cmd-git " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " "
-                                    (if org-pro-log-limit (concat "-n " (int-to-string org-pro-log-limit))) " -- " myfile))
-                           0 -1) "\n"))
-      ;;  (generate-new-buffer "*org-pro-git-scratch*")
-      (switch-to-buffer org-pro-scratchbuf)
-      (org-columns-quit)
-      (erase-buffer)
-      (insert-string (concat "* Git Log (" myfile ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " myfile "\n:GitPath: " gitpath "\n:END:\n"))
-      (setq result "")
-      (loop for x in gitlog
-            do 
-            (setq val (delete "" (split-string x "#&#")))
-            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
-            ;;(setq result (concat result item))
-            (if (or (not decorationonly) (nth 4 val)) (insert-string item)))
-      ;;(insert-string result)
-      (org-mode)
-      (org-columns)
-      (org-columns-content)
-      (goto-char (point-min))
-      ))
-  
-  (defun org-pro-git-search-at-point (&optional file)
-     (interactive)
-     (org-pro-git-log-at-point file (read-string "Search string: "))
-  )
-  
-  
-  (defun org-pro-git-tag-at-point (&optional tag)
-    "Set git tag"
-    (interactive)
-    (let ((myhash (org-pro-entry-get nil "hash" nil))
-          (mytag  (org-pro-entry-get nil "decoration" nil))
-          (mypath  (org-pro-entry-get nil "gitpath" t))
-          (tag (read-string "Tag (empty to clear): "))
-          )
-      (if (string-equal tag "")
-          (progn 
-            (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
-            (shell-command (concat "cd " mypath ";" org-pro-cmd-git " tag -d " mytag))
-            )
-        (shell-command (concat "cd " mypath ";" org-pro-cmd-git " tag -a " tag " " myhash " -m \"\"")))
-      ) 
-    (save-excursion
-      (goto-char (point-min))
-      (org-pro-git-log-at-point)
-      )
-    )
-  
-  (defun org-pro-git-revision-at-point (&optional diff)
-    (interactive)
-    (let ((myhash (org-pro-entry-get nil "hash" nil))
-          (myfile (org-pro-entry-get nil "filename" t))  
-          (mypath (org-pro-entry-get nil "gitpath" t))
-          (fileabs)(filehash)
-          (mystr))
-      (setq fileabs (concat mypath myfile))
-      (setq filehash (concat myhash "_" myfile))
-      (setq mystr (shell-command-to-string 
-                   (concat "cd " mypath ";" org-pro-cmd-git " show " myhash ":" myfile)))
-      (if diff (progn 
-                 (find-file fileabs)))
-      ;;(set-buffer (find-file-noselect fileabs))))
-      (switch-to-buffer-other-window filehash)
-      (erase-buffer)  
-      (insert-string mystr)
-      (normal-mode) ;; Get default major-mode 
-  ;;    (text-mode)
-      (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))
-      ))
-  
+    (switch-to-buffer view-buf))
+  (org-pro-view-mode 'on)
+  (org-columns-content)
+  (org-columns))
+
+;; (add-hook 'org-mode-hook (lambda ()
+;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
+
+
+(defvar org-pro-log-limit 5)
+(defun org-pro-git-log-at-point (arg &optional file searchstring decorationonly)
+  (interactive "p")
+  (let* ((limit (or arg org-pro-log-limit))
+	 (file (expand-file-name (or file (org-pro-filename-at-point))))
+	 (gitsearch (if searchstring (concat " -G" searchstring) ""))
+	 (gitpath (org-pro-git-toplevel file))
+	 (gitlog (split-string (substring 
+				(shell-command-to-string 
+				 (concat org-pro-cmd-git " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " "
+					 (if limit (concat "-n " (int-to-string limit))) " -- " file))
+				0 -1) "\n"))
+	 item val
+	 (logbuf (concat "*" (file-name-nondirectory file)  " git log")))
+    (switch-to-buffer logbuf)
+    (org-columns-quit)
+    (erase-buffer)
+    (insert (concat "* Git Log (" file ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: " file "\n:GitPath: " gitpath "\n:END:\n"))
+    (loop for x in gitlog
+	  do 
+	  (setq val (delete "" (split-string x "#&#")))
+	  (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
+	  (if (or (not decorationonly) (nth 4 val)) (insert item)))
+    (org-mode)
+    (org-columns)
+    (org-columns-content)
+    (goto-char (point-min))))
+
+(defun org-pro-git-search-at-point (&optional file)
+  (interactive)
+  (org-pro-git-log-at-point file (read-string "Search string: ")))
+
+
+(defun org-pro-git-tag-at-point (&optional tag)
+  "Set git tag"
+  (interactive)
+  (let ((myhash (org-pro-entry-get nil "hash" nil))
+	(mytag  (org-pro-entry-get nil "decoration" nil))
+	(mypath  (org-pro-entry-get nil "gitpath" t))
+	(tag (read-string "Tag (empty to clear): ")))
+    (if (string-equal tag "")
+	(progn 
+	  (setq mytag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" mytag)))
+	  (shell-command (concat "cd " mypath ";" org-pro-cmd-git " tag -d " mytag)))
+      (shell-command (concat "cd " mypath ";" org-pro-cmd-git " tag -a " tag " " myhash " -m \"\"")))) 
+  (save-excursion
+    (goto-char (point-min))
+    (org-pro-git-log-at-point)))
+
+(defun org-pro-git-revision-at-point (&optional diff)
+  (interactive)
+  (let* ((myhash (org-pro-entry-get nil "hash" nil))
+	 (myfile (org-pro-entry-get nil "filename" t))  
+	 (mypath (org-pro-entry-get nil "gitpath" t))
+	 (fileabs (concat mypath myfile))
+	 (filehash (concat myhash "_" myfile))
+	 (mystr (shell-command-to-string 
+		 (concat "cd " mypath ";" org-pro-cmd-git " show " myhash ":" myfile))))
+    (if diff (progn 
+	       (find-file fileabs)))
+    ;;(set-buffer (find-file-noselect fileabs))))
+    (switch-to-buffer-other-window filehash)
+    (erase-buffer)  
+    (insert mystr)
+    (normal-mode) ;; Get default major-mode 
+    (if diff (ediff-buffers (file-name-nondirectory myfile) filehash))))
+
 #+END_SRC
 
 #+RESULTS[8de7a830b00c23976dfcf1284223b354aa34adb6]:
@@ -1098,19 +1059,9 @@ splits in the current frame.
       (unless (file-exists-p (file-name-directory index))
 	(make-directory (file-name-directory index) 'with-parents))
       (make-directory (file-name-directory index) 'with-parents))
-    (find-file index)
-   ;; FIXME: this should to be removed when document-view is
-   ;; in a different buffer
-;;    (org-pro-view-mode nil)))
-))
+    (find-file index)))
 
 
-(defun org-pro-view-documents (&optional project)
- (interactive)
- (let ((pro (or project (org-pro-select-project)))
-       (org-pro-view-mode t))
-  (org-pro-goto-project (car pro) "Documents")
-  (org-pro-view-mode t)))
 
 (defun org-pro-file-list (project)
   (if (featurep 'file-list)
@@ -1233,7 +1184,6 @@ To achieve multiple defts, we made variables deft-hash-* buffer
 local. When a file is entered this way and then saved, a hook tries to
 update the deft-hash-* tables. This does currently not work
 because the variables are local to the *deft* buffer.
-
 
 #+BEGIN_SRC  emacs-lisp :export code
 ;; Hack to search project index files
@@ -1673,10 +1623,10 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
     (interactive)
     (let ((myfiles (org-pro-list-files "." 
                                        (or postfix (concat (read-string "Postfix: ") "$")) nil)))
-      (insert-string "\n")
+      (insert "\n")
       (loop for x in myfiles
             do 
-            (insert-string (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:FileName: [[" (file-relative-name x) "]]\n:END:\n")))
+            (insert (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:FileName: [[" (file-relative-name x) "]]\n:END:\n")))
       ))
   
   (defun org-pro-goto-project-taskpool (&optional arg)
