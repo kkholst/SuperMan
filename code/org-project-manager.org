@@ -948,7 +948,7 @@ capture mechanism.
          (logbuf (concat "*" (file-name-nondirectory file)  " git log"))
          item val)
     (if (string= gitlog "")
-        (error "File not (not yet) git controlled.")
+        (error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
     (pop-to-buffer logbuf)
     (org-columns-quit)
     (erase-buffer)
