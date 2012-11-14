@@ -897,6 +897,8 @@ capture mechanism.
 ;;(if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
 (define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
 (define-key org-pro-view-mode-map "C" 'org-pro-git-commit-file-at-point)
+(define-key org-pro-view-mode-map "c" 'org-columns)
+
 
 (defun org-pro-view-documents (&optional project)
   (interactive)
@@ -918,119 +920,123 @@ capture mechanism.
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
 #+END_SRC
 
+#+RESULTS[e5807bcacbe95df117bda9cb3c29c6c4a0b44ba8]:
+: org-pro-view-documents
+
 *** Git log view
 #+BEGIN_SRC emacs-lisp :export code
-
-(defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
-  "Keymap used for `org-pro-git-log-mode' commands.")
-
-(define-minor-mode org-pro-git-log-mode 
-  "Toggle org projectmanager document view mode.
-                      With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
-                      turn it off.
-                      
-                      Enabling org-pro-view mode electrifies the column view for documents
-                      for git and other actions like commit, history search and pretty log-view."
-  :lighter " git-log"
-  :group 'org
-  :keymap 'org-pro-git-log-mode-map)
-
-(defvar org-pro-log-assoc-file nil)
-(make-variable-buffer-local 'org-pro-log-assoc-file)
-(defvar org-pro-git-log-limit 5)
-(defvar org-pro-git-search-limit 500)
-
-
-
-(defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
-  (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
-         (gitlog (shell-command-to-string
-                  (concat
-                   "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
-         (logbuf (concat "*" (file-name-nondirectory file)  " git log"))
-         item val)
-    (if (string= gitlog "")
-        (error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
-    (pop-to-buffer logbuf)
-    (org-columns-quit)
-    (erase-buffer)
-    (insert (concat "* Git Log ("
-                    file-rel
-                    ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:filename: "
-                    file-rel
-                    "\n:GitPath: "
-                    gitpath
-                    "\n:END:\n"))
-    (loop for x in (split-string (substring gitlog 0 -1) "\n")
-          do 
-          (setq val (delete "" (split-string x "#&#")))
-          (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
-          (if (or (not decorationonly) (nth 4 val)) (insert item)))
-    (org-mode)
-    (org-columns)
-    (org-columns-content)
-    (setq org-pro-log-assoc-file (cons gitpath file))
-    (org-pro-git-log-mode t)
-    (goto-char (point-min)))))
-
-(defun org-pro-git-log-at-point (arg &optional file path limit searchstring decorationonly)
-  (interactive "p")
-  (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
-  (let* ((limit (or arg limit org-pro-git-log-limit))
-	 (file (or file (org-pro-filename-at-point)
-		   (org-pro-entry-get nil "filename" t)))
-	 (gitsearch (if searchstring (concat " -G\"" searchstring "\"") ""))
-	 (gitpath (or path (org-pro-git-toplevel file))))
-      (org-pro-git-setup-log-buffer file gitpath
-				    (concat " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " " (if limit (concat "-n " (int-to-string limit))))
-				    decorationonly))))
-
-(defun org-pro-git-search-at-point (arg &optional file path decorationonly)
-  (interactive "p")
-  (if (not (or org-pro-git-log-mode org-pro-view-mode))
-      (error "This function works only in org-pro-git-log-mode and org-pro-git-view-mode buffers")
-    (let* ((limit (if (= arg 1) org-pro-git-search-limit (or arg org-pro-git-search-limit)))
-           (file-info (when org-pro-git-log-mode org-pro-log-assoc-file))
-           (file (or file (cdr file-info)))
-           (path (or path (car file-info)))
-	   (search-string  (read-string "Search string: ")))
-      (org-pro-git-log-at-point nil file path limit search-string decorationonly))))
-
-(defun org-pro-git-tag-at-point (&optional tag)
-  "Set git tag"
-  (interactive)
-  (let ((hash (org-pro-entry-get nil "hash" nil))
-	(tag (org-pro-entry-get nil "decoration" nil))
-	(path (org-pro-entry-get nil "gitpath" t))
-	(tag (read-string "Tag (empty to clear): ")))
-    (if (string-equal tag "")
-	(progn 
-	  (setq tag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" tag)))
-	  (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " tag)))
-      (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
-  (save-excursion
-    (goto-char (point-min))
-    (org-pro-git-log-at-point)))
-
-(defun org-pro-git-revision-at-point (&optional diff)
-  "Shows version of the document at point "
-  (interactive)
-  (if (not org-pro-git-log-mode)
-      (error "This function works only in org-pro-git-log-mode buffers")
-    (let* ((hash (org-pro-entry-get nil "hash" nil))
-	   (file (org-pro-entry-get nil "filename" t))
-	   (path (org-pro-entry-get nil "gitpath" t))
-	   (fileabs (concat path file))
-	   (filehash (concat hash "_" file))
-	   (str (shell-command-to-string 
-		 (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
-      (if diff (find-file fileabs))
-      (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
-      (erase-buffer)  
-      (insert str)
-      (normal-mode) ;; Get default major-mode 
-      (if diff (ediff-buffers (file-name-nondirectory file) filehash)))))
-
+  
+  (defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
+    "Keymap used for `org-pro-git-log-mode' commands.")
+  
+  (define-minor-mode org-pro-git-log-mode 
+    "Toggle org projectmanager document view mode.
+                        With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
+                        turn it off.
+                        
+                        Enabling org-pro-view mode electrifies the column view for documents
+                        for git and other actions like commit, history search and pretty log-view."
+    :lighter " git-log"
+    :group 'org
+    :keymap 'org-pro-git-log-mode-map)
+  
+  (defvar org-pro-log-assoc-file nil)
+  (make-variable-buffer-local 'org-pro-log-assoc-file)
+  (defvar org-pro-git-log-limit 5)
+  (defvar org-pro-git-search-limit 500)
+  
+  
+  
+  (defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
+    (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
+           (gitlog (shell-command-to-string
+                    (concat
+                     "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
+           (logbuf (concat "*" (file-name-nondirectory file)  " git log"))
+           item val)
+      (if (string= gitlog "")
+          (error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
+      (pop-to-buffer logbuf)
+      (org-columns-quit)
+      (erase-buffer)
+      (insert (concat "* Git Log ("
+                      file-rel
+                      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:filename: "
+                      file-rel
+                      "\n:GitPath: "
+                      gitpath
+                      "\n:END:\n"))
+      (loop for x in (split-string (substring gitlog 0 -1) "\n")
+            do 
+            (setq val (delete "" (split-string x "#&#")))
+            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) "\n:Decoration: " (nth 4 val) "\n:END:\n"))
+            (if (or (not decorationonly) (nth 4 val)) (insert item)))
+      (org-mode)
+      (org-columns)
+      (org-columns-content)
+      (setq org-pro-log-assoc-file (cons gitpath file))
+      (org-pro-git-log-mode t)
+      (goto-char (point-min)))))
+  
+  (defun org-pro-git-log-at-point (arg &optional file path limit searchstring decorationonly)
+    (interactive "p")
+    (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
+    (let* 
+        ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
+           (file (or file (org-pro-filename-at-point)
+                     (org-pro-entry-get nil "filename" t)))
+           (gitsearch (if searchstring (concat " -G\"" searchstring "\"") ""))
+           (gitpath (or path (org-pro-git-toplevel file))))
+        (org-pro-git-setup-log-buffer file gitpath
+                                      (concat " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " " (if limit (concat "-n " (int-to-string limit))))
+                                      decorationonly))))
+  
+  (defun org-pro-git-search-at-point (arg &optional file path decorationonly)
+    (interactive "p")
+    (if (not (or org-pro-git-log-mode org-pro-view-mode))
+        (error "This function works only in org-pro-git-log-mode and org-pro-git-view-mode buffers")
+      (let* ((limit (if (= arg 1) org-pro-git-search-limit (or arg org-pro-git-search-limit)))
+             (file-info (when org-pro-git-log-mode org-pro-log-assoc-file))
+             (file (or file (cdr file-info)))
+             (path (or path (car file-info)))
+             (search-string  (read-string "Search string: ")))
+        (org-pro-git-log-at-point nil file path limit search-string decorationonly))))
+  
+  (defun org-pro-git-tag-at-point (&optional tag)
+    "Set git tag"
+    (interactive)
+    (let ((hash (org-pro-entry-get nil "hash" nil))
+          (tag (org-pro-entry-get nil "decoration" nil))
+          (path (org-pro-entry-get nil "gitpath" t))
+          (tag (read-string "Tag (empty to clear): ")))
+      (if (string-equal tag "")
+          (progn 
+            (setq tag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" tag)))
+            (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " tag)))
+        (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
+    (save-excursion
+      (goto-char (point-min))
+      (org-pro-git-log-at-point)))
+  
+  (defun org-pro-git-revision-at-point (&optional diff)
+    "Shows version of the document at point "
+    (interactive)
+    (if (not org-pro-git-log-mode)
+        (error "This function works only in org-pro-git-log-mode buffers")
+      (let* ((hash (org-pro-entry-get nil "hash" nil))
+             (file (org-pro-entry-get nil "filename" t))
+             (path (org-pro-entry-get nil "gitpath" t))
+             (fileabs (concat path file))
+             (filehash (concat hash "_" file))
+             (str (shell-command-to-string 
+                   (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
+        (if diff (find-file fileabs))
+        (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
+        (erase-buffer)  
+        (insert str)
+        (normal-mode) ;; Get default major-mode 
+        (if diff (ediff-buffers (file-name-nondirectory file) filehash)))))
+  
 #+END_SRC
 
 ** Window configuration
