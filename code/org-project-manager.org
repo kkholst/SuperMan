@@ -159,37 +159,59 @@ keystrokes differently in this file, the current solution is to put
 a minor-mode on top of it.
     
 #+BEGIN_SRC emacs-lisp :export code
-(defvar org-pro-minor-mode nil)
-(make-variable-buffer-local 'org-pro-minor-mode)
-(defvar org-pro-minor-mode-map (make-sparse-keymap)
-  "Keymap used for `org-pro-minor-mode' commands.")
-
-(or (assq 'org-pro-minor-mode minor-mode-map-alist)
-    (setq minor-mode-map-alist
-	  (append minor-mode-map-alist
-		  (list (cons 'org-pro-minor-mode org-pro-minor-mode-map)))))
-(or (assq 'org-pro-minor-mode minor-mode-alist)
-    (setq minor-mode-alist
-	  (cons '(org-pro-minor-mode " Project") minor-mode-alist)))
-
-(defun org-pro-minor-mode (&optional arg)
-  "A minor mode for using org Project Manager."
-  (interactive "P")
-  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-  (setq org-pro-minor-mode
-	(not (or (and (null arg) org-pro-minor-mode)
-		 (<= (prefix-numeric-value arg) 0))))    
-  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
-
-(define-key org-pro-minor-mode-map [(meta return)] 'org-pro-return)
-(define-key org-pro-minor-mode-map [(meta n)] 'org-pro-next-project)
-(define-key org-pro-minor-mode-map [(meta p)] 'org-pro-previous-project)
-
-(add-hook 'find-file-hooks 
-	  (lambda ()
-	    (let ((file (buffer-file-name)))
-	      (when (and file (equal file (expand-file-name org-pro-file)))
-		(org-pro-minor-mode)))))
+    (defvar org-pro-manager-mode-map (make-sparse-keymap)
+      "Keymap used for `org-pro-manager-mode' commands.")
+    (define-minor-mode org-pro-manager-mode 
+      "Toggle org projectmanager document view mode.
+                  With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
+                  turn it off.
+                  
+                  Enabling org-pro-view mode electrifies the column view for documents
+                  for git and other actions like commit, history search and pretty log-view."
+      :lighter " manager"
+      :group 'org
+      :keymap 'org-pro-manager-mode-map
+      (setq org-pro-manager-mode
+            (not (or (and (null arg) org-pro-manager-mode)
+                     (<= (prefix-numeric-value arg) 0))))    
+      (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+    
+    (define-key org-pro-manager-mode-map [(meta return)] 'org-pro-return)
+    (define-key org-pro-manager-mode-map [(meta n)] 'org-pro-next-project)
+    (define-key org-pro-manager-mode-map [(meta p)] 'org-pro-previous-project)
+    (define-key org-pro-manager-mode-map [f1] 'org-pro-manager)
+    
+    (defun org-pro-manager ()
+      (interactive)
+      (pop-to-buffer "*org-pro-manager*")
+      (local-set-key "d" 'org-pro-view-documents)
+      (local-set-key "N" 'org-pro-new-project)
+      (insert "Press 'd' to view documents")
+      (insert "Press 'n' to view notes")
+      (insert "Press 'N' to add a project"))
+    
+    ;; (defun org-pro-manager-mode (&optional arg)
+    ;;  "A minor mode for using org Project Manager."
+    ;;  (interactive "P")
+    ;;  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
+    ;;  (setq org-pro-manager-mode
+    ;;      (not (or (and (null arg) org-pro-manager-mode)
+    ;;               (<= (prefix-numeric-value arg) 0))))    
+    ;;  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+    ;; (defvar org-pro-manager-mode nil)
+    ;; (make-variable-buffer-local 'org-pro-manager-mode)
+    ;;(or (assq 'org-pro-manager-mode minor-mode-map-alist)
+    ;;    (setq minor-mode-map-alist
+    ;;        (append minor-mode-map-alist
+    ;;                (list (cons 'org-pro-manager-mode org-pro-manager-mode-map)))))
+    ;;(or (assq 'org-pro-manager-mode minor-mode-alist)
+    ;;    (setq minor-mode-alist
+    ;;        (cons '(org-pro-manager-mode " Project") minor-mode-alist)))
+    ;;(add-hook 'find-file-hooks 
+    ;;        (lambda ()
+    ;;          (let ((file (buffer-file-name)))
+    ;;            (when (and file (equal file (expand-file-name org-pro-file)))
+    ;;              (org-pro-manager-mode)))))
 #+END_SRC
    
 *** Dynamically updating lists 
@@ -496,77 +518,79 @@ the `org-pro-file'.")
 ** The project manager
    
 #+BEGIN_SRC emacs-lisp  :export code
-  (defun org-pro-goto-project-manager ()
-    (interactive)
-    (find-file org-pro-file))
-  
- (defun org-pro-super-manager ()
-    "Returns a super project for project management"
-    `("SuperManager"
-      (("location" . ,org-pro-default-directory)
-           ("index" . ,org-pro-file)
-           ("category" . "Super")
-           ("state" . "ACTIVE")
-           ("config" . "INDEX | AGENDA / TODO"))))
-  
-  (defun org-pro-project-at-point (&optional noerror)
-    "Check if point is at project heading and return the project,
-                  i.e. its entry from the 'org-pro-project-alist'.
-                  Otherwise return error or nil if NOERROR is non-nil. "
-    (interactive)
-    ;; (org-back-to-heading)
-    (if (or (org-before-first-heading-p)
-            (not (org-at-heading-p))
-            (not (= org-pro-project-level
-                    (- (match-end 0) (match-beginning 0) 1))))
-        (if noerror nil
-          (error "No project at point"))
-      (or (org-entry-get nil "NICKNAME")
-          (progn (org-pro-set-nickname)
-                 (save-buffer) ;; to update the project-alist
-                 (org-entry-get nil "NICKNAME")))))
-  
-  (defun org-pro-goto-profile (project)
-    (let ((case-fold-search t))
-      (find-file org-pro-file)
-      (goto-char (point-min))
-      (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
-          (error (concat "Cannot locate project " (car project))))))
-  
-  (defun org-pro-return ()
-    (interactive)
-    (let* ((pro (assoc (org-pro-project-at-point)
-                       org-pro-project-alist)))
-      (delete-other-windows)
-      (split-window-horizontally 25)
-      (other-window 1)
-      (find-file (org-pro-get-index pro))
-      (split-window-vertically 13)
-      (switch-to-buffer "*Current project*")
-      (erase-buffer)
-      (insert (car pro) "\n------------------------------\n")
-      (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
-      (other-window 1)))
-  
-  (defun org-pro-forward-project ()
-    (interactive)
-    (re-search-forward
-     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-  
-  (defun org-pro-backward-project ()
-    (interactive)
-    (re-search-backward
-     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-  
-  (defun org-pro-next-project (arg)
-    (interactive  "p")
-    (org-pro-forward-project)
-    (org-pro-return))
-  
-  (defun org-pro-previous-project (arg)
-    (interactive  "p")
-    (org-pro-backward-project)
-    (org-pro-return))
+(defun org-pro-goto-project-manager ()
+  (interactive)
+  (find-file org-pro-file))
+
+
+
+(defun org-pro-super-manager ()
+  "Returns a super project for project management"
+  `("SuperManager"
+    (("location" . ,org-pro-default-directory)
+     ("index" . ,org-pro-file)
+     ("category" . "Super")
+     ("state" . "ACTIVE")
+     ("config" . "INDEX | AGENDA / TODO"))))
+
+(defun org-pro-project-at-point (&optional noerror)
+  "Check if point is at project heading and return the project,
+                    i.e. its entry from the 'org-pro-project-alist'.
+                    Otherwise return error or nil if NOERROR is non-nil. "
+  (interactive)
+  ;; (org-back-to-heading)
+  (if (or (org-before-first-heading-p)
+	  (not (org-at-heading-p))
+	  (not (= org-pro-project-level
+		  (- (match-end 0) (match-beginning 0) 1))))
+      (if noerror nil
+	(error "No project at point"))
+    (or (org-entry-get nil "NICKNAME")
+	(progn (org-pro-set-nickname)
+	       (save-buffer) ;; to update the project-alist
+	       (org-entry-get nil "NICKNAME")))))
+
+(defun org-pro-goto-profile (project)
+  (let ((case-fold-search t))
+    (find-file org-pro-file)
+    (goto-char (point-min))
+    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
+	(error (concat "Cannot locate project " (car project))))))
+
+(defun org-pro-return ()
+  (interactive)
+  (let* ((pro (assoc (org-pro-project-at-point)
+		     org-pro-project-alist)))
+    (delete-other-windows)
+    (split-window-horizontally 25)
+    (other-window 1)
+    (find-file (org-pro-get-index pro))
+    (split-window-vertically 13)
+    (switch-to-buffer "*Current project*")
+    (erase-buffer)
+    (insert (car pro) "\n------------------------------\n")
+    (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+    (other-window 1)))
+
+(defun org-pro-forward-project ()
+  (interactive)
+  (re-search-forward
+   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+
+(defun org-pro-backward-project ()
+  (interactive)
+  (re-search-backward
+   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+
+(defun org-pro-next-project (arg)
+  (interactive  "p")
+  (org-pro-forward-project)
+  (org-pro-return))
+
+(defun org-pro-previous-project (arg)
+  (interactive  "p")
+  (org-pro-backward-project)
+  (org-pro-return))
 #+END_SRC
 
 ** Git control
@@ -1200,7 +1224,6 @@ splits in the current frame.
 : org-pro-set-config
 
 ** Hacking deft
-
 *** TODO Fix problems with local hash
 
 To achieve multiple defts, we made variables deft-hash-* buffer
@@ -1636,6 +1659,10 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
   (interactive)
   (or (org-pro-goto-project nil "WorkFlow" 'create)))
 
+(defun org-pro-goto-project-notes ()
+  (interactive)
+  (or (org-pro-goto-project nil "Notes" 'create)))
+
 (defun org-pro-goto-project-documents (&optional narrow)
   (interactive)
   (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
@@ -1675,7 +1702,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 #+RESULTS[482ae7669a1f13b3ccded477ffd9bbe11452cc15]:
 : org-pro-goto-project-taskpool
 
-** Capture: Adding information to projectsy
+** Capture: Adding information to projects
 *** Choose a prefix
 #+BEGIN_SRC  emacs-lisp :export code
 (setq org-pro-capture-prefix "P")
@@ -1702,7 +1729,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 *** Capturing notes
 #+BEGIN_SRC  emacs-lisp :export code
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add note" plain
-  (function org-pro-goto-project-workflow) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+  (function org-pro-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 #+END_SRC
 *** Capturing documents
 #+BEGIN_SRC  emacs-lisp :export code
