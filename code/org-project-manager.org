@@ -159,149 +159,158 @@ keystrokes differently in this file, the current solution is to put
 a minor-mode on top of it.
     
 #+BEGIN_SRC emacs-lisp :export code
-    (defvar org-pro-manager-mode-map (make-sparse-keymap)
-      "Keymap used for `org-pro-manager-mode' commands.")
-    (define-minor-mode org-pro-manager-mode 
-      "Toggle org projectmanager document view mode.
+(defvar org-pro-manager-mode-map (make-sparse-keymap)
+  "Keymap used for `org-pro-manager-mode' commands.")
+(define-minor-mode org-pro-manager-mode 
+  "Toggle org projectmanager document view mode.
                   With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
                   turn it off.
                   
                   Enabling org-pro-view mode electrifies the column view for documents
                   for git and other actions like commit, history search and pretty log-view."
-      :lighter " manager"
-      :group 'org
-      :keymap 'org-pro-manager-mode-map
-      (setq org-pro-manager-mode
-            (not (or (and (null arg) org-pro-manager-mode)
-                     (<= (prefix-numeric-value arg) 0))))    
-      (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
-    
-    (define-key org-pro-manager-mode-map [(meta return)] 'org-pro-return)
-    (define-key org-pro-manager-mode-map [(meta n)] 'org-pro-next-project)
-    (define-key org-pro-manager-mode-map [(meta p)] 'org-pro-previous-project)
-    (define-key org-pro-manager-mode-map [f1] 'org-pro-manager)
-    
-    (defun org-pro-manager ()
-      (interactive)
-      (pop-to-buffer "*org-pro-manager*")
-      (local-set-key "d" 'org-pro-view-documents)
-      (local-set-key "N" 'org-pro-new-project)
-      (insert "Press 'd' to view documents")
-      (insert "Press 'n' to view notes")
-      (insert "Press 'N' to add a project"))
-    
-    ;; (defun org-pro-manager-mode (&optional arg)
-    ;;  "A minor mode for using org Project Manager."
-    ;;  (interactive "P")
-    ;;  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-    ;;  (setq org-pro-manager-mode
-    ;;      (not (or (and (null arg) org-pro-manager-mode)
-    ;;               (<= (prefix-numeric-value arg) 0))))    
-    ;;  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
-    ;; (defvar org-pro-manager-mode nil)
-    ;; (make-variable-buffer-local 'org-pro-manager-mode)
-    ;;(or (assq 'org-pro-manager-mode minor-mode-map-alist)
-    ;;    (setq minor-mode-map-alist
-    ;;        (append minor-mode-map-alist
-    ;;                (list (cons 'org-pro-manager-mode org-pro-manager-mode-map)))))
-    ;;(or (assq 'org-pro-manager-mode minor-mode-alist)
-    ;;    (setq minor-mode-alist
-    ;;        (cons '(org-pro-manager-mode " Project") minor-mode-alist)))
-    ;;(add-hook 'find-file-hooks 
-    ;;        (lambda ()
-    ;;          (let ((file (buffer-file-name)))
-    ;;            (when (and file (equal file (expand-file-name org-pro-file)))
-    ;;              (org-pro-manager-mode)))))
+  :lighter " manager"
+  :group 'org
+  :keymap 'org-pro-manager-mode-map
+  (setq org-pro-manager-mode
+	(not (or (and (null arg) org-pro-manager-mode)
+		 (<= (prefix-numeric-value arg) 0))))    
+  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+
+(define-key org-pro-manager-mode-map [(meta return)] 'org-pro-return)
+(define-key org-pro-manager-mode-map [(meta n)] 'org-pro-next-project)
+(define-key org-pro-manager-mode-map [(meta p)] 'org-pro-previous-project)
+(define-key org-pro-manager-mode-map [f1] 'org-pro-manager)
+
+(defun org-pro-manager ()
+  (interactive)
+  (pop-to-buffer "*org-pro-manager*")
+  (local-set-key "d" 'org-pro-view-documents)
+  (local-set-key "D" 'org-pro-view-all-documents)
+  (local-set-key "N" 'org-pro-new-project)
+  (insert "Press 'd' to view documents")
+  (insert "Press 'n' to view notes")
+  (insert "Press 'N' to add a project"))
+
+
+(defun org-pro-view-all-documents ()
+  (interactive)
+  (org-tags-view nil "LastCommit={.+}&GitStatus<>{Comitted}"))
+
+
+;; (defun org-pro-manager-mode (&optional arg)
+;;  "A minor mode for using org Project Manager."
+;;  (interactive "P")
+;;  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
+;;  (setq org-pro-manager-mode
+;;      (not (or (and (null arg) org-pro-manager-mode)
+;;               (<= (prefix-numeric-value arg) 0))))    
+;;  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+;; (defvar org-pro-manager-mode nil)
+;; (make-variable-buffer-local 'org-pro-manager-mode)
+;;(or (assq 'org-pro-manager-mode minor-mode-map-alist)
+;;    (setq minor-mode-map-alist
+;;        (append minor-mode-map-alist
+;;                (list (cons 'org-pro-manager-mode org-pro-manager-mode-map)))))
+;;(or (assq 'org-pro-manager-mode minor-mode-alist)
+;;    (setq minor-mode-alist
+;;        (cons '(org-pro-manager-mode " Project") minor-mode-alist)))
+(add-hook 'find-file-hooks 
+        (lambda ()
+          (let ((file (buffer-file-name)))
+            (when (and file (equal file (expand-file-name org-pro-file)))
+              (org-pro-manager-mode)))))
 #+END_SRC
    
 *** Dynamically updating lists 
     
 #+BEGIN_SRC emacs-lisp :export code
-(defvar org-pro-project-alist nil
-  "Alist of projects associating the nickname of the project
-  with information like the location of the project, the index file,
-  collaborator names, a category, the publishing directory, etc.")
-
-(defvar org-pro-current-project nil "The currently selected project.")
-
-(defvar org-pro-project-categories nil
-  "List of categories for sorting projects.")
-
-(defun org-pro-entry-get  (pom property &optional inherit literal-nil)
-  "Read property and remove leading and trailing whitespace."
-  (let ((prop (org-entry-get pom property inherit literal-nil)))
-    (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
-
-(defun org-pro-parse-projects (&optional all)
-  "Parse the file `org-pro-file' and update `org-pro-project-alist'."
-  (interactive)
-  (save-excursion
-    (setq org-pro-project-alist nil)
-    (set-buffer (find-file-noselect org-pro-file))
-    (save-buffer)
-    (goto-char (point-min))
-    (while (org-pro-forward-project)
-      (let* ((loc (or (org-pro-entry-get nil "LOCATION" 'inherit) org-pro-default-directory))
-	     (category (org-pro-entry-get nil "CATEGORY" 'inherit))
-	     (others (org-pro-entry-get nil "OTHERS" nil))
-	     (publish-dir (org-pro-entry-get nil "PUBLISH" 'inherit))
-	     (name (or (org-pro-entry-get nil "NICKNAME" nil)
-		       (nth 4 (org-heading-components))))
-	     (git (org-pro-entry-get nil "GIT" 'inherit))
-	     (config (org-pro-entry-get nil "config" 'inherit))
-	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (org-pro-entry-get nil "INDEX" nil)
-			(let ((default-org-home
-				(concat (file-name-as-directory loc)
-					name
-					org-pro-org-location)))
-			  ;; (make-directory default-org-home t)
-			  (concat (file-name-as-directory default-org-home) name ".org")))))
-	(unless (file-name-absolute-p index)
-	  (setq index
-		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-	(add-to-list 'org-pro-project-alist
-		     (list name
-			   (list (cons "location"  loc)
-				 (cons "index" index)
-				 (cons "category" category)
-				 (cons "others" others)
-				 (cons "git" git)
-				 (cons "config" config)
-				 (cons "state" todo)
-				 (cons "publish-directory" publish-dir))))))
-    org-pro-project-alist))
-
-
-
-(defun org-pro-get-buffer-props (property)
-  "Get a table of all values of PROPERTY used in the buffer, for completion."
-  (let (props)
+  (defvar org-pro-project-alist nil
+    "Alist of projects associating the nickname of the project
+    with information like the location of the project, the index file,
+    collaborator names, a category, the publishing directory, etc.")
+  
+  (defvar org-pro-current-project nil "The currently selected project.")
+  
+  (defvar org-pro-project-categories nil
+    "List of categories for sorting projects.")
+  
+  (defun org-pro-entry-get  (pom property &optional inherit literal-nil)
+    "Read property and remove leading and trailing whitespace."
+    (let ((prop (org-entry-get pom property inherit literal-nil)))
+      (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
+  
+  (defun org-pro-parse-projects (&optional all)
+    "Parse the file `org-pro-file' and update `org-pro-project-alist'."
+    (interactive)
     (save-excursion
+      (setq org-pro-project-alist nil)
+      (set-buffer (find-file-noselect org-pro-file))
+      (unless (org-pro-manager-mode 1))
+      (save-buffer)
       (goto-char (point-min))
-      (while (re-search-forward (concat ":" property ":") nil t)
-	(add-to-list 'props (list
-			     (org-entry-get
-			      nil property nil)))))
-    props))
-
-(defun org-pro-parse-categories ()
-  "Parse the file `org-pro-file' and update `org-pro-project-categories'."
-  (interactive)
-  (set-buffer (find-file-noselect org-pro-file))
-  (setq org-pro-project-categories
-	(reverse (org-pro-get-buffer-props "CATEGORY"))))
-
-(defun org-pro-refresh ()
-  "Parses the categories and projects in file `org-pro-file' and also
-           updates the currently selected project."
-  (interactive)
-  (org-pro-parse-categories)
-  (org-pro-parse-projects)
-  (when org-pro-current-project
-    (setq org-pro-current-project
-	  (assoc (car org-pro-current-project) org-pro-project-alist))))
-
+      (while (org-pro-forward-project)
+        (let* ((loc (or (org-pro-entry-get nil "LOCATION" 'inherit) org-pro-default-directory))
+               (category (org-pro-entry-get nil "CATEGORY" 'inherit))
+               (others (org-pro-entry-get nil "OTHERS" nil))
+               (publish-dir (org-pro-entry-get nil "PUBLISH" 'inherit))
+               (name (or (org-pro-entry-get nil "NICKNAME" nil)
+                         (nth 4 (org-heading-components))))
+               (git (org-pro-entry-get nil "GIT" 'inherit))
+               (config (org-pro-entry-get nil "config" 'inherit))
+               (todo (substring-no-properties (or (org-get-todo-state) "")))
+               (index (or (org-pro-entry-get nil "INDEX" nil)
+                          (let ((default-org-home
+                                  (concat (file-name-as-directory loc)
+                                          name
+                                          org-pro-org-location)))
+                            ;; (make-directory default-org-home t)
+                            (concat (file-name-as-directory default-org-home) name ".org")))))
+          (unless (file-name-absolute-p index)
+            (setq index
+                  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+          (add-to-list 'org-pro-project-alist
+                       (list name
+                             (list (cons "location"  loc)
+                                   (cons "index" index)
+                                   (cons "category" category)
+                                   (cons "others" others)
+                                   (cons "git" git)
+                                   (cons "config" config)
+                                   (cons "state" todo)
+                                   (cons "publish-directory" publish-dir))))))
+      org-pro-project-alist))
+  
+  
+  
+  (defun org-pro-get-buffer-props (property)
+    "Get a table of all values of PROPERTY used in the buffer, for completion."
+    (let (props)
+      (save-excursion
+        (goto-char (point-min))
+        (while (re-search-forward (concat ":" property ":") nil t)
+          (add-to-list 'props (list
+                               (org-entry-get
+                                nil property nil)))))
+      props))
+  
+  (defun org-pro-parse-categories ()
+    "Parse the file `org-pro-file' and update `org-pro-project-categories'."
+    (interactive)
+    (set-buffer (find-file-noselect org-pro-file))
+    (unless (org-pro-manager-mode 1))
+    (setq org-pro-project-categories
+          (reverse (org-pro-get-buffer-props "CATEGORY"))))
+  
+  (defun org-pro-refresh ()
+    "Parses the categories and projects in file `org-pro-file' and also
+             updates the currently selected project."
+    (interactive)
+    (org-pro-parse-categories)
+    (org-pro-parse-projects)
+    (when org-pro-current-project
+      (setq org-pro-current-project
+            (assoc (car org-pro-current-project) org-pro-project-alist))))
+  
 #+END_SRC
 
 *** Lists of project-index and project-org files 
@@ -368,8 +377,8 @@ the `org-pro-file'.")
   (interactive)
   (let* ((pro (assoc (org-pro-project-at-point t)
 		     org-pro-project-alist))
-         (others (cdr (assoc "others" (cadr pro))))
-         (init (if others (concat others ", ") "")))
+	 (others (cdr (assoc "others" (cadr pro))))
+	 (init (if others (concat others ", ") "")))
     ;; (org-entry-get nil "others")
     (if pro
 	(org-set-property
@@ -378,9 +387,10 @@ the `org-pro-file'.")
 	  "[,\t ]+$" ""     (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
 (defun org-pro-fix-others ()
-"Update the others property (collaborator names) of all projects in `org-pro-file'."
+  "Update the others property (collaborator names) of all projects in `org-pro-file'."
   (interactive "P")
   (set-buffer (find-file-noselect org-pro-file))
+  (unless (org-pro-manager-mode 1))
   (goto-char (point-min))
   (while (org-pro-forward-project)
     (org-pro-set-others)))
@@ -401,7 +411,7 @@ the `org-pro-file'.")
 (defvar org-pro-project-subdirectories nil)
 (defun org-pro-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
-                                  'org-pro-project-subdirectories' is set."
+                                    'org-pro-project-subdirectories' is set."
   (interactive)
   (let ((pro (assoc project org-pro-project-alist)))
     (when pro
@@ -417,6 +427,7 @@ the `org-pro-file'.")
 	  (loop for subdir in org-pro-project-subdirectories
 		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
 	(find-file org-pro-file)
+	(unless (org-pro-manager-mode 1))
 	(goto-char (point-min))
 	(re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
 
@@ -445,8 +456,8 @@ the `org-pro-file'.")
 (defun org-pro-delete-project (&optional project)
   (interactive)
   (let* ((pro (or project (org-pro-select-project)))
-         (dir (concat (org-pro-get-location pro) (car pro)))
-         (index (org-pro-get-index pro)))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (index (org-pro-get-index pro)))
     (pop-to-buffer "*Org-project-files*")
     (erase-buffer)
     (insert index "\n" dir "\n")
@@ -454,6 +465,7 @@ the `org-pro-file'.")
       (when (file-exists-p dir) (move-file-to-trash dir))
       (when (file-exists-p index) (move-file-to-trash index))
       (find-file org-pro-file)
+      (unless (org-pro-manager-mode 1))
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car pro)) nil t)
       ;; (org-show-subtree)
@@ -464,12 +476,12 @@ the `org-pro-file'.")
 
 (defun org-pro-new-project (&optional nickname category)
   "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-                This function modifies the 'org-pro' and creates and visits the index file of the new project.
-                Thus, to undo all this you may want to call 'org-pro-delete-project'. 
-                " 
+                  This function modifies the 'org-pro' and creates and visits the index file of the new project.
+                  Thus, to undo all this you may want to call 'org-pro-delete-project'. 
+                  " 
   (interactive)
   (org-pro-refresh)
-  (let* ((nickname (or nickname (read-string "Project name (short) ")))
+  (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
 	 category)
     ;; check if nickname exists 
     (while (assoc nickname org-pro-project-alist)
@@ -486,10 +498,9 @@ the `org-pro-file'.")
 		       "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
 	  (org-capture-bookmark nil))
       (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
-      (add-hook 'org-capture-after-finalize-hook `(lambda () (org-pro-create-project ,nickname 'ask)) nil 'local)
+      (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (org-pro-create-project ,nickname 'ask)) nil 'local)
       ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
-      (org-capture nil "p")
-      )))
+      (org-capture nil "p"))))
 
 
 (defun org-pro-show-properties ()
@@ -518,79 +529,78 @@ the `org-pro-file'.")
 ** The project manager
    
 #+BEGIN_SRC emacs-lisp  :export code
-(defun org-pro-goto-project-manager ()
-  (interactive)
-  (find-file org-pro-file))
-
-
-
-(defun org-pro-super-manager ()
-  "Returns a super project for project management"
-  `("SuperManager"
-    (("location" . ,org-pro-default-directory)
-     ("index" . ,org-pro-file)
-     ("category" . "Super")
-     ("state" . "ACTIVE")
-     ("config" . "INDEX | AGENDA / TODO"))))
-
-(defun org-pro-project-at-point (&optional noerror)
-  "Check if point is at project heading and return the project,
-                    i.e. its entry from the 'org-pro-project-alist'.
-                    Otherwise return error or nil if NOERROR is non-nil. "
-  (interactive)
-  ;; (org-back-to-heading)
-  (if (or (org-before-first-heading-p)
-	  (not (org-at-heading-p))
-	  (not (= org-pro-project-level
-		  (- (match-end 0) (match-beginning 0) 1))))
-      (if noerror nil
-	(error "No project at point"))
-    (or (org-entry-get nil "NICKNAME")
-	(progn (org-pro-set-nickname)
-	       (save-buffer) ;; to update the project-alist
-	       (org-entry-get nil "NICKNAME")))))
-
-(defun org-pro-goto-profile (project)
-  (let ((case-fold-search t))
-    (find-file org-pro-file)
-    (goto-char (point-min))
-    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
-	(error (concat "Cannot locate project " (car project))))))
-
-(defun org-pro-return ()
-  (interactive)
-  (let* ((pro (assoc (org-pro-project-at-point)
-		     org-pro-project-alist)))
-    (delete-other-windows)
-    (split-window-horizontally 25)
-    (other-window 1)
-    (find-file (org-pro-get-index pro))
-    (split-window-vertically 13)
-    (switch-to-buffer "*Current project*")
-    (erase-buffer)
-    (insert (car pro) "\n------------------------------\n")
-    (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
-    (other-window 1)))
-
-(defun org-pro-forward-project ()
-  (interactive)
-  (re-search-forward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-backward-project ()
-  (interactive)
-  (re-search-backward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
-
-(defun org-pro-next-project (arg)
-  (interactive  "p")
-  (org-pro-forward-project)
-  (org-pro-return))
-
-(defun org-pro-previous-project (arg)
-  (interactive  "p")
-  (org-pro-backward-project)
-  (org-pro-return))
+  (defun org-pro-goto-project-manager ()
+    (interactive)
+    (find-file org-pro-file))
+  
+  (defun org-pro-super-manager ()
+    "Returns a super project for project management"
+    `("SuperManager"
+      (("location" . ,org-pro-default-directory)
+       ("index" . ,org-pro-file)
+       ("category" . "Super")
+       ("state" . "ACTIVE")
+       ("config" . "INDEX | AGENDA / TODO"))))
+  
+  (defun org-pro-project-at-point (&optional noerror)
+    "Check if point is at project heading and return the project,
+                      i.e. its entry from the 'org-pro-project-alist'.
+                      Otherwise return error or nil if NOERROR is non-nil. "
+    (interactive)
+    ;; (org-back-to-heading)
+    (if (or (org-before-first-heading-p)
+            (not (org-at-heading-p))
+            (not (= org-pro-project-level
+                    (- (match-end 0) (match-beginning 0) 1))))
+        (if noerror nil
+          (error "No project at point"))
+      (or (org-entry-get nil "NICKNAME")
+          (progn (org-pro-set-nickname)
+                 (save-buffer) ;; to update the project-alist
+                 (org-entry-get nil "NICKNAME")))))
+  
+  (defun org-pro-goto-profile (project)
+    (let ((case-fold-search t))
+      (find-file org-pro-file)
+      (unless (org-pro-manager-mode 1))
+      (goto-char (point-min))
+      (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
+          (error (concat "Cannot locate project " (car project))))))
+  
+  (defun org-pro-return ()
+    (interactive)
+    (let* ((pro (assoc (org-pro-project-at-point)
+                       org-pro-project-alist)))
+      (delete-other-windows)
+      (split-window-horizontally 25)
+      (other-window 1)
+      (find-file (org-pro-get-index pro))
+      (split-window-vertically 13)
+      (switch-to-buffer "*Current project*")
+      (erase-buffer)
+      (insert (car pro) "\n------------------------------\n")
+      (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
+      (other-window 1)))
+  
+  (defun org-pro-forward-project ()
+    (interactive)
+    (re-search-forward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-backward-project ()
+    (interactive)
+    (re-search-backward
+     (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+  
+  (defun org-pro-next-project (arg)
+    (interactive  "p")
+    (org-pro-forward-project)
+    (org-pro-return))
+  
+  (defun org-pro-previous-project (arg)
+    (interactive  "p")
+    (org-pro-backward-project)
+    (org-pro-return))
 #+END_SRC
 
 ** Git control
@@ -949,37 +959,37 @@ capture mechanism.
 
 *** Git log view
 #+BEGIN_SRC emacs-lisp :export code
-  
-  (defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
-    "Keymap used for `org-pro-git-log-mode' commands.")
-  
-  (define-minor-mode org-pro-git-log-mode 
-    "Toggle org projectmanager document view mode.
+
+(defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
+  "Keymap used for `org-pro-git-log-mode' commands.")
+
+(define-minor-mode org-pro-git-log-mode 
+  "Toggle org projectmanager document view mode.
                         With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
                         turn it off.
                         
                         Enabling org-pro-view mode electrifies the column view for documents
                         for git and other actions like commit, history search and pretty log-view."
-    :lighter " git-log"
-    :group 'org
-    :keymap 'org-pro-git-log-mode-map)
-  
-  (defvar org-pro-log-assoc-file nil)
-  (make-variable-buffer-local 'org-pro-log-assoc-file)
-  (defvar org-pro-git-log-limit 5)
-  (defvar org-pro-git-search-limit 500)
-  
-  
-  
-  (defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
-    (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
-           (gitlog (shell-command-to-string
-                    (concat
-                     "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
-           (logbuf (concat "*" (file-name-nondirectory file)  " git log"))
-           item val)
-      (if (string= gitlog "")
-          (error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
+  :lighter " git-log"
+  :group 'org
+  :keymap 'org-pro-git-log-mode-map)
+
+(defvar org-pro-log-assoc-file nil)
+(make-variable-buffer-local 'org-pro-log-assoc-file)
+(defvar org-pro-git-log-limit 5)
+(defvar org-pro-git-search-limit 500)
+
+
+
+(defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
+  (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
+	 (gitlog (shell-command-to-string
+		  (concat
+		   "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
+	 (logbuf (concat "*" (file-name-nondirectory file)  " git log"))
+	 item val)
+    (if (string= gitlog "")
+	(error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
       (pop-to-buffer logbuf)
       (org-columns-quit)
       (erase-buffer)
@@ -1001,66 +1011,66 @@ capture mechanism.
       (setq org-pro-log-assoc-file (cons gitpath file))
       (org-pro-git-log-mode t)
       (goto-char (point-min)))))
-  
-  (defun org-pro-git-log-at-point (arg &optional file path limit searchstring decorationonly)
-    (interactive "p")
-    (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
+
+(defun org-pro-git-log-at-point (arg &optional file path limit searchstring decorationonly)
+  (interactive "p")
+  (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
     (let* 
         ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
-           (file (or file (org-pro-filename-at-point)
-                     (org-pro-entry-get nil "filename" t)))
-           (gitsearch (if searchstring (concat " -G\"" searchstring "\"") ""))
-           (gitpath (or path (org-pro-git-toplevel file))))
-        (org-pro-git-setup-log-buffer file gitpath
-                                      (concat " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " " (if limit (concat "-n " (int-to-string limit))))
-                                      decorationonly))))
-  
-  (defun org-pro-git-search-at-point (arg &optional file path decorationonly)
-    (interactive "p")
-    (if (not (or org-pro-git-log-mode org-pro-view-mode))
-        (error "This function works only in org-pro-git-log-mode and org-pro-git-view-mode buffers")
-      (let* ((limit (if (= arg 1) org-pro-git-search-limit (or arg org-pro-git-search-limit)))
-             (file-info (when org-pro-git-log-mode org-pro-log-assoc-file))
-             (file (or file (cdr file-info)))
-             (path (or path (car file-info)))
-             (search-string  (read-string "Search string: ")))
-        (org-pro-git-log-at-point nil file path limit search-string decorationonly))))
-  
-  (defun org-pro-git-tag-at-point (&optional tag)
-    "Set git tag"
-    (interactive)
-    (let ((hash (org-pro-entry-get nil "hash" nil))
-          (tag (org-pro-entry-get nil "decoration" nil))
-          (path (org-pro-entry-get nil "gitpath" t))
-          (tag (read-string "Tag (empty to clear): ")))
-      (if (string-equal tag "")
-          (progn 
-            (setq tag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" tag)))
-            (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " tag)))
-        (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
-    (save-excursion
-      (goto-char (point-min))
-      (org-pro-git-log-at-point)))
-  
-  (defun org-pro-git-revision-at-point (&optional diff)
-    "Shows version of the document at point "
-    (interactive)
-    (if (not org-pro-git-log-mode)
-        (error "This function works only in org-pro-git-log-mode buffers")
-      (let* ((hash (org-pro-entry-get nil "hash" nil))
-             (file (org-pro-entry-get nil "filename" t))
-             (path (org-pro-entry-get nil "gitpath" t))
-             (fileabs (concat path file))
-             (filehash (concat hash "_" file))
-             (str (shell-command-to-string 
-                   (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
-        (if diff (find-file fileabs))
-        (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
-        (erase-buffer)  
-        (insert str)
-        (normal-mode) ;; Get default major-mode 
-        (if diff (ediff-buffers (file-name-nondirectory file) filehash)))))
-  
+	 (file (or file (org-pro-filename-at-point)
+		   (org-pro-entry-get nil "filename" t)))
+	 (gitsearch (if searchstring (concat " -G\"" searchstring "\"") ""))
+	 (gitpath (or path (org-pro-git-toplevel file))))
+      (org-pro-git-setup-log-buffer file gitpath
+				    (concat " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " " (if limit (concat "-n " (int-to-string limit))))
+				    decorationonly))))
+
+(defun org-pro-git-search-at-point (arg &optional file path decorationonly)
+  (interactive "p")
+  (if (not (or org-pro-git-log-mode org-pro-view-mode))
+      (error "This function works only in org-pro-git-log-mode and org-pro-git-view-mode buffers")
+    (let* ((limit (if (= arg 1) org-pro-git-search-limit (or arg org-pro-git-search-limit)))
+	   (file-info (when org-pro-git-log-mode org-pro-log-assoc-file))
+	   (file (or file (cdr file-info)))
+	   (path (or path (car file-info)))
+	   (search-string  (read-string "Search string: ")))
+      (org-pro-git-log-at-point nil file path limit search-string decorationonly))))
+
+(defun org-pro-git-tag-at-point (&optional tag)
+  "Set git tag"
+  (interactive)
+  (let ((hash (org-pro-entry-get nil "hash" nil))
+	(tag (org-pro-entry-get nil "decoration" nil))
+	(path (org-pro-entry-get nil "gitpath" t))
+	(tag (read-string "Tag (empty to clear): ")))
+    (if (string-equal tag "")
+	(progn 
+	  (setq tag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" tag)))
+	  (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " tag)))
+      (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
+  (save-excursion
+    (goto-char (point-min))
+    (org-pro-git-log-at-point)))
+
+(defun org-pro-git-revision-at-point (&optional diff)
+  "Shows version of the document at point "
+  (interactive)
+  (if (not org-pro-git-log-mode)
+      (error "This function works only in org-pro-git-log-mode buffers")
+    (let* ((hash (org-pro-entry-get nil "hash" nil))
+	   (file (org-pro-entry-get nil "filename" t))
+	   (path (org-pro-entry-get nil "gitpath" t))
+	   (fileabs (concat path file))
+	   (filehash (concat hash "_" file))
+	   (str (shell-command-to-string 
+		 (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
+      (if diff (find-file fileabs))
+      (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
+      (erase-buffer)  
+      (insert str)
+      (normal-mode) ;; Get default major-mode 
+      (if diff (ediff-buffers (file-name-nondirectory file) filehash)))))
+
 #+END_SRC
 
 ** Window configuration
@@ -1737,6 +1747,22 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 	     `(,(concat org-pro-capture-prefix "d") "Add document" plain
 	       (function org-pro-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append) 
 #+END_SRC
+** Adding documents from file-list
+
+#+BEGIN_SRC  emacs-lisp :export code
+(defun org-pro-add-documents (&optional file-list)
+  (interactive)
+  (let* ((fl (or file-list file-list-current-file-list)))
+;; FIXME need to write org-pro-get-documents and filter duplicates
+    (org-pro-goto-project-documents)
+    (while fl
+      (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (file-list-make-file-name (car fl))))
+	      "\n:PROPERTIES:\n:filename: [["(file-list-make-file-name (car fl))"]]\n:CaptureDate: ")
+      (org-insert-time-stamp (current-time) t)
+      (insert "\n:END:")
+      (setq fl (cdr fl)))))
+#+END_SRC
+
 ** Export
 *** Publishing
 
@@ -1745,7 +1771,6 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 (defvar org-pro-public-directory "~/public_html/")
 (defvar org-pro-public-server "" "Place on the web where pages are published.")
 (defvar org-pro-export-base-extension "html\\|png\\|jpg\\|org\\|pdf\\|R")
-
 (defun org-pro-browse-this-file (&optional arg)
   "Browse the html version of the current file using `browse-url'. If
         prefix arg is given, then browse the corresponding file on the org-pro-public-server"
