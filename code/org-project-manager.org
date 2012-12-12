@@ -777,7 +777,7 @@ the `org-pro-file'.")
 
 (defun org-pro-git-add-and-commit-file (file dir &optional message)
   (shell-command (concat "cd " dir
-			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\" "
+			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\""
 			 (or message 
 			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
 			 "\" " file)))
