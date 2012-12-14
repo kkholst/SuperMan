@@ -1424,31 +1424,38 @@ the active status of projects."
 #+END_SRC
 
 *** Selecting a project from the project-alist
-#+BEGIN_SRC emacs-lisp :export code    
+
+#+BEGIN_SRC emacs-lisp :export code
+(defvar org-pro-select-project-summary-format
+  "%c/%o/%n"
+  "Format of the entries of the completion-list when selecting a project. ")
+
+;; (setq org-pro-select-project-summary-format "%n %c -- %o")
+;; (setq org-pro-select-project-summary-format "%n %o")
 (defun org-pro-format-project (entry)
-        (let ((cat (org-pro-get entry "category"))
-              (coll (org-pro-get entry "others"))
-              (nickname (car entry)))
-          (cons
-           ;; (format format cat (if coll coll "") nickname)
-           (concat cat "/" (if coll (concat coll "/")) (car entry))
-           (car entry))))
-      
+  (let* ((cat (or (org-pro-get entry "category") ""))
+	 (coll (or (org-pro-get entry "others") ""))
+	 (nickname (car entry))
+	 (string (replace-regexp-in-string "%c" cat org-pro-select-project-summary-format))
+	 (string (replace-regexp-in-string "%o" coll string))
+	 (string (replace-regexp-in-string "%n" (car entry) string)))
+    (cons string (car entry))))
+
 (defun org-pro-select-project ()
-        "Select a project from the project alist, 
-    which is modified such that 'org-pro-current-project'
-    is the first choice."
-        (let* ((plist org-pro-project-alist)
-               (project-array (mapcar 'org-pro-format-project
-                                      (if (not org-pro-current-project)
-                                          plist
-                                        (setq plist (append (list org-pro-current-project)
-                                                (remove org-pro-current-project plist))))))
-               (completion-ignore-case t)
-               (key (ido-completing-read "Project: " (mapcar 'car project-array)))
-               (nickname (cdr (assoc key project-array))))
-          (assoc nickname org-pro-project-alist)))
-                
+  "Select a project from the project alist, 
+              which is modified such that 'org-pro-current-project'
+              is the first choice."
+  (let* ((plist org-pro-project-alist)
+	 (project-array (mapcar 'org-pro-format-project
+				(if (not org-pro-current-project)
+				    plist
+				  (setq plist (append (list org-pro-current-project)
+						      (remove org-pro-current-project plist))))))
+	 (completion-ignore-case t)
+	 (key (ido-completing-read "Project: " (mapcar 'car project-array)))
+	 (nickname (cdr (assoc key project-array))))
+    (assoc nickname org-pro-project-alist)))
+
 #+END_SRC
 
 *** Activating a project
@@ -1611,7 +1618,7 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 (defun org-pro-switch-to-project (&optional force)
   "Select project via 'org-pro-select-project', activate it
-                                                   via 'org-pro-activate-project',  find the associated index file."
+ via 'org-pro-activate-project',  find the associated index file."
   (interactive "P")
   (let* ((curpro org-pro-current-project)
 	 (change-maybe (or force
