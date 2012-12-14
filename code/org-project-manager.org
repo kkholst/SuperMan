@@ -918,12 +918,12 @@ capture mechanism.
 
 (define-key org-pro-view-mode-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
 (define-key org-pro-view-mode-map "l" 'org-pro-git-log-at-point) 
-(define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point nil nil t)))
+(define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point 1 nil nil nil nil t)))
 (define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
 (define-key org-pro-view-mode-map "b" 'org-pro-git-blame-at-point)
 (define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-(define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point t)))
+(define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
 (define-key org-pro-view-mode-map "q" (lambda ()          
 					(interactive)
 					(org-columns-quit)))
@@ -954,7 +954,7 @@ capture mechanism.
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
 #+END_SRC
 
-#+RESULTS[e5807bcacbe95df117bda9cb3c29c6c4a0b44ba8]:
+#+RESULTS[5c3188d032320c074a06dfedadaec105d5d59d3c]:
 : org-pro-view-documents
 
 *** Git log view
@@ -1014,7 +1014,7 @@ capture mechanism.
 
 (defun org-pro-git-log-at-point (arg &optional file path limit searchstring decorationonly)
   (interactive "p")
-  (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
+;;  (if (and org-pro-git-log-mode (not file)) (message "Already in log-buffer")
     (let* 
         ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
 	 (file (or file (org-pro-filename-at-point)
@@ -1023,7 +1023,7 @@ capture mechanism.
 	 (gitpath (or path (org-pro-git-toplevel file))))
       (org-pro-git-setup-log-buffer file gitpath
 				    (concat " log --pretty=\"%h#&#%s#&#%ad#&#%an#&#%d\" --date short " gitsearch " " (if limit (concat "-n " (int-to-string limit))))
-				    decorationonly))))
+				    decorationonly)))
 
 (defun org-pro-git-search-at-point (arg &optional file path decorationonly)
   (interactive "p")
@@ -1034,23 +1034,23 @@ capture mechanism.
 	   (file (or file (cdr file-info)))
 	   (path (or path (car file-info)))
 	   (search-string  (read-string "Search string: ")))
-      (org-pro-git-log-at-point nil file path limit search-string decorationonly))))
+      (org-pro-git-log-at-point 1 file path limit search-string decorationonly))))
 
 (defun org-pro-git-tag-at-point (&optional tag)
   "Set git tag"
   (interactive)
   (let ((hash (org-pro-entry-get nil "hash" nil))
-	(tag (org-pro-entry-get nil "decoration" nil))
+	(oldtag (org-pro-entry-get nil "decoration" nil))
 	(path (org-pro-entry-get nil "gitpath" t))
 	(tag (read-string "Tag (empty to clear): ")))
     (if (string-equal tag "")
 	(progn 
-	  (setq tag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" tag)))
-	  (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " tag)))
+	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
+	  (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
       (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
   (save-excursion
     (goto-char (point-min))
-    (org-pro-git-log-at-point)))
+    (org-pro-git-log-at-point 1)))
 
 (defun org-pro-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
