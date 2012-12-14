@@ -924,10 +924,12 @@ capture mechanism.
 (define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
 (define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
-(define-key org-pro-view-mode-map "q" (lambda ()          
-					(interactive)
-					(org-columns-quit)))
-;; (if (string= (buffer-name) org-pro-viewbuf) (kill-buffer org-pro-viewbuf))
+(define-key org-pro-view-mode-map "q" (lambda ()
+          (interactive) 
+          (kill-buffer)
+          (if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
+
+;; (string= (buffer-name) org-pro-viewbuf) (kill-buffer org-pro-viewbuf))
 ;;(if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
 (define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
 (define-key org-pro-view-mode-map "C" 'org-pro-git-commit-file-at-point)
@@ -945,7 +947,8 @@ capture mechanism.
     (unless (get-buffer view-buf)
       (make-indirect-buffer index-buf view-buf t))
     (widen)
-    (switch-to-buffer view-buf))
+    (switch-to-buffer view-buf)
+    (org-narrow-to-subtree))
   (org-pro-view-mode 'on)
   (org-columns-content)
   (org-columns))
@@ -954,7 +957,7 @@ capture mechanism.
 ;;                         (local-set-key (kbd "C-x c") 'org-pro-view-mode)))
 #+END_SRC
 
-#+RESULTS[5c3188d032320c074a06dfedadaec105d5d59d3c]:
+#+RESULTS[13c2316d4d3a36588d5d363d92d41c3c3ddebeae]:
 : org-pro-view-documents
 
 *** Git log view
