@@ -38,45 +38,28 @@
     (org-pro-tags-view-plus nil "filename={.+}" nil)))
 
 
-;; FIXME: unnecessary double def of let-props 
 (defun org-pro-view-documents (&optional project)
   "View documents of the current project"
   (interactive)
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 ;; (index (org-pro-get-index pro))
-	 (org-agenda-files  `(,(org-pro-get-index pro)))
-	 (org-agenda-overriding-columns-format "%20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)")
-	 (org-agenda-overriding-header (concat "Documents in " (car pro) ":\n\n| title | git status | last commit"))
-	 (org-agenda-overriding-agenda-format '(lambda (hdr level category tags-list properties)
-						 (concat  "| " hdr
-							  (let ((cprops properties)
-								(pstring ""))
-							    (while cprops
-							      (setq pstring (concat pstring " | " (cdr (car cprops))))
-							      (setq cprops (cdr cprops)))
-							    pstring))))
-	 ;; (org-agenda-finalize-hook '(org-pro-show-document-status-in-summary))
-	 (org-agenda-view-columns-initially nil))
-    (put 'org-agenda-redo-command 'org-lprops
-	 `((org-agenda-files (quote (,(org-pro-get-index pro))))
-	   (org-agenda-overriding-header (concat "Documents in " ,(car pro) ":\n\n| title | git status | last commit"))
+         (lprops
+	  `((org-agenda-files (quote (,(org-pro-get-index pro))))
+	   (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n title, git status, last commit"))
 	   ;; (org-agenda-overriding-agenda-format t)
 	   (org-agenda-overriding-agenda-format
 	    '(lambda (hdr level category tags-list properties)
-	       (concat "| " hdr
+	       (concat " " hdr
 		       (let ((cprops properties)
 			     (pstring ""))
 			 (while cprops
 			   (setq pstring (concat pstring " | " (cdr (car cprops))))
 			   (setq cprops (cdr cprops)))
 			 pstring))))
-	   (org-agenda-view-columns-initially nil)))
-    (org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit"))
-    ;; FIXME if property is illposed, i.e. LastCommit: this may
-    ;; result in an endless loop of org-pro-tags-view-plus
-    ;; (org-pro-tags-view-plus nil "filename={.+}" '("LastCommit"))
-    ;; (org-pro-tags-view-plus nil "filename={.+}" '("GitStatus"))
+	   (org-agenda-view-columns-initially nil))))
+    (put 'org-agenda-redo-command 'org-lprops lprops)
+    (org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit")))
     (org-pro-view-mode t)))
+
 
 
 (defun org-pro-view-documents-1 (&optional project)
@@ -421,7 +404,6 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	  ;; (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp "\\* TODO"))))))
 
 
-
 (defun org-pro-column-action ()
      (interactive)
      (let* ((prop (get-char-property (point) 'org-columns-key))
@@ -454,7 +436,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
               (org-pro-git-commit-file-at-point)
               (org-columns-redo))
              (t (org-columns-edit-value)))))
-   
+
    (defvar org-pro-view-mode-map (make-sparse-keymap)
      "Keymap used for `org-pro-view-mode' commands.")
    
@@ -469,42 +451,35 @@ the same tree node, and the headline of the tree node in the Org-mode file."
      :group 'org
      :keymap 'org-pro-view-mode-map)
    
-   
-   (define-key org-pro-view-mode-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
-   (define-key org-pro-view-mode-map "l" 'org-pro-git-log-at-point) 
-   (define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point 1 nil nil nil nil t)))
-   (define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
-   (define-key org-pro-view-mode-map "b" 'org-pro-git-blame-at-point)
-   (define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
-   (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-   (define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
-   (define-key org-pro-view-mode-map "q" (lambda ()
-                                           (interactive) 
-                                           (kill-buffer)
-                                           (if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
-   
-   ;; (string= (buffer-name) org-pro-viewbuf) (kill-buffer org-pro-viewbuf))
-   ;;(if (buffer-live-p org-pro-helpbuf) (kill-buffer org-pro-helpbuf))))
-   (define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
-   (define-key org-pro-view-mode-map "C" 'org-pro-git-commit-file-at-point)
-   (define-key org-pro-view-mode-map "c" 'org-columns)
-   
-   (defun org-pro-view-documents-old (&optional project)
-     (interactive)
-     (let* ((pro (or project (org-pro-select-project)))
-            index-buf
-            (view-buf (concat "*" (car pro) "-documents*")))
-       (org-pro-goto-project (car pro) "Documents")
-       (setq index-buf (current-buffer))
-       (org-narrow-to-subtree)
-       (unless (get-buffer view-buf)
-         (make-indirect-buffer index-buf view-buf t))
-       (widen)
-       (switch-to-buffer view-buf)
-       (org-narrow-to-subtree))
-     (org-pro-view-mode 'on)
-     (org-columns-content)
-     (org-columns))
+(define-key org-pro-view-mode-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(define-key org-pro-view-mode-map "l" 'org-pro-agenda-git-log) 
+;; (define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point 1 nil nil nil nil t)))
+(define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
+(define-key org-pro-view-mode-map "b" 'org-pro-git-blame-at-point)
+(define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
+(define-key org-pro-view-mode-map "h" 'org-pro-show-help)
+(define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
+(define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
+(define-key org-pro-view-mode-map "C" 'org-pro-agenda-git-commit-file)
+(define-key org-pro-view-mode-map "c" 'org-agenda-columns)
+
+
+;; (defun org-pro-view-documents-old (&optional project)
+     ;; (interactive)
+     ;; (let* ((pro (or project (org-pro-select-project)))
+            ;; index-buf
+            ;; (view-buf (concat "*" (car pro) "-documents*")))
+       ;; (org-pro-goto-project (car pro) "Documents")
+       ;; (setq index-buf (current-buffer))
+       ;; (org-narrow-to-subtree)
+       ;; (unless (get-buffer view-buf)
+         ;; (make-indirect-buffer index-buf view-buf t))
+       ;; (widen)
+       ;; (switch-to-buffer view-buf)
+       ;; (org-narrow-to-subtree))
+     ;; (org-pro-view-mode 'on)
+     ;; (org-columns-content)
+     ;; (org-columns))
 
 ;;}}}
 ;;{{{ showing document properties
