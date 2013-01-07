@@ -403,44 +403,49 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	  ;; (org-agenda-ndays 1)
 	  ;; (org-agenda-skip-function '(org-agenda-skip-entry-if 'notregexp "\\* TODO"))))))
 
+;;}}}
+;;{{{ summary-view commands
+(require 'org-pro-git)
 
-(defun org-pro-column-action ()
-     (interactive)
-     (let* ((prop (get-char-property (point) 'org-columns-key))
-            (tempstr) (tempfrm))
-       (cond ((string= prop "ITEM")
-              (org-narrow-to-element)
-              (if (re-search-forward ":Hash:" nil t)
-                  (progn 
-                    (widen)
-                    (org-pro-git-revision-at-point)
-                    (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))))
-              (if (re-search-forward ":filename:" nil t)
-                  (progn 
-                    (widen)
-                    (org-open-at-point-global)
-                    (widen))))
-             ((string= prop "GitStatus")
-              (nth 1 (org-pro-git-status-file-at-point))
-              (org-columns-redo))
-             ((string= prop "Decoration")
-              (org-pro-git-tag-at-point)
-              (org-columns-redo))
-             ((string= prop "filename")    
-              (org-columns-open-link))
-             ((string= prop "Other")
-              (org-columns-open-link))
-             ((string= prop "Hash")
-              (org-pro-git-revision-at-revision))
-             ((string= prop "LastCommit")
-              (org-pro-git-commit-file-at-point)
-              (org-columns-redo))
-             (t (org-columns-edit-value)))))
+(defun org-pro-view-git-return ()
+  (interactive)
+  (let* ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
+	 (m (org-get-at-bol 'org-hd-marker))
+	 (file (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
+    (org-pro-git-log file nil limit nil nil)))
 
-   (defvar org-pro-view-mode-map (make-sparse-keymap)
-     "Keymap used for `org-pro-view-mode' commands.")
+(defun org-pro-view-git-log (arg)
+  (interactive "p")
+  (let* ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
+	 (m (org-get-at-bol 'org-hd-marker))
+	 (file (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
+    (org-pro-git-log file nil limit nil nil)))
+
+(defun org-pro-view-git-set-status ()
+  (interactive)
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (filename (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
+    (org-pro-git-set-status m filename)))
+
+(defun org-pro-view-git-commit-file ()
+  (interactive)
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (filename (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename"))))
+	 (file (file-name-nondirectory filename))
+	 (dir (if filename (expand-file-name (file-name-directory filename))))
+	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
+    (org-pro-git-add-and-commit-file file dir message)
+    (org-pro-git-set-status m filename)))
+
+
+
+;;}}}
+;;{{{ summary-view-mode
+
+(defvar org-pro-view-mode-map (make-sparse-keymap)
+  "Keymap used for `org-pro-view-mode' commands.")
    
-   (define-minor-mode org-pro-view-mode 
+(define-minor-mode org-pro-view-mode 
      "Toggle org projectmanager document view mode.
                    With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
                    turn it off.
@@ -451,7 +456,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
      :group 'org
      :keymap 'org-pro-view-mode-map)
    
-(define-key org-pro-view-mode-map "\r" 'org-pro-column-action) ;; Return is not used anyway in column mode
+(define-key org-pro-view-mode-map "\r" 'org-pro-agenda-find-document) ;; Return is not used anyway in column mode
 (define-key org-pro-view-mode-map "l" 'org-pro-agenda-git-log) 
 ;; (define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point 1 nil nil nil nil t)))
 (define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
@@ -463,23 +468,40 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 (define-key org-pro-view-mode-map "C" 'org-pro-agenda-git-commit-file)
 (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
 
+(defun org-pro-column-action ()
+  (interactive)
+  (let* ((prop (get-char-property (point) 'org-columns-key))
+	 (tempstr) (tempfrm))
+    (cond ((string= prop "ITEM")
+	   (org-narrow-to-element)
+	   (if (re-search-forward ":Hash:" nil t)
+	       (progn 
+		 (widen)
+		 (org-pro-git-revision-at-point)
+		 (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))))
+	   (if (re-search-forward ":filename:" nil t)
+	       (progn 
+		 (widen)
+		 (org-open-at-point-global)
+		 (widen))))
+	  ((string= prop "GitStatus")
+	   (nth 1 (org-pro-git-status-file-at-point))
+	   (org-columns-redo))
+	  ((string= prop "Decoration")
+	   (org-pro-git-tag-at-point)
+	   (org-columns-redo))
+	  ((string= prop "filename")    
+	   (org-columns-open-link))
+	  ((string= prop "Other")
+	   (org-columns-open-link))
+	  ((string= prop "Hash")
+	   (org-pro-git-revision-at-revision))
+	  ((string= prop "LastCommit")
+	   (org-pro-git-commit-file-at-point)
+	   (org-columns-redo))
+	  (t (org-columns-edit-value)))))
 
-;; (defun org-pro-view-documents-old (&optional project)
-     ;; (interactive)
-     ;; (let* ((pro (or project (org-pro-select-project)))
-            ;; index-buf
-            ;; (view-buf (concat "*" (car pro) "-documents*")))
-       ;; (org-pro-goto-project (car pro) "Documents")
-       ;; (setq index-buf (current-buffer))
-       ;; (org-narrow-to-subtree)
-       ;; (unless (get-buffer view-buf)
-         ;; (make-indirect-buffer index-buf view-buf t))
-       ;; (widen)
-       ;; (switch-to-buffer view-buf)
-       ;; (org-narrow-to-subtree))
-     ;; (org-pro-view-mode 'on)
-     ;; (org-columns-content)
-     ;; (org-columns))
+
 
 ;;}}}
 ;;{{{ showing document properties
