@@ -95,7 +95,7 @@
   "Put directory DIR under git control."
   (if (org-pro-git-p dir)
       (message (concat "Directory " dir " is under git control."))
-    (shell-command (concat "cd " dir ";" org-pro-cmd-git " init"))
+    (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " init"))
     (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
 
 (defun org-pro-filename-at-point ()
@@ -210,10 +210,10 @@
   (let* ((pro (or project (org-pro-select-project)))
 	 (dir (concat (org-pro-get-location pro) (car pro)))
 	 (file (or file (read-file-name "Git add file: " dir nil t))))
-    (shell-command (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
+    (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
 
 (defun org-pro-git-add-and-commit-file (file dir &optional message)
-  (shell-command (concat "cd " dir
+  (shell-command-to-string (concat "cd " dir
 			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\""
 			 (or message 
 			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
@@ -247,7 +247,7 @@
 	 (necessary (string-match "Your branch is ahead .*\n" status))
 	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
     (if doit
-	(shell-command (concat "cd " dir ";" org-pro-cmd-git " push")))))
+	(shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " push")))))
 
 
 (defun org-pro-git-update-project (project before)
@@ -268,7 +268,7 @@
 		    (org-pro-git-init-directory dir)))
 		(when (and (string-match "pull" git-control)
 			   (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-		  (shell-command (concat "cd " dir ";" org-pro-cmd-git " pull"))))
+		  (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " pull"))))
 	    ;; deactivating project
 	    (when (and (org-pro-git-p dir)
 		       (string-match "yes\\|silent" git-control)))))))))
@@ -336,19 +336,19 @@
       (let ((lprops
 	     `((org-agenda-files (quote (,logfile)))
 	       (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
-		(org-agenda-overriding-header (concat "Git-log of " ,file-rel "\th: help, C:commit, l: log, H:history\n\n| title | git status | last commit |"))
-		(org-agenda-overriding-agenda-format
-		 '(lambda (hdr level category tags-list properties)
-		    (concat "| " hdr
-			    (let ((cprops properties)
-				  (pstring ""))
-			      (while cprops
-				(setq pstring (concat pstring " | " (cdr (car cprops))))
-				(setq cprops (cdr cprops)))
-			      pstring) " |")))
-		(org-agenda-view-columns-initially nil))))
+	       (org-agenda-overriding-header (concat "Git-log of " ,file-rel "\th: help, C:commit, l: log, H:history\n\n"))
+	       (org-agenda-overriding-agenda-format
+		'(lambda (hdr level category tags-list properties)
+		   (concat "| " hdr
+			   (let ((cprops properties)
+				 (pstring ""))
+			     (while cprops
+			       (setq pstring (concat pstring " | " (cdr (car cprops))))
+			       (setq cprops (cdr cprops)))
+			     pstring) " |")))
+	       (org-agenda-view-columns-initially nil))))
 	(put 'org-agenda-redo-command 'org-lprops lprops)
-	(org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("Hash" "Date" "Author" "Decoration")))))))
+	(org-let lprops '(org-pro-tags-view-plus nil "Hash={.+}" '("Hash" "Date" "Author" "Decoration")))))))
 
 
 (defun org-pro-git-log (file gitpath limit &optional search-string decorationonly)
@@ -387,8 +387,8 @@
     (if (string-equal tag "")
 	(progn 
 	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
-	  (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
-      (shell-command (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
+	  (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
+      (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
   (save-excursion
     (goto-char (point-min))
     (org-pro-git-log-at-point 1)))

@@ -44,21 +44,21 @@
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
          (lprops
 	  `((org-agenda-files (quote (,(org-pro-get-index pro))))
-	   (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n title, git status, last commit"))
-	   ;; (org-agenda-overriding-agenda-format t)
-	   (org-agenda-overriding-agenda-format
-	    '(lambda (hdr level category tags-list properties)
-	       (concat " " hdr
-		       (let ((cprops properties)
-			     (pstring ""))
-			 (while cprops
-			   (setq pstring (concat pstring " | " (cdr (car cprops))))
-			   (setq cprops (cdr cprops)))
-			 pstring))))
-	   (org-agenda-view-columns-initially nil))))
+	    (org-agenda-finalize-hook 'org-pro-view-mode-on)
+	    (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n| title | git status | last commit |"))
+	    ;; (org-agenda-overriding-agenda-format t)
+	    (org-agenda-overriding-agenda-format
+	     '(lambda (hdr level category tags-list properties)
+		(concat "| " hdr
+			(let ((cprops properties)
+			      (pstring ""))
+			  (while cprops
+			    (setq pstring (concat pstring " | " (cdr (car cprops))))
+			    (setq cprops (cdr cprops)))
+			  pstring) " |")))
+	    (org-agenda-view-columns-initially nil))))
     (put 'org-agenda-redo-command 'org-lprops lprops)
-    (org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit")))
-    (org-pro-view-mode t)))
+    (org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit")))))
 
 
 
@@ -407,35 +407,52 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 ;;{{{ summary-view commands
 (require 'org-pro-git)
 
-(defun org-pro-view-git-return ()
+(defun org-pro-view-return ()
   (interactive)
-  (let* ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
-	 (m (org-get-at-bol 'org-hd-marker))
-	 (file (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
-    (org-pro-git-log file nil limit nil nil)))
+  (let* ((m (org-get-at-bol 'org-hd-marker)))
+    (org-open-link-from-string (org-pro-get-property m "filename"))))
 
 (defun org-pro-view-git-log (arg)
   (interactive "p")
-  (let* ((limit (if (= arg 1) org-pro-git-log-limit (or arg org-pro-git-log-limit)))
-	 (m (org-get-at-bol 'org-hd-marker))
-	 (file (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
-    (org-pro-git-log file nil limit nil nil)))
+  (org-pro-git-log-at-point arg)
+  (org-agenda-redo))
+
+(defun org-pro-view-git-log-decorationonly (arg)
+  (interactive "p")
+  (org-pro-git-log-decorationonly-at-point arg)
+  (org-agenda-redo))
+
+(defun org-pro-view-git-search (arg)
+  (interactive "p")
+  (org-pro-git-search-at-point arg)
+  (org-agenda-redo))
 
 (defun org-pro-view-git-set-status ()
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (filename (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename")))))
-    (org-pro-git-set-status m filename)))
+  (org-pro-git-status-at-point)
+  (org-agenda-redo))
+
+(defun org-pro-view-update-git-status ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (org-agenda-next-item 1)
+      (org-pro-git-status-at-point))
+    (org-agenda-redo)))
+
+;; (defun org-pro-view-add-file ()
+  ;; (interactive)
+  ;; (org-pro-
 
 (defun org-pro-view-git-commit-file ()
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (filename (replace-regexp-in-string "\\]+$" "" (replace-regexp-in-string "^\\[+" "" (org-pro-get-property m "filename"))))
+  (let* ((filename (org-pro-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename))))
 	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
     (org-pro-git-add-and-commit-file file dir message)
-    (org-pro-git-set-status m filename)))
+    (org-pro-git-status-at-point))
+  (org-agenda-redo))
 
 
 
@@ -455,17 +472,18 @@ the same tree node, and the headline of the tree node in the Org-mode file."
      :lighter " pro"
      :group 'org
      :keymap 'org-pro-view-mode-map)
+
+(defun org-pro-view-mode-on ()
+  (interactive)
+  (org-pro-view-mode t))
    
-(define-key org-pro-view-mode-map "\r" 'org-pro-agenda-find-document) ;; Return is not used anyway in column mode
-(define-key org-pro-view-mode-map "l" 'org-pro-agenda-git-log) 
-;; (define-key org-pro-view-mode-map "L" (lambda () (interactive) (org-pro-git-log-at-point 1 nil nil nil nil t)))
-(define-key org-pro-view-mode-map "S" 'org-pro-git-search-at-point)
-(define-key org-pro-view-mode-map "b" 'org-pro-git-blame-at-point)
-(define-key org-pro-view-mode-map "t" 'org-pro-git-tag-at-point)
+(define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
+(define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
+(define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
+(define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-(define-key org-pro-view-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
 (define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
-(define-key org-pro-view-mode-map "C" 'org-pro-agenda-git-commit-file)
+(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-file)
 (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
 
 (defun org-pro-column-action ()
@@ -485,7 +503,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 		 (org-open-at-point-global)
 		 (widen))))
 	  ((string= prop "GitStatus")
-	   (nth 1 (org-pro-git-status-file-at-point))
+	   (nth 1 (org-pro-git-status-at-point))
 	   (org-columns-redo))
 	  ((string= prop "Decoration")
 	   (org-pro-git-tag-at-point)
@@ -497,7 +515,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	  ((string= prop "Hash")
 	   (org-pro-git-revision-at-revision))
 	  ((string= prop "LastCommit")
-	   (org-pro-git-commit-file-at-point)
+	   (org-pro-git-commit-at-point)
 	   (org-columns-redo))
 	  (t (org-columns-edit-value)))))
 
@@ -630,7 +648,7 @@ removed from the entry content.  Currently only `planning' is allowed here."
 		       (org-open-at-point-global)
 		       (widen))))
 		((string= prop "GitStatus")
-		 (nth 1 (org-pro-git-status-file-at-point))
+		 (nth 1 (org-pro-git-status-at-point))
 		 (org-columns-redo))
 		((string= prop "Decoration")
 		 (org-pro-git-tag-at-point)
@@ -642,7 +660,7 @@ removed from the entry content.  Currently only `planning' is allowed here."
 		((string= prop "Hash")
 		 (org-pro-git-revision-at-revision))
 		((string= prop "LastCommit")
-		 (org-pro-git-commit-file-at-point)
+		 (org-pro-git-commit-at-point)
 		 (org-columns-redo))
 		(t (org-columns-edit-value)))))
 	(save-excursion
