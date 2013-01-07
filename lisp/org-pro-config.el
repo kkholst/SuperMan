@@ -34,29 +34,6 @@
 
 ;;; Code:
 
-(setq org-pro-default-config "INDEX")
-(setq org-pro-sticky-config nil)
-
-(defvar org-pro-file-manager "file-list")
-
-;; could be 
-;; (setq org-pro-sticky-config "recent.org / *R* | TODO")
-(setq org-pro-config-action-alist '(("INDEX" . org-pro-find-index)
-				    ("TODO" . org-pro-todo)
-				    ("TIMELINE" . org-pro-timeline)
-				    ("LOCATION" . org-pro-location)
-				    ("DOCUMENTS" . org-pro-view-documents)
-				    ("FILELIST" . org-pro-file-list)
-				    ("magit" . org-pro-magit)
-				    ("recent.org" . org-pro-recent-org)
-				    ("*shell*" . (lambda (project) (if (get-buffer "*shell*") (switch-to-buffer "*shell*") (shell))))
-                                    ("*ielm*" . (lambda (project) (if (get-buffer "*ielm*") (switch-to-buffer "*ielm*") (ielm))))
-				    ("*R*" . org-pro-find-R-function)))
-
-(defvar org-pro-find-R-function
-  "Function used to find *R*"
-  (lambda (project) (if (get-buffer "*R*") (switch-to-buffer "*R*") (R))))
-
 (defun org-pro-find-index (project)
   (let* ((index (org-pro-get-index project)))
     (unless (file-exists-p index)
@@ -64,8 +41,6 @@
 	(make-directory (file-name-directory index) 'with-parents))
       (make-directory (file-name-directory index) 'with-parents))
     (find-file index)))
-
-
 
 (defun org-pro-file-list (project)
   (if (featurep 'file-list)
@@ -132,7 +107,6 @@
     config))
 
 
-(defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
 
 
 (defun org-pro-get-config (project)
@@ -177,6 +151,103 @@
     (select-window (nth 0 top-windows))))
 
 
+(defun org-pro-magit (project)
+  (magit-status (concat (org-pro-get-location project) (car project))))
+
+(defun org-pro-location (project)
+  (let ((loc (concat (org-pro-get-location project) (car project))))
+    (find-file loc)))
+
+(defun org-pro-timeline (project)
+  (let (tbuf)
+    (save-window-excursion
+      (let ((index (org-pro-get-index project))
+            (org-agenda-sticky nil)
+            (bufname (concat "*" (car project) "-timeline*")))
+        (if (not (file-exists-p index))
+            (progn
+              (switch-to-buffer bufname)
+              (setq tbuf (get-buffer bufname))
+              (toggle-read-only -1)
+	      (erase-buffer)
+              (insert "TIMELINE: Project index file does not exist yet"))
+          (when (get-buffer bufname)
+            (kill-buffer bufname))
+          (find-file index)
+          (org-timeline 'yeah)
+          (rename-buffer bufname)
+          (local-set-key [(return)] 'org-return)
+          (setq tbuf (current-buffer)))))
+    (switch-to-buffer tbuf)))
+
+(defun org-pro-recent-org (project)
+  (car (org-pro-list-files
+	(concat (org-pro-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
+
+
+(defun org-pro-todo (project)
+  (let (tbuf)
+    (save-window-excursion
+      (let* ((location (concat (org-pro-get-location project) (car project)))
+	     (org-files (org-pro-list-files location "^[^\\.].*\\.org$" nil))
+	     (org-agenda-sticky t) ;; to enable multiple agenda buffers
+	     (org-agenda-files org-files)
+	     (bufname (concat "*" (car project) "-todo*")))
+	(when (get-buffer bufname)
+	  (kill-buffer bufname))
+	(org-todo-list org-match)
+	(rename-buffer bufname)
+	(setq tbuf (current-buffer))))
+    (switch-to-buffer tbuf)))
+
+(defun org-pro-find-project (project pos)
+  (org-pro-set-config project nil (or pos org-pro-config-cycle-pos 0)))
+
+
+(defun org-pro-get (project el)
+  (cdr (assoc el (cadr project))))
+
+(defun org-pro-get-index (project)
+"Extract the index file of PROJECT."
+  (cdr (assoc "index" (cadr project))))
+
+
+(defun org-pro-get-git (project)
+  (or (cdr (assoc "git" (cadr project))) ""))
+
+(defun org-pro-get-git-location (project)
+  (or (cdr (assoc "git-location" (cadr project)))
+      (concat (org-pro-get-location project) (car project))))
+
+(defun org-pro-get-location (project)
+  "Get the directory associated with PROJECT."
+  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
+;;  (let ((loc (cdr (assoc "location" (cadr project)))))
+;;                (if loc 
+;;                                (concat (file-name-as-directory loc)
+;;                                        (car project)))))
+
+(defun org-pro-get-publish-directory (project)
+  (cdr (assoc "publish-directory" (cadr project))))
+
+(defun org-pro-get-category (project)
+  (cdr (assoc "category" (cadr project))))
+
+(defun org-pro-get-state (project)
+  (cdr (assoc "state" (cadr project))))
+
+
+(defun org-pro-switch-config (&optional project)
+  "Switch to the next window configuration (if any)."
+  (interactive)
+  (let* ((pro (or project org-pro-current-project))
+	 (curpos (or org-pro-config-cycle-pos 0))
+	 (config-list (org-pro-read-config-list
+		       (org-pro-get-config pro))))
+    (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
+	(setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
+      (setq org-pro-config-cycle-pos 0))
+    (org-pro-find-project pro org-pro-config-cycle-pos)))
 
 
 (provide 'org-pro-config)
