@@ -45,7 +45,8 @@
          (lprops
 	  `((org-agenda-files (quote (,(org-pro-get-index pro))))
 	    (org-agenda-finalize-hook 'org-pro-view-mode-on)
-	    (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n| title | git status | last commit |"))
+	    (org-agenda-buffer-name (concat "*org-pro-view-mode[" ,(car pro) "]*"))
+	    (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n"))
 	    ;; (org-agenda-overriding-agenda-format t)
 	    (org-agenda-overriding-agenda-format
 	     '(lambda (hdr level category tags-list properties)
@@ -405,7 +406,8 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 
 ;;}}}
 ;;{{{ summary-view commands
-(require 'org-pro-git)
+
+;;(require 'org-pro-git)
 
 (defun org-pro-view-return ()
   (interactive)
@@ -453,8 +455,6 @@ the same tree node, and the headline of the tree node in the Org-mode file."
     (org-pro-git-add-and-commit-file file dir message)
     (org-pro-git-status-at-point))
   (org-agenda-redo))
-
-
 
 ;;}}}
 ;;{{{ summary-view-mode
@@ -518,8 +518,6 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	   (org-pro-git-commit-at-point)
 	   (org-columns-redo))
 	  (t (org-columns-edit-value)))))
-
-
 
 ;;}}}
 ;;{{{ showing document properties

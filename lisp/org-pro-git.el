@@ -98,19 +98,28 @@
     (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " init"))
     (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
 
-(defun org-pro-filename-at-point ()
+
+(defun org-pro-property-at-point (prop)
+  (interactive)
   (let* ((pom (cond ((eq major-mode 'org-mode) (point))
 		    ((eq major-mode 'org-agenda-mode) (org-get-at-bol 'org-hd-marker))
 		    (t (error "This function works only in org-mode, org-agenda-mode, org-pro-git-log-mode, org-pro-view-mode."))))
-	 (file-or-link  (org-pro-get-property pom "filename" t)))
+	 (propval  (org-pro-get-property pom prop t)))
+    propval))
+
+(defun org-pro-filename-at-point ()
+  (interactive)
+  (let ((file-or-link (org-pro-property-at-point "filename")))
    (if (not (stringp file-or-link))
-       (error "No proper(ty) filename at point.")
+       (error "No proper(ty) at point."))
     (if (string-match org-bracket-link-regexp file-or-link)
 	(expand-file-name
 	 (org-extract-attributes
 	  (org-link-unescape (org-match-string-no-properties 1 file-or-link))))
       (if (file-exists-p file-or-link)
-	  (expand-file-name file-or-link))))))
+	  (expand-file-name file-or-link)
+	file-or-link ;; else we just return the string (needed in log-mode)
+	))))
 
 (defun org-pro-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
@@ -273,16 +282,17 @@
 	    (when (and (org-pro-git-p dir)
 		       (string-match "yes\\|silent" git-control)))))))))
 
-
 ;;}}}
 
 
-;;{{{ log-view
+"t";;{{{ log-view
+
 (defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
   "Keymap used for `org-pro-git-log-mode' commands.")
 
+(define-key org-pro-git-log-mode-map [return] 'org-pro-git-revision-at-point)
 (define-key org-pro-git-log-mode-map "D" (lambda () (interactive) (org-pro-git-revision-at-point 1)))
-(define-key org-pro-git-log-mode-map "t" 'org-pro-view-git-tag)
+(define-key org-pro-git-log-mode-map "t" 'org-pro-git-tag-at-point)
 (define-key org-pro-git-log-mode-map "b" 'org-pro-view-git-blame)
 
 
@@ -298,7 +308,7 @@
   :group 'org
   :keymap 'org-pro-git-log-mode-map)
 
-(defvar org-pro-git-log-limit 5)
+(defvar org-pro-git-log-limit 25)
 (defvar org-pro-git-search-limit 500)
 
 
@@ -307,12 +317,13 @@
   (org-pro-git-log-mode t))
 
 (defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
-  (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
+;;  (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
+  (let* ((file-rel (if (file-name-absolute-p file)  (file-relative-name file (expand-file-name gitpath)) file))
 	 (gitlog (shell-command-to-string
 		  (concat
 		   "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
-	 (logbuf (concat "#" (file-name-nondirectory file) ".org"))
-	 (logfile (concat "/tmp/" logbuf))
+	 (logbuf (concat " #" (file-name-nondirectory file) ".org"))
+	 (logfile (concat "/tmp/" logbuf)) ;; Use (make-temp-file name-of-application) instead?!
 	 item val)
     (if (string= gitlog "")
 	(error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
@@ -332,14 +343,16 @@
             (if (or (not decorationonly) (nth 4 val)) (insert item)))
       ;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
       (write-file logfile nil)
+      ;;(delete-buffer logfile)
       (goto-char (point-min))
       (let ((lprops
 	     `((org-agenda-files (quote (,logfile)))
 	       (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
 	       (org-agenda-overriding-header (concat "Git-log of " ,file-rel "\th: help, C:commit, l: log, H:history\n\n"))
+	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
 	       (org-agenda-overriding-agenda-format
 		'(lambda (hdr level category tags-list properties)
-		   (concat "| " hdr
+		   (concat  "| " hdr
 			   (let ((cprops properties)
 				 (pstring ""))
 			     (while cprops
@@ -355,7 +368,7 @@
   (let* ((file (or file (org-pro-filename-at-point)
 		   (org-pro-get-property nil "filename" t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (or gitpath (org-pro-git-toplevel file)))
+	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath") (org-pro-git-toplevel file))))
 	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date short " gitsearch  " " (if limit (concat "-n " (int-to-string limit))))))
     (org-pro-git-setup-log-buffer file gitpath gitcmd decorationonly)))
 
@@ -377,21 +390,27 @@
 	 (file (org-pro-filename-at-point)))
     (org-pro-git-log file nil limit (read-string "Search string: ")) nil))
 
-(defun org-pro-git-tag-at-point (&optional tag)
+(defun org-pro-git-tag-at-point ()
+  "Shows git tag "
+  (interactive)
+  (org-pro-git-tag (org-get-at-bol 'org-hd-marker)))
+
+(defun org-pro-git-tag (pom)
   "Set git tag"
   (interactive)
-  (let ((hash (org-pro-get-property nil "hash" nil))
-	(oldtag (org-pro-get-property nil "decoration" nil))
-	(path (org-pro-get-property nil "gitpath" t))
-	(tag (read-string "Tag (empty to clear): ")))
+  (let* ((hash (org-pro-get-property pom "hash" nil))
+	 (oldtag (org-pro-get-property pom "decoration" nil))
+	 (path (org-pro-get-property pom "gitpath" t))
+	 (tag (read-string "Tag (empty to clear): ")))
     (if (string-equal tag "")
 	(progn 
 	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
 	  (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
       (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
-  (save-excursion
-    (goto-char (point-min))
-    (org-pro-git-log-at-point 1)))
+;;  (save-excursion
+;;    (goto-char (point-min))
+;;    (org-pro-view-git-log))
+)
 
 (defun org-pro-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
@@ -413,6 +432,7 @@
     (insert str)
     (normal-mode) ;; Get default major-mode 
     (if diff (ediff-buffers (file-name-nondirectory file) filehash))))
+
 ;;}}}
 
 
