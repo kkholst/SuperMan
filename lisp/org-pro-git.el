@@ -27,12 +27,7 @@
 
 (defvar org-pro-cmd-git "git")
 
-;; (setq org-property-set-functions-alist nil)  
-(add-to-list 'org-property-set-functions-alist
-	     `("GitStatus" . org-pro-git-get-status-at-point))
-(add-to-list 'org-property-set-functions-alist
-	     `("LastCommit" . org-pro-git-commit-at-point))
-
+;;{{{ variables
 (defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
                                                                      If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
 
@@ -46,6 +41,17 @@
                                                      having to filter all the unpredictable names one can give to files
                                                      that never should get git controlled.")
 
+;;}}}
+;;{{{ property set functions
+;; (setq org-property-set-functions-alist nil)  
+;; FIXME: do these work?
+(add-to-list 'org-property-set-functions-alist
+	     `("GitStatus" . org-pro-git-get-status-at-point))
+(add-to-list 'org-property-set-functions-alist
+	     `("LastCommit" . org-pro-git-commit-at-point))
+;;}}}
+;;{{{ helper functions
+
 (defun org-pro-git-p (dir)
   "Test if directory DIR is under git control."
   (eq 0 (shell-command (concat "cd " dir ";" org-pro-cmd-git " rev-parse --is-inside-work-tree "))))
@@ -55,7 +61,16 @@
   (let ((dir (if (file-directory-p file) file (file-name-directory file))))
     (if (org-pro-git-p dir)
 	(replace-regexp-in-string "\n" "" (shell-command-to-string (concat "cd " dir "; git rev-parse --show-toplevel "))))))
-
+(defun org-pro-read-git-date (git-date-string &optional no-time)
+  "Transform git date to org-format"
+  (with-temp-buffer
+    (org-insert-time-stamp 
+     (date-to-time git-date-string) (not no-time))))
+;;      (set-time-zone-rule t) ;; Use Universal time.
+;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
+;;        (set-time-zone-rule nil))))
+;;}}}
+;;{{{ initialize project and directory
 (defun org-pro-git-init-project (&optional pro)
   "Put project under git control."
   (interactive)
@@ -76,6 +91,8 @@
     (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " init"))
     (append-to-file org-pro-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
 
+;;}}}
+;;{{{ property and filename at point
 
 (defun org-pro-property-at-point (prop)
   (interactive)
@@ -89,6 +106,7 @@
   (let ((file-or-link (org-pro-property-at-point "filename")))
     (if (not (stringp file-or-link))
 	(error "No proper(ty) filename at point."))
+    ;; FIXME: maybe need these org-bracket-link-analytic-regexp instead?
     (if (string-match org-bracket-link-regexp file-or-link)
 	(expand-file-name
 	 (org-extract-attributes
@@ -98,15 +116,8 @@
 	(when non-exist-ok file-or-link);; needed in log-mode
 	))))
 
-(defun org-pro-read-git-date (git-date-string &optional no-time)
-  "Transform git date to org-format"
-  (with-temp-buffer
-    (org-insert-time-stamp 
-     (date-to-time git-date-string) (not no-time))))
-;;      (set-time-zone-rule t) ;; Use Universal time.
-;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
-;;        (set-time-zone-rule nil))))
-
+;;}}}
+;;{{{ get status and commit from git
 (defun org-pro-git-get-commit (arg file &optional dir)
   "Run git log and report the date and message of the n'th commit of
 file FILE in directory DIR where n is determined by ARG."
@@ -168,6 +179,9 @@ buffer is in org-agenda-mode."
 	    (t (setq label "Unknown")))
       (list git-status label git-last-commit))))
 
+;;}}}
+;;{{{ set and update status
+
 (defun org-pro-git-set-status-at-point ()
   (interactive)
   (let ((file (org-pro-filename-at-point)))
@@ -196,22 +210,24 @@ buffer is in org-agenda-mode."
     (goto-char (point-min))
     (while (re-search-forward ":filename:" nil t)
       (org-pro-git-set-status-at-point))))
+;;}}}
+;;{{{ git add file
 
-(defun org-pro-git-add-file (file project)
+(defun org-pro-git-add-file (file dir)
+  "Add file FILE to git repository at DIR. If DIR is nil,
+prompt for project and use the associated git repository.
+If FILE is nil then read file name below DIR.
+
+The attempt is made to `git add' the file at
+the location of the project. This fails if location is not a git repository,
+or if the file is not inside the location."
   (interactive)
-  (let* ((pro (or project (org-pro-select-project)))
-	 (dir (concat (org-pro-get-location pro) (car pro)))
+  (let* ((dir (or dir
+		  (let ((pro (org-pro-select-project)))
+		    (concat (org-pro-get-location pro) (car pro)))))
 	 (file (or file (read-file-name "Git add file: " dir nil t))))
     (setq file (file-relative-name (expand-file-name file) (expand-file-name dir)))
     (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
-
-(defun org-pro-git-add-and-commit-file (file dir &optional message)
-  (shell-command-to-string (concat "cd " dir
-			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\""
-			 (or message 
-			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
-			 "\" " file)))
-
 
 (defun org-pro-git-add-at-point ()
   "Add or update file FILE to git repository DIR."
@@ -220,6 +236,17 @@ buffer is in org-agenda-mode."
 	 (pro (assoc (org-pro-property-at-point "PROJECT") org-pro-project-alist)))
     (org-pro-git-add-file (org-link-display-format file) pro)
     (org-pro-git-set-status-at-point)))
+;;}}}
+;;{{{ git add and commit
+(defun org-pro-git-add-and-commit-file (file dir &optional message)
+  (shell-command-to-string (concat "cd " dir
+			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\""
+			 (or message 
+			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
+			 "\" " file)))
+
+
+
 
 (defun org-pro-git-commit-at-point (&rest args)
   "Add or update file FILE to git repository DIR."
@@ -230,6 +257,8 @@ buffer is in org-agenda-mode."
     (org-pro-git-add-and-commit-file file dir message)
     (org-pro-git-set-status-at-point)))
 
+;;}}}
+;;{{{ updating and pushing projects
 (defun org-pro-git-push-directory (dir silent)
   "Git push directory DIR."
   (let* ((status (shell-command-to-string  (concat "cd " dir ";" org-pro-cmd-git " status")))
@@ -263,9 +292,7 @@ buffer is in org-agenda-mode."
 		       (string-match "yes\\|silent" git-control)))))))))
 
 ;;}}}
-
-
-"t";;{{{ log-view
+;;{{{ log-view
 
 (defvar org-pro-git-log-mode-map (copy-keymap org-pro-view-mode-map)
   "Keymap used for `org-pro-git-log-mode' commands.")
