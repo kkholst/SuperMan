@@ -29,7 +29,7 @@
 
 ;; (setq org-property-set-functions-alist nil)  
 (add-to-list 'org-property-set-functions-alist
-	     `("GitStatus" . org-pro-git-status-at-point))
+	     `("GitStatus" . org-pro-git-get-status-at-point))
 (add-to-list 'org-property-set-functions-alist
 	     `("LastCommit" . org-pro-git-commit-at-point))
 
@@ -85,18 +85,17 @@
 	 (propval  (org-pro-get-property pom prop t)))
     propval))
 
-(defun org-pro-filename-at-point ()
-  (interactive)
+(defun org-pro-filename-at-point (&optional non-exist-ok)
   (let ((file-or-link (org-pro-property-at-point "filename")))
-   (if (not (stringp file-or-link))
-       (error "No proper(ty) at point."))
+    (if (not (stringp file-or-link))
+	(error "No proper(ty) filename at point."))
     (if (string-match org-bracket-link-regexp file-or-link)
 	(expand-file-name
 	 (org-extract-attributes
 	  (org-link-unescape (org-match-string-no-properties 1 file-or-link))))
       (if (file-exists-p file-or-link)
 	  (expand-file-name file-or-link)
-	file-or-link ;; else we just return the string (needed in log-mode)
+	(when non-exist-ok file-or-link);; needed in log-mode
 	))))
 
 (defun org-pro-read-git-date (git-date-string &optional no-time)
@@ -109,8 +108,10 @@
 ;;        (set-time-zone-rule nil))))
 
 (defun org-pro-git-get-commit (arg file &optional dir)
-  (interactive)
-  (let* ((dir (cond (dir) ((file-name-absolute-p file) (file-name-directory file))
+  "Run git log and report the date and message of the n'th commit of
+file FILE in directory DIR where n is determined by ARG."
+  (let* ((dir (cond (dir)
+		    ((file-name-absolute-p file) (file-name-directory file))
 		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
 	 (date-string
 		(shell-command-to-string
@@ -124,13 +125,16 @@
 		  (concat org-pro-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
     (concat date " " mess)))
 
-(defun org-pro-git-status-at-point ()
+(defun org-pro-git-get-status-at-point ()
+  "Report the status of the document-file at point.
+Point is either (point), ie. if the current buffer is in org-mode,
+or the hdmarker associated with the item at point when the current
+buffer is in org-agenda-mode."
   (interactive)
   (org-pro-git-get-status (org-pro-filename-at-point)))
 
 (defun org-pro-git-get-status (file)
   "Determine the git status of file FILE"
-  (interactive)
   (let* ((file (or file (read-file-name "Get git status for file: ")))
 	 (dir (if file (file-name-directory file)))
 	 (git-status (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " status --ignored --porcelain " file)))
@@ -174,8 +178,8 @@
   (let* ((statlist (org-pro-git-get-status file))
 	 (last-commit (nth 2 statlist))
 	 (git-status (nth 0 statlist))
-	 (git-label (nth 1 statlist)))
-    ;;	 (org-property-changed-functions '(lambda (prop val) (save-buffer))))
+	 (git-label (nth 1 statlist))
+	 (org-property-changed-functions '(lambda (prop val) (save-buffer))))
     (org-entry-put pom "GitStatus" git-label)
     ;; (org-set-property "GitStatus" git-label)
     (unless (or (string= git-status "E") (string= git-status "?"))
