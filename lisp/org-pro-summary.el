@@ -417,35 +417,63 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 
 (defun org-pro-view-git-log (arg)
   (interactive "p")
-  (org-pro-git-log-at-point arg)
-  (org-agenda-redo))
+  (org-pro-git-log-at-point arg))
 
 (defun org-pro-view-git-log-decorationonly (arg)
   (interactive "p")
-  (org-pro-git-log-decorationonly-at-point arg)
-  (org-agenda-redo))
+  (org-pro-git-log-decorationonly-at-point arg))
 
 (defun org-pro-view-git-search (arg)
   (interactive "p")
-  (org-pro-git-search-at-point arg)
-  (org-agenda-redo))
+  (org-pro-git-search-at-point arg))
 
-(defun org-pro-view-git-set-status ()
+(defun org-pro-view-git-set-status (&optional save redo)
   (interactive)
-  (org-pro-git-status-at-point)
-  (org-agenda-redo))
+  (let ((file (org-pro-filename-at-point))
+	(pom  (org-get-at-bol 'org-hd-marker)))
+    (org-pro-git-set-status pom file)
+    (when save (org-pro-view-save-hd-buffer))
+    (when redo (org-agenda-redo))))
 
-(defun org-pro-view-update-git-status ()
+(defun org-pro-view-save-hd-buffer ()
+  (save-excursion
+    (set-buffer
+     (marker-buffer (org-get-at-bol 'org-hd-marker)))
+    (save-buffer)))
+
+(defun org-pro-view-update-all ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
-    (while (org-agenda-next-item 1)
-      (org-pro-git-status-at-point))
+    (org-agenda-next-item 1)
+    (while (next-single-property-change (point-at-eol) 'org-marker)
+      (org-pro-view-git-set-status)
+      (move-end-of-line 1)
+      (goto-char (next-single-property-change (point) 'org-marker)))
     (org-agenda-redo)))
 
-;; (defun org-pro-view-add-file ()
+(defun org-pro-view-update ()
+  (interactive)
+  (org-pro-view-git-set-status)
+  (org-pro-view-save-hd-buffer)
+  (org-agenda-redo))
+
+;; (defun org-pro-summary-save-and-redo ()
+  ;; "Save buffer associated with current item. Then redo agenda view."
   ;; (interactive)
-  ;; (org-pro-
+  ;; (org-pro-view-save-hd-buffer)
+  ;; (org-agenda-redo))
+
+(defun org-pro-view-git-add ()
+  "Add or update the file given by the filename property
+of the item at point."
+  (interactive)
+  (let* ((file (org-pro-filename-at-point))
+	 (pro (assoc (org-pro-view-current-project)
+		     org-pro-project-alist))
+	 (dir (org-pro-get-location pro)))
+    (org-pro-git-add-file file dir)
+  (org-pro-view-git-set-status)))
 
 (defun org-pro-view-git-commit-file ()
   (interactive)  
@@ -454,8 +482,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	 (dir (if filename (expand-file-name (file-name-directory filename))))
 	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
     (org-pro-git-add-and-commit-file file dir message)
-    (org-pro-git-status-at-point))
-  (org-agenda-redo))
+    (org-pro-view-git-set-status 'save 'redo)))
 
 ;;}}}
 ;;{{{ summary-view-mode
@@ -505,11 +532,12 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 (define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
 (define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
 (define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
-(define-key org-pro-view-mode-map "a" 'org-pro-add-documents-at-point)
-(define-key org-pro-view-mode-map "A" 'org-pro-git-add-at-point)
+(define-key org-pro-view-mode-map "a" 'org-pro-view-add-documents-at-point)
+(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-at-point)
 (define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-(define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
+(define-key org-pro-view-mode-map "u" 'org-pro-view-update)
+(define-key org-pro-view-mode-map "u" 'org-pro-view-update-all)
 (define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-file)
 (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
 
@@ -530,7 +558,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 		 (org-open-at-point-global)
 		 (widen))))
 	  ((string= prop "GitStatus")
-	   (nth 1 (org-pro-git-status-at-point))
+	   (nth 1 (org-pro-git-get-status-at-point))
 	   (org-columns-redo))
 	  ((string= prop "Decoration")
 	   (org-pro-git-tag-at-point)
@@ -673,7 +701,7 @@ removed from the entry content.  Currently only `planning' is allowed here."
 		       (org-open-at-point-global)
 		       (widen))))
 		((string= prop "GitStatus")
-		 (nth 1 (org-pro-git-status-at-point))
+		 (nth 1 (org-pro-git-get-status-at-point))
 		 (org-columns-redo))
 		((string= prop "Decoration")
 		 (org-pro-git-tag-at-point)
