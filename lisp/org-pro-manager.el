@@ -36,10 +36,11 @@
 (require 'org-publish)
 
 ;; Loading extensions
-(require 'org-pro-summary) ;; project summary
-(require 'org-pro-git)     ;; git contro,
-(require 'org-pro-config)  ;; saving and setting window configurations
-(require 'org-pro-deft)    ;; selecting projects via deft
+(require 'org-pro-superman) ;; a project to manage projects
+(require 'org-pro-summary)  ;; project summary
+(require 'org-pro-git)      ;; git contro,
+(require 'org-pro-config)   ;; saving and setting window configurations
+(require 'org-pro-deft)     ;; selecting projects via deft
 
 ;;{{{ variables and user options
 
@@ -183,15 +184,6 @@ the `org-pro-file'.")
 (defun org-pro-goto-project-manager ()
   (interactive)
   (find-file org-pro-file))
-
-(defun org-pro-super-manager ()
-  "Returns a super project for project management"
-  `("SuperManager"
-    (("location" . ,org-pro-default-directory)
-     ("index" . ,org-pro-file)
-     ("category" . "Super")
-     ("state" . "ACTIVE")
-     ("config" . "INDEX | AGENDA / TODO"))))
 
 (defun org-pro-project-at-point (&optional noerror)
   "Check if point is at project heading and return the project,
