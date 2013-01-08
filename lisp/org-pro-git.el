@@ -27,28 +27,6 @@
 
 (defvar org-pro-cmd-git "git")
 
-(defun org-pro-show-help ()
-  (interactive)
-  (split-window-vertically)  
-  (other-window 1)
-  (switch-to-buffer "*org-pro-help-buffer*")
-  (toggle-read-only -1)
-  (erase-buffer)
-  (insert "'<ret>':\t\t Open file (or revision) at point\n")
-  (insert "'l':    \t\t Show git log\n")
-  (insert "'L':    \t\t Show git log for tagged revisions\n")
-  (insert "'u':    \t\t Update git status\n")
-  (insert "'b':    \t\t Blame\n")
-  (insert "'S':    \t\t Search for revision containing a regular expression\n")
-  (insert "'D':    \t\t Show difference between revision at point and HEAD\n")
-  (insert "'h':    \t\t Open this help window\n")
-  (insert "'t':    \t\t Alter tag (empty string to remove)\n")
-  (insert "'q':    \t\t Quit view mode\n")
-  (goto-char (point-min))
-  (toggle-read-only 1)
-  (other-window -1))
-
-
 ;; (setq org-property-set-functions-alist nil)  
 (add-to-list 'org-property-set-functions-alist
 	     `("GitStatus" . org-pro-git-status-at-point))
@@ -219,6 +197,7 @@
   (let* ((pro (or project (org-pro-select-project)))
 	 (dir (concat (org-pro-get-location pro) (car pro)))
 	 (file (or file (read-file-name "Git add file: " dir nil t))))
+    (setq file (file-relative-name (expand-file-name file) (expand-file-name dir)))
     (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
 
 (defun org-pro-git-add-and-commit-file (file dir &optional message)
@@ -232,13 +211,9 @@
 (defun org-pro-git-add-at-point ()
   "Add or update file FILE to git repository DIR."
   (interactive)
-  (let* ((file (org-pro-filename-at-point))
-	 (dir (if file (file-name-directory file))))
-    (org-pro-git-add-file file
-			  (if (string= (expand-file-name (buffer-file-name))
-				       (expand-file-name (org-pro-get-index org-pro-current-project)))
-			      org-pro-current-project
-			    nil))
+  (let* ((file (org-pro-property-at-point "filename"))
+	 (pro (assoc (org-pro-property-at-point "PROJECT") org-pro-project-alist)))
+    (org-pro-git-add-file (org-link-display-format file) pro)
     (org-pro-git-set-status-at-point)))
 
 (defun org-pro-git-commit-at-point (&rest args)
@@ -349,7 +324,7 @@
 	     `((org-agenda-files (quote (,logfile)))
 	       (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
 	       (org-agenda-overriding-header (concat "Git-log of " ,file-rel "\th: help, C:commit, l: log, H:history\n\n"))
-	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
+	       ;;	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
 	       (org-agenda-overriding-agenda-format
 		'(lambda (hdr level category tags-list properties)
 		   (concat  "| " hdr

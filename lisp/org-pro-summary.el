@@ -45,7 +45,6 @@
          (lprops
 	  `((org-agenda-files (quote (,(org-pro-get-index pro))))
 	    (org-agenda-finalize-hook 'org-pro-view-mode-on)
-	    (org-agenda-buffer-name (concat "*org-pro-view-mode[" ,(car pro) "]*"))
 	    (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n"))
 	    ;; (org-agenda-overriding-agenda-format t)
 	    (org-agenda-overriding-agenda-format
@@ -57,7 +56,9 @@
 			    (setq pstring (concat pstring " | " (cdr (car cprops))))
 			    (setq cprops (cdr cprops)))
 			  pstring) " |")))
-	    (org-agenda-view-columns-initially nil))))
+	    (org-agenda-view-columns-initially nil)
+	    ;;	    (org-agenda-buffer-name (concat "*org-pro-view-mode[" ,(car pro) "]*"))
+	    )))
     (put 'org-agenda-redo-command 'org-lprops lprops)
     (org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit")))))
 
@@ -447,7 +448,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
   ;; (org-pro-
 
 (defun org-pro-view-git-commit-file ()
-  (interactive)
+  (interactive)  
   (let* ((filename (org-pro-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename))))
@@ -477,9 +478,35 @@ the same tree node, and the headline of the tree node in the Org-mode file."
   (interactive)
   (org-pro-view-mode t))
    
+
+(defun org-pro-show-help ()
+  (interactive)
+  (split-window-vertically)  
+  (other-window 1)
+  (switch-to-buffer "*org-pro-help-buffer*")
+  (toggle-read-only -1)
+  (erase-buffer)
+  (insert "'<ret>':\t\t Open file (or revision) at point\n")
+  (insert "'l':    \t\t Show git log\n")
+  (insert "'L':    \t\t Show git log for tagged revisions\n")
+  (insert "'u':    \t\t Update git status\n")
+  (insert "'A':    \t\t Add to git repository\n")
+  (insert "'a':    \t\t Add file to document list\n")
+  (insert "'b':    \t\t Blame\n")
+  (insert "'S':    \t\t Search for revision containing a regular expression\n")
+  (insert "'D':    \t\t Show difference between revision at point and HEAD\n")
+  (insert "'h':    \t\t Open this help window\n")
+  (insert "'t':    \t\t Alter tag (empty string to remove)\n")
+  (insert "'q':    \t\t Quit view mode\n")
+  (goto-char (point-min))
+  (toggle-read-only 1)
+  (other-window -1))
+
 (define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
 (define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
 (define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
+(define-key org-pro-view-mode-map "a" 'org-pro-add-documents-at-point)
+(define-key org-pro-view-mode-map "A" 'org-pro-git-add-at-point)
 (define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
 (define-key org-pro-view-mode-map "u" 'org-pro-update-git-status)
@@ -691,6 +718,7 @@ removed from the entry content.  Currently only `planning' is allowed here."
 		nil t))
 	      (create
 	       (insert "* " head "\n")
+	       (org-set-property "PROJECT" pro)
 	       (forward-line -1))
 	      (t (error (concat "Heading " head " not found in index file of " pro))))
 	(if prop-alist (mapcar (lambda (p)
@@ -782,6 +810,21 @@ removed from the entry content.  Currently only `planning' is allowed here."
       (org-insert-time-stamp (current-time) t)
       (insert "\n:END:")
       (setq fl (cdr fl)))))
+
+(defun org-pro-add-documents-at-point (&optional file-list)
+  (interactive)
+  (let* ((fl (or file-list `(,(read-file-name (concat "Choose: ")))))
+	 (pro (org-pro-property-at-point "PROJECT"))
+	 )
+    ;; FIXME need to write org-pro-get-documents and filter duplicates
+    (org-pro-goto-project pro "Documents")
+    (while fl
+      (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
+	      "\n:PROPERTIES:\n:filename: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
+      (org-insert-time-stamp (current-time) t)
+      (insert "\n:END:")
+      (setq fl (cdr fl))))
+  (switch-to-buffer (other-buffer)))
 
 ;;}}}
 

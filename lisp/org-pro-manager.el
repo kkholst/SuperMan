@@ -255,6 +255,7 @@ the `org-pro-file'.")
 
 ;;}}}
 ;;{{{ parsing dynamically updating lists
+
 (defun org-pro-get-property  (pom property &optional inherit literal-nil)
   "Read property and remove leading and trailing whitespace."
   (let ((prop (org-entry-get pom property inherit literal-nil)))
@@ -330,7 +331,6 @@ the `org-pro-file'.")
     (when org-pro-current-project
       (setq org-pro-current-project
             (assoc (car org-pro-current-project) org-pro-project-alist))))
-
 
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
