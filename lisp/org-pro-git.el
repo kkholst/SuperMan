@@ -175,7 +175,7 @@
 	 (last-commit (nth 2 statlist))
 	 (git-status (nth 0 statlist))
 	 (git-label (nth 1 statlist))
-	 (org-property-changed-functions 'save-buffer))
+	 (org-property-changed-functions '(lambda (prop val) (save-buffer))))
     (org-entry-put pom "GitStatus" git-label)
     ;; (org-set-property "GitStatus" git-label)
     (unless (or (string= git-status "E") (string= git-status "?"))
