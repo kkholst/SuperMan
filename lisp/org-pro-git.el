@@ -23,14 +23,11 @@
 
 ;;; Code:
 
-;;{{{ control
-
-(defvar org-pro-cmd-git "git")
 
 ;;{{{ variables
-(defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.
-                                                                     If non-nil, git is controlled on per project basis using properties set in `org-pro'.")
 
+(defvar org-pro-cmd-git "git")
+(defvar org-pro-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.")
 (setq org-pro-git-ignore "*")
 (defvar org-pro-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
                                                         
@@ -44,11 +41,10 @@
 ;;}}}
 ;;{{{ property set functions
 ;; (setq org-property-set-functions-alist nil)  
-;; FIXME: do these work?
-(add-to-list 'org-property-set-functions-alist
-	     `("GitStatus" . org-pro-git-get-status-at-point))
-(add-to-list 'org-property-set-functions-alist
-	     `("LastCommit" . org-pro-git-commit-at-point))
+;; (add-to-list 'org-property-set-functions-alist
+	     ;; `("GitStatus" . org-pro-git-get-status-at-point))
+;; (add-to-list 'org-property-set-functions-alist
+	     ;; `("LastCommit" . org-pro-git-add-at-point))
 ;;}}}
 ;;{{{ helper functions
 
@@ -61,6 +57,14 @@
   (let ((dir (if (file-directory-p file) file (file-name-directory file))))
     (if (org-pro-git-p dir)
 	(replace-regexp-in-string "\n" "" (shell-command-to-string (concat "cd " dir "; git rev-parse --show-toplevel "))))))
+
+(defun org-pro-relative-name (file dir)
+  "If filename FILE is absolute return the relative filename w.r.t. dir,
+Else return FILE as it is."
+  (if (file-name-absolute-p file)
+      (file-relative-name (expand-file-name file) (expand-file-name dir))
+    file))
+
 (defun org-pro-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
   (with-temp-buffer
@@ -69,8 +73,10 @@
 ;;      (set-time-zone-rule t) ;; Use Universal time.
 ;;      (prog1 (format-time-string "%Y-%m-%d %T UTC" time)
 ;;        (set-time-zone-rule nil))))
+
 ;;}}}
 ;;{{{ initialize project and directory
+
 (defun org-pro-git-init-project (&optional pro)
   "Put project under git control."
   (interactive)
@@ -81,8 +87,9 @@
 	(error (concat "Trying to org-pro-git-init-project: Project " (car pro) " has no index file."))
       (org-pro-git-init-directory loc)
       (if (string-match loc index)
-	  (org-pro-git-add-and-commit-file
-	   index loc (concat "Initial commit of project " (car pro)))))))
+	  (org-pro-git-add
+	   index loc
+	   'commit (concat "Initial commit of project " (car pro)))))))
 
 (defun org-pro-git-init-directory (dir)
   "Put directory DIR under git control."
@@ -102,33 +109,29 @@
 	 (propval  (org-pro-get-property pom prop t)))
     propval))
 
-(defun org-pro-filename-at-point (&optional non-exist-ok)
-  (let ((file-or-link (org-pro-property-at-point "filename")))
+(defun org-pro-filename-at-point ()
+  "If property FileName exists at point return its value."
+  (let* ((file-or-link (org-pro-property-at-point "FileName")))
     (if (not (stringp file-or-link))
-	(error "No proper(ty) filename at point."))
-    ;; FIXME: maybe need these org-bracket-link-analytic-regexp instead?
-    (if (string-match org-bracket-link-regexp file-or-link)
-	(expand-file-name
-	 (org-extract-attributes
-	  (org-link-unescape (org-match-string-no-properties 1 file-or-link))))
-      (if (file-exists-p file-or-link)
-	  (expand-file-name file-or-link)
-	(when non-exist-ok file-or-link);; needed in log-mode
-	))))
+	(error "No proper(ty) FileName at point."))
+    (org-link-display-format file-or-link)))
 
 ;;}}}
 ;;{{{ get status and commit from git
+
 (defun org-pro-git-get-commit (arg file &optional dir)
   "Run git log and report the date and message of the n'th commit of
 file FILE in directory DIR where n is determined by ARG."
   (let* ((dir (cond (dir)
 		    ((file-name-absolute-p file) (file-name-directory file))
 		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
+	 (file (org-pro-relative-name file dir))
 	 (date-string
-		(shell-command-to-string
-		 (if (string= arg "first")
-		     (concat  "cd " dir ";" org-pro-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- " file "  | head -1")
-		   (concat org-pro-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file))))
+	  (shell-command-to-string
+	   (if (string= arg "first")
+	       (concat  "cd " dir ";" org-pro-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- "
+			file "  | head -1")
+	     (concat "cd " dir ";" org-pro-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file))))
          (date (if (string= date-string "") "" (org-pro-read-git-date date-string)))
 	 (mess (shell-command-to-string
 		(if (string= arg "first")
@@ -148,13 +151,14 @@ buffer is in org-agenda-mode."
   "Determine the git status of file FILE"
   (let* ((file (or file (read-file-name "Get git status for file: ")))
 	 (dir (if file (file-name-directory file)))
+	 (file (org-pro-relative-name file dir))
 	 (git-status (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " status --ignored --porcelain " file)))
 	 git-last-commit
 	 label)
     (if (not (org-pro-git-p dir))
 	(error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
       (if (string= git-status "")
-	  (if (file-exists-p file)
+	  (if (file-exists-p (concat dir "/" file))
 	      (setq git-status "C")
 	    (setq git-status "E"))
 	(if (string-match "^fatal" git-status)
@@ -196,7 +200,7 @@ buffer is in org-agenda-mode."
 	 (org-property-changed-functions '(lambda (prop val) (save-buffer))))
     (org-entry-put pom "GitStatus" git-label)
     ;; (org-set-property "GitStatus" git-label)
-    (unless (or (string= git-status "E") (string= git-status "?"))
+    (unless (or (string= git-status "A") (string= git-status "E") (string= git-status "?"))
       (unless (org-pro-get-property pom "GitInit")
 	(org-entry-put pom "GitInit" (org-pro-git-get-commit "first" file)))
       (unless (string= last-commit "")
@@ -208,70 +212,63 @@ buffer is in org-agenda-mode."
   (interactive)
   (save-excursion 
     (goto-char (point-min))
-    (while (re-search-forward ":filename:" nil t)
+    (while (re-search-forward ":FileName:" nil t)
       (org-pro-git-set-status-at-point))))
-;;}}}
-;;{{{ git add file
 
-(defun org-pro-git-add-file (file dir)
+;;}}}
+;;{{{ git add/commit 
+
+(defun org-pro-git-commit (&optional dir query)
+  (let* ((dir (or dir
+		  (let ((pro (assoc (org-pro-property-at-point "Project") org-pro-project-alist)))
+		    (concat (org-pro-get-location pro) (car pro)))))
+	 (message (read-string query))
+	 (cmd (concat (concat "cd " dir ";" org-pro-cmd-git " commit -m \"" message "\""))))
+    (shell-command-to-string cmd)))
+
+(defun org-pro-git-add (file dir &optional commit message)
   "Add file FILE to git repository at DIR. If DIR is nil,
 prompt for project and use the associated git repository.
 If FILE is nil then read file name below DIR.
 
-The attempt is made to `git add' the file at
-the location of the project. This fails if location is not a git repository,
+If COMMIT is non-nil prompt for commit message and
+commit the file to the git repository.
+
+The attempt is made to `git add' the file at the location
+of the project. This fails if location is not a git repository,
 or if the file is not inside the location."
   (interactive)
   (let* ((dir (or dir
 		  (let ((pro (org-pro-select-project)))
 		    (concat (org-pro-get-location pro) (car pro)))))
-	 (file (or file (read-file-name "Git add file: " dir nil t))))
-    (setq file (file-relative-name (expand-file-name file) (expand-file-name dir)))
-    (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " add -f " file))))
+	 (file (or file (read-file-name "Git add file: " dir nil t)))
+	 (file (org-pro-relative-name file dir))
+	 (cmd (concat "cd " dir ";" org-pro-cmd-git " add -f " file))
+	 (message (if commit (or message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))))
+    (if message (setq cmd (concat cmd  ";" org-pro-cmd-git " commit -m \"" message "\" " file)))
+    (shell-command-to-string cmd)))
 
-(defun org-pro-git-add-at-point ()
+(defun org-pro-git-add-at-point (&optional commit message)
   "Add or update file FILE to git repository DIR."
   (interactive)
-  (let* ((file (org-pro-property-at-point "filename"))
-	 (pro (assoc (org-pro-property-at-point "PROJECT") org-pro-project-alist)))
-    (org-pro-git-add-file (org-link-display-format file) pro)
-    (org-pro-git-set-status-at-point)))
-;;}}}
-;;{{{ git add and commit
-(defun org-pro-git-add-and-commit-file (file dir &optional message)
-  (shell-command-to-string (concat "cd " dir
-			 ";" org-pro-cmd-git " add -f " file ";" org-pro-cmd-git " commit -m\""
-			 (or message 
-			     (read-string (concat "Commit message for " (file-name-nondirectory file) ": ")))
-			 "\" " file)))
-
-
-
-
-(defun org-pro-git-commit-at-point (&rest args)
-  "Add or update file FILE to git repository DIR."
-  (interactive)
-  (let* ((file (org-pro-filename-at-point))
-	 (dir (if file (file-name-directory file)))
-	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
-    (org-pro-git-add-and-commit-file file dir message)
+  (let* ((file (org-pro-property-at-point "FileName"))
+	 (pro (assoc (org-pro-property-at-point "Project") org-pro-project-alist)))
+    (org-pro-git-add (org-link-display-format file) pro commit message)
     (org-pro-git-set-status-at-point)))
 
 ;;}}}
 ;;{{{ updating and pushing projects
-(defun org-pro-git-push-directory (dir silent)
-  "Git push directory DIR."
-  (let* ((status (shell-command-to-string  (concat "cd " dir ";" org-pro-cmd-git " status")))
-	 (necessary (string-match "Your branch is ahead .*\n" status))
-	 (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-    (if doit
-	(shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " push")))))
-
+;; (defun org-pro-git-push-directory (dir silent)
+  ;; "Git push directory DIR."
+  ;; (let* ((status (shell-command-to-string  (concat "cd " dir ";" org-pro-cmd-git " status")))
+	 ;; (necessary (string-match "Your branch is ahead .*\n" status))
+	 ;; (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
+    ;; (if doit
+	;; (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " push")))))
 
 (defun org-pro-git-update-project (project before)
   "Check if project needs to be put under git control and update.
-                                                     If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push.
-                                                    "
+If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push."
   (let* ((git-control (downcase (org-pro-get-git project))))
     (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
       (let ((silent-p (string= git-control "silent"))
@@ -323,25 +320,25 @@ or if the file is not inside the location."
   (interactive)
   (org-pro-git-log-mode t))
 
-(defun org-pro-git-setup-log-buffer (file path git-switches decorationonly)
-;;  (let* ((file-rel (file-relative-name (expand-file-name file) (expand-file-name gitpath)))
-  (let* ((file-rel (if (file-name-absolute-p file)  (file-relative-name file (expand-file-name gitpath)) file))
+(defun org-pro-git-setup-log-buffer (file dir git-switches decorationonly)
+  (let* ((file (org-pro-relative-name file dir))
+	 (dir dir)
 	 (gitlog (shell-command-to-string
 		  (concat
-		   "cd " gitpath "; " org-pro-cmd-git git-switches " -- " file-rel)))
+		   "cd " dir "; " org-pro-cmd-git git-switches " -- " file)))
 	 (logbuf (concat " #" (file-name-nondirectory file) ".org"))
 	 (logfile (concat "/tmp/" logbuf)) ;; Use (make-temp-file name-of-application) instead?!
 	 item val)
     (if (string= gitlog "")
-	(error (concat "No search results in file history or file " file-rel " not (not yet) git controlled."))
+	(error (concat "No search results in file history or file " file " not (not yet) git controlled."))
       (pop-to-buffer logbuf)
       (erase-buffer)
       (insert (concat "* Git Log ("
-                      file-rel
-                      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:filename: "
-                      file-rel
+                      file
+                      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
+                      file
                       "\n:GitPath: "
-                      gitpath
+                      dir
                       "\n:END:\n"))
       (loop for x in (split-string (substring gitlog 0 -1) "\n")
             do 
@@ -355,7 +352,7 @@ or if the file is not inside the location."
       (let ((lprops
 	     `((org-agenda-files (quote (,logfile)))
 	       (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
-	       (org-agenda-overriding-header (concat "Git-log of " ,file-rel "\th: help, C:commit, l: log, H:history\n\n"))
+	       (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
 	       ;;	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
 	       (org-agenda-overriding-agenda-format
 		'(lambda (hdr level category tags-list properties)
@@ -373,10 +370,13 @@ or if the file is not inside the location."
 
 (defun org-pro-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (org-pro-filename-at-point)
-		   (org-pro-get-property nil "filename" t)))
+		   (org-pro-get-property nil "FileName" t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath") (org-pro-git-toplevel file))))
-	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date short " gitsearch  " " (if limit (concat "-n " (int-to-string limit))))))
+	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath")
+				  (org-pro-git-toplevel file))))
+	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\"--date short "
+			 gitsearch  " "
+			 (if limit (concat "-n " (int-to-string limit))))))
     (org-pro-git-setup-log-buffer file gitpath gitcmd decorationonly)))
 
 (defun org-pro-git-log-at-point (arg)
@@ -405,15 +405,15 @@ or if the file is not inside the location."
 (defun org-pro-git-tag (pom)
   "Set git tag"
   (interactive)
-  (let* ((hash (org-pro-get-property pom "hash" nil))
-	 (oldtag (org-pro-get-property pom "decoration" nil))
-	 (path (org-pro-get-property pom "gitpath" t))
+  (let* ((hash (org-pro-get-property pom "Hash" nil))
+	 (oldtag (org-pro-get-property pom "Decoration" nil))
+	 (path (org-pro-get-property pom "GitPath" t))
 	 (tag (read-string "Tag (empty to clear): ")))
     (if (string-equal tag "")
 	(progn 
 	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
 	  (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
-      (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
+      (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " Hash " -m \"\"")))) 
 ;;  (save-excursion
 ;;    (goto-char (point-min))
 ;;    (org-pro-view-git-log))
@@ -426,13 +426,13 @@ or if the file is not inside the location."
 
 (defun org-pro-git-revision (pom &optional diff)
   "Shows version of the document at point "
-  (let* ((file (org-pro-get-property pom "filename" t))
-	 (hash (org-pro-get-property pom "hash" nil))
-	 (path (org-pro-get-property pom "gitpath" t))
+  (let* ((file (org-pro-get-property pom "FileName" t))
+	 (hash (org-pro-get-property pom "Hash" nil))
+	 (path (org-pro-get-property pom "GitPath" t))
 	 (fileabs (concat path file))
 	 (filehash (concat hash "_" file))
 	 (str (shell-command-to-string 
-	       (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
+	       (concat "cd " path ";" org-pro-cmd-git " show " Hash ":" file))))
     (if diff (find-file fileabs))
     (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
     (erase-buffer)  
