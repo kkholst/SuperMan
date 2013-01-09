@@ -31,63 +31,94 @@
     (switch-to-buffer (concat "*" (car pro) " view*"))
     (local-set-key "d" 'org-pro-view-documents)))
 
-
 (defun org-pro-summary ()
   (interactive)
   (let ((org-agenda-files (org-pro-get-index org-pro-current-project)))
     (org-pro-tags-view-plus nil "filename={.+}" nil)))
 
+(defvar org-pro-view-current-project nil)
+(make-variable-buffer-local 'org-pro-view-current-project)
+
+
+(defun org-pro-trim-string (str len)
+  "Trim string STR to a given length by either calling substring
+or by adding whitespace characters."
+  (let* ((slen (length str))
+	 (diff (- len slen)))
+    (if (> diff 0)
+	(concat str (make-string diff (string-to-char " ")))
+      (substring str 0 len))))
+
+(defun org-pro-view-documents-format (hdr level category tags-list prop-list)
+  (concat (org-pro-trim-string hdr 20)
+	  (let ((cprops prop-list)
+		(pstring ""))
+	    (while cprops
+	      (let ((val (cdr (car cprops))))
+		(cond ((string= (downcase (caar cprops)) "filename")
+		       (setq val (file-name-nondirectory (org-link-display-format val)))))
+		(setq pstring (concat pstring "  " (org-pro-trim-string val  23))))
+		(setq cprops (cdr cprops)))
+	      pstring) "\t"))
+
+(defun org-pro-view-current-project ()
+  ;; FIXME: may give problems 
+  (or (org-pro-property-at-point "Project")
+      (save-excursion (goto-char (point-min))
+		      (if (re-search-forward "^Project:[ \t]*\\(.*\\)[ \t]*$" nil t)
+			  (assoc (match-string-no-properties 1) org-pro-project-alist)
+			(org-pro-select-project)))))
+
+(defun org-pro-view-control ()
+  ;; FIXME: this is a hack to distinguish between
+  ;; the first time agenda and redo's
+  (let ((pro (if org-pro-view-mode (org-pro-view-current-project) org-pro-current-project)))
+    (if (org-pro-git-p (concat (org-pro-get-location pro) (car pro)))
+	"Git" "press `I' to initialize git")))
+
+;; (defun org-pro-view-current-location ()
+  ;; (let ((pro (org-pro-view-current-project))
+	;; (concat (org-pro-get-location pro) (car pro)))))
+
+(defun org-pro-view-finalize-documents ()
+  (let* ((pro (or (org-pro-view-current-project)
+		  (org-pro-select-project)))
+	 (loc (concat (org-pro-get-location pro) (car pro))))
+    (org-pro-view-mode-on)))
 
 (defun org-pro-view-documents (&optional project)
-  "View documents of the current project"
+  "View documents of the current project."
   (interactive)
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-         (lprops
-	  `((org-agenda-files (quote (,(org-pro-get-index pro))))
-	    (org-agenda-finalize-hook 'org-pro-view-mode-on)
-	    (org-agenda-overriding-header (concat "Documents in " ,(car pro) "\th: help, C:commit, l: log, H:history\n\n"))
-	    ;; (org-agenda-overriding-agenda-format t)
-	    (org-agenda-overriding-agenda-format
-	     '(lambda (hdr level category tags-list properties)
-		(concat "| " hdr
-			(let ((cprops properties)
-			      (pstring ""))
-			  (while cprops
-			    (setq pstring (concat pstring " | " (cdr (car cprops))))
-			    (setq cprops (cdr cprops)))
-			  pstring) " |")))
-	    (org-agenda-view-columns-initially nil)
-	    ;;	    (org-agenda-buffer-name (concat "*org-pro-view-mode[" ,(car pro) "]*"))
-	    )))
-    (put 'org-agenda-redo-command 'org-lprops lprops)
-    (org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit")))))
-
-
-
-(defun org-pro-view-documents-1 (&optional project)
-  "View documents of the current project"
-  (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (index (org-pro-get-index pro))
-	 (org-agenda-custom-commands
-	  `(("d" "view Project-DOCUMENTS" tags "filename={.+}"
-	     ((org-agenda-files `(,index))
-	      (org-agenda-overriding-columns-format "%20ITEM(Title) %8TODO(ToDo) %GitStatus %50LastCommit(Last Commit)")
-              (org-agenda-overriding-header "Documents:\n")
-	      ;; (org-agenda-finalize-hook '(org-pro-show-document-status-in-summary))
-	      (org-agenda-view-columns-initially nil))))))
-    (push ?d unread-command-events)
-    (call-interactively 'org-agenda)
-    (org-pro-view-mode t)))
+	 (loc (concat (org-pro-get-location pro) (car pro)))
+	 (view-buf (concat "*Documents[" (car pro) "]*")))
+    (if (get-buffer view-buf)
+	(switch-to-buffer view-buf)
+      (let ((lprops
+	     `((org-agenda-files (quote (,(org-pro-get-index pro))))
+	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	       (org-agenda-overriding-header
+		(concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+			"\nProject: "  ,(car pro)
+			"\nControl: " (or (org-pro-view-control) 
+					  (concat "press `I' to initialize git"))
+			"\n\nDocuments: " "\n"
+			(org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+	       (org-agenda-view-columns-initially nil)
+	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
+	(put 'org-agenda-redo-command 'org-lprops lprops)
+	(org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit" "filename")))
+	(rename-buffer view-buf)))))
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
 ;; replaces org-scan-tags by org-pro-scan-tags-plus
 ;; additional argument: get-properties
-(defun org-pro-tags-view-plus (&optional todo-only match get-properties)
+(defun org-pro-tags-view-plus (&optional todo-only match get-prop-list buffer-name)
   "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
 The prefix arg TODO-ONLY limits the search to TODO entries.
 
-Additional properties can be specified as a list of property keywords GET-PROPERTIES."
+Additional properties can be specified as a list of property keywords GET-PROP-LIST."
   (interactive "P")
   (if org-agenda-overriding-arguments
       (setq todo-only (car org-agenda-overriding-arguments)
@@ -115,7 +146,7 @@ Additional properties can be specified as a list of property keywords GET-PROPER
       (setq org-agenda-redo-command
       	    (list 'org-pro-tags-view-plus `(quote ,todo-only)
       		  (list 'if 'current-prefix-arg nil `(quote ,org-agenda-query-string))
-		  `(quote ,get-properties)))
+		  `(quote ,get-prop-list)))
       ;; (put 'org-agenda-redo-command 'org-lprops)
       (setq files (org-agenda-files nil 'ifmode)
 	    rtnall nil)
@@ -139,7 +170,7 @@ Additional properties can be specified as a list of property keywords GET-PROPER
 		      (narrow-to-region org-agenda-restrict-begin
 					org-agenda-restrict-end)
 		    (widen))
-		  (setq rtn (org-pro-scan-tags-plus 'agenda matcher todo-only nil get-properties))
+		  (setq rtn (org-pro-scan-tags-plus 'agenda matcher todo-only nil get-prop-list))
 		  (setq rtnall (append rtnall rtn))))))))
       (if org-agenda-overriding-header
 	  (insert (org-add-props (copy-sequence org-agenda-overriding-header)
@@ -170,8 +201,8 @@ Additional properties can be specified as a list of property keywords GET-PROPER
       (setq buffer-read-only t))))
 
 ;; hack of org-scan-tags version 7.9.2 (copy: 06 Jan 2013 (10:28))
-;; additional argument: get-properties
-(defun org-pro-scan-tags-plus (action matcher todo-only &optional start-level get-properties)
+;; additional argument: get-prop-list
+(defun org-pro-scan-tags-plus (action matcher todo-only &optional start-level get-prop-list)
   "Scan headline tags with inheritance and produce output ACTION.
 
 ACTION can be `sparse-tree' to produce a sparse tree in the current buffer,
@@ -188,7 +219,7 @@ and set by `org-make-tags-matcher' when it constructed MATCHER.
 START-LEVEL can be a string with asterisks, reducing the scope to
 headlines matching this string.
 
-GET-PROPERTIES is a list of properties to get from each entry."
+GET-PROP-LIST is a list of properties to get from each entry."
   
   (require 'org-agenda)
   (let* ((re (concat "^"
@@ -216,7 +247,7 @@ GET-PROPERTIES is a list of properties to get from each entry."
          lspos tags tags-list
 	 (tags-alist (list (cons 0 org-file-tags)))
 	 (llast 0) rtn rtn1 level category i txt
-	 todo properties marker entry priority)
+	 todo prop-list marker entry priority)
     (when (not (or (member action '(agenda sparse-tree)) (functionp action)))
       (setq action (list 'lambda nil action)))
     (save-excursion
@@ -283,15 +314,15 @@ GET-PROPERTIES is a list of properties to get from each entry."
 		  ;; we have an archive tag, should we use this anyway?
 		  (or (not org-agenda-skip-archived-trees)
 		      (and (eq action 'agenda) org-agenda-archives-mode))))
-	    ;; extract properties
-	    (if get-properties
-	      (setq properties
+	    ;; extract prop-list
+	    (if get-prop-list
+	      (setq prop-list
 		    (mapcar
 		     '(lambda (prop)
 			(cons prop (or (org-pro-get-property (point) prop 'inherit)
 				       "not set"
-				       ""))) get-properties))
-	    (setq properties ""))
+				       ""))) get-prop-list))
+	    (setq prop-list ""))
 
 	    ;; select this headline
 	    (cond
@@ -308,7 +339,7 @@ GET-PROPERTIES is a list of properties to get from each entry."
 				     level
 				     category
 				     tags-list
-				     properties))
+				     prop-list))
 		(setq txt (org-agenda-format-item
 			   ""
 			   (concat
@@ -410,6 +441,13 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 
 ;;(require 'org-pro-git)
 
+(defun org-pro-view-git-init ()
+  (interactive)
+  (let ((pro (or (org-pro-view-current-project) (org-pro-select-project))))
+  (org-pro-git-init-directory (concat (org-pro-get-location pro) (car pro)))
+  (org-agenda-redo)))
+  
+
 (defun org-pro-view-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker)))
@@ -464,25 +502,64 @@ the same tree node, and the headline of the tree node in the Org-mode file."
   ;; (org-pro-view-save-hd-buffer)
   ;; (org-agenda-redo))
 
-(defun org-pro-view-git-add ()
-  "Add or update the file given by the filename property
-of the item at point."
-  (interactive)
-  (let* ((file (org-pro-filename-at-point))
-	 (pro (assoc (org-pro-view-current-project)
-		     org-pro-project-alist))
-	 (dir (org-pro-get-location pro)))
-    (org-pro-git-add-file file dir)
-  (org-pro-view-git-set-status)))
 
-(defun org-pro-view-git-commit-file ()
-  (interactive)  
+;; (defun org-pro-view-new-document ()
+  ;; (unless org-pro-view-mode (error "Can only be called from document view mode."))
+  ;; (let* ((pro (org-pro-view-current-project))
+	 ;; (filename (read-file-name "Document file"
+				   ;; (concat (org-pro-get-location pro) (car pro)))))
+    ;; (save-excursion
+      ;; (org-pro-goto-project-documents pro
+      ;; (find-file (org-pro-get-index pro)))))
+    
+
+
+
+(defun org-pro-view-git-add (&optional dont-redo)
+  "Add but not commit the file given by the filename property
+of the item at point.
+
+If dont-redo the agenda is not reversed."
+  (interactive)
   (let* ((filename (org-pro-filename-at-point))
 	 (file (file-name-nondirectory filename))
-	 (dir (if filename (expand-file-name (file-name-directory filename))))
-	 (message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))
-    (org-pro-git-add-and-commit-file file dir message)
-    (org-pro-view-git-set-status 'save 'redo)))
+	 (dir (if filename (expand-file-name (file-name-directory filename)))))
+    (org-pro-git-add file dir nil nil)
+    (org-pro-view-git-set-status 'save (not dont-redo))))
+
+(defun org-pro-view-git-commit (&optional dont-redo)
+  "Add and commit the file given by the filename property
+of the item at point.
+
+If dont-redo the agenda is not reversed."
+  (interactive)
+  (let* ((filename (org-pro-filename-at-point))
+	 (file (file-name-nondirectory filename))
+	 (dir (if filename (expand-file-name (file-name-directory filename)))))
+    (org-pro-git-add file dir 'commit nil)
+  (org-pro-view-git-set-status 'save (not dont-redo))))
+
+
+(defun org-pro-view-loop (fun args)
+  "Call function on all items."
+  (let (loop-out)
+  (save-excursion
+    (goto-char (point-min))
+    (org-agenda-next-item 1)
+    (while (next-single-property-change (point-at-eol) 'org-marker)
+      (setq loop-out (append (list (funcall fun args)) loop-out))
+      (move-end-of-line 1)
+      (goto-char (next-single-property-change (point) 'org-marker)))
+    loop-out)))
+
+(defun org-pro-view-git-add-all (&optional commit)
+  (interactive)
+  (let* ((allinone (yes-or-no-p "Do one commit for all or individual commits? "))
+	 (if allinone (setq commit nil message nil)))
+    (org-pro-view-loop 'org-pro-git-add (list commit message))
+    (org-pro-git-commit nil "Git commit message for selected files: ")
+    (org-agenda-redo)))
+  
 
 ;;}}}
 ;;{{{ summary-view-mode
@@ -532,14 +609,19 @@ of the item at point."
 (define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
 (define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
 (define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
-(define-key org-pro-view-mode-map "a" 'org-pro-view-add-documents-at-point)
-(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-at-point)
+(define-key org-pro-view-mode-map "n" 'org-pro-view-register-document)
+(define-key org-pro-view-mode-map "r" 'org-agenda-redo)
+;; (define-key org-pro-view-mode-map "R" 'org-pro-view-git)
+(define-key org-pro-view-mode-map "a" 'org-pro-view-git-add)
+(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-all)
 (define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
 (define-key org-pro-view-mode-map "h" 'org-pro-show-help)
 (define-key org-pro-view-mode-map "u" 'org-pro-view-update)
-(define-key org-pro-view-mode-map "u" 'org-pro-view-update-all)
-(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-file)
-(define-key org-pro-view-mode-map "c" 'org-agenda-columns)
+(define-key org-pro-view-mode-map "I" 'org-pro-view-git-init)
+(define-key org-pro-view-mode-map "U" 'org-pro-view-update-all)
+(define-key org-pro-view-mode-map "c" 'org-pro-view-git-commit)
+(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-all)
+;; (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
 
 (defun org-pro-column-action ()
   (interactive)
@@ -726,37 +808,31 @@ removed from the entry content.  Currently only `planning' is allowed here."
 
 (defun org-pro-goto-project (&optional project heading create prop-alist)
   (interactive)
-  (let ((pro 
-	 (or project
-	     (car (org-pro-select-project)))))
-    (when (and (not (string-equal pro "")) pro)
-      (let* ((entry (assoc pro org-pro-project-alist))
-	     (index (org-pro-get-index entry))
-	     hiddenp
-	     (head (or heading (read-string "Goto heading: "))))
-	(if index
-	    (find-file index)
-	  (error (concat "Project " pro " does not have an index.")))
-	(setq hiddenp (not visible-mode))
-	(org-columns-quit)
-	(if hiddenp (visible-mode t))
-	(goto-char (point-min))
-	(cond ((re-search-forward
-		(format org-complex-heading-regexp-format (regexp-quote head))
-		nil t))
-	      (create
-	       (insert "* " head "\n")
-	       (org-set-property "PROJECT" pro)
-	       (forward-line -1))
-	      (t (error (concat "Heading " head " not found in index file of " pro))))
-	(if prop-alist (mapcar (lambda (p)
-				 (unless (org-entry-get nil (car p))
-				   (org-set-property (car p) (car (cdr p))))) prop-alist))
-	(re-search-forward ":END:" nil t)
-	(forward-line)
-	(unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1)))
-	(if hiddenp (visible-mode nil))
-        (org-show-subtree)))))
+  (let* ((pro (or project (org-pro-select-project)))
+	 (index (org-pro-get-index pro))
+	 hiddenp
+	 (head (or heading (read-string "Goto heading: "))))
+    (if index
+	(find-file index)
+      (error (concat "Project " pro " does not have an index.")))
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (cond ((re-search-forward
+	      (format org-complex-heading-regexp-format (regexp-quote head))
+	      nil t))
+	    (create
+	     (insert "* " head "\n")
+	     (org-set-property "Project" pro)
+	     (forward-line -1))
+	    (t (error (concat "Heading " head " not found in index file of " (car pro)))))
+      (org-narrow-to-element)
+      (if prop-alist (mapcar (lambda (p)
+			       (unless (org-entry-get nil (car p))
+				 (org-set-property (car p) (car (cdr p))))) prop-alist))
+      (goto-char (point-max)))))
+      ;; (forward-line)
+      ;; (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1))))))
 
 (defun org-pro-goto-project-workflow ()
   (interactive)
@@ -822,7 +898,7 @@ removed from the entry content.  Currently only `planning' is allowed here."
 ;; Capturing documents
 (add-to-list 'org-capture-templates
 	     `(,(concat org-pro-capture-prefix "d") "Add document" plain
-	       (function org-pro-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append) 
+	       (function org-pro-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append)
 
 ;;}}}
 ;;{{{ Adding documents from file-list
@@ -839,20 +915,23 @@ removed from the entry content.  Currently only `planning' is allowed here."
       (insert "\n:END:")
       (setq fl (cdr fl)))))
 
-(defun org-pro-add-documents-at-point (&optional file-list)
+(defun org-pro-view-register-document (&optional file-list)
   (interactive)
-  (let* ((fl (or file-list `(,(read-file-name (concat "Choose: ")))))
-	 (pro (org-pro-property-at-point "PROJECT"))
-	 )
+  (let* ((pro (org-pro-view-current-project))
+	 (dir (concat (org-pro-get-location pro) (car pro)))
+	 (fl (or file-list `(,(read-file-name (concat "Choose: "))))))
     ;; FIXME need to write org-pro-get-documents and filter duplicates
-    (org-pro-goto-project pro "Documents")
-    (while fl
-      (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-	      "\n:PROPERTIES:\n:filename: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
-      (org-insert-time-stamp (current-time) t)
-      (insert "\n:END:")
-      (setq fl (cdr fl))))
-  (switch-to-buffer (other-buffer)))
+    (save-excursion
+      (org-pro-goto-project pro "Documents")
+      (while fl
+	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
+		"\n:PROPERTIES:\n:filename: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
+	(org-insert-time-stamp (current-time) t)
+	(insert "\n:END:\n")
+	(setq fl (cdr fl)))
+      (save-buffer)))
+    (org-agenda-redo))
+  ;; (switch-to-buffer (other-buffer)))
 
 ;;}}}
 
