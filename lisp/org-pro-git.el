@@ -328,44 +328,50 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 		   "cd " dir "; " org-pro-cmd-git git-switches " -- " file)))
 	 (logbuf (concat " #" (file-name-nondirectory file) ".org"))
 	 (logfile (concat "/tmp/" logbuf)) ;; Use (make-temp-file name-of-application) instead?!
+	 (log-view-buf (concat "*Git-log[" logfile "]*"))
 	 item val)
-    (if (string= gitlog "")
-	(error (concat "No search results in file history or file " file " not (not yet) git controlled."))
-      (pop-to-buffer logbuf)
-      (erase-buffer)
-      (insert (concat "* Git Log ("
-                      file
-                      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
-                      file
-                      "\n:GitPath: "
-                      dir
-                      "\n:END:\n"))
-      (loop for x in (split-string (substring gitlog 0 -1) "\n")
-            do 
-            (setq val (delete "" (split-string x ":#:")))
-            (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) (when (nth 4 val) (concat "\n:Decoration: " (nth 4 val))) "\n:END:\n"))
-            (if (or (not decorationonly) (nth 4 val)) (insert item)))
-      ;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
-      (write-file logfile nil)
-      ;;(delete-buffer logfile)
-      (goto-char (point-min))
-      (let ((lprops
-	     `((org-agenda-files (quote (,logfile)))
-	       (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
-	       (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
-	       ;;	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
-	       (org-agenda-overriding-agenda-format
-		'(lambda (hdr level category tags-list properties)
-		   (concat  "| " hdr
-			   (let ((cprops properties)
-				 (pstring ""))
-			     (while cprops
-			       (setq pstring (concat pstring " | " (cdr (car cprops))))
-			       (setq cprops (cdr cprops)))
-			     pstring) " |")))
-	       (org-agenda-view-columns-initially nil))))
-	(put 'org-agenda-redo-command 'org-lprops lprops)
-	(org-let lprops '(org-pro-tags-view-plus nil "Hash={.+}" '("Hash" "Date" "Author" "Decoration")))))))
+    (if (get-buffer log-view-buf)
+	(switch-to-buffer log-view-buf)
+      (if (string= gitlog "")
+	  (error (concat "No search results in file history or file " file " not (not yet) git controlled."))
+	(pop-to-buffer logbuf)
+	(erase-buffer)
+	(insert (concat "* Git Log ("
+			file
+			")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
+			file
+			"\n:GitPath: "
+			dir
+			"\n:END:\n"))
+	(loop for x in (split-string (substring gitlog 0 -1) "\n")
+	      do 
+	      (setq val (delete "" (split-string x ":#:")))
+	      (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) (when (nth 4 val) (concat "\n:Decoration: " (nth 4 val))) "\n:END:\n"))
+	      (if (or (not decorationonly) (nth 4 val)) (insert item)))
+	;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
+	(write-file logfile nil)
+	;;(delete-buffer logfile)
+	(goto-char (point-min))
+	(put 'org-agenda-redo-command 'org-lprops nil)
+	(let ((lprops
+	       `((org-agenda-files (quote (,logfile)))
+		 (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
+		 (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
+		 ;;	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
+		 (org-agenda-overriding-agenda-format
+		  '(lambda (hdr level category tags-list properties)
+		     (concat  "| " hdr
+			      (let ((cprops properties)
+				    (pstring ""))
+				(while cprops
+				  (setq pstring (concat pstring " | " (cdr (car cprops))))
+				  (setq cprops (cdr cprops)))
+				pstring) " |")))
+		 (org-agenda-buffer-name ,log-view-buf)
+		 (org-agenda-view-columns-initially nil))))
+	  (org-let lprops '(org-pro-tags-view-plus nil "Hash={.+}" '("Hash" "Date" "Author" "Decoration")))
+	  (rename-buffer log-view-buf)
+	  (put 'org-agenda-redo-command 'org-lprops lprops))))))
 
 
 (defun org-pro-git-log (file gitpath limit &optional search-string decorationonly)
