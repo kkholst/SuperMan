@@ -42,7 +42,6 @@
 (defvar org-pro-view-current-project nil)
 (make-variable-buffer-local 'org-pro-view-current-project)
 
-
 (defun org-pro-trim-string (str len)
   "Trim string STR to a given length by either calling substring
 or by adding whitespace characters."
@@ -106,6 +105,7 @@ or by adding whitespace characters."
 	 (view-buf (concat "*Documents[" (car pro) "]*")))
     (if (get-buffer view-buf)
 	(switch-to-buffer view-buf)
+      (put 'org-agenda-redo-command 'org-lprops nil)
       (let ((lprops
 	     `((org-agenda-files (quote (,(org-pro-get-index pro))))
 	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
@@ -119,14 +119,14 @@ or by adding whitespace characters."
 	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 	       (org-agenda-view-columns-initially nil)
 	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
-	(put 'org-agenda-redo-command 'org-lprops lprops)
 	(org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
-	(rename-buffer view-buf)))))
+	(rename-buffer view-buf)
+	(put 'org-agenda-redo-command 'org-lprops lprops)))))
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
 ;; replaces org-scan-tags by org-pro-scan-tags-plus
 ;; additional argument: get-properties
-(defun org-pro-tags-view-plus (&optional todo-only match get-prop-list buffer-name)
+(defun org-pro-tags-view-plus (&optional todo-only match get-prop-list)
   "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
 The prefix arg TODO-ONLY limits the search to TODO entries.
 
@@ -156,8 +156,8 @@ Additional properties can be specified as a list of property keywords GET-PROP-L
       (org-set-sorting-strategy 'tags)
       (setq org-agenda-query-string match)
       (setq org-agenda-redo-command
-      	    (list 'org-pro-tags-view-plus `(quote ,todo-only)
-      		  (list 'if 'current-prefix-arg nil `(quote ,org-agenda-query-string))
+	    (list 'org-pro-tags-view-plus `(quote ,todo-only)
+		  (list 'if 'current-prefix-arg nil `(quote ,org-agenda-query-string))
 		  `(quote ,get-prop-list)))
       ;; (put 'org-agenda-redo-command 'org-lprops)
       (setq files (org-agenda-files nil 'ifmode)
@@ -608,6 +608,23 @@ If dont-redo the agenda is not reversed."
   (interactive)
   (org-pro-view-mode t))
    
+(define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
+(define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
+(define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
+(define-key org-pro-view-mode-map "n" 'org-pro-view-register-document)
+(define-key org-pro-view-mode-map "r" 'org-agenda-redo)
+;; (define-key org-pro-view-mode-map "R" 'org-pro-view-git)
+(define-key org-pro-view-mode-map "a" 'org-pro-view-git-add)
+(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-all)
+(define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
+(define-key org-pro-view-mode-map "h" 'org-pro-show-help)
+(define-key org-pro-view-mode-map "u" 'org-pro-view-update)
+(define-key org-pro-view-mode-map "I" 'org-pro-view-git-init)
+(define-key org-pro-view-mode-map "U" 'org-pro-view-update-all)
+(define-key org-pro-view-mode-map "c" 'org-pro-view-git-commit)
+(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-all)
+;; (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
+
 
 (defun org-pro-show-help ()
   (interactive)
@@ -631,56 +648,6 @@ If dont-redo the agenda is not reversed."
   (goto-char (point-min))
   (toggle-read-only 1)
   (other-window -1))
-
-(define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
-(define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
-(define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
-(define-key org-pro-view-mode-map "n" 'org-pro-view-register-document)
-(define-key org-pro-view-mode-map "r" 'org-agenda-redo)
-;; (define-key org-pro-view-mode-map "R" 'org-pro-view-git)
-(define-key org-pro-view-mode-map "a" 'org-pro-view-git-add)
-(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-all)
-(define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
-(define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-(define-key org-pro-view-mode-map "u" 'org-pro-view-update)
-(define-key org-pro-view-mode-map "I" 'org-pro-view-git-init)
-(define-key org-pro-view-mode-map "U" 'org-pro-view-update-all)
-(define-key org-pro-view-mode-map "c" 'org-pro-view-git-commit)
-(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-all)
-;; (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
-
-(defun org-pro-column-action ()
-  (interactive)
-  (let* ((prop (get-char-property (point) 'org-columns-key))
-	 (tempstr) (tempfrm))
-    (cond ((string= prop "ITEM")
-	   (org-narrow-to-element)
-	   (if (re-search-forward ":Hash:" nil t)
-	       (progn 
-		 (widen)
-		 (org-pro-git-revision-at-point)
-		 (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))))
-	   (if (re-search-forward ":filename:" nil t)
-	       (progn 
-		 (widen)
-		 (org-open-at-point-global)
-		 (widen))))
-	  ((string= prop "GitStatus")
-	   (nth 1 (org-pro-git-get-status-at-point))
-	   (org-columns-redo))
-	  ((string= prop "Decoration")
-	   (org-pro-git-tag-at-point)
-	   (org-columns-redo))
-	  ((string= prop "filename")    
-	   (org-columns-open-link))
-	  ((string= prop "Other")
-	   (org-columns-open-link))
-	  ((string= prop "Hash")
-	   (org-pro-git-revision-at-revision))
-	  ((string= prop "LastCommit")
-	   (org-pro-git-commit-at-point)
-	   (org-columns-redo))
-	  (t (org-columns-edit-value)))))
 
 ;;}}}
 ;;{{{ remote control
