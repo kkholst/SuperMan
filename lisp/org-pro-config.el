@@ -108,8 +108,6 @@
     config))
 
 
-
-
 (defun org-pro-get-config (project)
   (let* ((config (or org-pro-sticky-config org-pro-default-config "INDEX"))
 	 (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
@@ -176,9 +174,9 @@
             (kill-buffer bufname))
           (find-file index)
           (org-timeline 'yeah)
-          (rename-buffer bufname)
-          (local-set-key [(return)] 'org-return)
-          (setq tbuf (current-buffer)))))
+	  (rename-buffer bufname)
+	  (local-set-key [(return)] 'org-return)
+	  (setq tbuf (current-buffer)))))
     (switch-to-buffer tbuf)))
 
 (defun org-pro-recent-org (project)

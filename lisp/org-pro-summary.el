@@ -36,6 +36,9 @@
   (let ((org-agenda-files (org-pro-get-index org-pro-current-project)))
     (org-pro-tags-view-plus nil "filename={.+}" nil)))
 
+(defvar org-pro-view-marks nil "Marks for items in agenda.")
+(make-variable-buffer-local 'org-pro-view-marks)
+
 (defvar org-pro-view-current-project nil)
 (make-variable-buffer-local 'org-pro-view-current-project)
 
@@ -49,8 +52,9 @@ or by adding whitespace characters."
 	(concat str (make-string diff (string-to-char " ")))
       (substring str 0 len))))
 
+;; FIXME: use gnus-user-date-format-alist to trim date
 (defun org-pro-view-documents-format (hdr level category tags-list prop-list)
-  (concat (org-pro-trim-string hdr 20)
+  (concat " " (org-pro-trim-string hdr 20)
 	  (let ((cprops prop-list)
 		(pstring ""))
 	    (while cprops
@@ -62,7 +66,8 @@ or by adding whitespace characters."
 	      pstring) "\t"))
 
 (defun org-pro-view-current-project ()
-  ;; FIXME: may give problems 
+  ;; FIXME: may give problems when property "Project" does
+  ;; not match currently viewed project
   (or (org-pro-property-at-point "Project")
       (save-excursion (goto-char (point-min))
 		      (if (re-search-forward "^Project:[ \t]*\\(.*\\)[ \t]*$" nil t)
@@ -74,17 +79,24 @@ or by adding whitespace characters."
   ;; the first time agenda and redo's
   (let ((pro (if org-pro-view-mode (org-pro-view-current-project) org-pro-current-project)))
     (if (org-pro-git-p (concat (org-pro-get-location pro) (car pro)))
-	"Git" "press `I' to initialize git")))
+	(concat "Git repository: " (concat (org-pro-get-location pro) (car pro)))
+      "press `I' to initialize git")))
 
-;; (defun org-pro-view-current-location ()
-  ;; (let ((pro (org-pro-view-current-project))
-	;; (concat (org-pro-get-location pro) (car pro)))))
+;; (defun org-pro-view-set-marks ()
+  ;; (org-pro-view-loop 'org-pro-view-set-mark))
+
+;; (defun org-pro-view-set-mark (&optional m)
+ ;; (let ((m (or m "M"))
+       ;; (buffer-read-only nil))
+   ;; (if (org-get-at-bol 'org-pro-view-mark) (insert m) )))
 
 (defun org-pro-view-finalize-documents ()
   (let* ((pro (or (org-pro-view-current-project)
 		  (org-pro-select-project)))
 	 (loc (concat (org-pro-get-location pro) (car pro))))
     (org-pro-view-mode-on)))
+    ;; (let ((buffer-read-only nil))
+      ;; (org-pro-view-set-marks))))
 
 (defun org-pro-view-documents (&optional project)
   "View documents of the current project."
@@ -446,7 +458,23 @@ the same tree node, and the headline of the tree node in the Org-mode file."
   (let ((pro (or (org-pro-view-current-project) (org-pro-select-project))))
   (org-pro-git-init-directory (concat (org-pro-get-location pro) (car pro)))
   (org-agenda-redo)))
-  
+
+;; (defun org-pro-view-set (&optional dont-redo)
+  ;; "Set a property for document at point."
+  ;; (interactive)
+  ;; (let ((prop "Property"
+  ;; (org-entry-put 
+  ;; (org-agenda-redo))
+
+;; (defun org-pro-view-mark-item ()
+  ;; (if (org-get-at-bol 'org-hd-marker)
+      ;; (let ((buffer-read-only nil))
+	;; (add-text-properties (point-at-bol) (point-at-eol) '(:org-view-mark t)))))
+
+;; (defun org-pro-view-unmark-item ()
+  ;; (if (org-get-at-bol 'org-hd-marker)
+      ;; (let ((buffer-read-only nil))
+	;; (add-text-properties (point-at-bol) (point-at-eol) '(:org-view-mark nil)))))
 
 (defun org-pro-view-return ()
   (interactive)
@@ -465,29 +493,31 @@ the same tree node, and the headline of the tree node in the Org-mode file."
   (interactive "p")
   (org-pro-git-search-at-point arg))
 
-(defun org-pro-view-git-set-status (&optional save redo)
+(defun org-pro-view-git-set-status (&optional save redo check)
   (interactive)
   (let ((file (org-pro-filename-at-point))
 	(pom  (org-get-at-bol 'org-hd-marker)))
-    (org-pro-git-set-status pom file)
+    (org-pro-git-set-status pom file check)
     (when save (org-pro-view-save-hd-buffer))
     (when redo (org-agenda-redo))))
 
 (defun org-pro-view-save-hd-buffer ()
   (save-excursion
+    (goto-char (point-min))
+    (org-agenda-next-item 1)
     (set-buffer
      (marker-buffer (org-get-at-bol 'org-hd-marker)))
     (save-buffer)))
 
 (defun org-pro-view-update-all ()
   (interactive)
-  (org-pro-view-loop 'org-pro-view-git-set-status (list nil nil))
+  (org-pro-view-loop 'org-pro-view-git-set-status (list nil nil nil))
   (org-pro-view-save-hd-buffer)
   (org-agenda-redo))
 
 (defun org-pro-view-update ()
   (interactive)
-  (org-pro-view-git-set-status 'save 'redo))
+  (org-pro-view-git-set-status 'save 'redo nil))
 
 ;; (defun org-pro-summary-save-and-redo ()
   ;; "Save buffer associated with current item. Then redo agenda view."
@@ -515,7 +545,7 @@ If dont-redo the agenda is not reversed."
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename)))))
     (org-pro-git-add file dir nil nil)
-    (org-pro-view-git-set-status 'save (not dont-redo))))
+    (org-pro-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun org-pro-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
@@ -527,7 +557,7 @@ If dont-redo the agenda is not reversed."
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename)))))
     (org-pro-git-add file dir 'commit nil)
-  (org-pro-view-git-set-status 'save (not dont-redo))))
+  (org-pro-view-git-set-status 'save (not dont-redo) nil)))
 
 
 (defun org-pro-view-loop (fun args)
@@ -537,19 +567,25 @@ If dont-redo the agenda is not reversed."
     (goto-char (point-min))
     (org-agenda-next-item 1)
     (while (next-single-property-change (point-at-eol) 'org-marker)
-      (setq loop-out (append (list (funcall fun args)) loop-out))
+      (setq loop-out (append (list (apply fun args)) loop-out))
       (move-end-of-line 1)
       (goto-char (next-single-property-change (point) 'org-marker)))
     loop-out)))
 
-(defun org-pro-view-git-add-all (&optional commit)
+(defun org-pro-view-git-add-all (&optional dont-redo)
   (interactive)
-  (let* ((allinone (yes-or-no-p "Do one commit for all or individual commits? "))
-	 (if allinone (setq commit nil message nil)))
-    (org-pro-view-loop 'org-pro-git-add (list commit message))
-    (org-pro-git-commit nil "Git commit message for selected files: ")
-    (org-agenda-redo)))
-  
+   (org-pro-view-loop 'org-pro-view-git-add (list 'dont))
+   (unless dont-redo (org-agenda-redo)))
+
+(defun org-pro-view-git-commit-all (&optional commit dont-redo)
+  (interactive)
+  (let* ((pro (org-pro-view-current-project))
+	 (dir (concat (org-pro-get-location pro) (car pro))))
+    ;; (files (org-pro-view-loop 'org-pro-filename-at-point (list nil))))
+    (org-pro-view-git-add-all 'dont)
+    (org-pro-git-commit dir (concat "Git commit message for selected files in " dir ": "))
+    (org-pro-view-update-all)
+    (unless dont-redo (org-agenda-redo))))
 
 ;;}}}
 ;;{{{ summary-view-mode
@@ -647,99 +683,7 @@ If dont-redo the agenda is not reversed."
 	  (t (org-columns-edit-value)))))
 
 ;;}}}
-;;{{{ showing document properties
-
-(setq org-agenda-document-properties-maxlines 5)
-
-(defun org-agenda-add-document-properties ()
-  "Add entry text to agenda lines.
-This will add properties following headings shown in the agenda.
-"
-  (when (not (org-bound-and-true-p org-mobile-creating-agendas))
-    (let (m txt)
-      (goto-char (point-min))
-      (while (not (eobp))
-	(if (not (setq m (org-get-at-bol 'org-hd-marker)))
-	    (beginning-of-line 2)
-	  (setq txt (org-agenda-get-some-document-properties
-		     m org-agenda-add-document-properties-maxlines "    > "))
-	  (end-of-line 1)
-	  (if (string-match "\\S-" txt)
-	      (insert "\n" txt)
-	    (or (eobp) (forward-char 1))))))))
-
-(defun org-agenda-get-some-document-properties (marker n-lines &optional indent
-						       &rest keep)
-  "Extract entry text from MARKER, at most N-LINES lines.
-This will ignore drawers etc, just get the text.
-If INDENT is given, prefix every line with this string.  If KEEP is
-given, it is a list of symbols, defining stuff that should not be
-removed from the entry content.  Currently only `planning' is allowed here."
-  (let (txt drawer-re kwd-time-re ind)
-    (save-excursion
-      (with-current-buffer (marker-buffer marker)
-	(if (not (derived-mode-p 'org-mode))
-	    (setq txt "")
-	  (save-excursion
-	    (save-restriction
-	      (widen)
-	      (goto-char marker)
-	      (setq txt
-		    (concat (or (org-pro-get-property nil "GitStatus") "Not git controlled") "\n"
-			    (org-pro-get-property nil "CaptureDate"))))))))))
-
-(setq org-agenda-document-properties-mode t)
-(defun org-agenda-document-properties-mode (&optional arg)
-  "Toggle entry text mode in an agenda buffer."
-  (interactive "P")
- (setq org-agenda-document-properties-mode (or (integerp arg)
-                                       (not org-agenda-document-properties-mode)))
-  (org-agenda-document-properties-hide)
-  (and org-agenda-document-properties-mode
-       (org-agenda-document-properties-show)))
-  ;; (org-agenda-set-mode-name)
-  ;; (message "Entry text mode is %s.  Maximum number of lines is %d"
-	   ;; (if org-agenda-document-properties-mode "on" "off")
-	   ;; (if (integerp arg) arg org-agenda-document-properties-maxlines)))
-
-(defun org-agenda-document-properties-show-here ()
-  "Add some text from the entry as context to the current line."
-  (let (m txt o)
-    (setq m (org-get-at-bol 'org-hd-marker))
-    (unless (marker-buffer m)
-      (error "No marker points to an entry here"))
-    (setq txt (concat "\n" (org-no-properties
-			    (org-agenda-get-some-document-properties
-			     m org-agenda-document-properties-maxlines "    > "))))
-    (when (string-match "\\S-" txt)
-      (setq o (make-overlay (point-at-bol) (point-at-eol)))
-      (overlay-put o 'evaporate t)
-      (overlay-put o 'org-overlay-type 'agenda-entry-content)
-      (overlay-put o 'after-string txt))))
-
-(defun org-agenda-document-properties-show ()
-  "Add entry context for all agenda lines."
-  (interactive)
-  (save-excursion
-    (goto-char (point-max))
-    (beginning-of-line 1)
-    (while (not (bobp))
-      (when (org-get-at-bol 'org-hd-marker)
-	(org-agenda-document-properties-show-here))
-      (beginning-of-line 0))))
-
-(defun org-agenda-document-properties-hide ()
-  "Remove any shown entry context."
-  (delq nil
-	(mapcar (lambda (o)
-		  (if (eq (overlay-get o 'org-overlay-type)
-			  'agenda-entry-content)
-		      (progn (delete-overlay o) t)))
-		(overlays-in (point-min) (point-max)))))
-
-;;}}}
 ;;{{{ remote control
-
 ;; hack of org-agenda-todo
 (defun org-pro-treat-document (&optional arg)
   (interactive "P")

@@ -253,76 +253,76 @@ the `org-pro-file'.")
   (let ((prop (org-entry-get pom property inherit literal-nil)))
     (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
   
-  (defun org-pro-parse-projects (&optional all)
-    "Parse the file `org-pro-file' and update `org-pro-project-alist'."
-    (interactive)
-    (save-excursion
-      (setq org-pro-project-alist nil)
-      (set-buffer (find-file-noselect org-pro-file))
-      (unless (org-pro-manager-mode 1))
-      (save-buffer)
-      (goto-char (point-min))
-      (while (org-pro-forward-project)
-        (let* ((loc (or (org-pro-get-property nil "LOCATION" 'inherit) org-pro-default-directory))
-               (category (org-pro-get-property nil "CATEGORY" 'inherit))
-               (others (org-pro-get-property nil "OTHERS" nil))
-               (publish-dir (org-pro-get-property nil "PUBLISH" 'inherit))
-               (name (or (org-pro-get-property nil "NICKNAME" nil)
-                         (nth 4 (org-heading-components))))
-               (git (org-pro-get-property nil "GIT" 'inherit))
-               (config (org-pro-get-property nil "config" 'inherit))
-               (todo (substring-no-properties (or (org-get-todo-state) "")))
-               (index (or (org-pro-get-property nil "INDEX" nil)
-                          (let ((default-org-home
-                                  (concat (file-name-as-directory loc)
-                                          name
-                                          org-pro-org-location)))
-                            ;; (make-directory default-org-home t)
-                            (concat (file-name-as-directory default-org-home) name ".org")))))
-          (unless (file-name-absolute-p index)
-            (setq index
-                  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-          (add-to-list 'org-pro-project-alist
-                       (list name
-                             (list (cons "location"  loc)
-                                   (cons "index" index)
-                                   (cons "category" category)
-                                   (cons "others" others)
-                                   (cons "git" git)
-                                   (cons "config" config)
-                                   (cons "state" todo)
-                                   (cons "publish-directory" publish-dir))))))
-      org-pro-project-alist))
-  
-  
-  (defun org-pro-get-buffer-props (property)
-    "Get a table of all values of PROPERTY used in the buffer, for completion."
-    (let (props)
-      (save-excursion
-        (goto-char (point-min))
-        (while (re-search-forward (concat ":" property ":") nil t)
-          (add-to-list 'props (list
-                               (org-entry-get
-                                nil property nil)))))
-      props))
-  
-  (defun org-pro-parse-categories ()
-    "Parse the file `org-pro-file' and update `org-pro-project-categories'."
-    (interactive)
+(defun org-pro-parse-projects (&optional all)
+  "Parse the file `org-pro-file' and update `org-pro-project-alist'."
+  (interactive)
+  (save-excursion
+    (setq org-pro-project-alist nil)
     (set-buffer (find-file-noselect org-pro-file))
     (unless (org-pro-manager-mode 1))
-    (setq org-pro-project-categories
-          (reverse (org-pro-get-buffer-props "CATEGORY"))))
+    (save-buffer)
+    (goto-char (point-min))
+    (while (org-pro-forward-project)
+      (let* ((loc (or (org-pro-get-property nil "LOCATION" 'inherit) org-pro-default-directory))
+	     (category (org-pro-get-property nil "CATEGORY" 'inherit))
+	     (others (org-pro-get-property nil "OTHERS" nil))
+	     (publish-dir (org-pro-get-property nil "PUBLISH" 'inherit))
+	     (name (or (org-pro-get-property nil "NICKNAME" nil)
+		       (nth 4 (org-heading-components))))
+	     (git (org-pro-get-property nil "GIT" 'inherit))
+	     (config (org-pro-get-property nil "config" 'inherit))
+	     (todo (substring-no-properties (or (org-get-todo-state) "")))
+	     (index (or (org-pro-get-property nil "INDEX" nil)
+			(let ((default-org-home
+				(concat (file-name-as-directory loc)
+					name
+					org-pro-org-location)))
+			  ;; (make-directory default-org-home t)
+			  (concat (file-name-as-directory default-org-home) name ".org")))))
+	(unless (file-name-absolute-p index)
+	  (setq index
+		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+	(add-to-list 'org-pro-project-alist
+		     (list name
+			   (list (cons "location"  loc)
+				 (cons "index" index)
+				 (cons "category" category)
+				 (cons "others" others)
+				 (cons "git" git)
+				 (cons "config" config)
+				 (cons "state" todo)
+				 (cons "publish-directory" publish-dir))))))
+    org-pro-project-alist))
   
-  (defun org-pro-refresh ()
-    "Parses the categories and projects in file `org-pro-file' and also
+  
+(defun org-pro-get-buffer-props (property)
+  "Get a table of all values of PROPERTY used in the buffer, for completion."
+  (let (props)
+    (save-excursion
+      (goto-char (point-min))
+      (while (re-search-forward (concat ":" property ":") nil t)
+	(add-to-list 'props (list
+			     (org-entry-get
+			      nil property nil)))))
+    props))
+  
+(defun org-pro-parse-categories ()
+  "Parse the file `org-pro-file' and update `org-pro-project-categories'."
+  (interactive)
+  (set-buffer (find-file-noselect org-pro-file))
+  (unless (org-pro-manager-mode 1))
+  (setq org-pro-project-categories
+	(reverse (org-pro-get-buffer-props "CATEGORY"))))
+  
+(defun org-pro-refresh ()
+  "Parses the categories and projects in file `org-pro-file' and also
              updates the currently selected project."
-    (interactive)
-    (org-pro-parse-categories)
-    (org-pro-parse-projects)
-    (when org-pro-current-project
-      (setq org-pro-current-project
-            (assoc (car org-pro-current-project) org-pro-project-alist))))
+  (interactive)
+  (org-pro-parse-categories)
+  (org-pro-parse-projects)
+  (when org-pro-current-project
+    (setq org-pro-current-project
+	  (assoc (car org-pro-current-project) org-pro-project-alist))))
 
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
@@ -372,14 +372,15 @@ the `org-pro-file'.")
 	   `(("p" "Project" plain
 	      (file+headline org-pro-file ,category)
 	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
-		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NICKNAME: "
+		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NickName: "
 		       nickname
-		       "\n:LOCATION: \n:CATEGORY: " category "\n:INDEX: \n:GIT: \n:OTHERS: \n:END:\n"))))
+		       "\n:Location: \n:Category: " category "\n:Index:\n:InitialVisit:" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)) " \n:Others: \n:END:\n"))))
 	  (org-capture-bookmark nil))
       (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
       (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (org-pro-create-project ,nickname 'ask)) nil 'local)
       ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
-      (org-capture nil "p"))))
+      (org-capture nil "p")
+      (message "Press Control-c Control-c when done editing."))))
 
 
 ;; (defun org-pro-show-properties ()
@@ -497,8 +498,8 @@ the active status of projects."
               Only files ending on EXTENSION are returned unless EXTENSION is nil.
               If UPDATE is non-nil first parse the file org-pro.
 Examples:
-(org-pro-index-list nil \"ACTIVE\")
-(org-pro-index-list nil \"DONE\")
+ (org-pro-index-list nil \"ACTIVE\")
+ (org-pro-index-list nil \"DONE\")
 "
   (interactive "P")
   (when update
@@ -581,7 +582,7 @@ Examples:
       (org-pro-switch-to-project)
     (org-pro-switch-config)))
 
-(defun org-pro-switch-to-project (&optional force)
+(defun org-pro-switch-to-project (&optional force project)
   "Select project via 'org-pro-select-project', activate it
  via 'org-pro-activate-project',  find the associated index file."
   (interactive "P")
@@ -589,7 +590,7 @@ Examples:
 	 (change-maybe (or force
 			   org-pro-switch-always
 			   (not org-pro-current-project)))
-	 (pro (if change-maybe (org-pro-select-project) curpro))
+	 (pro (or project (if change-maybe (org-pro-select-project) curpro)))
 	 (stay (eq pro curpro)))
     (unless stay
       (org-pro-save-project curpro)

@@ -50,7 +50,7 @@
 
 (defun org-pro-git-p (dir)
   "Test if directory DIR is under git control."
-  (eq 0 (shell-command (concat "cd " dir ";" org-pro-cmd-git " rev-parse --is-inside-work-tree "))))
+  (string-match "^true" (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " rev-parse --is-inside-work-tree "))))
 
 (defun org-pro-git-toplevel (file)
   "Find the toplevel directory DIR is under git control."
@@ -139,23 +139,23 @@ file FILE in directory DIR where n is determined by ARG."
 		  (concat org-pro-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
     (concat date " " mess)))
 
-(defun org-pro-git-get-status-at-point ()
+(defun org-pro-git-get-status-at-point (&optional check)
   "Report the status of the document-file at point.
 Point is either (point), ie. if the current buffer is in org-mode,
 or the hdmarker associated with the item at point when the current
 buffer is in org-agenda-mode."
   (interactive)
-  (org-pro-git-get-status (org-pro-filename-at-point)))
+  (org-pro-git-get-status (org-pro-filename-at-point) check))
 
-(defun org-pro-git-get-status (file)
-  "Determine the git status of file FILE"
+(defun org-pro-git-get-status (file check)
+  "Determine the git status of file FILE."
   (let* ((file (or file (read-file-name "Get git status for file: ")))
 	 (dir (if file (file-name-directory file)))
 	 (file (org-pro-relative-name file dir))
 	 (git-status (shell-command-to-string (concat "cd " dir ";" org-pro-cmd-git " status --ignored --porcelain " file)))
 	 git-last-commit
 	 label)
-    (if (not (org-pro-git-p dir))
+    (if (and check (not (org-pro-git-p dir)))
 	(error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `org-pro-git-init-project'."))
       (if (string= git-status "")
 	  (if (file-exists-p (concat dir "/" file))
@@ -186,17 +186,18 @@ buffer is in org-agenda-mode."
 ;;}}}
 ;;{{{ set and update status
 
-(defun org-pro-git-set-status-at-point ()
+(defun org-pro-git-set-status-at-point (&optional check)
   (interactive)
   (let ((file (org-pro-filename-at-point)))
-    (org-pro-git-set-status (point) file)))
-(defun org-pro-git-set-status (pom file)
+    (org-pro-git-set-status (point) file check)))
+
+(defun org-pro-git-set-status (pom file check)
   (interactive)
-  (let* ((statlist (org-pro-git-get-status file))
+  (let* ((statlist (org-pro-git-get-status file check))
 	 (last-commit (nth 2 statlist))
 	 (git-status (nth 0 statlist))
-	 (git-label (nth 1 statlist))
-	 (org-property-changed-functions '(lambda (prop val) (save-buffer))))
+	 (git-label (nth 1 statlist)))
+    ;; (org-property-changed-functions '(lambda (prop val) (save-buffer))))
     (org-entry-put pom "GitStatus" git-label)
     ;; (org-set-property "GitStatus" git-label)
     (unless (or (string= git-status "A") (string= git-status "E") (string= git-status "?"))
@@ -212,7 +213,7 @@ buffer is in org-agenda-mode."
   (save-excursion 
     (goto-char (point-min))
     (while (re-search-forward ":FileName:" nil t)
-      (org-pro-git-set-status-at-point))))
+      (org-pro-git-set-status-at-point nil))))
 
 ;;}}}
 ;;{{{ git add/commit 
@@ -247,13 +248,13 @@ or if the file is not inside the location."
     (if message (setq cmd (concat cmd  ";" org-pro-cmd-git " commit -m \"" message "\" " file)))
     (shell-command-to-string cmd)))
 
-(defun org-pro-git-add-at-point (&optional commit message)
+(defun org-pro-git-add-at-point (&optional commit message check)
   "Add or update file FILE to git repository DIR."
   (interactive)
   (let* ((file (org-pro-property-at-point "FileName"))
 	 (pro (assoc (org-pro-property-at-point "Project") org-pro-project-alist)))
     (org-pro-git-add (org-link-display-format file) pro commit message)
-    (org-pro-git-set-status-at-point)))
+    (org-pro-git-set-status-at-point check)))
 
 ;;}}}
 ;;{{{ updating and pushing projects
@@ -373,7 +374,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath")
 				  (org-pro-git-toplevel file))))
-	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\"--date short "
+	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\"--date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
     (org-pro-git-setup-log-buffer file gitpath gitcmd decorationonly)))
@@ -431,7 +432,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	 (fileabs (concat path file))
 	 (filehash (concat hash "_" file))
 	 (str (shell-command-to-string 
-	       (concat "cd " path ";" org-pro-cmd-git " show " Hash ":" file))))
+	       (concat "cd " path ";" org-pro-cmd-git " show " hash ":" file))))
     (if diff (find-file fileabs))
     (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
     (erase-buffer)  
