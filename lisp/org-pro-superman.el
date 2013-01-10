@@ -38,5 +38,30 @@
      ("state" . "ACTIVE")
      ("config" . "INDEX | AGENDA / TODO"))))
 
+(defun org-pro-finalize-superman ()
+  (local-set-key "n" 'org-pro-new-project))
+ ;; (org-pro-superman-on))
+
+(defun superman (&optional project)
+  "Manage projects."
+  (interactive)
+  (let* ((view-buf (concat "*Superman*")))
+    (if (get-buffer view-buf)
+	(switch-to-buffer view-buf)
+      (let ((lprops
+	     `((org-agenda-files (quote (,org-pro-file)))
+	       (org-agenda-finalize-hook 'org-pro-finalize-superman)
+	       (org-agenda-overriding-header
+		(concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+			"\n\nProjects: " "\n"
+			(org-pro-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
+	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+	       (org-agenda-view-columns-initially nil)
+	       (org-agenda-buffer-name "*Superman*"))))
+	(put 'org-agenda-redo-command 'org-lprops lprops)
+	(org-let lprops '(org-pro-tags-view-plus nil "InitialVisit={.+}" '("NickName" "LastVisit" "Location" "Others")))
+	(rename-buffer view-buf)))))
+  
+
 (provide 'org-pro-superman)
 ;;; org-pro-superman.el ends here

@@ -53,6 +53,7 @@
 	       (insert "FILE-LIST: No files in project"))))
     (error "file-list.el not loaded.")))
 
+
 (defun org-pro-find-thing (thing project)
   (let* ((case-fold-search t)
 	 (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  (car thing))

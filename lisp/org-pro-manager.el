@@ -554,11 +554,13 @@ Examples:
   "Sets the current project.
             Start git, if the project is under git control, and git is not up and running yet."
   (setq org-pro-current-project project)
-  (if org-pro-frame-title-format
-      (org-pro-set-frame-title))
-  ;; maybe activate git control
-  (when org-pro-use-git 
-    (org-pro-git-update-project project 'before)))
+  (if org-pro-frame-title-format (org-pro-set-frame-title))
+  (with-current-buffer (or (find-buffer-visiting org-pro-file)
+			   (find-file-noselect org-pro-file))
+    (save-excursion
+      (goto-char (point-min))
+      (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
+      (org-entry-put (point) "LastVisit" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))))))
 
 (defun org-pro-save-project (&optional project)
     (interactive)

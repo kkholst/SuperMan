@@ -190,7 +190,6 @@ buffer is in org-agenda-mode."
   (interactive)
   (let ((file (org-pro-filename-at-point)))
     (org-pro-git-set-status (point) file)))
-
 (defun org-pro-git-set-status (pom file)
   (interactive)
   (let* ((statlist (org-pro-git-get-status file))

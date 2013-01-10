@@ -108,7 +108,7 @@ or by adding whitespace characters."
 	       (org-agenda-view-columns-initially nil)
 	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
 	(put 'org-agenda-redo-command 'org-lprops lprops)
-	(org-let lprops '(org-pro-tags-view-plus nil "filename={.+}" '("GitStatus" "LastCommit" "filename")))
+	(org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
 	(rename-buffer view-buf)))))
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
@@ -481,20 +481,13 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 
 (defun org-pro-view-update-all ()
   (interactive)
-  (save-excursion
-    (goto-char (point-min))
-    (org-agenda-next-item 1)
-    (while (next-single-property-change (point-at-eol) 'org-marker)
-      (org-pro-view-git-set-status)
-      (move-end-of-line 1)
-      (goto-char (next-single-property-change (point) 'org-marker)))
-    (org-agenda-redo)))
+  (org-pro-view-loop 'org-pro-view-git-set-status (list nil nil))
+  (org-pro-view-save-hd-buffer)
+  (org-agenda-redo))
 
 (defun org-pro-view-update ()
   (interactive)
-  (org-pro-view-git-set-status)
-  (org-pro-view-save-hd-buffer)
-  (org-agenda-redo))
+  (org-pro-view-git-set-status 'save 'redo))
 
 ;; (defun org-pro-summary-save-and-redo ()
   ;; "Save buffer associated with current item. Then redo agenda view."
@@ -512,9 +505,6 @@ the same tree node, and the headline of the tree node in the Org-mode file."
       ;; (org-pro-goto-project-documents pro
       ;; (find-file (org-pro-get-index pro)))))
     
-
-
-
 (defun org-pro-view-git-add (&optional dont-redo)
   "Add but not commit the file given by the filename property
 of the item at point.
@@ -918,20 +908,20 @@ removed from the entry content.  Currently only `planning' is allowed here."
 (defun org-pro-view-register-document (&optional file-list)
   (interactive)
   (let* ((pro (org-pro-view-current-project))
-	 (dir (concat (org-pro-get-location pro) (car pro)))
-	 (fl (or file-list `(,(read-file-name (concat "Choose: "))))))
+	 (dir (expand-file-name (concat (org-pro-get-location pro) (car pro))))
+	 (fl (or file-list `(,(read-file-name (concat "Choose: ") dir)))))
     ;; FIXME need to write org-pro-get-documents and filter duplicates
-    (save-excursion
+    (save-window-excursion
       (org-pro-goto-project pro "Documents")
       (while fl
 	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-		"\n:PROPERTIES:\n:filename: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
+		"\n:PROPERTIES:\n:FileName: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
 	(org-insert-time-stamp (current-time) t)
 	(insert "\n:END:\n")
 	(setq fl (cdr fl)))
       (save-buffer)))
-    (org-agenda-redo))
-  ;; (switch-to-buffer (other-buffer)))
+  (org-agenda-redo))
+;; (switch-to-buffer (other-buffer)))
 
 ;;}}}
 

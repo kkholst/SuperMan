@@ -58,6 +58,7 @@
     (run-with-idle-timer deft-auto-save-interval t 'deft-auto-save))
   (run-mode-hooks 'deft-mode-hook))
 
+
 (defun deft-local-mode ()
   ;; (kill-all-local-variables)
   (setq truncate-lines t)
