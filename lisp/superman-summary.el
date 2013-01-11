@@ -1,4 +1,4 @@
-;;; org-pro-summary.el --- Summary of project contents and adding information to projects
+;;; superman-summary.el --- Summary of project contents and adding information to projects
 
 ;; Copyright (C) 2012  Klaus Kähler Holst, Thomas Alexander Gerds
 
@@ -25,24 +25,24 @@
 
 ;;{{{ summary views
 
-;; (defun org-pro-view-project (&optional project)
+;; (defun superman-view-project (&optional project)
   ;; (interactive)
-  ;; (let ((pro (or project org-pro-current-project (org-pro-select-project))))
+  ;; (let ((pro (or project superman-current-project (superman-select-project))))
     ;; (switch-to-buffer (concat "*" (car pro) " view*"))
-    ;; (local-set-key "d" 'org-pro-view-documents)))
+    ;; (local-set-key "d" 'superman-view-documents)))
 
-(defun org-pro-summary ()
+(defun superman-summary ()
   (interactive)
-  (let ((org-agenda-files (org-pro-get-index org-pro-current-project)))
-    (org-pro-tags-view-plus nil "filename={.+}" nil)))
+  (let ((org-agenda-files (superman-get-index superman-current-project)))
+    (superman-tags-view-plus nil "filename={.+}" nil)))
 
-(defvar org-pro-view-marks nil "Marks for items in agenda.")
-(make-variable-buffer-local 'org-pro-view-marks)
+(defvar superman-view-marks nil "Marks for items in agenda.")
+(make-variable-buffer-local 'superman-view-marks)
 
 (defvar org-agenda-overriding-buffer-name nil)
 
-(defvar org-pro-view-current-project nil)
-(make-variable-buffer-local 'org-pro-view-current-project)
+(defvar superman-view-current-project nil)
+(make-variable-buffer-local 'superman-view-current-project)
 
 (defvar org-agenda-property-list nil)
 (make-variable-buffer-local 'org-agenda-property-list)
@@ -50,7 +50,7 @@
 (defvar org-agenda-overriding-agenda-format nil)
 (make-variable-buffer-local 'org-agenda-overriding-agenda-format)
 
-(defun org-pro-trim-string (str len)
+(defun superman-trim-string (str len)
   "Trim string STR to a given length by either calling substring
 or by adding whitespace characters."
   (let* ((slen (length str))
@@ -60,89 +60,89 @@ or by adding whitespace characters."
       (substring str 0 len))))
 
 ;; FIXME: use gnus-user-date-format-alist to trim date
-(defun org-pro-view-documents-format (hdr level category tags-list prop-list)
-  (concat " " (org-pro-trim-string hdr 20)
+(defun superman-view-documents-format (hdr level category tags-list prop-list)
+  (concat " " (superman-trim-string hdr 20)
 	  (let ((cprops prop-list)
 		(pstring ""))
 	    (while cprops
 	      (let ((val (cdr (car cprops))))
 		(cond ((string= (downcase (caar cprops)) "filename")
 		       (setq val (file-name-nondirectory (org-link-display-format val)))))
-		(setq pstring (concat pstring "  " (org-pro-trim-string val  23))))
+		(setq pstring (concat pstring "  " (superman-trim-string val  23))))
 		(setq cprops (cdr cprops)))
 	      pstring) "\t"))
 
-(defun org-pro-view-current-project ()
+(defun superman-view-current-project ()
   ;; FIXME: may give problems when property "Project" does
   ;; not match currently viewed project
-  (or (org-pro-property-at-point "Project")
+  (or (superman-property-at-point "Project")
       (save-excursion (goto-char (point-min))
 		      (if (re-search-forward "^Project:[ \t]*\\(.*\\)[ \t]*$" nil t)
-			  (assoc (match-string-no-properties 1) org-pro-project-alist)
-			(org-pro-select-project)))))
+			  (assoc (match-string-no-properties 1) superman-project-alist)
+			(superman-select-project)))))
 
-(defun org-pro-view-control ()
+(defun superman-view-control ()
   ;; FIXME: this is a hack to distinguish between
   ;; the first time agenda and redo's
-  (let ((pro (if org-pro-view-mode (org-pro-view-current-project) org-pro-current-project)))
-    (if (org-pro-git-p (concat (org-pro-get-location pro) (car pro)))
-	(concat "Git repository: " (concat (org-pro-get-location pro) (car pro)))
+  (let ((pro (if superman-view-mode (superman-view-current-project) superman-current-project)))
+    (if (superman-git-p (concat (superman-get-location pro) (car pro)))
+	(concat "Git repository: " (concat (superman-get-location pro) (car pro)))
       "press `I' to initialize git")))
 
-;; (defun org-pro-view-set-marks ()
-  ;; (org-pro-view-loop 'org-pro-view-set-mark))
+;; (defun superman-view-set-marks ()
+  ;; (superman-view-loop 'superman-view-set-mark))
 
-;; (defun org-pro-view-set-mark (&optional m)
+;; (defun superman-view-set-mark (&optional m)
  ;; (let ((m (or m "M"))
        ;; (buffer-read-only nil))
-   ;; (if (org-get-at-bol 'org-pro-view-mark) (insert m) )))
+   ;; (if (org-get-at-bol 'superman-view-mark) (insert m) )))
 
-(defun org-pro-view-finalize-documents ()
-  (let* ((pro (or (org-pro-view-current-project)
-		  (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro))))
-    (org-pro-view-mode-on)))
+(defun superman-view-finalize-documents ()
+  (let* ((pro (or (superman-view-current-project)
+		  (superman-select-project)))
+	 (loc (concat (superman-get-location pro) (car pro))))
+    (superman-view-mode-on)))
     ;; (let ((buffer-read-only nil))
-      ;; (org-pro-view-set-marks))))
+      ;; (superman-view-set-marks))))
 
-(defun org-pro-view-project (&optional project)
+(defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro)))
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
-	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	 (org-agenda-finalize-hook 'superman-view-finalize-documents)
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-custom-commands
 	  `(("p" "view Project"
-	     ((tags (concat ,(org-pro-property 'filename)  "={.+}")
-		    ((org-agenda-files (quote (,(org-pro-get-index pro))))
-		     (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	     ((tags (concat ,(superman-property 'filename)  "={.+}")
+		    ((org-agenda-files (quote (,(superman-get-index pro))))
+		     (org-agenda-finalize-hook 'superman-view-finalize-documents)
 		     (org-agenda-overriding-header
 		      (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
 			      "\nProject: "  ,(car pro)
-			      "\nControl: " (or (org-pro-view-control) 
+			      "\nControl: " (or (superman-view-control) 
 						(concat "press `I' to initialize git"))
 			      "\n\nDocuments: " "\n"
-			      (org-pro-view-documents-format "header" 0 nil nil '
+			      (superman-view-documents-format "header" 0 nil nil '
 							     (("GitStatus" .  "GitStatus") 
 							      ("LastCommit" . "LastCommit") 
 							      ("FileName" . "FileName")))))
 		     (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
-		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 		     (org-agenda-view-columns-initially nil)
 		     (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
 		     (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
 		     ))
 	      (tags "NoteDate={.+}"
-		    ((org-agenda-files (quote (,(org-pro-get-index pro))))
-		     (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+		    ((org-agenda-files (quote (,(superman-get-index pro))))
+		     (org-agenda-finalize-hook 'superman-view-finalize-documents)
 		     (org-agenda-overriding-header "")
 		     (org-agenda-overriding-header (concat "\n"
-							   (org-pro-view-documents-format "header" 0 nil nil '(("NoteDate" .  "NoteDate")))))
+							   (superman-view-documents-format "header" 0 nil nil '(("NoteDate" .  "NoteDate")))))
 		     (org-agenda-property-list '("NoteDate"))
-		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 		     (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
 		     (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
 		     (org-agenda-view-columns-initially nil))))))))
@@ -151,86 +151,64 @@ or by adding whitespace characters."
     ;; (rename-buffer view-buf)
     ))
 
-(defun org-pro-view-documents (&optional project)
+(defun superman-view-documents (&optional project)
   "View documents of the current project."
   (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro)))
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
-	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	 (org-agenda-finalize-hook 'superman-view-finalize-documents)
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
-
 	 (org-agenda-custom-commands
-	  `("d" "view Project-DOCUMENTS" tags ,(concat (org-pro-property 'filename) "={.+}")
-	    ,(mapcar '(lambda (key)
-			(list 'todo key
-			      `((org-agenda-files (quote (,(org-pro-get-index pro))))
-				(org-agenda-finalize-hook 'org-pro-view-finalize-documents)
-				(org-agenda-overriding-header
-				 (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-					 "\nProject: "  ,(car pro)
-					 "\nControl: " (or (org-pro-view-control) 
-							   (concat "press `I' to initialize git"))
-					 "\n\nDocuments: " "\n"
-					 (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
-				;; (org-agenda-property-list (quote (,(org-pro-property 'gitstatus)
-				;; 					,(org-pro-property 'lastcommit)
-				;; 					,(org-pro-property 'filename))))
-				(org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
-				(org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
-				(org-agenda-view-columns-initially nil)
-				(org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
-				)))))))
-
-	 ;; (org-agenda-custom-commands
-	 ;;  `(("d" "view Project-DOCUMENTS" tags ,(concat (org-pro-property 'filename) "={.+}")
-	 ;;     ((org-agenda-files (quote (,(org-pro-get-index pro))))
-	 ;;      (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
-	 ;;      (org-agenda-overriding-header
-	 ;;       (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-	 ;; 	       "\nProject: "  ,(car pro)
-	 ;; 	       "\nControl: " (or (org-pro-view-control) 
-	 ;; 				 (concat "press `I' to initialize git"))
-	 ;; 	       "\n\nDocuments: " "\n"
-	 ;; 	       (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
-	 ;;      ;; (org-agenda-property-list (quote (,(org-pro-property 'gitstatus)
-	 ;;      ;; 					,(org-pro-property 'lastcommit)
-	 ;;      ;; 					,(org-pro-property 'filename))))
-	 ;;      (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
-	 ;;      (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
-	 ;;      (org-agenda-view-columns-initially nil)
-	 ;;      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
-	 ;;      )))))
+	  `(("d" "view Project-DOCUMENTS" tags ,(concat (superman-property 'filename) "={.+}")
+	     ((org-agenda-files (quote (,(superman-get-index pro))))
+	      (org-agenda-finalize-hook 'superman-view-finalize-documents)
+	      (org-agenda-overriding-header
+	       (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+		       "\nProject: "  ,(car pro)
+		       "\nControl: " (or (superman-view-control) 
+					 (concat "press `I' to initialize git"))
+		       "\n\nDocuments: " "\n"
+		       (superman-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+	      (org-agenda-property-list (quote (,(superman-property 'gitstatus)
+						,(superman-property 'lastcommit)
+						,(superman-property 'filename))))
+	      (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
+	      (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+	      (org-agenda-view-columns-initially nil)
+	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
+	      )))))
     (push ?d unread-command-events)
     (call-interactively 'org-agenda)))
-;; (org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
+
+;; (org-let lprops '(superman-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
 ;; (rename-buffer view-buf)
 ;; (put 'org-agenda-redo-command 'org-lprops lprops)))
 
 
-;; (defun org-pro-view-documents-1 (&optional project)
+;; (defun superman-view-documents-1 (&optional project)
 ;;   "View documents of the current project."
 ;;   (interactive)
-;;   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-;; 	 (loc (concat (org-pro-get-location pro) (car pro)))
+;;   (let* ((pro (or project superman-current-project (superman-select-project)))
+;; 	 (loc (concat (superman-get-location pro) (car pro)))
 ;; 	 (view-buf (concat "*Documents[" (car pro) "]*")))
 ;;     (if (get-buffer view-buf)
 ;; 	(switch-to-buffer view-buf)
 ;;       (put 'org-agenda-redo-command 'org-lprops nil)
 ;;       (let ((lprops
-;; 	     `((org-agenda-files (quote (,(org-pro-get-index pro))))
-;; 	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+;; 	     `((org-agenda-files (quote (,(superman-get-index pro))))
+;; 	       (org-agenda-finalize-hook 'superman-view-finalize-documents)
 ;; 	       (org-agenda-overriding-header
 ;; 		(concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
 ;; 			"\nProject: "  ,(car pro)
-;; 			"\nControl: " (or (org-pro-view-control) 
+;; 			"\nControl: " (or (superman-view-control) 
 ;; 					  (concat "press `I' to initialize git"))
 ;; 			"\n\nDocuments: " "\n"
-;; 			(org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
-;; 	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+;; 			(superman-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+;; 	       (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 ;; 	       (org-agenda-view-columns-initially nil)
 ;; ;;	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
-;; 	(org-let lprops '(org-pro-tags-view-plus nil (concat (org-pro-property 'filename) "={.+}") '("GitStatus" "LastCommit" "FileName")))
+;; 	(org-let lprops '(superman-tags-view-plus nil (concat (superman-property 'filename) "={.+}") '("GitStatus" "LastCommit" "FileName")))
 ;; 	(rename-buffer view-buf)
 ;; 	(put 'org-agenda-redo-command 'org-lprops lprops)))))
 
@@ -370,7 +348,7 @@ Pressing `<' twice means to restrict to the current subtree or region
 				      org-agenda-window-setup))
 	   (org-agenda-custom-commands-orig org-agenda-custom-commands)
 	   (org-agenda-custom-commands
-	    ;; normalize different versions
+	    ;; normlize different versions
 	    (delq nil
 		  (mapcar
 		   (lambda (x)
@@ -515,10 +493,10 @@ Pressing `<' twice means to restrict to the current subtree or region
 ;;}}}
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
-;; replaces org-scan-tags by org-pro-scan-tags-plus
+;; replaces org-scan-tags by superman-scan-tags-plus
 ;; additional argument: get-properties
-;; (defun org-pro-tags-view-plus (&optional todo-only match get-prop-list)
-(defun org-pro-tags-view-plus (&optional todo-only match get-prop-list)
+;; (defun superman-tags-view-plus (&optional todo-only match get-prop-list)
+(defun superman-tags-view-plus (&optional todo-only match get-prop-list)
   "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
 The prefix arg TODO-ONLY limits the search to TODO entries.
 
@@ -548,7 +526,7 @@ Additional properties can be specified as a list of property keywords GET-PROP-L
       (org-set-sorting-strategy 'tags)
       (setq org-agenda-query-string match)
       (setq org-agenda-redo-command
-	    (list 'org-pro-tags-view-plus `(quote ,todo-only)
+	    (list 'superman-tags-view-plus `(quote ,todo-only)
 		  (list 'if 'current-prefix-arg nil `(quote ,org-agenda-query-string))
 		  `(quote ,get-prop-list)))
       ;; (put 'org-agenda-redo-command 'org-lprops)
@@ -574,7 +552,7 @@ Additional properties can be specified as a list of property keywords GET-PROP-L
 		      (narrow-to-region org-agenda-restrict-begin
 					org-agenda-restrict-end)
 		    (widen))
-		  (setq rtn (org-pro-scan-tags-plus 'agenda matcher todo-only nil get-prop-list))
+		  (setq rtn (superman-scan-tags-plus 'agenda matcher todo-only nil get-prop-list))
 		  (setq rtnall (append rtnall rtn))))))))
       (if org-agenda-overriding-header
 	  (insert (org-add-props (copy-sequence org-agenda-overriding-header)
@@ -606,7 +584,7 @@ Additional properties can be specified as a list of property keywords GET-PROP-L
 
 ;; hack of org-scan-tags version 7.9.2 (copy: 06 Jan 2013 (10:28))
 ;; additional argument: get-prop-list
-;; (defun org-pro-scan-tags-plus (action matcher todo-only &optional start-level get-prop-list)
+;; (defun superman-scan-tags-plus (action matcher todo-only &optional start-level get-prop-list)
 (defun org-scan-tags (action matcher todo-only &optional start-level)
   "Scan headline tags with inheritance and produce output ACTION.
 
@@ -722,13 +700,13 @@ headlines matching this string."
 		;; (setq prop-list
 		;; (mapcar
 		;; '(lambda (prop)
-		;; (cons prop (or (org-pro-get-property (point) prop 'inherit)
+		;; (cons prop (or (superman-get-property (point) prop 'inherit)
 		;; "not set"
 		;; ""))) get-prop-list))
 		(setq prop-list
 		      (mapcar
 		       '(lambda (prop)
-			  (cons prop (or (org-pro-get-property (point) prop 'inherit)
+			  (cons prop (or (superman-get-property (point) prop 'inherit)
 					 "not set"
 					 ""))) org-agenda-property-list))
 	      (setq prop-list ""))
@@ -787,7 +765,7 @@ headlines matching this string."
 
 ;; hack of org-agenda-todo version 7.9.2 (copy: 05 Jan 2013 (10:28))
 ;; to remote control git status (instead of TODO status)
-(defun org-pro-document-status (&optional arg)
+(defun superman-document-status (&optional arg)
   "Cycle document state of line at point, also in Org-mode file.
 This changes the line at point, all other lines in the agenda referring to
 the same tree node, and the headline of the tree node in the Org-mode file."
@@ -811,7 +789,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 	  (and (outline-next-heading)
 	       (org-flag-heading nil)))   ; show the next heading
 	(let ((current-prefix-arg arg)
-	      (statlist (call-interactively 'org-pro-git-set-status-at-point)))
+	      (statlist (call-interactively 'superman-git-set-status-at-point)))
 	  (and (bolp) (forward-char 1))
 	(setq newhead (concat " " (nth 1 statlist) " " (org-get-heading))))
 	(when (and (org-bound-and-true-p
@@ -847,57 +825,57 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 ;;}}}
 ;;{{{ summary-view commands
 
-;;(require 'org-pro-git)
+;;(require 'superman-git)
 
-(defun org-pro-view-git-init ()
+(defun superman-view-git-init ()
   (interactive)
-  (let ((pro (or (org-pro-view-current-project) (org-pro-select-project))))
-  (org-pro-git-init-directory (concat (org-pro-get-location pro) (car pro)))
+  (let ((pro (or (superman-view-current-project) (superman-select-project))))
+  (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
   (org-agenda-redo)))
 
-;; (defun org-pro-view-set (&optional dont-redo)
+;; (defun superman-view-set (&optional dont-redo)
   ;; "Set a property for document at point."
   ;; (interactive)
   ;; (let ((prop "Property"
   ;; (org-entry-put 
   ;; (org-agenda-redo))
 
-;; (defun org-pro-view-mark-item ()
+;; (defun superman-view-mark-item ()
   ;; (if (org-get-at-bol 'org-hd-marker)
       ;; (let ((buffer-read-only nil))
 	;; (add-text-properties (point-at-bol) (point-at-eol) '(:org-view-mark t)))))
 
-;; (defun org-pro-view-unmark-item ()
+;; (defun superman-view-unmark-item ()
   ;; (if (org-get-at-bol 'org-hd-marker)
       ;; (let ((buffer-read-only nil))
 	;; (add-text-properties (point-at-bol) (point-at-eol) '(:org-view-mark nil)))))
 
-(defun org-pro-view-return ()
+(defun superman-view-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker)))
-    (org-open-link-from-string (org-pro-get-property m "filename"))))
+    (org-open-link-from-string (superman-get-property m "filename"))))
 
-(defun org-pro-view-git-log (arg)
+(defun superman-view-git-log (arg)
   (interactive "p")
-  (org-pro-git-log-at-point arg))
+  (superman-git-log-at-point arg))
 
-(defun org-pro-view-git-log-decorationonly (arg)
+(defun superman-view-git-log-decorationonly (arg)
   (interactive "p")
-  (org-pro-git-log-decorationonly-at-point arg))
+  (superman-git-log-decorationonly-at-point arg))
 
-(defun org-pro-view-git-search (arg)
+(defun superman-view-git-search (arg)
   (interactive "p")
-  (org-pro-git-search-at-point arg))
+  (superman-git-search-at-point arg))
 
-(defun org-pro-view-git-set-status (&optional save redo check)
+(defun superman-view-git-set-status (&optional save redo check)
   (interactive)
-  (let ((file (org-pro-filename-at-point))
+  (let ((file (superman-filename-at-point))
 	(pom  (org-get-at-bol 'org-hd-marker)))
-    (org-pro-git-set-status pom file check)
-    (when save (org-pro-view-save-hd-buffer))
+    (superman-git-set-status pom file check)
+    (when save (superman-view-save-hd-buffer))
     (when redo (org-agenda-redo))))
 
-(defun org-pro-view-save-hd-buffer ()
+(defun superman-view-save-hd-buffer ()
   (save-excursion
     (goto-char (point-min))
     (org-agenda-next-item 1)
@@ -905,58 +883,58 @@ the same tree node, and the headline of the tree node in the Org-mode file."
      (marker-buffer (org-get-at-bol 'org-hd-marker)))
     (save-buffer)))
 
-(defun org-pro-view-update-all ()
+(defun superman-view-update-all ()
   (interactive)
-  (org-pro-view-loop 'org-pro-view-git-set-status (list nil nil nil))
-  (org-pro-view-save-hd-buffer)
+  (superman-view-loop 'superman-view-git-set-status (list nil nil nil))
+  (superman-view-save-hd-buffer)
   (org-agenda-redo))
 
-(defun org-pro-view-update ()
+(defun superman-view-update ()
   (interactive)
-  (org-pro-view-git-set-status 'save 'redo nil))
+  (superman-view-git-set-status 'save 'redo nil))
 
-;; (defun org-pro-summary-save-and-redo ()
+;; (defun superman-summary-save-and-redo ()
   ;; "Save buffer associated with current item. Then redo agenda view."
   ;; (interactive)
-  ;; (org-pro-view-save-hd-buffer)
+  ;; (superman-view-save-hd-buffer)
   ;; (org-agenda-redo))
 
 
-;; (defun org-pro-view-new-document ()
-  ;; (unless org-pro-view-mode (error "Can only be called from document view mode."))
-  ;; (let* ((pro (org-pro-view-current-project))
+;; (defun superman-view-new-document ()
+  ;; (unless superman-view-mode (error "Can only be called from document view mode."))
+  ;; (let* ((pro (superman-view-current-project))
 	 ;; (filename (read-file-name "Document file"
-				   ;; (concat (org-pro-get-location pro) (car pro)))))
+				   ;; (concat (superman-get-location pro) (car pro)))))
     ;; (save-excursion
-      ;; (org-pro-goto-project-documents pro
-      ;; (find-file (org-pro-get-index pro)))))
+      ;; (superman-goto-project-documents pro
+      ;; (find-file (superman-get-index pro)))))
     
-(defun org-pro-view-git-add (&optional dont-redo)
+(defun superman-view-git-add (&optional dont-redo)
   "Add but not commit the file given by the filename property
 of the item at point.
 
 If dont-redo the agenda is not reversed."
   (interactive)
-  (let* ((filename (org-pro-filename-at-point))
+  (let* ((filename (superman-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename)))))
-    (org-pro-git-add file dir nil nil)
-    (org-pro-view-git-set-status 'save (not dont-redo) nil)))
+    (superman-git-add file dir nil nil)
+    (superman-view-git-set-status 'save (not dont-redo) nil)))
 
-(defun org-pro-view-git-commit (&optional dont-redo)
+(defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
 of the item at point.
 
 If dont-redo the agenda is not reversed."
   (interactive)
-  (let* ((filename (org-pro-filename-at-point))
+  (let* ((filename (superman-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename)))))
-    (org-pro-git-add file dir 'commit nil)
-  (org-pro-view-git-set-status 'save (not dont-redo) nil)))
+    (superman-git-add file dir 'commit nil)
+  (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 
-(defun org-pro-view-loop (fun args)
+(defun superman-view-loop (fun args)
   "Call function on all items."
   (let (loop-out)
   (save-excursion
@@ -968,65 +946,65 @@ If dont-redo the agenda is not reversed."
       (goto-char (next-single-property-change (point) 'org-marker)))
     loop-out)))
 
-(defun org-pro-view-git-add-all (&optional dont-redo)
+(defun superman-view-git-add-all (&optional dont-redo)
   (interactive)
-   (org-pro-view-loop 'org-pro-view-git-add (list 'dont))
+   (superman-view-loop 'superman-view-git-add (list 'dont))
    (unless dont-redo (org-agenda-redo)))
 
-(defun org-pro-view-git-commit-all (&optional commit dont-redo)
+(defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
-  (let* ((pro (org-pro-view-current-project))
-	 (dir (concat (org-pro-get-location pro) (car pro))))
-    ;; (files (org-pro-view-loop 'org-pro-filename-at-point (list nil))))
-    (org-pro-view-git-add-all 'dont)
-    (org-pro-git-commit dir (concat "Git commit message for selected files in " dir ": "))
-    (org-pro-view-update-all)
+  (let* ((pro (superman-view-current-project))
+	 (dir (concat (superman-get-location pro) (car pro))))
+    ;; (files (superman-view-loop 'superman-filename-at-point (list nil))))
+    (superman-view-git-add-all 'dont)
+    (superman-git-commit dir (concat "Git commit message for selected files in " dir ": "))
+    (superman-view-update-all)
     (unless dont-redo (org-agenda-redo))))
 
 ;;}}}
 ;;{{{ summary-view-mode
 
-(defvar org-pro-view-mode-map (make-sparse-keymap)
-  "Keymap used for `org-pro-view-mode' commands.")
+(defvar superman-view-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-view-mode' commands.")
    
-(define-minor-mode org-pro-view-mode 
+(define-minor-mode superman-view-mode 
      "Toggle org projectmanager document view mode.
-                   With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
+                   With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
                    turn it off.
                    
-                   Enabling org-pro-view mode electrifies the column view for documents
+                   Enabling superman-view mode electrifies the column view for documents
                    for git and other actions like commit, history search and pretty log-view."
      :lighter " pro"
      :group 'org
-     :keymap 'org-pro-view-mode-map)
+     :keymap 'superman-view-mode-map)
 
-(defun org-pro-view-mode-on ()
+(defun superman-view-mode-on ()
   (interactive)
-  (org-pro-view-mode t))
+  (superman-view-mode t))
    
-(define-key org-pro-view-mode-map [return] 'org-pro-view-return) ;; Return is not used anyway in column mode
-(define-key org-pro-view-mode-map "l" 'org-pro-view-git-log) 
-(define-key org-pro-view-mode-map "L" 'org-pro-view-git-log-decorationonly)
-(define-key org-pro-view-mode-map "n" 'org-pro-view-register-document)
-(define-key org-pro-view-mode-map "r" 'org-agenda-redo)
-;; (define-key org-pro-view-mode-map "R" 'org-pro-view-git)
-(define-key org-pro-view-mode-map "a" 'org-pro-view-git-add)
-(define-key org-pro-view-mode-map "A" 'org-pro-view-git-add-all)
-(define-key org-pro-view-mode-map "S" 'org-pro-view-git-search)
-(define-key org-pro-view-mode-map "h" 'org-pro-show-help)
-(define-key org-pro-view-mode-map "u" 'org-pro-view-update)
-(define-key org-pro-view-mode-map "I" 'org-pro-view-git-init)
-(define-key org-pro-view-mode-map "U" 'org-pro-view-update-all)
-(define-key org-pro-view-mode-map "c" 'org-pro-view-git-commit)
-(define-key org-pro-view-mode-map "C" 'org-pro-view-git-commit-all)
-;; (define-key org-pro-view-mode-map "c" 'org-agenda-columns)
+(define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
+(define-key superman-view-mode-map "l" 'superman-view-git-log) 
+(define-key superman-view-mode-map "L" 'superman-view-git-log-decorationonly)
+(define-key superman-view-mode-map "n" 'superman-view-register-document)
+(define-key superman-view-mode-map "r" 'org-agenda-redo)
+;; (define-key superman-view-mode-map "R" 'superman-view-git)
+(define-key superman-view-mode-map "a" 'superman-view-git-add)
+(define-key superman-view-mode-map "A" 'superman-view-git-add-all)
+(define-key superman-view-mode-map "S" 'superman-view-git-search)
+(define-key superman-view-mode-map "h" 'superman-show-help)
+(define-key superman-view-mode-map "u" 'superman-view-update)
+(define-key superman-view-mode-map "I" 'superman-view-git-init)
+(define-key superman-view-mode-map "U" 'superman-view-update-all)
+(define-key superman-view-mode-map "c" 'superman-view-git-commit)
+(define-key superman-view-mode-map "C" 'superman-view-git-commit-all)
+;; (define-key superman-view-mode-map "c" 'org-agenda-columns)
 
 
-(defun org-pro-show-help ()
+(defun superman-show-help ()
   (interactive)
   (split-window-vertically)  
   (other-window 1)
-  (switch-to-buffer "*org-pro-help-buffer*")
+  (switch-to-buffer "*superman-help-buffer*")
   (toggle-read-only -1)
   (erase-buffer)
   (insert "'<ret>':\t\t Open file (or revision) at point\n")
@@ -1048,7 +1026,7 @@ If dont-redo the agenda is not reversed."
 ;;}}}
 ;;{{{ remote control
 ;; hack of org-agenda-todo
-(defun org-pro-treat-document (&optional arg)
+(defun superman-treat-document (&optional arg)
   (interactive "P")
   (org-agenda-check-no-diary)
   (let* ((col (current-column))
@@ -1072,7 +1050,7 @@ If dont-redo the agenda is not reversed."
 		 (if (re-search-forward ":Hash:" nil t)
 		     (progn 
 		       (widen)
-		       (org-pro-git-revision-at-point)
+		       (superman-git-revision-at-point)
 		       (let ((buffer-file-name (expand-file-name (buffer-name)))) (normal-mode))))
 		 (if (re-search-forward ":filename:" nil t)
 		     (progn 
@@ -1080,19 +1058,19 @@ If dont-redo the agenda is not reversed."
 		       (org-open-at-point-global)
 		       (widen))))
 		((string= prop "GitStatus")
-		 (nth 1 (org-pro-git-get-status-at-point))
+		 (nth 1 (superman-git-get-status-at-point))
 		 (org-columns-redo))
 		((string= prop "Decoration")
-		 (org-pro-git-tag-at-point)
+		 (superman-git-tag-at-point)
 		 (org-columns-redo))
 		((string= prop "filename")    
 		 (org-columns-open-link))
 		((string= prop "Other")
 		 (org-columns-open-link))
 		((string= prop "Hash")
-		 (org-pro-git-revision-at-revision))
+		 (superman-git-revision-at-revision))
 		((string= prop "LastCommit")
-		 (org-pro-git-commit-at-point)
+		 (superman-git-commit-at-point)
 		 (org-columns-redo))
 		(t (org-columns-edit-value)))))
 	(save-excursion
@@ -1103,10 +1081,10 @@ If dont-redo the agenda is not reversed."
 ;;}}}
 ;;{{{ capture documents, notes, etc.
 
-(defun org-pro-goto-project (&optional project heading create prop-alist)
+(defun superman-goto-project (&optional project heading create prop-alist)
   (interactive)
-  (let* ((pro (or project (org-pro-select-project)))
-	 (index (org-pro-get-index pro))
+  (let* ((pro (or project (superman-select-project)))
+	 (index (superman-get-index pro))
 	 hiddenp
 	 (head (or heading (read-string "Goto heading: "))))
     (if index
@@ -1131,36 +1109,36 @@ If dont-redo the agenda is not reversed."
       ;; (forward-line)
       ;; (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1))))))
 
-(defun org-pro-goto-project-workflow ()
+(defun superman-goto-project-workflow ()
   (interactive)
-  (or (org-pro-goto-project nil "WorkFlow" 'create)))
+  (or (superman-goto-project nil "WorkFlow" 'create)))
 
-(defun org-pro-goto-project-notes ()
+(defun superman-goto-project-notes ()
   (interactive)
-  (or (org-pro-goto-project nil "Notes" 'create)))
+  (or (superman-goto-project nil "Notes" 'create)))
 
-(defun org-pro-goto-project-documents (&optional narrow)
+(defun superman-goto-project-documents (&optional narrow)
   (interactive)
-  (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
-      (if narrow (org-pro-view-mode t))))
+  (or (superman-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
+      (if narrow (superman-view-mode t))))
 
-(defun org-pro-insert-list-files (&optional postfix)
+(defun superman-insert-list-files (&optional postfix)
   (interactive)
-  (let ((files (org-pro-list-files "." 
+  (let ((files (superman-list-files "." 
 				   (or postfix (concat (read-string "Postfix: ") "$")) nil)))
     (insert "\n")
     (loop for x in files
 	  do 
 	  (insert (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:filename: [[" (file-relative-name x) "]]\n:END:\n")))))
 
-(defun org-pro-goto-project-taskpool (&optional arg)
+(defun superman-goto-project-taskpool (&optional arg)
   (interactive)
   (if arg (org-store-link nil))
   (let* ((buf (current-buffer))
-	 (pro (car (org-pro-select-project)))
-	 ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
-	 (entry (assoc pro org-pro-project-alist))
-	 (index (org-pro-get-index entry)))
+	 (pro (car (superman-select-project)))
+	 ;;             (pro (ido-completing-read "Select project: " superman-project-alist))
+	 (entry (assoc pro superman-project-alist))
+	 (index (superman-get-index entry)))
     (if index
 	(find-file index)
       (error (concat "Project " pro " does not have an index.")))
@@ -1174,36 +1152,36 @@ If dont-redo the agenda is not reversed."
 
 
 ;; Choose a prefix
-(setq org-pro-capture-prefix "P")
-(add-to-list 'org-capture-templates `(,org-pro-capture-prefix "Project management") 'append)
-(defun org-pro-capture() 
+(setq superman-capture-prefix "P")
+(add-to-list 'org-capture-templates `(,superman-capture-prefix "Project management") 'append)
+(defun superman-capture() 
   (interactive)
-  (push (string-to-char org-pro-capture-prefix) unread-command-events)
+  (push (string-to-char superman-capture-prefix) unread-command-events)
   (call-interactively 'org-capture))
 ;; Capturing links 
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "l") "Add link" plain 
-				      (function (lambda () (org-pro-goto-project nil "Links" 'yes))) "\n - %x%?") 'append)
+(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
+				      (function (lambda () (superman-goto-project nil "Links" 'yes))) "\n - %x%?") 'append)
 ;; Capturing tasks
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "t") "Add task" plain
-				      (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "c") "Add checklist item" plain
-				      (function org-pro-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "t") "Add task" plain
+				      (function superman-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
+				      (function superman-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing notes
-(add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add note" plain
-				      (function org-pro-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "n") "Add note" plain
+				      (function superman-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing documents
 (add-to-list 'org-capture-templates
-	     `(,(concat org-pro-capture-prefix "d") "Add document" plain
-	       (function org-pro-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append)
+	     `(,(concat superman-capture-prefix "d") "Add document" plain
+	       (function superman-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append)
 
 ;;}}}
 ;;{{{ Adding documents from file-list
 
-(defun org-pro-add-documents (&optional file-list)
+(defun superman-add-documents (&optional file-list)
   (interactive)
   (let* ((fl (or file-list file-list-current-file-list)))
-    ;; FIXME need to write org-pro-get-documents and filter duplicates
-    (org-pro-goto-project-documents)
+    ;; FIXME need to write superman-get-documents and filter duplicates
+    (superman-goto-project-documents)
     (while fl
       (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (file-list-make-file-name (car fl))))
 	      "\n:PROPERTIES:\n:filename: [["(file-list-make-file-name (car fl))"]]\n:CaptureDate: ")
@@ -1211,20 +1189,20 @@ If dont-redo the agenda is not reversed."
       (insert "\n:END:")
       (setq fl (cdr fl)))))
 
-(defun org-pro-view-register-document (&optional file-list)
+(defun superman-view-register-document (&optional file-list)
   (interactive)
-  (let* ((pro (org-pro-view-current-project))
-	 (dir (expand-file-name (concat (org-pro-get-location pro) (car pro))))
+  (let* ((pro (superman-view-current-project))
+	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
 	 (fl (or file-list `(,(read-file-name (concat "Choose: ") (file-name-as-directory dir))))))
-    ;; FIXME need to write org-pro-get-documents and filter duplicates
+    ;; FIXME need to write superman-get-documents and filter duplicates
     (save-window-excursion
-      (org-pro-goto-project pro "Documents")
+      (superman-goto-project pro "Documents")
       (while fl
 	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
 		"\n:PROPERTIES:\n:"
-		(org-pro-property 'filename) ": [["(car fl)"]]\n:"
-		(org-pro-property 'gitstatus) ": Unknown\n:"
-		(org-pro-property 'capturedate) ": ")
+		(superman-property 'filename) ": [["(car fl)"]]\n:"
+		(superman-property 'gitstatus) ": Unknown\n:"
+		(superman-property 'capturedate) ": ")
 	(org-insert-time-stamp (current-time) t)
 	(insert "\n:END:\n")
 	(setq fl (cdr fl)))
@@ -1234,6 +1212,6 @@ If dont-redo the agenda is not reversed."
 
 ;;}}}
 
-(provide 'org-pro-summary)
-;;; org-pro-summary.el ends here
+(provide 'superman-summary)
+;;; superman-summary.el ends here
 
