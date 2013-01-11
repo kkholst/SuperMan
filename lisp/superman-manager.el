@@ -607,7 +607,8 @@ Examples:
     (save-excursion
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
-      (org-entry-put (point) "LastVisit" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))))))
+      (org-entry-put (point) "LastVisit" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)))
+      (save-buffer))))
 
 (defun superman-save-project (&optional project)
     (interactive)
