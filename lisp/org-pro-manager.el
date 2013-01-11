@@ -44,6 +44,44 @@
 
 ;;{{{ variables and user options
 
+(defvar org-pro-property-list 
+  '((index . "Index")
+    (nickname . "NickName")
+    (gitstatus . "GitStatus")
+    (hash . "Hash")
+    (author . "Author")
+    (decoration . "Decoration")
+    (gitpath . "GitPath")
+    (location . "Location")
+    (filename . "FileName")
+    (others . "Others")
+    (category . "Category")
+    (git . "Git")
+    (lastcommit . "LastCommit")
+    (capturedate . "CaptureDate")
+    (project . "Project")
+    (publish . "Publish")
+    (config . "Config")
+    (publishdirectory . "PublishDirectory")
+    (initialvisit . "InitialVisit"))  
+  "Association list with names of all org-pro properties.
+index: Name of the index property
+nickname: Name of the nick-name property
+gitstatus: Name of the git status property
+hash: Name of the git hash property
+author: Name of the git author property
+decoration: Name of the git decoration property
+gitpath: Name of the git path property
+location: Name of the location property
+filename: Name of the filename property
+others: Name of the others (collaborators) property
+category: Name of the category property
+")
+(defun org-pro-property (label)
+  (interactive)
+  (cdr (assoc label org-pro-property-list))
+)
+
 (defvar org-pro-default-directory
   (file-name-as-directory org-directory)
   "A place for new projects.")
@@ -263,16 +301,16 @@ the `org-pro-file'.")
     (save-buffer)
     (goto-char (point-min))
     (while (org-pro-forward-project)
-      (let* ((loc (or (org-pro-get-property nil "LOCATION" 'inherit) org-pro-default-directory))
-	     (category (org-pro-get-property nil "CATEGORY" 'inherit))
-	     (others (org-pro-get-property nil "OTHERS" nil))
-	     (publish-dir (org-pro-get-property nil "PUBLISH" 'inherit))
-	     (name (or (org-pro-get-property nil "NICKNAME" nil)
+      (let* ((loc (or (org-pro-get-property nil (org-pro-property 'location) 'inherit) org-pro-default-directory))
+	     (category (org-pro-get-property nil (org-pro-property 'category) 'inherit))
+	     (others (org-pro-get-property nil (org-pro-property 'others) nil))
+	     (publish-dir (org-pro-get-property nil (org-pro-property 'publish) 'inherit))
+	     (name (or (org-pro-get-property nil (org-pro-property 'nickname) nil)
 		       (nth 4 (org-heading-components))))
-	     (git (org-pro-get-property nil "GIT" 'inherit))
-	     (config (org-pro-get-property nil "config" 'inherit))
+	     (git (org-pro-get-property nil (org-pro-property 'git) 'inherit))
+	     (config (org-pro-get-property nil (org-pro-property 'config) 'inherit))
 	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (org-pro-get-property nil "INDEX" nil)
+	     (index (or (org-pro-get-property nil (org-pro-property 'index) nil)
 			(let ((default-org-home
 				(concat (file-name-as-directory loc)
 					name
@@ -312,7 +350,7 @@ the `org-pro-file'.")
   (set-buffer (find-file-noselect org-pro-file))
   (unless (org-pro-manager-mode 1))
   (setq org-pro-project-categories
-	(reverse (org-pro-get-buffer-props "CATEGORY"))))
+	(reverse (org-pro-get-buffer-props (org-pro-property 'category)))))
   
 (defun org-pro-refresh ()
   "Parses the categories and projects in file `org-pro-file' and also
@@ -372,9 +410,15 @@ the `org-pro-file'.")
 	   `(("p" "Project" plain
 	      (file+headline org-pro-file ,category)
 	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
-		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:NickName: "
+		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:" 
+		       (org-pro-property 'nickname) ": "
 		       nickname
-		       "\n:Location: \n:Category: " category "\n:Index:\n:InitialVisit:" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)) " \n:Others: \n:END:\n"))))
+		       "\n:" (org-pro-property 'location) ": \n:"
+		       (org-pro-property 'category) ": " category 
+		       "\n:" (org-pro-property 'index) 
+		       ":\n:" (org-pro-property 'initialvisit) ": " 
+		       (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)) 
+		       " \n:" (org-pro-property 'others) ": \n:END:\n"))))
 	  (org-capture-bookmark nil))
       (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
       (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (org-pro-create-project ,nickname 'ask)) nil 'local)
@@ -399,9 +443,9 @@ the `org-pro-file'.")
 (defun org-pro-complete-property ()
   (interactive)
   (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-    (cond ((string= (downcase curprop) "index")
+    (cond ((string= (downcase curprop) (downcase (org-pro-property 'index)))
 	   (insert (read-file-name (concat "Set " curprop ": "))))
-	  ((string= (downcase curprop) "location")
+	  ((string= (downcase curprop) (downcase (org-pro-property 'location)))
 	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
 
 (defun org-pro-move-project (&optional project)
@@ -420,8 +464,8 @@ the `org-pro-file'.")
       (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
 	  (rename-file index new-index))
       (org-pro-goto-profile pro)
-      (org-set-property "LOCATION" (file-name-directory target))
-      (org-set-property "INDEX" (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
+      (org-set-property (org-pro-property 'location) (file-name-directory target))
+      (org-set-property (org-pro-property 'index) (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
       (save-buffer))))
 
 
@@ -439,7 +483,7 @@ the `org-pro-file'.")
       (find-file org-pro-file)
       (unless (org-pro-manager-mode 1))
       (goto-char (point-min))
-      (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car pro)) nil t)
+      (re-search-forward (concat ":" (org-pro-property 'nickname) ":[ \t]?.*" (car pro)) nil t)
       ;; (org-show-subtree)
       ;; (org-mark-element)
       (message "If you delete this entry and then save the buffer, the project will disappear from the project-alist"))))
@@ -462,7 +506,7 @@ the active status of projects."
 (defun org-pro-set-nickname ()
   (interactive)
   (org-set-property
-   "NICKNAME"
+   (org-pro-property 'nickname)
    (read-string "NickName for project: "
 		(nth 4 (org-heading-components)))))
 
@@ -470,12 +514,12 @@ the active status of projects."
   (interactive)
   (let* ((pro (assoc (org-pro-project-at-point t)
 		     org-pro-project-alist))
-	 (others (cdr (assoc "others" (cadr pro))))
+	 (others (cdr (assoc (org-pro-property 'others) (cadr pro))))
 	 (init (if others (concat others ", ") "")))
     ;; (org-entry-get nil "others")
     (if pro
 	(org-set-property
-	 "others"
+	 (org-pro-property 'others)
 	 (replace-regexp-in-string
 	  "[,\t ]+$" ""     (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
@@ -487,6 +531,7 @@ the active status of projects."
   (goto-char (point-min))
   (while (org-pro-forward-project)
     (org-pro-set-others)))
+
 ;;}}}
 ;;{{{ listing projects
 

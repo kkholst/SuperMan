@@ -41,7 +41,7 @@
 
 (defun org-pro-set-property ()
   (interactive)
-  (let* ((prop-list '(("Location" . nil) ("Index" . nil) ("Category" . nil) ("Others" . nil) ("PublishDirectory" . nil)))
+  (let* ((prop-list '(((org-pro-property 'location) . nil) ((org-pro-property 'index) . nil) ((org-pro-property 'category) . nil) ((org-pro-property 'others) . nil) ((org-pro-property 'publishdirectory) . nil)))
 	 (prop (completing-read "Set property: " prop-list))
 	 (pom (org-get-at-bol 'org-hd-marker))
 	 (curval (org-entry-get pom prop))
@@ -52,7 +52,7 @@
 
 (defun org-superman-return ()
   (interactive)
-  (let ((pro (assoc (org-pro-property-at-point "NickName") org-pro-project-alist)))
+  (let ((pro (assoc (org-pro-property-at-point (org-pro-property 'nickname)) org-pro-project-alist)))
     (org-pro-switch-to-project 'force pro)))
 
 (defun org-pro-finalize-superman ()
@@ -77,7 +77,7 @@
   "Manage projects."
   (interactive)
   (let* ((view-buf-name (concat "*Superman*"))
-	 (org-agenda-overriding-buffer-name view-buf-name)
+;;	 (org-agenda-overriding-buffer-name view-buf-name)
 	 (org-agenda-finalize-hook 'org-pro-finalize-superman)
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
@@ -91,7 +91,8 @@
 			      (org-pro-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
 		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 		     (org-agenda-view-columns-initially nil)
-		     (org-agenda-buffer-name "*Superman*"))))))))
+;;		     (org-agenda-buffer-name "*Superman*")
+		     )))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
 

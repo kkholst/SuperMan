@@ -40,11 +40,13 @@
 
 ;;}}}
 ;;{{{ property set functions
+
 ;; (setq org-property-set-functions-alist nil)  
 ;; (add-to-list 'org-property-set-functions-alist
 	     ;; `("GitStatus" . org-pro-git-get-status-at-point))
 ;; (add-to-list 'org-property-set-functions-alist
 	     ;; `("LastCommit" . org-pro-git-add-at-point))
+
 ;;}}}
 ;;{{{ helper functions
 
@@ -111,7 +113,8 @@ Else return FILE as it is."
 
 (defun org-pro-filename-at-point ()
   "If property FileName exists at point return its value."
-  (let* ((file-or-link (org-pro-property-at-point "FileName")))
+  (let* ((file-or-link (org-pro-property-at-point (org-pro-property 
+'filename))))
     (if (not (stringp file-or-link))
 	(error "No proper(ty) FileName at point."))
     (org-link-display-format file-or-link)))
@@ -198,7 +201,7 @@ buffer is in org-agenda-mode."
 	 (git-status (nth 0 statlist))
 	 (git-label (nth 1 statlist)))
     ;; (org-property-changed-functions '(lambda (prop val) (save-buffer))))
-    (org-entry-put pom "GitStatus" git-label)
+    (org-entry-put pom (org-pro-property 'gitstatus) git-label)
     ;; (org-set-property "GitStatus" git-label)
     (unless (or (string= git-status "A") (string= git-status "E") (string= git-status "?"))
       (unless (org-pro-get-property pom "GitInit")
@@ -212,7 +215,7 @@ buffer is in org-agenda-mode."
   (interactive)
   (save-excursion 
     (goto-char (point-min))
-    (while (re-search-forward ":FileName:" nil t)
+    (while (re-search-forward (concat ":" (org-pro-property 'filename) ":") nil t)
       (org-pro-git-set-status-at-point nil))))
 
 ;;}}}
@@ -251,8 +254,8 @@ or if the file is not inside the location."
 (defun org-pro-git-add-at-point (&optional commit message check)
   "Add or update file FILE to git repository DIR."
   (interactive)
-  (let* ((file (org-pro-property-at-point "FileName"))
-	 (pro (assoc (org-pro-property-at-point "Project") org-pro-project-alist)))
+  (let* ((file (org-pro-property-at-point (org-pro-property 'filename)))
+	 (pro (assoc (org-pro-property-at-point (org-pro-property 'project)) org-pro-project-alist)))
     (org-pro-git-add (org-link-display-format file) pro commit message)
     (org-pro-git-set-status-at-point check)))
 
@@ -352,7 +355,8 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	(write-file logfile nil)
 	;;(delete-buffer logfile)
 	(goto-char (point-min))
-	(let* ((org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
+	(let* (
+	       ;;(org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 	       (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-custom-commands
@@ -363,16 +367,17 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 		    (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
 		    (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 		    (org-agenda-view-columns-initially nil)
-		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*")))))))
+;;		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
+		    )))))
 	  (push ?L unread-command-events)
 	  (call-interactively 'org-agenda))))))
 
 
 (defun org-pro-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (org-pro-filename-at-point)
-		   (org-pro-get-property nil "FileName" t)))
+		   (org-pro-get-property nil (org-pro-property 'filename) t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath")
+	 (gitpath (or gitpath (or (org-pro-property-at-point (org-pro-property 'gitpath))
 				  (org-pro-git-toplevel file))))
 	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
@@ -405,15 +410,15 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 (defun org-pro-git-tag (pom)
   "Set git tag"
   (interactive)
-  (let* ((hash (org-pro-get-property pom "Hash" nil))
-	 (oldtag (org-pro-get-property pom "Decoration" nil))
-	 (path (org-pro-get-property pom "GitPath" t))
+  (let* ((hash (org-pro-get-property pom (org-pro-property 'hash) nil))
+	 (oldtag (org-pro-get-property pom (org-pro-property 'decoration) nil))
+	 (path (org-pro-get-property pom (org-pro-property 'gitpath) t))
 	 (tag (read-string "Tag (empty to clear): ")))
     (if (string-equal tag "")
 	(progn 
 	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
 	  (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -d " oldtag)))
-      (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " Hash " -m \"\"")))) 
+      (shell-command-to-string (concat "cd " path ";" org-pro-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
 ;;  (save-excursion
 ;;    (goto-char (point-min))
 ;;    (org-pro-view-git-log))
@@ -426,9 +431,9 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 
 (defun org-pro-git-revision (pom &optional diff)
   "Shows version of the document at point "
-  (let* ((file (org-pro-get-property pom "FileName" t))
-	 (hash (org-pro-get-property pom "Hash" nil))
-	 (path (org-pro-get-property pom "GitPath" t))
+  (let* ((file (org-pro-get-property pom (org-pro-property 'filename) t))
+	 (hash (org-pro-get-property pom (org-pro-property 'hash) nil))
+	 (path (org-pro-get-property pom (org-pro-property 'gitpath) t))
 	 (fileabs (concat path file))
 	 (filehash (concat hash "_" file))
 	 (str (shell-command-to-string 

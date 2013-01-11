@@ -70,7 +70,7 @@ or by adding whitespace characters."
 		       (setq val (file-name-nondirectory (org-link-display-format val)))))
 		(setq pstring (concat pstring "  " (org-pro-trim-string val  23))))
 		(setq cprops (cdr cprops)))
-	    pstring) "\t"))
+	      pstring) "\t"))
 
 (defun org-pro-view-current-project ()
   ;; FIXME: may give problems when property "Project" does
@@ -110,13 +110,13 @@ or by adding whitespace characters."
   (interactive)
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
 	 (loc (concat (org-pro-get-location pro) (car pro)))
-	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
-	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
+	 ;;	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
+	 ;;	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-custom-commands
 	  `(("p" "view Project"
-	     ((tags "FileName={.+}"
+	     ((tags (concat ,(org-pro-property 'filename)  "={.+}")
 		    ((org-agenda-files (quote (,(org-pro-get-index pro))))
 		     (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 		     (org-agenda-overriding-header
@@ -125,7 +125,10 @@ or by adding whitespace characters."
 			      "\nControl: " (or (org-pro-view-control) 
 						(concat "press `I' to initialize git"))
 			      "\n\nDocuments: " "\n"
-			      (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+			      (org-pro-view-documents-format "header" 0 nil nil '
+							     (("GitStatus" .  "GitStatus") 
+							      ("LastCommit" . "LastCommit") 
+							      ("FileName" . "FileName")))))
 		     (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
 		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 		     (org-agenda-view-columns-initially nil)
@@ -153,11 +156,11 @@ or by adding whitespace characters."
   (interactive)
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
 	 (loc (concat (org-pro-get-location pro) (car pro)))
-	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
+	 ;;	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-custom-commands
-	  `(("d" "view Project-DOCUMENTS" tags "FileName={.+}"
+	  `(("d" "view Project-DOCUMENTS" tags ,(concat (org-pro-property 'filename) "={.+}")
 	     ((org-agenda-files (quote (,(org-pro-get-index pro))))
 	      (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 	      (org-agenda-overriding-header
@@ -167,43 +170,51 @@ or by adding whitespace characters."
 					 (concat "press `I' to initialize git"))
 		       "\n\nDocuments: " "\n"
 		       (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+	      ;; (org-agenda-property-list (quote (,(org-pro-property 'gitstatus)
+	      ;; 					,(org-pro-property 'lastcommit)
+	      ;; 					,(org-pro-property 'filename))))
 	      (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
 	      (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 	      (org-agenda-view-columns-initially nil)
-	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))))
+;;	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
+	      )))))
     (push ?d unread-command-events)
     (call-interactively 'org-agenda)))
 ;; (org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
 ;; (rename-buffer view-buf)
 ;; (put 'org-agenda-redo-command 'org-lprops lprops)))
 
-(defun org-pro-view-documents-1 (&optional project)
-  "View documents of the current project."
-  (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (loc (concat (org-pro-get-location pro) (car pro)))
-	 (view-buf (concat "*Documents[" (car pro) "]*")))
-    (if (get-buffer view-buf)
-	(switch-to-buffer view-buf)
-      (put 'org-agenda-redo-command 'org-lprops nil)
-      (let ((lprops
-	     `((org-agenda-files (quote (,(org-pro-get-index pro))))
-	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
-	       (org-agenda-overriding-header
-		(concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-			"\nProject: "  ,(car pro)
-			"\nControl: " (or (org-pro-view-control) 
-					  (concat "press `I' to initialize git"))
-			"\n\nDocuments: " "\n"
-			(org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
-	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
-	       (org-agenda-view-columns-initially nil)
-	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
-	(org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
-	(rename-buffer view-buf)
-	(put 'org-agenda-redo-command 'org-lprops lprops)))))
+
+;; (defun org-pro-view-documents-1 (&optional project)
+;;   "View documents of the current project."
+;;   (interactive)
+;;   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+;; 	 (loc (concat (org-pro-get-location pro) (car pro)))
+;; 	 (view-buf (concat "*Documents[" (car pro) "]*")))
+;;     (if (get-buffer view-buf)
+;; 	(switch-to-buffer view-buf)
+;;       (put 'org-agenda-redo-command 'org-lprops nil)
+;;       (let ((lprops
+;; 	     `((org-agenda-files (quote (,(org-pro-get-index pro))))
+;; 	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+;; 	       (org-agenda-overriding-header
+;; 		(concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+;; 			"\nProject: "  ,(car pro)
+;; 			"\nControl: " (or (org-pro-view-control) 
+;; 					  (concat "press `I' to initialize git"))
+;; 			"\n\nDocuments: " "\n"
+;; 			(org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+;; 	       (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+;; 	       (org-agenda-view-columns-initially nil)
+;; ;;	       (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))
+;; 	(org-let lprops '(org-pro-tags-view-plus nil (concat (org-pro-property 'filename) "={.+}") '("GitStatus" "LastCommit" "FileName")))
+;; 	(rename-buffer view-buf)
+;; 	(put 'org-agenda-redo-command 'org-lprops lprops)))))
+
 ;;{{{ copy of org-tags-view
+
 ;;;###autoload
+
 (defun org-tags-view (&optional todo-only match)
   "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
 The prefix arg TODO-ONLY limits the search to TODO entries."
@@ -287,8 +298,11 @@ The prefix arg TODO-ONLY limits the search to TODO entries."
 					     org-series-cmd ,org-cmd))
       (org-agenda-finalize)
       (setq buffer-read-only t))))
+
 ;;}}}
+
 ;;{{{ copy of org-agenda
+
 (defun org-agenda (&optional arg org-keys restriction)
   "Dispatch agenda commands to collect entries to the agenda buffer.
 Prompts for a command to execute.  Any prefix arg will be passed
@@ -474,6 +488,7 @@ Pressing `<' twice means to restrict to the current subtree or region
        ((equal org-keys "/") (call-interactively 'org-occur-in-agenda-files))
        ((equal org-keys "!") (customize-variable 'org-stuck-projects))
        (t (error "Invalid agenda key"))))))
+
 ;;}}}
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
@@ -1183,7 +1198,10 @@ If dont-redo the agenda is not reversed."
       (org-pro-goto-project pro "Documents")
       (while fl
 	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-		"\n:PROPERTIES:\n:FileName: [["(car fl)"]]\n:GitStatus: Unknown\n:CaptureDate: ")
+		"\n:PROPERTIES:\n:"
+		(org-pro-property 'filename) ": [["(car fl)"]]\n:"
+		(org-pro-property 'gitstatus) ": Unknown\n:"
+		(org-pro-property 'capturedate) ": ")
 	(org-insert-time-stamp (current-time) t)
 	(insert "\n:END:\n")
 	(setq fl (cdr fl)))
