@@ -355,23 +355,25 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	(write-file logfile nil)
 	;;(delete-buffer logfile)
 	(goto-char (point-min))
-	(let* (
-	       (org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
-	       (org-agenda-finalize-hook 'superman-view-finalize-documents)
+	(let* ((org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
+	       (org-agenda-finalize-hook 'superman-finalize-git-log)
 	       (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-custom-commands
-		`(("L" "view file history" tags "Hash={.+}"
-		   ((org-agenda-files (quote (,logfile)))
-		    (org-agenda-finalize-hook 'superman-git-log-mode-on)
-		    (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
-		    (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
-		    (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-		    (org-agenda-view-columns-initially nil)
-		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
-		    )))))
+		`(("L" "view file history"
+		   ((tags "Hash={.+}"
+			  ((org-agenda-files (quote (,logfile)))
+			   (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
+			   (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
+			   (org-agenda-view-columns-initially nil)
+			   (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+			   (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
+			   (org-agenda-finalize-hook 'superman-finalize-git-log)  
+			   )))))))
 	  (push ?L unread-command-events)
 	  (call-interactively 'org-agenda))))))
 
+(defun superman-finalize-git-log ()
+    (superman-git-log-mode-on))
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)
