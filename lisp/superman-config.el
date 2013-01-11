@@ -1,4 +1,4 @@
-;;; org-pro-config.el --- Project specific window configurations
+;;; superman-config.el --- Project specific window configurations
 
 ;; Copyright (C) 2012  Thomas Alexander Gerds
 
@@ -34,17 +34,17 @@
 
 ;;; Code:
 
-(defun org-pro-find-index (project)
-  (let* ((index (org-pro-get-index project)))
+(defun superman-find-index (project)
+  (let* ((index (superman-get-index project)))
     (unless (file-exists-p index)
       (unless (file-exists-p (file-name-directory index))
 	(make-directory (file-name-directory index) 'with-parents))
       (make-directory (file-name-directory index) 'with-parents))
     (find-file index)))
 
-(defun org-pro-file-list (project)
+(defun superman-file-list (project)
   (if (featurep 'file-list)
-      (let ((loc (concat (org-pro-get-location project) (car project))))
+      (let ((loc (concat (superman-get-location project) (car project))))
 	(cond ((file-list-select-internal nil "." nil nil loc (concat "*File-list-" (car project) "*")))
 	      (t
 	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
@@ -54,22 +54,22 @@
     (error "file-list.el not loaded.")))
 
 
-(defun org-pro-find-thing (thing project)
+(defun superman-find-thing (thing project)
   (let* ((case-fold-search t)
 	 (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  (car thing))
-			     org-pro-config-action-alist))))
+			     superman-config-action-alist))))
     (cond ((functionp action) (funcall action project))
 	  ((and (car thing) (file-name-directory (car thing)))
 	   (find-file (expand-file-name
-		       (car thing) (concat (org-pro-get-location project) (car project)))))
+		       (car thing) (concat (superman-get-location project) (car project)))))
 	  (t (switch-to-buffer (car thing))))))
 
-(defun org-pro-read-config-list (string)
+(defun superman-read-config-list (string)
   ;; return a list of lists with vertical splits 
   ;; where each element can have horizontal splits
   (split-string string "[ \t]+:[ \t]+"))
 
-(defun org-pro-read-config (config &optional pos)
+(defun superman-read-config (config &optional pos)
   ;; return a list with horizontal splits 
   ;; where each element can have vertical splits
   (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
@@ -77,17 +77,17 @@
     hlist))
 
 
-(defun org-pro-save-config (&optional config project)
+(defun superman-save-config (&optional config project)
   (interactive)
-  (let ((conf (or config (org-pro-current-config)))
-	(pro (or project org-pro-current-project (org-pro-select-project))))
-    (find-file-other-window (concat (org-pro-get-location pro) (car pro) "/.org-pro-window-config"))
+  (let ((conf (or config (superman-current-config)))
+	(pro (or project superman-current-project (superman-select-project))))
+    (find-file-other-window (concat (superman-get-location pro) (car pro) "/.superman-window-config"))
     (goto-char (point-max))
     (unless (looking-at "^$") (insert "\n"))
     (insert conf)
     (save-buffer)))
 
-(defun org-pro-current-config ()
+(defun superman-current-config ()
   (let* ((windata (winner-win-data))
 	 config
 	 prev-row)
@@ -108,9 +108,9 @@
     config))
 
 
-(defun org-pro-get-config (project)
-  (let* ((config (or org-pro-sticky-config org-pro-default-config "INDEX"))
-	 (config-file  (concat (org-pro-get-location project) (car project) "/.org-pro-window-config"))
+(defun superman-get-config (project)
+  (let* ((config (or superman-sticky-config superman-default-config "INDEX"))
+	 (config-file  (concat (superman-get-location project) (car project) "/.superman-window-config"))
 	 (filed-config (when (file-exists-p config-file)
 			 (save-window-excursion
 			   (find-file config-file)
@@ -125,12 +125,12 @@
       config)))
 
 
-(defun org-pro-set-config (&optional project config pos)
+(defun superman-set-config (&optional project config pos)
   (interactive)
-  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
-	 (conf (or config (org-pro-get-config pro)))
-	 (pos (or pos org-pro-config-cycle-pos 0))
-	 (window-config (org-pro-read-config (nth pos (org-pro-read-config-list conf))))
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (conf (or config (superman-get-config pro)))
+	 (pos (or pos superman-config-cycle-pos 0))
+	 (window-config (superman-read-config (nth pos (superman-read-config-list conf))))
 	 (ncolumns (length window-config))
 	 top-windows)
     ;;(message conf)
@@ -144,23 +144,23 @@
 	  (select-window (nth n top-windows))
 	  (let ((el (nth n window-config)))
 	    (while el
-	      (org-pro-find-thing el pro)
+	      (superman-find-thing el pro)
 	      (setq el (cdr el))
 	      (when el (split-window-vertically) (other-window 1)))))
     (select-window (nth 0 top-windows))))
 
 
-(defun org-pro-magit (project)
-  (magit-status (concat (org-pro-get-location project) (car project))))
+(defun superman-magit (project)
+  (magit-status (concat (superman-get-location project) (car project))))
 
-(defun org-pro-location (project)
-  (let ((loc (concat (org-pro-get-location project) (car project))))
+(defun superman-location (project)
+  (let ((loc (concat (superman-get-location project) (car project))))
     (find-file loc)))
 
-(defun org-pro-timeline (project)
+(defun superman-timeline (project)
   (let (tbuf)
     (save-window-excursion
-      (let ((index (org-pro-get-index project))
+      (let ((index (superman-get-index project))
             (org-agenda-sticky nil)
             (bufname (concat "*" (car project) "-timeline*")))
         (if (not (file-exists-p index))
@@ -179,16 +179,16 @@
 	  (setq tbuf (current-buffer)))))
     (switch-to-buffer tbuf)))
 
-(defun org-pro-recent-org (project)
-  (car (org-pro-list-files
-	(concat (org-pro-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
+(defun superman-recent-org (project)
+  (car (superman-list-files
+	(concat (superman-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
 
 
-(defun org-pro-todo (project)
+(defun superman-todo (project)
   (let (tbuf)
     (save-window-excursion
-      (let* ((location (concat (org-pro-get-location project) (car project)))
-	     (org-files (org-pro-list-files location "^[^\\.].*\\.org$" nil))
+      (let* ((location (concat (superman-get-location project) (car project)))
+	     (org-files (superman-list-files location "^[^\\.].*\\.org$" nil))
 	     (org-agenda-sticky t) ;; to enable multiple agenda buffers
 	     (org-agenda-files org-files)
 	     (bufname (concat "*" (car project) "-todo*")))
@@ -199,26 +199,26 @@
 	(setq tbuf (current-buffer))))
     (switch-to-buffer tbuf)))
 
-(defun org-pro-find-project (project pos)
-  (org-pro-set-config project nil (or pos org-pro-config-cycle-pos 0)))
+(defun superman-find-project (project pos)
+  (superman-set-config project nil (or pos superman-config-cycle-pos 0)))
 
 
-(defun org-pro-get (project el)
+(defun superman-get (project el)
   (cdr (assoc el (cadr project))))
 
-(defun org-pro-get-index (project)
+(defun superman-get-index (project)
 "Extract the index file of PROJECT."
   (cdr (assoc "index" (cadr project))))
 
 
-(defun org-pro-get-git (project)
+(defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
 
-(defun org-pro-get-git-location (project)
+(defun superman-get-git-location (project)
   (or (cdr (assoc "git-location" (cadr project)))
-      (concat (org-pro-get-location project) (car project))))
+      (concat (superman-get-location project) (car project))))
 
-(defun org-pro-get-location (project)
+(defun superman-get-location (project)
   "Get the directory associated with PROJECT."
   (file-name-as-directory (cdr (assoc "location" (cadr project)))))
 ;;  (let ((loc (cdr (assoc "location" (cadr project)))))
@@ -226,28 +226,28 @@
 ;;                                (concat (file-name-as-directory loc)
 ;;                                        (car project)))))
 
-(defun org-pro-get-publish-directory (project)
+(defun superman-get-publish-directory (project)
   (cdr (assoc "publish-directory" (cadr project))))
 
-(defun org-pro-get-category (project)
+(defun superman-get-category (project)
   (cdr (assoc "category" (cadr project))))
 
-(defun org-pro-get-state (project)
+(defun superman-get-state (project)
   (cdr (assoc "state" (cadr project))))
 
 
-(defun org-pro-switch-config (&optional project)
+(defun superman-switch-config (&optional project)
   "Switch to the next window configuration (if any)."
   (interactive)
-  (let* ((pro (or project org-pro-current-project))
-	 (curpos (or org-pro-config-cycle-pos 0))
-	 (config-list (org-pro-read-config-list
-		       (org-pro-get-config pro))))
-    (if (> (length config-list) (1+ org-pro-config-cycle-pos));; cycle-pos starts at 0
-	(setq org-pro-config-cycle-pos (1+ org-pro-config-cycle-pos))
-      (setq org-pro-config-cycle-pos 0))
-    (org-pro-find-project pro org-pro-config-cycle-pos)))
+  (let* ((pro (or project superman-current-project))
+	 (curpos (or superman-config-cycle-pos 0))
+	 (config-list (superman-read-config-list
+		       (superman-get-config pro))))
+    (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
+	(setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
+      (setq superman-config-cycle-pos 0))
+    (superman-find-project pro superman-config-cycle-pos)))
 
 
-(provide 'org-pro-config)
-;;; org-pro-config.el ends here
+(provide 'superman-config)
+;;; superman-config.el ends here

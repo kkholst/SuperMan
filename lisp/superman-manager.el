@@ -1,4 +1,4 @@
-;;; org-pro-manager.el --- org project manager
+;;; superman-manager.el --- org project manager
 
 ;; Copyright (C) 2013  Thomas Alexander Gerds
 
@@ -36,15 +36,15 @@
 (require 'org-publish)
 
 ;; Loading extensions
-(require 'org-pro-superman) ;; a project to manage projects
-(require 'org-pro-summary)  ;; project summary
-(require 'org-pro-git)      ;; git contro,
-(require 'org-pro-config)   ;; saving and setting window configurations
-(require 'org-pro-deft)     ;; selecting projects via deft
+(require 'superman) ;; a project to manage projects
+(require 'superman-summary)  ;; project summary
+(require 'superman-git)      ;; git contro,
+(require 'superman-config)   ;; saving and setting window configurations
+(require 'superman-deft)     ;; selecting projects via deft
 
 ;;{{{ variables and user options
 
-(defvar org-pro-property-list 
+(defvar superman-property-list 
   '((index . "Index")
     (nickname . "NickName")
     (gitstatus . "GitStatus")
@@ -64,7 +64,7 @@
     (config . "Config")
     (publishdirectory . "PublishDirectory")
     (initialvisit . "InitialVisit"))  
-  "Association list with names of all org-pro properties.
+  "Association list with names of all superman properties.
 index: Name of the index property
 nickname: Name of the nick-name property
 gitstatus: Name of the git status property
@@ -77,82 +77,83 @@ filename: Name of the filename property
 others: Name of the others (collaborators) property
 category: Name of the category property
 ")
-(defun org-pro-property (label)
+(defun superman-property (label)
   (interactive)
-  (cdr (assoc label org-pro-property-list))
+  (cdr (assoc label superman-property-list))
 )
 
-(defvar org-pro-default-directory
+(defvar superman-default-directory
   (file-name-as-directory org-directory)
   "A place for new projects.")
-(defvar org-pro-file (concat
-		      (file-name-as-directory org-directory)
-		      "Projects.org")
+;;(defvar superman-file (concat (file-name-as-directory org-directory) "projects.org") ;
+;;  "File for managing projects. See the manual
+;;    for structure and syntax.")
+(defvar superman-file (concat (file-name-directory (locate-library "superman")) "../help/" "help-superman.org")
   "File for managing projects. See the manual
     for structure and syntax.")
-(defvar org-pro-default-content "" "Initial contents of org project index file.")
-(defvar org-pro-project-subdirectories nil)
-(defvar org-pro-project-level 4
-"Subheading level at which projects are defined in `org-pro-file'.")
-(defvar org-pro-manager-mode-map (make-sparse-keymap)
-  "Keymap used for `org-pro-manager-mode' commands.")
-(defvar org-pro-project-alist nil
+(defvar superman-default-content "" "Initial contents of org project index file.")
+(defvar superman-project-subdirectories nil)
+(defvar superman-project-level 4
+"Subheading level at which projects are defined in `superman-file'.")
+(defvar superman-manager-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-manager-mode' commands.")
+(defvar superman-project-alist nil
   "Alist of projects associating the nickname of the project
     with information like the location of the project, the index file,
     collaborator names, a category, the publishing directory, etc.")
-(defvar org-pro-current-project nil "The currently selected project.")
-(defvar org-pro-project-categories nil
+(defvar superman-current-project nil "The currently selected project.")
+(defvar superman-project-categories nil
   "List of categories for sorting projects.")
-(defvar org-pro-org-location "/"
+(defvar superman-org-location "/"
     "Relative to the project location this defines
   the path to the index file of a project. If set to
   'org' then the index file will be placed
   in a subdirectory 'org' of the project directory.
  The project directory is set by a property LOCATION in
-the `org-pro-file'.")
-(defvar org-pro-default-category "Unsorted" "Category for new projects.")
-(defvar org-pro-select-project-summary-format
+the `superman-file'.")
+(defvar superman-default-category "Unsorted" "Category for new projects.")
+(defvar superman-select-project-summary-format
   "%c/%o/%n"
   "Format of the entries of the completion-list when selecting a project. ")
-;; (setq org-pro-select-project-summary-format "%n %c -- %o")
-;; (setq org-pro-select-project-summary-format "%n %o")
-(defvar org-pro-frame-title-format t
-  "If non-nil add the nickname of the active project to frame-title")
-(defvar org-pro-save-buffers 'save-some-buffers
+;; (setq superman-select-project-summary-format "%n %c -- %o")
+;; (setq superman-select-project-summary-format "%n %o")
+(defvar superman-frame-title-format nil
+  "if non-nil add the nickname of the active project to frame-title")
+(defvar superman-save-buffers 'save-some-buffers
     "Function to be called to save buffers before switching project.")
 
 ;; config
-(setq org-pro-config-action-alist '(("INDEX" . org-pro-find-index)
-				    ("TODO" . org-pro-todo)
-				    ("TIMELINE" . org-pro-timeline)
-				    ("LOCATION" . org-pro-location)
-				    ("DOCUMENTS" . org-pro-view-documents)
-				    ("FILELIST" . org-pro-file-list)
-				    ("magit" . org-pro-magit)
-				    ("recent.org" . org-pro-recent-org)
+(setq superman-config-action-alist '(("INDEX" . superman-find-index)
+				    ("TODO" . superman-todo)
+				    ("TIMELINE" . superman-timeline)
+				    ("LOCATION" . superman-location)
+				    ("DOCUMENTS" . superman-view-documents)
+				    ("FILELIST" . superman-file-list)
+				    ("magit" . superman-magit)
+				    ("recent.org" . superman-recent-org)
 				    ("*shell*" . (lambda (project) (if (get-buffer "*shell*") (switch-to-buffer "*shell*") (shell))))
                                     ("*ielm*" . (lambda (project) (if (get-buffer "*ielm*") (switch-to-buffer "*ielm*") (ielm))))
-				    ("*R*" . org-pro-find-R-function)))
-(setq org-pro-default-config "INDEX")
-(setq org-pro-sticky-config nil)
-;; (setq org-pro-sticky-config "recent.org / *R* | TODO")
-(defvar org-pro-file-manager "file-list")
-(defvar org-pro-find-R-function
+				    ("*R*" . superman-find-R-function)))
+(setq superman-default-config "INDEX")
+(setq superman-sticky-config nil)
+;; (setq superman-sticky-config "recent.org / *R* | TODO")
+(defvar superman-file-manager "file-list")
+(defvar superman-find-R-function
   "Function used to find *R*"
   (lambda (project) (if (get-buffer "*R*") (switch-to-buffer "*R*") (R))))
 
-(defvar org-pro-switch-always t
-  "If nil 'org-pro-switch-to-project' will
- switch to current project unless the last command also was 'org-pro-switch-to-project'.
- Setting this variable to non-nil (the default) will force 'org-pro-switch-to-project'
+(defvar superman-switch-always t
+  "If nil 'superman-switch-to-project' will
+ switch to current project unless the last command also was 'superman-switch-to-project'.
+ Setting this variable to non-nil (the default) will force 'superman-switch-to-project'
  to always prompt for new project")
-(defvar org-pro-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
-(defvar org-pro-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
+(defvar superman-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
+(defvar superman-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
 
-(defvar org-pro-export-subdirectory "export")
-(defvar org-pro-public-directory "~/public_html/")
-(defvar org-pro-public-server "" "Place on the web where pages are published.")
-(defvar org-pro-export-base-extension "html\\|png\\|jpg\\|org\\|pdf\\|R")
+(defvar superman-export-subdirectory "export")
+(defvar superman-public-directory "~/public_html/")
+(defvar superman-public-server "" "Place on the web where pages are published.")
+(defvar superman-export-base-extension "html\\|png\\|jpg\\|org\\|pdf\\|R")
 
 ;;}}}
 ;;{{{ the pro-file in manager-mode
@@ -161,101 +162,101 @@ the `org-pro-file'.")
 ;; keystrokes differently in this file, the current solution is to put
 ;; a minor-mode on top of it.
 
-(define-minor-mode org-pro-manager-mode 
+(define-minor-mode superman-manager-mode 
   "Toggle org projectmanager document view mode.
-                  With argument ARG turn org-pro-docview-mode on if ARG is positive, otherwise
+                  With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
                   turn it off.
                   
-                  Enabling org-pro-view mode electrifies the column view for documents
+                  Enabling superman-view mode electrifies the column view for documents
                   for git and other actions like commit, history search and pretty log-view."
   :lighter " manager"
   :group 'org
-  :keymap 'org-pro-manager-mode-map
-  (setq org-pro-manager-mode
-	(not (or (and (null arg) org-pro-manager-mode)
+  :keymap 'superman-manager-mode-map
+  (setq superman-manager-mode
+	(not (or (and (null arg) superman-manager-mode)
 		 (<= (prefix-numeric-value arg) 0))))    
-  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
+  (add-hook 'after-save-hook 'superman-refresh nil 'local))
 
-(define-key org-pro-manager-mode-map [(meta return)] 'org-pro-return)
-(define-key org-pro-manager-mode-map [(meta n)] 'org-pro-next-project)
-(define-key org-pro-manager-mode-map [(meta p)] 'org-pro-previous-project)
-(define-key org-pro-manager-mode-map [f1] 'org-pro-manager)
+(define-key superman-manager-mode-map [(meta return)] 'superman-return)
+(define-key superman-manager-mode-map [(meta n)] 'superman-next-project)
+(define-key superman-manager-mode-map [(meta p)] 'superman-previous-project)
+(define-key superman-manager-mode-map [f1] 'superman-manager)
 
-(defun org-pro-manager ()
+(defun superman-manager ()
   (interactive)
-  (pop-to-buffer "*org-pro-manager*")
-  (local-set-key "d" 'org-pro-view-documents)
-  (local-set-key "D" 'org-pro-view-all-documents)
-  (local-set-key "N" 'org-pro-new-project)
+  (pop-to-buffer "*superman-manager*")
+  (local-set-key "d" 'superman-view-documents)
+  (local-set-key "D" 'superman-view-all-documents)
+  (local-set-key "N" 'superman-new-project)
   (insert "Press 'd' to view documents")
   (insert "Press 'n' to view notes")
   (insert "Press 'N' to add a project"))
 
 
-;; (defun org-pro-view-all-documents ()
+;; (defun superman-view-all-documents ()
 ;;  (interactive)
 ;;  (org-tags-view nil "LastCommit={.+}&GitStatus<>{Comitted}"))
-;; (defun org-pro-manager-mode (&optional arg)
+;; (defun superman-manager-mode (&optional arg)
 ;;  "A minor mode for using org Project Manager."
 ;;  (interactive "P")
 ;;  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-;;  (setq org-pro-manager-mode
-;;      (not (or (and (null arg) org-pro-manager-mode)
+;;  (setq superman-manager-mode
+;;      (not (or (and (null arg) superman-manager-mode)
 ;;               (<= (prefix-numeric-value arg) 0))))    
-;;  (add-hook 'after-save-hook 'org-pro-refresh nil 'local))
-;; (defvar org-pro-manager-mode nil)
-;; (make-variable-buffer-local 'org-pro-manager-mode)
-;;(or (assq 'org-pro-manager-mode minor-mode-map-alist)
+;;  (add-hook 'after-save-hook 'superman-refresh nil 'local))
+;; (defvar superman-manager-mode nil)
+;; (make-variable-buffer-local 'superman-manager-mode)
+;;(or (assq 'superman-manager-mode minor-mode-map-alist)
 ;;    (setq minor-mode-map-alist
 ;;        (append minor-mode-map-alist
-;;                (list (cons 'org-pro-manager-mode org-pro-manager-mode-map)))))
-;;(or (assq 'org-pro-manager-mode minor-mode-alist)
+;;                (list (cons 'superman-manager-mode superman-manager-mode-map)))))
+;;(or (assq 'superman-manager-mode minor-mode-alist)
 ;;    (setq minor-mode-alist
-;;        (cons '(org-pro-manager-mode " Project") minor-mode-alist)))
+;;        (cons '(superman-manager-mode " Project") minor-mode-alist)))
 (add-hook 'find-file-hooks 
         (lambda ()
           (let ((file (buffer-file-name)))
-            (when (and file (equal file (expand-file-name org-pro-file)))
-              (org-pro-manager-mode)))))
+            (when (and file (equal file (expand-file-name superman-file)))
+              (superman-manager-mode)))))
 
 
-(defun org-pro-goto-project-manager ()
+(defun superman-goto-project-manager ()
   (interactive)
-  (find-file org-pro-file))
+  (find-file superman-file))
 
-(defun org-pro-project-at-point (&optional noerror)
+(defun superman-project-at-point (&optional noerror)
   "Check if point is at project heading and return the project,
-                      i.e. its entry from the 'org-pro-project-alist'.
+                      i.e. its entry from the 'superman-project-alist'.
                       Otherwise return error or nil if NOERROR is non-nil. "
   (interactive)
   ;; (org-back-to-heading)
   (if (or (org-before-first-heading-p)
 	  (not (org-at-heading-p))
-	  (not (= org-pro-project-level
+	  (not (= superman-project-level
 		  (- (match-end 0) (match-beginning 0) 1))))
       (if noerror nil
 	(error "No project at point"))
     (or (org-entry-get nil "NICKNAME")
-	(progn (org-pro-set-nickname)
+	(progn (superman-set-nickname)
 	       (save-buffer) ;; to update the project-alist
 	       (org-entry-get nil "NICKNAME")))))
 
-(defun org-pro-goto-profile (project)
+(defun superman-goto-profile (project)
   (let ((case-fold-search t))
-    (find-file org-pro-file)
-    (unless (org-pro-manager-mode 1))
+    (find-file superman-file)
+    (unless (superman-manager-mode 1))
     (goto-char (point-min))
     (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
 	(error (concat "Cannot locate project " (car project))))))
 
-(defun org-pro-return ()
+(defun superman-return ()
   (interactive)
-  (let* ((pro (assoc (org-pro-project-at-point)
-		     org-pro-project-alist)))
+  (let* ((pro (assoc (superman-project-at-point)
+		     superman-project-alist)))
     (delete-other-windows)
     (split-window-horizontally 25)
     (other-window 1)
-    (find-file (org-pro-get-index pro))
+    (find-file (superman-get-index pro))
     (split-window-vertically 13)
     (switch-to-buffer "*Current project*")
     (erase-buffer)
@@ -263,64 +264,64 @@ the `org-pro-file'.")
     (mapc (lambda (x) (insert (car x) ": " (if (cdr x) (cdr x) "")  "\n")) (cadr pro))
     (other-window 1)))
 
-(defun org-pro-forward-project ()
+(defun superman-forward-project ()
   (interactive)
   (re-search-forward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+   (format "^\\*\\{%d\\} " superman-project-level) nil t))
 
-(defun org-pro-backward-project ()
+(defun superman-backward-project ()
   (interactive)
   (re-search-backward
-   (format "^\\*\\{%d\\} " org-pro-project-level) nil t))
+   (format "^\\*\\{%d\\} " superman-project-level) nil t))
 
-(defun org-pro-next-project (arg)
+(defun superman-next-project (arg)
   (interactive  "p")
-  (org-pro-forward-project)
-  (org-pro-return))
+  (superman-forward-project)
+  (superman-return))
 
-(defun org-pro-previous-project (arg)
+(defun superman-previous-project (arg)
   (interactive  "p")
-  (org-pro-backward-project)
-  (org-pro-return))
+  (superman-backward-project)
+  (superman-return))
 
 ;;}}}
 ;;{{{ parsing dynamically updating lists
 
-(defun org-pro-get-property  (pom property &optional inherit literal-nil)
+(defun superman-get-property  (pom property &optional inherit literal-nil)
   "Read property and remove leading and trailing whitespace."
   (let ((prop (org-entry-get pom property inherit literal-nil)))
     (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
   
-(defun org-pro-parse-projects (&optional all)
-  "Parse the file `org-pro-file' and update `org-pro-project-alist'."
+(defun superman-parse-projects (&optional all)
+  "Parse the file `superman-file' and update `superman-project-alist'."
   (interactive)
   (save-excursion
-    (setq org-pro-project-alist nil)
-    (set-buffer (find-file-noselect org-pro-file))
-    (unless (org-pro-manager-mode 1))
+    (setq superman-project-alist nil)
+    (set-buffer (find-file-noselect superman-file))
+    (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
-    (while (org-pro-forward-project)
-      (let* ((loc (or (org-pro-get-property nil (org-pro-property 'location) 'inherit) org-pro-default-directory))
-	     (category (org-pro-get-property nil (org-pro-property 'category) 'inherit))
-	     (others (org-pro-get-property nil (org-pro-property 'others) nil))
-	     (publish-dir (org-pro-get-property nil (org-pro-property 'publish) 'inherit))
-	     (name (or (org-pro-get-property nil (org-pro-property 'nickname) nil)
+    (while (superman-forward-project)
+      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
+	     (category (superman-get-property nil (superman-property 'category) 'inherit))
+	     (others (superman-get-property nil (superman-property 'others) nil))
+	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
+	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
 		       (nth 4 (org-heading-components))))
-	     (git (org-pro-get-property nil (org-pro-property 'git) 'inherit))
-	     (config (org-pro-get-property nil (org-pro-property 'config) 'inherit))
+	     (git (superman-get-property nil (superman-property 'git) 'inherit))
+	     (config (superman-get-property nil (superman-property 'config) 'inherit))
 	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (org-pro-get-property nil (org-pro-property 'index) nil)
+	     (index (or (superman-get-property nil (superman-property 'index) nil)
 			(let ((default-org-home
 				(concat (file-name-as-directory loc)
 					name
-					org-pro-org-location)))
+					superman-org-location)))
 			  ;; (make-directory default-org-home t)
 			  (concat (file-name-as-directory default-org-home) name ".org")))))
 	(unless (file-name-absolute-p index)
 	  (setq index
 		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-	(add-to-list 'org-pro-project-alist
+	(add-to-list 'superman-project-alist
 		     (list name
 			   (list (cons "location"  loc)
 				 (cons "index" index)
@@ -330,10 +331,10 @@ the `org-pro-file'.")
 				 (cons "config" config)
 				 (cons "state" todo)
 				 (cons "publish-directory" publish-dir))))))
-    org-pro-project-alist))
+    superman-project-alist))
   
   
-(defun org-pro-get-buffer-props (property)
+(defun superman-get-buffer-props (property)
   "Get a table of all values of PROPERTY used in the buffer, for completion."
   (let (props)
     (save-excursion
@@ -344,23 +345,23 @@ the `org-pro-file'.")
 			      nil property nil)))))
     props))
   
-(defun org-pro-parse-categories ()
-  "Parse the file `org-pro-file' and update `org-pro-project-categories'."
+(defun superman-parse-categories ()
+  "Parse the file `superman-file' and update `superman-project-categories'."
   (interactive)
-  (set-buffer (find-file-noselect org-pro-file))
-  (unless (org-pro-manager-mode 1))
-  (setq org-pro-project-categories
-	(reverse (org-pro-get-buffer-props (org-pro-property 'category)))))
+  (set-buffer (find-file-noselect superman-file))
+  (unless (superman-manager-mode 1))
+  (setq superman-project-categories
+	(reverse (superman-get-buffer-props (superman-property 'category)))))
   
-(defun org-pro-refresh ()
-  "Parses the categories and projects in file `org-pro-file' and also
+(defun superman-refresh ()
+  "Parses the categories and projects in file `superman-file' and also
              updates the currently selected project."
   (interactive)
-  (org-pro-parse-categories)
-  (org-pro-parse-projects)
-  (when org-pro-current-project
-    (setq org-pro-current-project
-	  (assoc (car org-pro-current-project) org-pro-project-alist))))
+  (superman-parse-categories)
+  (superman-parse-projects)
+  (when superman-current-project
+    (setq superman-current-project
+	  (assoc (car superman-current-project) superman-project-alist))))
 
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
@@ -368,91 +369,91 @@ the `org-pro-file'.")
 ;; (add-to-list 'org-structure-template-alist
 ;; '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
 
-(defun org-pro-create-project (&optional project ask)
+(defun superman-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
-                                    'org-pro-project-subdirectories' is set."
+                                    'superman-project-subdirectories' is set."
   (interactive)
-  (let ((pro (assoc project org-pro-project-alist)))
+  (let ((pro (assoc project superman-project-alist)))
     (when pro
-      (let ((dir (concat (org-pro-get-location pro) (car pro)))
-	    (index (org-pro-get-index pro)))
+      (let ((dir (concat (superman-get-location pro) (car pro)))
+	    (index (superman-get-index pro)))
 	(when (and index (not (file-exists-p index)))
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
 	  (find-file index))
-	;; (append-to-file org-pro-default-content nil index)
+	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
 	  (make-directory dir)
-	  (loop for subdir in org-pro-project-subdirectories
+	  (loop for subdir in superman-project-subdirectories
 		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-	(find-file org-pro-file)
-	(unless (org-pro-manager-mode 1))
+	(find-file superman-file)
+	(unless (superman-manager-mode 1))
 	(goto-char (point-min))
-	(re-search-forward (concat (make-string org-pro-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
+	(re-search-forward (concat (make-string superman-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
 
 
-(defun org-pro-new-project (&optional nickname category)
+(defun superman-new-project (&optional nickname category)
   "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-                  This function modifies the 'org-pro' and creates and visits the index file of the new project.
-                  Thus, to undo all this you may want to call 'org-pro-delete-project'. 
+                  This function modifies the 'superman' and creates and visits the index file of the new project.
+                  Thus, to undo all this you may want to call 'superman-delete-project'. 
                   " 
   (interactive)
-  (org-pro-refresh)
+  (superman-refresh)
   (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
 	 category)
     ;; check if nickname exists 
-    (while (assoc nickname org-pro-project-alist)
+    (while (assoc nickname superman-project-alist)
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (setq category (or category (completing-read "Category: " (org-pro-parse-categories) nil nil)))
+    (setq category (or category (completing-read "Category: " (superman-parse-categories) nil nil)))
     ;; a local capture command places the new project
     (let ((org-capture-templates
 	   `(("p" "Project" plain
-	      (file+headline org-pro-file ,category)
-	      ,(concat (make-string org-pro-project-level (string-to-char "*"))
+	      (file+headline superman-file ,category)
+	      ,(concat (make-string superman-project-level (string-to-char "*"))
 		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:" 
-		       (org-pro-property 'nickname) ": "
+		       (superman-property 'nickname) ": "
 		       nickname
-		       "\n:" (org-pro-property 'location) ": \n:"
-		       (org-pro-property 'category) ": " category 
-		       "\n:" (org-pro-property 'index) 
-		       ":\n:" (org-pro-property 'initialvisit) ": " 
+		       "\n:" (superman-property 'location) ": \n:"
+		       (superman-property 'category) ": " category 
+		       "\n:" (superman-property 'index) 
+		       ":\n:" (superman-property 'initialvisit) ": " 
 		       (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)) 
-		       " \n:" (org-pro-property 'others) ": \n:END:\n"))))
+		       " \n:" (superman-property 'others) ": \n:END:\n"))))
 	  (org-capture-bookmark nil))
-      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'org-pro-complete-property)) nil 'local)
-      (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (org-pro-create-project ,nickname 'ask)) nil 'local)
-      ;;(add-hook 'org-capture-mode-hook 'org-pro-show-properties nil 'local)
+      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'superman-complete-property)) nil 'local)
+      (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (superman-create-project ,nickname 'ask)) nil 'local)
+      ;;(add-hook 'org-capture-mode-hook 'superman-show-properties nil 'local)
       (org-capture nil "p")
       (message "Press Control-c Control-c when done editing."))))
 
 
-;; (defun org-pro-show-properties ()
+;; (defun superman-show-properties ()
   ;; (let ((pop-up-windows t)
 	;; (obuf (current-buffer))
 	;; (pbuf (get-buffer "*Org project manager properties*")))
     ;; (set-buffer pbuf)
     ;; (erase-buffer)
     ;; (insert "Current project categories:\n\n")
-    ;; (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) org-pro-project-categories)
+    ;; (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) superman-project-categories)
     ;; (delete-backward-char 2)
     ;; (insert "\n\n")
     ;; (pop-to-buffer pbuf)
     ;; (pop-to-buffer obuf)))
 
-(defun org-pro-complete-property ()
+(defun superman-complete-property ()
   (interactive)
   (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-    (cond ((string= (downcase curprop) (downcase (org-pro-property 'index)))
+    (cond ((string= (downcase curprop) (downcase (superman-property 'index)))
 	   (insert (read-file-name (concat "Set " curprop ": "))))
-	  ((string= (downcase curprop) (downcase (org-pro-property 'location)))
+	  ((string= (downcase curprop) (downcase (superman-property 'location)))
 	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
 
-(defun org-pro-move-project (&optional project)
+(defun superman-move-project (&optional project)
   (interactive)
-  (let* ((pro (or project (org-pro-select-project)))
-	 (index (org-pro-get-index pro))
-	 (dir (concat (org-pro-get-location pro) (car pro)))
+  (let* ((pro (or project (superman-select-project)))
+	 (index (superman-get-index pro))
+	 (dir (concat (superman-get-location pro) (car pro)))
 	 (target  (read-directory-name (concat "Move all files below " dir " to: " )))
 	 (new-index (unless (string-match dir (file-name-directory index))
 		      (read-file-name (concat "Move " index " to ")))))
@@ -463,27 +464,27 @@ the `org-pro-file'.")
       (rename-file dir target)
       (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
 	  (rename-file index new-index))
-      (org-pro-goto-profile pro)
-      (org-set-property (org-pro-property 'location) (file-name-directory target))
-      (org-set-property (org-pro-property 'index) (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
+      (superman-goto-profile pro)
+      (org-set-property (superman-property 'location) (file-name-directory target))
+      (org-set-property (superman-property 'index) (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
       (save-buffer))))
 
 
-(defun org-pro-delete-project (&optional project)
+(defun superman-delete-project (&optional project)
   (interactive)
-  (let* ((pro (or project (org-pro-select-project)))
-	 (dir (concat (org-pro-get-location pro) (car pro)))
-	 (index (org-pro-get-index pro)))
-    (pop-to-buffer "*Org-project-files*")
+  (let* ((pro (or project (superman-select-project)))
+	 (dir (concat (superman-get-location pro) (car pro)))
+	 (index (superman-get-index pro)))
+    (pop-to-buffer "*supermanject-files*")
     (erase-buffer)
     (insert index "\n" dir "\n")
     (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
       (when (file-exists-p dir) (move-file-to-trash dir))
       (when (file-exists-p index) (move-file-to-trash index))
-      (find-file org-pro-file)
-      (unless (org-pro-manager-mode 1))
+      (find-file superman-file)
+      (unless (superman-manager-mode 1))
       (goto-char (point-min))
-      (re-search-forward (concat ":" (org-pro-property 'nickname) ":[ \t]?.*" (car pro)) nil t)
+      (re-search-forward (concat ":" (superman-property 'nickname) ":[ \t]?.*" (car pro)) nil t)
       ;; (org-show-subtree)
       ;; (org-mark-element)
       (message "If you delete this entry and then save the buffer, the project will disappear from the project-alist"))))
@@ -493,70 +494,70 @@ the `org-pro-file'.")
 ;;}}}
 ;;{{{ setting project properties
 
-(defun org-pro-project-agenda ()
+(defun superman-project-agenda ()
     "Show an agenda of all the projects. Useful, e.g. for toggling
 the active status of projects."
     (interactive)
-    (find-file org-pro-file)
+    (find-file superman-file)
     (push ?t unread-command-events)
     (push ?< unread-command-events)
     (call-interactively 'org-agenda))  
 
 
-(defun org-pro-set-nickname ()
+(defun superman-set-nickname ()
   (interactive)
   (org-set-property
-   (org-pro-property 'nickname)
+   (superman-property 'nickname)
    (read-string "NickName for project: "
 		(nth 4 (org-heading-components)))))
 
-(defun org-pro-set-others ()
+(defun superman-set-others ()
   (interactive)
-  (let* ((pro (assoc (org-pro-project-at-point t)
-		     org-pro-project-alist))
-	 (others (cdr (assoc (org-pro-property 'others) (cadr pro))))
+  (let* ((pro (assoc (superman-project-at-point t)
+		     superman-project-alist))
+	 (others (cdr (assoc (superman-property 'others) (cadr pro))))
 	 (init (if others (concat others ", ") "")))
     ;; (org-entry-get nil "others")
     (if pro
 	(org-set-property
-	 (org-pro-property 'others)
+	 (superman-property 'others)
 	 (replace-regexp-in-string
 	  "[,\t ]+$" ""     (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
-(defun org-pro-fix-others ()
-  "Update the others property (collaborator names) of all projects in `org-pro-file'."
+(defun superman-fix-others ()
+  "Update the others property (collaborator names) of all projects in `superman-file'."
   (interactive "P")
-  (set-buffer (find-file-noselect org-pro-file))
-  (unless (org-pro-manager-mode 1))
+  (set-buffer (find-file-noselect superman-file))
+  (unless (superman-manager-mode 1))
   (goto-char (point-min))
-  (while (org-pro-forward-project)
-    (org-pro-set-others)))
+  (while (superman-forward-project)
+    (superman-set-others)))
 
 ;;}}}
 ;;{{{ listing projects
 
-(defun org-pro-index-list (&optional category state extension not-exist-ok update)
+(defun superman-index-list (&optional category state extension not-exist-ok update)
   "Return a list of project specific indexes.
               Projects are filtered by CATEGORY unless CATEGORY is nil.
               Projects are filtered by the todo-state regexp STATE unless STATE is nil.
               Only existing files are returned unless NOT-EXIST-OK is non-nil.
               Only files ending on EXTENSION are returned unless EXTENSION is nil.
-              If UPDATE is non-nil first parse the file org-pro.
+              If UPDATE is non-nil first parse the file superman.
 Examples:
- (org-pro-index-list nil \"ACTIVE\")
- (org-pro-index-list nil \"DONE\")
+ (superman-index-list nil \"ACTIVE\")
+ (superman-index-list nil \"DONE\")
 "
   (interactive "P")
   (when update
-    (org-pro-refresh))
+    (superman-refresh))
   (let* ((testfun (lambda (p) (when (and
-				     (or (not category) (string= category (org-pro-get-category p)))
-				     (or (not state) (string-match state (org-pro-get-state p)))) p)))
+				     (or (not category) (string= category (superman-get-category p)))
+				     (or (not state) (string-match state (superman-get-state p)))) p)))
 	 (palist (if (or category state)
-		     (delq nil (mapcar testfun org-pro-project-alist))
-		   org-pro-project-alist)))
+		     (delq nil (mapcar testfun superman-project-alist))
+		   superman-project-alist)))
     (delete-dups (delq nil (mapcar '(lambda (x)
-				      (let ((f (org-pro-get-index x)))
+				      (let ((f (superman-get-index x)))
 					(when (and (or not-exist-ok (file-exists-p f))
 						   (or (not extension)
 						       (string= extension (file-name-extension f))))
@@ -566,84 +567,83 @@ Examples:
 ;;}}}
 ;;{{{ selecting projects
 
-(defun org-pro-format-project (entry)
-  (let* ((cat (or (org-pro-get entry "category") ""))
-	 (coll (or (org-pro-get entry "others") ""))
+(defun superman-format-project (entry)
+  (let* ((cat (or (superman-get entry "category") ""))
+	 (coll (or (superman-get entry "others") ""))
 	 (nickname (car entry))
-	 (string (replace-regexp-in-string "%c" cat org-pro-select-project-summary-format))
+	 (string (replace-regexp-in-string "%c" cat superman-select-project-summary-format))
 	 (string (replace-regexp-in-string "%o" coll string))
 	 (string (replace-regexp-in-string "%n" (car entry) string)))
     (cons string (car entry))))
 
-(defun org-pro-select-project ()
+(defun superman-select-project ()
   "Select a project from the project alist, 
-              which is modified such that 'org-pro-current-project'
+              which is modified such that 'superman-current-project'
               is the first choice."
-  (let* ((plist org-pro-project-alist)
-	 (project-array (mapcar 'org-pro-format-project
-				(if (not org-pro-current-project)
+  (let* ((plist superman-project-alist)
+	 (project-array (mapcar 'superman-format-project
+				(if (not superman-current-project)
 				    plist
-				  (setq plist (append (list org-pro-current-project)
-						      (remove org-pro-current-project plist))))))
+				  (setq plist (append (list superman-current-project)
+						      (remove superman-current-project plist))))))
 	 (completion-ignore-case t)
 	 (key (ido-completing-read "Project: " (mapcar 'car project-array)))
 	 (nickname (cdr (assoc key project-array))))
-    (assoc nickname org-pro-project-alist)))
+    (assoc nickname superman-project-alist)))
 
-(defun org-pro-set-frame-title ()
+(defun superman-set-frame-title ()
   (let* ((old-format (split-string frame-title-format "Project:[ \t]+[^ \t]+[ \t]+"))
         (keep (if (> (length old-format) 1) (cadr old-format) (car old-format))))
     (setq frame-title-format
-          (concat "Project: " (or (car org-pro-current-project) "No active project") " " keep))))
+          (concat "Project: " (or (car superman-current-project) "No active project") " " keep))))
 
-(defun org-pro-activate-project (project)
+(defun superman-activate-project (project)
   "Sets the current project.
             Start git, if the project is under git control, and git is not up and running yet."
-  (setq org-pro-current-project project)
-  (if org-pro-frame-title-format (org-pro-set-frame-title))
-  (with-current-buffer (or (find-buffer-visiting org-pro-file)
-			   (find-file-noselect org-pro-file))
+  (setq superman-current-project project)
+  (if superman-frame-title-format (superman-set-frame-title))
+  (with-current-buffer (or (find-buffer-visiting superman-file)
+			   (find-file-noselect superman-file))
     (save-excursion
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
       (org-entry-put (point) "LastVisit" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))))))
 
-(defun org-pro-save-project (&optional project)
+(defun superman-save-project (&optional project)
     (interactive)
-    (when (and (object-p org-pro-save-buffers)
-               (functionp org-pro-save-buffers))
-      (funcall org-pro-save-buffers))
-    (let* ((pro (or project org-pro-current-project)))
-       (when org-pro-use-git 
-      (org-pro-git-update-project pro nil))))
+    (when (functionp superman-save-buffers)
+      (funcall superman-save-buffers))
+    (let* ((pro (or project superman-current-project)))
+       (when superman-use-git 
+      (superman-git-update-project pro nil))))
 
 ;;}}}
-;;{{{ switching projects (see also org-pro-config)
+;;{{{ switching projects (see also superman-config)
 
-(defun org-pro-switch (&optional arg)
+(defun superman-switch (&optional arg)
   "If ARG switch project else switch config."
   (interactive "P")
   (if arg
-      (org-pro-switch-to-project)
-    (org-pro-switch-config)))
+      (superman-switch-to-project)
+    (superman-switch-config)))
 
-(defun org-pro-switch-to-project (&optional force project)
-  "Select project via 'org-pro-select-project', activate it
- via 'org-pro-activate-project',  find the associated index file."
+(defun superman-switch-to-project (&optional force project)
+  "Select project via 'superman-select-project', activate it
+ via 'superman-activate-project',  find the associated index file."
   (interactive "P")
-  (let* ((curpro org-pro-current-project)
+  (let* ((curpro superman-current-project)
 	 (change-maybe (or force
-			   org-pro-switch-always
-			   (not org-pro-current-project)))
-	 (pro (or project (if change-maybe (org-pro-select-project) curpro)))
+			   superman-switch-always
+			   (not superman-current-project)))
+	 (pro (or project (if change-maybe (superman-select-project) curpro)))
 	 (stay (eq pro curpro)))
     (unless stay
-      (org-pro-save-project curpro)
-      (setq org-pro-config-cycle-pos 0)
-      (org-pro-activate-project pro))
-    (org-pro-find-project pro org-pro-config-cycle-pos)))
+      (superman-save-project curpro)
+      (setq superman-config-cycle-pos 0)
+      (superman-activate-project pro))
+    (superman-find-project pro superman-config-cycle-pos)))
 
-(defun org-pro-list-files (dir ext sort-by)
+(defun superman-list-files (dir ext sort-by)
   (if (featurep 'file-list)
       (mapcar 'file-list-make-file-name
 	      (file-list-sort-internal
@@ -654,41 +654,41 @@ Examples:
 ;;}}}
 ;;{{{ publishing project contents
 
-(defun org-pro-browse-this-file (&optional arg)
+(defun superman-browse-this-file (&optional arg)
   "Browse the html version of the current file using `browse-url'. If
-        prefix arg is given, then browse the corresponding file on the org-pro-public-server"
+        prefix arg is given, then browse the corresponding file on the superman-public-server"
   (interactive "P")
   (let* ((bf (buffer-file-name (current-buffer)))
-	 (server-home (if (and arg (not org-pro-public-server-home))
+	 (server-home (if (and arg (not superman-public-server-home))
 			  (read-string "Specify address on server: " "http://")
-			org-pro-public-server-home))
+			superman-public-server-home))
          (html-file (if arg
                         (concat (replace-regexp-in-string
-                                 (expand-file-name org-pro-public-directory)
+                                 (expand-file-name superman-public-directory)
                                  server-home
                                  (file-name-sans-extension bf))
                                 ".html")
                       (concat "file:///" (file-name-sans-extension bf) ".html"))))
-    ;; fixme org-pro-browse-file-hook (e.g. to synchronize with public server)
+    ;; fixme superman-browse-file-hook (e.g. to synchronize with public server)
     (message html-file)
     (browse-url html-file)))
 
 
-(defun org-pro-set-publish-alist ()
+(defun superman-set-publish-alist ()
   (interactive)
-  (let ((p-alist org-pro-project-alist))
+  (let ((p-alist superman-project-alist))
     (while p-alist
       (let* ((pro  (car p-alist))
 	     (nickname (car pro))
-	     (base-directory (concat (org-pro-get-location pro) (car pro)))
+	     (base-directory (concat (superman-get-location pro) (car pro)))
 	     (export-directory
 	      (concat base-directory "/"
-		      org-pro-export-subdirectory))
+		      superman-export-subdirectory))
 	     (public-directory
-	      (or (org-pro-get-publish-directory pro)
-		  (concat (file-name-as-directory org-pro-public-directory)
+	      (or (superman-get-publish-directory pro)
+		  (concat (file-name-as-directory superman-public-directory)
 			  nickname))))
-	;;(replace-regexp-in-string org-pro-public-directory (getenv "HOME") (expand-file-name export-directory))))
+	;;(replace-regexp-in-string superman-public-directory (getenv "HOME") (expand-file-name export-directory))))
 	(add-to-list 'org-publish-project-alist
 		     `(,(concat nickname "-export")
 		       :base-directory
@@ -706,7 +706,7 @@ Examples:
 		       :base-directory
 		       ,export-directory
 		       :base-extension
-                       ,org-pro-export-base-extension
+                       ,superman-export-base-extension
 		       :publishing-directory
 		       ,public-directory
 		       :recursive t
@@ -718,5 +718,5 @@ Examples:
       (setq p-alist (cdr p-alist)))))
 
 ;;}}}
-(provide 'org-pro-manager)
-;;; org-pro-manager.el ends here
+(provide 'superman-manager)
+;;; superman-manager.el ends here

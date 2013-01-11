@@ -1,4 +1,4 @@
-;;; org-pro-superman.el --- org project manager
+;;; superman.el --- org project manager
 
 ;; Copyright (C) 2013  Thomas Alexander Gerds
 
@@ -30,18 +30,18 @@
 ;;; Code:
 
 ;;{{{
-;; (defun org-pro-superman ()
+;; (defun superman ()
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
-    ;; (("location" . ,org-pro-default-directory)
-     ;; ("index" . ,org-pro-file)
+    ;; (("location" . ,superman-default-directory)
+     ;; ("index" . ,superman-file)
      ;; ("category" . "Super")
      ;; ("state" . "ACTIVE")
      ;; ("config" . "INDEX | AGENDA / TODO"))))
 
-(defun org-pro-set-property ()
+(defun superman-set-property ()
   (interactive)
-  (let* ((prop-list '(((org-pro-property 'location) . nil) ((org-pro-property 'index) . nil) ((org-pro-property 'category) . nil) ((org-pro-property 'others) . nil) ((org-pro-property 'publishdirectory) . nil)))
+  (let* ((prop-list '(((superman-property 'location) . nil) ((superman-property 'index) . nil) ((superman-property 'category) . nil) ((superman-property 'others) . nil) ((superman-property 'publishdirectory) . nil)))
 	 (prop (completing-read "Set property: " prop-list))
 	 (pom (org-get-at-bol 'org-hd-marker))
 	 (curval (org-entry-get pom prop))
@@ -52,24 +52,24 @@
 
 (defun org-superman-return ()
   (interactive)
-  (let ((pro (assoc (org-pro-property-at-point (org-pro-property 'nickname)) org-pro-project-alist)))
-    (org-pro-switch-to-project 'force pro)))
+  (let ((pro (assoc (superman-property-at-point (superman-property 'nickname)) superman-project-alist)))
+    (superman-switch-to-project 'force pro)))
 
-(defun org-pro-finalize-superman ()
-  (org-pro-superman-on))
+(defun superman-finalize-superman ()
+  (superman-on))
 ;;}}}
 ;;{{{ superman 
 
 ;; FIXME: use gnus-user-date-format-alist to trim date
-(defun org-pro-superman-format (hdr level category tags-list prop-list)
-  (concat " " (org-pro-trim-string hdr 20)
+(defun superman-format (hdr level category tags-list prop-list)
+  (concat " " (superman-trim-string hdr 20)
 	  (let ((cprops prop-list)
 		(pstring ""))
 	    (while cprops
 	      (let ((val (cdr (car cprops))))
 		(cond ((string= (downcase (caar cprops)) "filename")
 		       (setq val (file-name-nondirectory (org-link-display-format val)))))
-		(setq pstring (concat pstring "  " (org-pro-trim-string val  23))))
+		(setq pstring (concat pstring "  " (superman-trim-string val  23))))
 		(setq cprops (cdr cprops)))
 	      pstring) "\t"))
 
@@ -78,18 +78,18 @@
   (interactive)
   (let* ((view-buf-name (concat "*Superman*"))
 ;;	 (org-agenda-overriding-buffer-name view-buf-name)
-	 (org-agenda-finalize-hook 'org-pro-finalize-superman)
+	 (org-agenda-finalize-hook 'superman-finalize-superman)
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
 	     ((tags "NickName={.+}"
-		    ((org-agenda-files (quote (,org-pro-file)))
-		     (org-agenda-finalize-hook 'org-pro-finalize-superman)
+		    ((org-agenda-files (quote (,superman-file)))
+		     (org-agenda-finalize-hook 'superman-finalize-superman)
 		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		     (org-agenda-overriding-header
 		      (concat "h: help, n: new project, s[S]: set property[all]"
 			      "\n\nProjects: " "\n"
-			      (org-pro-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
-		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+			      (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
+		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 		     (org-agenda-view-columns-initially nil)
 ;;		     (org-agenda-buffer-name "*Superman*")
 		     )))))))
@@ -106,49 +106,49 @@
     ;; (if (get-buffer view-buf-name)
 	;; (switch-to-buffer view-buf-name)
       ;; (let ((lprops
-	     ;; `((org-agenda-files (quote (,org-pro-file)))
-	       ;; (org-agenda-finalize-hook 'org-pro-finalize-superman)
+	     ;; `((org-agenda-files (quote (,superman-file)))
+	       ;; (org-agenda-finalize-hook 'superman-finalize-superman)
 	       ;; (org-agenda-overriding-header
 		;; (concat "h: help, n: new project, s[S]: set property[all]"
 			;; "\n\nProjects: " "\n"
-			;; (org-pro-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
-	       ;; (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+			;; (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
+	       ;; (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 	       ;; (org-agenda-view-columns-initially nil)
 	       ;; (org-agenda-buffer-name "*Superman*"))))
-	;; (org-let lprops '(org-pro-tags-view-plus nil "InitialVisit={.+}" '("NickName" "LastVisit" "Location" "Others")))
+	;; (org-let lprops '(superman-tags-view-plus nil "InitialVisit={.+}" '("NickName" "LastVisit" "Location" "Others")))
 	;; (rename-buffer view-buf-name)
 	;; (put 'org-agenda-redo-command 'org-lprops lprops)))))
 ;;}}}
 ;;{{{
 
-(defvar org-pro-superman-mode-map (make-sparse-keymap)
-  "Keymap used for `org-pro-superman-mode' commands.")
+(defvar superman-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-mode' commands.")
    
-(define-minor-mode org-pro-superman-mode 
+(define-minor-mode superman-mode 
   "Toggle org projectmanager document superman mode.
-With argument ARG turn org-pro-superman-mode on if ARG is positive, otherwise
+With argument ARG turn superman-mode on if ARG is positive, otherwise
 turn it off.
 
-Enabling org-pro-superman mode electrifies the superman buffer for project management."
+Enabling superman mode electrifies the superman buffer for project management."
      :lighter " S"
      :group 'org
-     :keymap 'org-pro-superman-mode-map)
+     :keymap 'superman-mode-map)
 
-(defun org-pro-superman-on ()
+(defun superman-on ()
   (interactive)
-  (org-pro-superman-mode t))
+  (superman-mode t))
 
 
-(defun org-pro-superman-new-project ()
+(defun superman-new-project ()
   (interactive)
   (save-window-excursion
-    (org-pro-new-project))
+    (superman-new-project))
   (org-agenda-redo))
 
-(define-key org-pro-superman-mode-map [return] 'org-superman-return) ;; Return is not used anyway in column mode
-(define-key org-pro-superman-mode-map "n" 'org-pro-superman-new-project)
-(define-key org-pro-superman-mode-map "S" 'org-pro-set-property)
+(define-key superman-mode-map [return] 'org-superman-return) ;; Return is not used anyway in column mode
+(define-key superman-mode-map "n" 'superman-new-project)
+(define-key superman-mode-map "S" 'superman-set-property)
 ;;}}}  
 
-(provide 'org-pro-superman)
-;;; org-pro-superman.el ends here
+(provide 'superman)
+;;; superman.el ends here

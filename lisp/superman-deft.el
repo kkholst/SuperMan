@@ -1,4 +1,4 @@
-;;; org-pro-deft.el --- hacking deft for org project manager 
+;;; superman-deft.el --- hacking deft for org project manager 
 
 ;; Copyright (C) 2012  Thomas Alexander Gerds, Klaus Kähler Holst
 
@@ -168,24 +168,24 @@ use it as the title."
     (with-current-buffer (get-file-buffer filename)
       (goto-char (point-max)))))
 
-(defun org-pro-deft-new-project ()
+(defun superman-deft-new-project ()
   "Create a new project quickly."
   (interactive)
-  (org-pro-new-project (deft-whole-filter-regexp)))
+  (superman-new-project (deft-whole-filter-regexp)))
 
-(defun org-pro-deft ()
+(defun superman-deft ()
   (interactive)
   (switch-to-buffer "*deft projects*")
   (deft-mode)
   (deft-local-setup)
-  (setq deft-directory org-pro-default-directory)
-  (setq deft-find-all-files-function 'org-pro-index-list)
-  (setq deft-new-file-function 'org-pro-deft-new-project)
+  (setq deft-directory superman-default-directory)
+  (setq deft-find-all-files-function 'superman-index-list)
+  (setq deft-new-file-function 'superman-deft-new-project)
   (setq deft-buffer (current-buffer))
   (deft-local-mode))
 
-(provide 'org-pro-deft)
-;;; org-pro-deft.el ends here
+(provide 'superman-deft)
+;;; superman-deft.el ends here
 
 
 
