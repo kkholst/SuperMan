@@ -356,7 +356,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	;;(delete-buffer logfile)
 	(goto-char (point-min))
 	(let* (
-	       ;;(org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
+	       (org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
 	       (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-custom-commands
@@ -367,7 +367,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 		    (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
 		    (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
 		    (org-agenda-view-columns-initially nil)
-;;		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
+		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
 		    )))))
 	  (push ?L unread-command-events)
 	  (call-interactively 'org-agenda))))))
