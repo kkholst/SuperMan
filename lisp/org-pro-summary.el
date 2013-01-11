@@ -70,7 +70,7 @@ or by adding whitespace characters."
 		       (setq val (file-name-nondirectory (org-link-display-format val)))))
 		(setq pstring (concat pstring "  " (org-pro-trim-string val  23))))
 		(setq cprops (cdr cprops)))
-	      pstring) "\t"))
+	    pstring) "\t"))
 
 (defun org-pro-view-current-project ()
   ;; FIXME: may give problems when property "Project" does
