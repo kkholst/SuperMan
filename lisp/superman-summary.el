@@ -151,33 +151,49 @@ or by adding whitespace characters."
     ;; (rename-buffer view-buf)
     ))
 
+(defun superman-parse-document-categories (buf)
+  "Parse the file `superman-file' and update `superman-project-categories'."
+  (save-excursion
+    (set-buffer buf)
+    (reverse (superman-get-buffer-props (superman-property 'category)))))
+
 (defun superman-view-documents (&optional project)
   "View documents of the current project."
   (interactive)
   (let* ((pro (or project superman-current-project (superman-select-project)))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
-	 (org-agenda-finalize-hook 'superman-view-finalize-documents)
+	 ;; (org-agenda-finalize-hook 'superman-view-finalize-documents)
+	 (cats (superman-parse-document-categories (get-file-buffer (superman-get-index pro))))
+	 ;; (cats '(("start-me-up") ("nice-to-know")))
+	 (cat-number-one (car cats))
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
+	 (header-start (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+			       "\nProject: " (car pro)
+			       "\nControl: " (or (superman-view-control) (concat "press `I' to initialize git"))
+			       "\n\nDocuments: " "\n"))
+	 (shared-header
+	  (superman-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName"))))
+	 (cmd-block
+	  (if cats
+	      (mapcar '(lambda (cat)
+			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" (car cat) "\"")
+			       (let ((hdr (if (eq cat cat-number-one)
+					      (concat header-start "cat: " (car cat) "\n" shared-header)
+					    (concat "cat: " (car cat) "\n" shared-header))))
+				 `((org-agenda-overriding-header ,hdr)))))
+		      cats)
+	    `((tags "FileName={.+}" ((org-agenda-overriding-header (concat ,header-start ,shared-header)))))))
 	 (org-agenda-custom-commands
-	  `(("d" "view Project-DOCUMENTS" tags ,(concat (superman-property 'filename) "={.+}")
-	     ((org-agenda-files (quote (,(superman-get-index pro))))
-	      (org-agenda-finalize-hook 'superman-view-finalize-documents)
-	      (org-agenda-overriding-header
-	       (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-		       "\nProject: "  ,(car pro)
-		       "\nControl: " (or (superman-view-control) 
-					 (concat "press `I' to initialize git"))
-		       "\n\nDocuments: " "\n"
-		       (superman-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
-	      (org-agenda-property-list (quote (,(superman-property 'gitstatus)
-						,(superman-property 'lastcommit)
-						,(superman-property 'filename))))
-	      (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
-	      (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+	  `(("d" "view Project-DOCUMENTS"
+	     ,cmd-block
+	     ((org-agenda-finalize-hook 'superman-view-finalize-documents)
+	      (org-agenda-property-list (quote (,(superman-property 'gitstatus) ,(superman-property 'lastcommit) ,(superman-property 'filename)))) (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
 	      (org-agenda-view-columns-initially nil)
 	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
-	      )))))
+	      (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+	      (org-agenda-files (quote (,(superman-get-index pro))))
+	      (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*")))))))
     (push ?d unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -936,14 +952,15 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-loop (fun args)
   "Call function on all items."
-  (let (loop-out)
+  (let (loop-out (i t))
   (save-excursion
     (goto-char (point-min))
     (org-agenda-next-item 1)
-    (while (next-single-property-change (point-at-eol) 'org-marker)
+    (while i
       (setq loop-out (append (list (apply fun args)) loop-out))
       (move-end-of-line 1)
-      (goto-char (next-single-property-change (point) 'org-marker)))
+      (goto-char (next-single-property-change (point) 'org-marker))
+      (setq i (next-single-property-change (point-at-eol) 'org-marker)))
     loop-out)))
 
 (defun superman-view-git-add-all (&optional dont-redo)
@@ -1214,4 +1231,6 @@ If dont-redo the agenda is not reversed."
 
 (provide 'superman-summary)
 ;;; superman-summary.el ends here
+
+
 
