@@ -90,7 +90,7 @@ or by adding whitespace characters."
       "press `I' to initialize git")))
 
 ;; (defun superman-view-set-marks ()
-  ;; (superman-view-loop 'superman-view-set-mark))
+  ;; (superman-loop 'superman-view-set-mark))
 
 ;; (defun superman-view-set-mark (&optional m)
  ;; (let ((m (or m "M"))
@@ -901,7 +901,7 @@ the same tree node, and the headline of the tree node in the Org-mode file."
 
 (defun superman-view-update-all ()
   (interactive)
-  (superman-view-loop 'superman-view-git-set-status (list nil nil nil))
+  (superman-loop 'superman-view-git-set-status (list nil nil nil))
   (superman-view-save-hd-buffer)
   (org-agenda-redo))
 
@@ -949,30 +949,27 @@ If dont-redo the agenda is not reversed."
     (superman-git-add file dir 'commit nil)
   (superman-view-git-set-status 'save (not dont-redo) nil)))
 
-
-(defun superman-view-loop (fun args)
+;; test
+(defun superman-loop (fun args)
   "Call function on all items."
-  (let (loop-out (i t))
-  (save-excursion
-    (goto-char (point-min))
-    (org-agenda-next-item 1)
-    (while i
-      (setq loop-out (append (list (apply fun args)) loop-out))
-      (move-end-of-line 1)
-      (goto-char (next-single-property-change (point) 'org-marker))
-      (setq i (next-single-property-change (point-at-eol) 'org-marker)))
-    loop-out)))
+  (let (loop-out)
+    (save-excursion
+      (goto-char (point-min))
+      (while (next-single-property-change (point-at-eol) 'org-marker)
+	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
+	(setq loop-out (append (list (apply fun args)) loop-out)))
+      loop-out)))
 
 (defun superman-view-git-add-all (&optional dont-redo)
   (interactive)
-   (superman-view-loop 'superman-view-git-add (list 'dont))
+   (superman-loop 'superman-view-git-add (list 'dont))
    (unless dont-redo (org-agenda-redo)))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
   (let* ((pro (superman-view-current-project))
 	 (dir (concat (superman-get-location pro) (car pro))))
-    ;; (files (superman-view-loop 'superman-filename-at-point (list nil))))
+    ;; (files (superman-loop 'superman-filename-at-point (list nil))))
     (superman-view-git-add-all 'dont)
     (superman-git-commit dir (concat "Git commit message for selected files in " dir ": "))
     (superman-view-update-all)
