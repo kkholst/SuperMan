@@ -25,11 +25,11 @@
 
 ;;{{{ summary views
 
-(defun org-pro-view-project (&optional project)
-  (interactive)
-  (let ((pro (or project org-pro-current-project (org-pro-select-project))))
-    (switch-to-buffer (concat "*" (car pro) " view*"))
-    (local-set-key "d" 'org-pro-view-documents)))
+;; (defun org-pro-view-project (&optional project)
+  ;; (interactive)
+  ;; (let ((pro (or project org-pro-current-project (org-pro-select-project))))
+    ;; (switch-to-buffer (concat "*" (car pro) " view*"))
+    ;; (local-set-key "d" 'org-pro-view-documents)))
 
 (defun org-pro-summary ()
   (interactive)
@@ -39,8 +39,16 @@
 (defvar org-pro-view-marks nil "Marks for items in agenda.")
 (make-variable-buffer-local 'org-pro-view-marks)
 
+(defvar org-agenda-overriding-buffer-name nil)
+
 (defvar org-pro-view-current-project nil)
 (make-variable-buffer-local 'org-pro-view-current-project)
+
+(defvar org-agenda-property-list nil)
+(make-variable-buffer-local 'org-agenda-property-list)
+
+(defvar org-agenda-overriding-agenda-format nil)
+(make-variable-buffer-local 'org-agenda-overriding-agenda-format)
 
 (defun org-pro-trim-string (str len)
   "Trim string STR to a given length by either calling substring
@@ -97,7 +105,79 @@ or by adding whitespace characters."
     ;; (let ((buffer-read-only nil))
       ;; (org-pro-view-set-marks))))
 
+(defun org-pro-view-project (&optional project)
+  "View documents of the current project."
+  (interactive)
+  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+	 (loc (concat (org-pro-get-location pro) (car pro)))
+	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	 (view-buf (concat "*Documents[" (car pro) "]*"))
+	 (org-agenda-custom-commands
+	  `(("p" "view Project"
+	     ((tags "FileName={.+}"
+		    ((org-agenda-files (quote (,(org-pro-get-index pro))))
+		     (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+		     (org-agenda-overriding-header
+		      (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+			      "\nProject: "  ,(car pro)
+			      "\nControl: " (or (org-pro-view-control) 
+						(concat "press `I' to initialize git"))
+			      "\n\nDocuments: " "\n"
+			      (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+		     (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
+		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+		     (org-agenda-view-columns-initially nil)
+		     ;; (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ))
+	      (tags "NoteDate={.+}"
+		    ((org-agenda-files (quote (,(org-pro-get-index pro))))
+		     (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+		     (org-agenda-overriding-header "")
+		     (org-agenda-overriding-header (concat "\n"
+							   (org-pro-view-documents-format "header" 0 nil nil '(("NoteDate" .  "NoteDate")))))
+		     (org-agenda-property-list '("NoteDate"))
+		     (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+		     ;; (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     (org-agenda-view-columns-initially nil))))))))
+    (push ?p unread-command-events)
+    (call-interactively 'org-agenda)
+    ;; (rename-buffer view-buf)
+    ))
+
 (defun org-pro-view-documents (&optional project)
+  "View documents of the current project."
+  (interactive)
+  (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
+	 (loc (concat (org-pro-get-location pro) (car pro)))
+	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	 (view-buf (concat "*Documents[" (car pro) "]*"))
+	 (org-agenda-custom-commands
+	  `(("d" "view Project-DOCUMENTS" tags "FileName={.+}"
+	     ((org-agenda-files (quote (,(org-pro-get-index pro))))
+	      (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	      (org-agenda-overriding-header
+	       (concat "h: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+		       "\nProject: "  ,(car pro)
+		       "\nControl: " (or (org-pro-view-control) 
+					 (concat "press `I' to initialize git"))
+		       "\n\nDocuments: " "\n"
+		       (org-pro-view-documents-format "header" 0 nil nil '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName")))))
+	      (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
+	      (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+	      (org-agenda-view-columns-initially nil)
+	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*")))))))
+    (push ?d unread-command-events)
+    (call-interactively 'org-agenda)))
+;; (org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
+;; (rename-buffer view-buf)
+;; (put 'org-agenda-redo-command 'org-lprops lprops)))
+
+(defun org-pro-view-documents-1 (&optional project)
   "View documents of the current project."
   (interactive)
   (let* ((pro (or project org-pro-current-project (org-pro-select-project)))
@@ -122,10 +202,284 @@ or by adding whitespace characters."
 	(org-let lprops '(org-pro-tags-view-plus nil "FileName={.+}" '("GitStatus" "LastCommit" "FileName")))
 	(rename-buffer view-buf)
 	(put 'org-agenda-redo-command 'org-lprops lprops)))))
+;;{{{ copy of org-tags-view
+;;;###autoload
+(defun org-tags-view (&optional todo-only match)
+  "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
+The prefix arg TODO-ONLY limits the search to TODO entries."
+  (interactive "P")
+  (if org-agenda-overriding-arguments
+      (setq todo-only (car org-agenda-overriding-arguments)
+	    match (nth 1 org-agenda-overriding-arguments)))
+  (let* ((org-tags-match-list-sublevels
+	  org-tags-match-list-sublevels)
+	 (completion-ignore-case t)
+	 rtn rtnall files file pos matcher
+	 buffer)
+    (when (and (stringp match) (not (string-match "\\S-" match)))
+      (setq match nil))
+    (setq matcher (org-make-tags-matcher match)
+	  match (car matcher) matcher (cdr matcher))
+    (catch 'exit
+      (if org-agenda-overriding-buffer-name
+	  (setq org-agenda-buffer-name org-agenda-overriding-buffer-name)
+      (if org-agenda-sticky
+	  (setq org-agenda-buffer-name
+		(if (stringp match)
+		    (format "*Org Agenda(%s:%s)*"
+			    (or org-keys (or (and todo-only "M") "m")) match)
+		  (format "*Org Agenda(%s)*" (or (and todo-only "M") "m"))))))
+      (org-agenda-prepare (concat "TAGS " match))
+      (org-compile-prefix-format 'tags)
+      (org-set-sorting-strategy 'tags)
+      (setq org-agenda-query-string match)
+      (setq org-agenda-redo-command
+      	    (list 'org-tags-view `(quote ,todo-only)
+      		  (list 'if 'current-prefix-arg nil `(quote ,org-agenda-query-string))))
+      (setq files (org-agenda-files nil 'ifmode)
+	    rtnall nil)
+      (while (setq file (pop files))
+	(catch 'nextfile
+	  (org-check-agenda-file file)
+	  (setq buffer (if (file-exists-p file)
+			   (org-get-agenda-file-buffer file)
+			 (error "No such file %s" file)))
+	  (if (not buffer)
+	      ;; If file does not exist, error message to agenda
+	      (setq rtn (list
+			 (format "ORG-AGENDA-ERROR: No such org-file %s" file))
+		    rtnall (append rtnall rtn))
+	    (with-current-buffer buffer
+	      (unless (derived-mode-p 'org-mode)
+		(error "Agenda file %s is not in `org-mode'" file))
+	      (save-excursion
+		(save-restriction
+		  (if org-agenda-restrict
+		      (narrow-to-region org-agenda-restrict-begin
+					org-agenda-restrict-end)
+		    (widen))
+		  (setq rtn (org-scan-tags 'agenda matcher todo-only))
+		  (setq rtnall (append rtnall rtn))))))))
+      (if org-agenda-overriding-header
+	  (insert (org-add-props (copy-sequence org-agenda-overriding-header)
+		      nil 'face 'org-agenda-structure) "\n")
+	(insert "Headlines with TAGS match: ")
+	(add-text-properties (point-min) (1- (point))
+			     (list 'face 'org-agenda-structure
+				   'short-heading
+				   (concat "Match: " match)))
+	(setq pos (point))
+	(insert match "\n")
+	(add-text-properties pos (1- (point)) (list 'face 'org-warning))
+	(setq pos (point))
+	(unless org-agenda-multi
+	  (insert "Press `C-u r' to search again with new search string\n"))
+	(add-text-properties pos (1- (point)) (list 'face 'org-agenda-structure)))
+      (org-agenda-mark-header-line (point-min))
+      (when rtnall
+	(insert (org-agenda-finalize-entries rtnall) "\n"))
+      (goto-char (point-min))
+      (or org-agenda-multi (org-agenda-fit-window-to-buffer))
+      (add-text-properties (point-min) (point-max)
+			   `(org-agenda-type tags
+					     org-last-args (,todo-only ,match)
+					     org-redo-cmd ,org-agenda-redo-command
+					     org-series-cmd ,org-cmd))
+      (org-agenda-finalize)
+      (setq buffer-read-only t))))
+;;}}}
+;;{{{ copy of org-agenda
+(defun org-agenda (&optional arg org-keys restriction)
+  "Dispatch agenda commands to collect entries to the agenda buffer.
+Prompts for a command to execute.  Any prefix arg will be passed
+on to the selected command.  The default selections are:
+
+a     Call `org-agenda-list' to display the agenda for current day or week.
+t     Call `org-todo-list' to display the global todo list.
+T     Call `org-todo-list' to display the global todo list, select only
+      entries with a specific TODO keyword (the user gets a prompt).
+m     Call `org-tags-view' to display headlines with tags matching
+      a condition  (the user is prompted for the condition).
+M     Like `m', but select only TODO entries, no ordinary headlines.
+L     Create a timeline for the current buffer.
+e     Export views to associated files.
+s     Search entries for keywords.
+S     Search entries for keywords, only with TODO keywords.
+/     Multi occur across all agenda files and also files listed
+      in `org-agenda-text-search-extra-files'.
+<     Restrict agenda commands to buffer, subtree, or region.
+      Press several times to get the desired effect.
+>     Remove a previous restriction.
+#     List \"stuck\" projects.
+!     Configure what \"stuck\" means.
+C     Configure custom agenda commands.
+
+More commands can be added by configuring the variable
+`org-agenda-custom-commands'.  In particular, specific tags and TODO keyword
+searches can be pre-defined in this way.
+
+If the current buffer is in Org-mode and visiting a file, you can also
+first press `<' once to indicate that the agenda should be temporarily
+\(until the next use of \\[org-agenda]) restricted to the current file.
+Pressing `<' twice means to restrict to the current subtree or region
+\(if active)."
+  (interactive "P")
+  (catch 'exit
+    (let* ((prefix-descriptions nil)
+	   (org-agenda-buffer-name org-agenda-buffer-name)
+	   (org-agenda-window-setup (if (equal (buffer-name)
+					       org-agenda-buffer-name)
+					'current-window
+				      org-agenda-window-setup))
+	   (org-agenda-custom-commands-orig org-agenda-custom-commands)
+	   (org-agenda-custom-commands
+	    ;; normalize different versions
+	    (delq nil
+		  (mapcar
+		   (lambda (x)
+		     (cond ((stringp (cdr x))
+			    (push x prefix-descriptions)
+			    nil)
+			   ((stringp (nth 1 x)) x)
+			   ((not (nth 1 x)) (cons (car x) (cons "" (cddr x))))
+			   (t (cons (car x) (cons "" (cdr x))))))
+		   org-agenda-custom-commands)))
+	   (org-agenda-custom-commands
+	    (org-contextualize-keys
+	     org-agenda-custom-commands org-agenda-custom-commands-contexts))
+	   (buf (current-buffer))
+	   (bfn (buffer-file-name (buffer-base-buffer)))
+	   entry key type org-match lprops ans)
+      ;; Turn off restriction unless there is an overriding one,
+      (unless org-agenda-overriding-restriction
+	(unless (org-bound-and-true-p org-agenda-keep-restricted-file-list)
+	  ;; There is a request to keep the file list in place
+	  (put 'org-agenda-files 'org-restrict nil))
+	(setq org-agenda-restrict nil)
+	(move-marker org-agenda-restrict-begin nil)
+	(move-marker org-agenda-restrict-end nil))
+      ;; Delete old local properties
+      (put 'org-agenda-redo-command 'org-lprops nil)
+      ;; Delete previously set last-arguments
+      (put 'org-agenda-redo-command 'last-args nil)
+      ;; Remember where this call originated
+      (setq org-agenda-last-dispatch-buffer (current-buffer))
+      (unless org-keys
+	(setq ans (org-agenda-get-restriction-and-command prefix-descriptions)
+	      org-keys (car ans)
+	      restriction (cdr ans)))
+      ;; If we have sticky agenda buffers, set a name for the buffer,
+      ;; depending on the invoking keys.  The user may still set this
+      ;; as a command option, which will overwrite what we do here.
+      (if org-agenda-overriding-buffer-name
+	  (setq org-agenda-buffer-name org-agenda-overriding-buffer-name)
+	(if org-agenda-sticky
+	    (setq org-agenda-buffer-name
+		  (format "*Org Agenda(%s)*" org-keys))))
+      ;; Establish the restriction, if any
+      (when (and (not org-agenda-overriding-restriction) restriction)
+	(put 'org-agenda-files 'org-restrict (list bfn))
+	(cond
+	 ((eq restriction 'region)
+	  (setq org-agenda-restrict t)
+	  (move-marker org-agenda-restrict-begin (region-beginning))
+	  (move-marker org-agenda-restrict-end (region-end)))
+	 ((eq restriction 'subtree)
+	  (save-excursion
+	    (setq org-agenda-restrict t)
+	    (org-back-to-heading t)
+	    (move-marker org-agenda-restrict-begin (point))
+	    (move-marker org-agenda-restrict-end
+			 (progn (org-end-of-subtree t)))))))
+
+      ;; For example the todo list should not need it (but does...)
+      (cond
+       ((setq entry (assoc org-keys org-agenda-custom-commands))
+	(if (or (symbolp (nth 2 entry)) (functionp (nth 2 entry)))
+	    (progn
+	      (setq type (nth 2 entry) org-match (eval (nth 3 entry))
+		    lprops (nth 4 entry))
+	      (if org-agenda-sticky
+		  (setq org-agenda-buffer-name
+			(or (and (stringp org-match) (format "*Org Agenda(%s:%s)*" org-keys org-match))
+			    (format "*Org Agenda(%s)*" org-keys))))
+	      (put 'org-agenda-redo-command 'org-lprops lprops)
+	      (cond
+	       ((eq type 'agenda)
+		(org-let lprops '(org-agenda-list current-prefix-arg)))
+	       ((eq type 'alltodo)
+		(org-let lprops '(org-todo-list current-prefix-arg)))
+	       ((eq type 'search)
+		(org-let lprops '(org-search-view current-prefix-arg org-match nil)))
+	       ((eq type 'stuck)
+		(org-let lprops '(org-agenda-list-stuck-projects
+				  current-prefix-arg)))
+	       ((eq type 'tags)
+		(org-let lprops '(org-tags-view current-prefix-arg org-match)))
+	       ((eq type 'tags-todo)
+		(org-let lprops '(org-tags-view '(4) org-match)))
+	       ((eq type 'todo)
+		(org-let lprops '(org-todo-list org-match)))
+	       ((eq type 'tags-tree)
+		(org-check-for-org-mode)
+		(org-let lprops '(org-match-sparse-tree current-prefix-arg org-match)))
+	       ((eq type 'todo-tree)
+		(org-check-for-org-mode)
+		(org-let lprops
+		  '(org-occur (concat "^" org-outline-regexp "[ \t]*"
+				      (regexp-quote org-match) "\\>"))))
+	       ((eq type 'occur-tree)
+		(org-check-for-org-mode)
+		(org-let lprops '(org-occur org-match)))
+	       ((functionp type)
+		(org-let lprops '(funcall type org-match)))
+	       ((fboundp type)
+		(org-let lprops '(funcall type org-match)))
+	       (t (error "Invalid custom agenda command type %s" type))))
+	  (org-agenda-run-series (nth 1 entry) (cddr entry))))
+       ((equal org-keys "C")
+	(setq org-agenda-custom-commands org-agenda-custom-commands-orig)
+	(customize-variable 'org-agenda-custom-commands))
+       ((equal org-keys "a") (call-interactively 'org-agenda-list))
+       ((equal org-keys "s") (call-interactively 'org-search-view))
+       ((equal org-keys "S") (org-call-with-arg 'org-search-view (or arg '(4))))
+       ((equal org-keys "t") (call-interactively 'org-todo-list))
+       ((equal org-keys "T") (org-call-with-arg 'org-todo-list (or arg '(4))))
+       ((equal org-keys "m") (call-interactively 'org-tags-view))
+       ((equal org-keys "M") (org-call-with-arg 'org-tags-view (or arg '(4))))
+       ((equal org-keys "e") (call-interactively 'org-store-agenda-views))
+       ((equal org-keys "?") (org-tags-view nil "+FLAGGED")
+	(org-add-hook
+	 'post-command-hook
+	 (lambda ()
+	   (unless (current-message)
+	     (let* ((m (org-agenda-get-any-marker))
+		    (note (and m (org-entry-get m "THEFLAGGINGNOTE"))))
+	       (when note
+		 (message (concat
+			   "FLAGGING-NOTE ([?] for more info): "
+			   (org-add-props
+			       (replace-regexp-in-string
+				"\\\\n" "//"
+				(copy-sequence note))
+			       nil 'face 'org-warning)))))))
+	 t t))
+       ((equal org-keys "L")
+	(unless (derived-mode-p 'org-mode)
+	  (error "This is not an Org-mode file"))
+	(unless restriction
+	  (put 'org-agenda-files 'org-restrict (list bfn))
+	  (org-call-with-arg 'org-timeline arg)))
+       ((equal org-keys "#") (call-interactively 'org-agenda-list-stuck-projects))
+       ((equal org-keys "/") (call-interactively 'org-occur-in-agenda-files))
+       ((equal org-keys "!") (customize-variable 'org-stuck-projects))
+       (t (error "Invalid agenda key"))))))
+;;}}}
 
 ;; hack of org-tags-view version 7.9.2 (copy: 06 Jan 2013 (10:36))
 ;; replaces org-scan-tags by org-pro-scan-tags-plus
 ;; additional argument: get-properties
+;; (defun org-pro-tags-view-plus (&optional todo-only match get-prop-list)
 (defun org-pro-tags-view-plus (&optional todo-only match get-prop-list)
   "Show all headlines for all `org-agenda-files' matching a TAGS criterion.
 The prefix arg TODO-ONLY limits the search to TODO entries.
@@ -214,7 +568,8 @@ Additional properties can be specified as a list of property keywords GET-PROP-L
 
 ;; hack of org-scan-tags version 7.9.2 (copy: 06 Jan 2013 (10:28))
 ;; additional argument: get-prop-list
-(defun org-pro-scan-tags-plus (action matcher todo-only &optional start-level get-prop-list)
+;; (defun org-pro-scan-tags-plus (action matcher todo-only &optional start-level get-prop-list)
+(defun org-scan-tags (action matcher todo-only &optional start-level)
   "Scan headline tags with inheritance and produce output ACTION.
 
 ACTION can be `sparse-tree' to produce a sparse tree in the current buffer,
@@ -229,11 +584,8 @@ This should be the same variable that was scoped into
 and set by `org-make-tags-matcher' when it constructed MATCHER.
 
 START-LEVEL can be a string with asterisks, reducing the scope to
-headlines matching this string.
-
-GET-PROP-LIST is a list of properties to get from each entry."
-  
-  (require 'org-agenda)
+headlines matching this string."
+  (require 'org-agenda) 
   (let* ((re (concat "^"
 		     (if start-level
 			 ;; Get the correct level to match
@@ -326,16 +678,22 @@ GET-PROP-LIST is a list of properties to get from each entry."
 		  ;; we have an archive tag, should we use this anyway?
 		  (or (not org-agenda-skip-archived-trees)
 		      (and (eq action 'agenda) org-agenda-archives-mode))))
-	    ;; extract prop-list
-	    (if get-prop-list
-	      (setq prop-list
-		    (mapcar
-		     '(lambda (prop)
-			(cons prop (or (org-pro-get-property (point) prop 'inherit)
-				       "not set"
-				       ""))) get-prop-list))
-	    (setq prop-list ""))
-
+	    ;; extract properties
+	    (if org-agenda-property-list
+		;; (if get-prop-list
+		;; (setq prop-list
+		;; (mapcar
+		;; '(lambda (prop)
+		;; (cons prop (or (org-pro-get-property (point) prop 'inherit)
+		;; "not set"
+		;; ""))) get-prop-list))
+		(setq prop-list
+		      (mapcar
+		       '(lambda (prop)
+			  (cons prop (or (org-pro-get-property (point) prop 'inherit)
+					 "not set"
+					 ""))) org-agenda-property-list))
+	      (setq prop-list ""))
 	    ;; select this headline
 	    (cond
 	     ((eq action 'sparse-tree)
@@ -778,7 +1136,6 @@ If dont-redo the agenda is not reversed."
 
 
 ;; Choose a prefix
-
 (setq org-pro-capture-prefix "P")
 (add-to-list 'org-capture-templates `(,org-pro-capture-prefix "Project management") 'append)
 (defun org-pro-capture() 
@@ -787,15 +1144,15 @@ If dont-redo the agenda is not reversed."
   (call-interactively 'org-capture))
 ;; Capturing links 
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "l") "Add link" plain 
- (function (lambda () (org-pro-goto-project nil "Links" 'yes))) "\n - %x%?") 'append)
+				      (function (lambda () (org-pro-goto-project nil "Links" 'yes))) "\n - %x%?") 'append)
 ;; Capturing tasks
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "t") "Add task" plain
-  (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+				      (function org-pro-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "c") "Add checklist item" plain
-  (function org-pro-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+				      (function org-pro-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing notes
 (add-to-list 'org-capture-templates `(,(concat org-pro-capture-prefix "n") "Add note" plain
-  (function org-pro-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+				      (function org-pro-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing documents
 (add-to-list 'org-capture-templates
 	     `(,(concat org-pro-capture-prefix "d") "Add document" plain
@@ -820,7 +1177,7 @@ If dont-redo the agenda is not reversed."
   (interactive)
   (let* ((pro (org-pro-view-current-project))
 	 (dir (expand-file-name (concat (org-pro-get-location pro) (car pro))))
-	 (fl (or file-list `(,(read-file-name (concat "Choose: ") dir)))))
+	 (fl (or file-list `(,(read-file-name (concat "Choose: ") (file-name-as-directory dir))))))
     ;; FIXME need to write org-pro-get-documents and filter duplicates
     (save-window-excursion
       (org-pro-goto-project pro "Documents")
@@ -838,3 +1195,4 @@ If dont-redo the agenda is not reversed."
 
 (provide 'org-pro-summary)
 ;;; org-pro-summary.el ends here
+

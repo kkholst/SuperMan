@@ -352,26 +352,20 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	(write-file logfile nil)
 	;;(delete-buffer logfile)
 	(goto-char (point-min))
-	(put 'org-agenda-redo-command 'org-lprops nil)
-	(let ((lprops
-	       `((org-agenda-files (quote (,logfile)))
-		 (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
-		 (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
-		 ;;	       (org-agenda-buffer-name (concat "*org-pro-log-mode[" ,logfile "]*"))
-		 (org-agenda-overriding-agenda-format
-		  '(lambda (hdr level category tags-list properties)
-		     (concat  "| " hdr
-			      (let ((cprops properties)
-				    (pstring ""))
-				(while cprops
-				  (setq pstring (concat pstring " | " (cdr (car cprops))))
-				  (setq cprops (cdr cprops)))
-				pstring) " |")))
-		 (org-agenda-buffer-name ,log-view-buf)
-		 (org-agenda-view-columns-initially nil))))
-	  (org-let lprops '(org-pro-tags-view-plus nil "Hash={.+}" '("Hash" "Date" "Author" "Decoration")))
-	  (rename-buffer log-view-buf)
-	  (put 'org-agenda-redo-command 'org-lprops lprops))))))
+	(let* ((org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
+	       (org-agenda-finalize-hook 'org-pro-view-finalize-documents)
+	       (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
+	       (org-agenda-custom-commands
+		`(("L" "view file history" tags "Hash={.+}"
+		   ((org-agenda-files (quote (,logfile)))
+		    (org-agenda-finalize-hook 'org-pro-git-log-mode-on)
+		    (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
+		    (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
+		    (org-agenda-overriding-agenda-format 'org-pro-view-documents-format)
+		    (org-agenda-view-columns-initially nil)
+		    (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*")))))))
+	  (push ?L unread-command-events)
+	  (call-interactively 'org-agenda))))))
 
 
 (defun org-pro-git-log (file gitpath limit &optional search-string decorationonly)
@@ -380,7 +374,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (or gitpath (or (org-pro-property-at-point "GitPath")
 				  (org-pro-git-toplevel file))))
-	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\"--date=short "
+	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
     (org-pro-git-setup-log-buffer file gitpath gitcmd decorationonly)))
