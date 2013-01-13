@@ -30,6 +30,7 @@
 ;;; Code:
 
 ;;{{{
+
 ;; (defun superman ()
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
@@ -57,6 +58,7 @@
 
 (defun superman-finalize-superman ()
   (superman-on))
+
 ;;}}}
 ;;{{{ superman 
 
@@ -86,7 +88,7 @@
 		     (org-agenda-finalize-hook 'superman-finalize-superman)
 		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		     (org-agenda-overriding-header
-		      (concat "h: help, n: new project, s[S]: set property[all]"
+		      (concat "?: help, n: new project, s[S]: set property[all]"
 			      "\n\nProjects: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
 		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
@@ -136,6 +138,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (defun superman-on ()
   (interactive)
+  (hl-line-mode 1)
   (superman-mode t))
 
 
@@ -147,7 +150,22 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (define-key superman-mode-map [return] 'org-superman-return) ;; Return is not used anyway in column mode
 (define-key superman-mode-map "n" 'superman-new-project)
+(define-key superman-mode-map [(f1)] 'superman-switch-to-project)
+(define-key superman-mode-map " " 'superman-switch-to-project)
 (define-key superman-mode-map "S" 'superman-set-property)
+(define-key superman-mode-map "?" 'superman-show-help)
+
+(defun superman-show-help ()
+  (interactive)
+  (let ((msg
+	(concat 
+	 "------------------\n"
+	"[return]:\t\t Open project at point\n"
+	"[n]:     \t\t New project\n"
+	"[space]: \t\t Switch to project\n"
+	 "------------------\n")))
+    (funcall superman-help-fun msg)))
+
 ;;}}}  
 
 (provide 'superman)

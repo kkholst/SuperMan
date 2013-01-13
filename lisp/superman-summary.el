@@ -122,8 +122,8 @@ or by adding whitespace characters."
 		     (org-agenda-overriding-header
 		      (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
 			      "\nProject: "  ,(car pro)
-			      "\nControl: " (or (superman-view-control) 
-						(concat "press `I' to initialize git"))
+			      "\n" (or (superman-view-control) 
+						(concat "\nControl: " "press `I' to initialize git"))
 			      "\n\nDocuments: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '
 							     (("GitStatus" .  "GitStatus") 
@@ -163,14 +163,12 @@ or by adding whitespace characters."
   (let* ((pro (or project superman-current-project (superman-select-project)))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
-	 ;; (org-agenda-finalize-hook 'superman-view-finalize-documents)
 	 (cats (superman-parse-document-categories (get-file-buffer (superman-get-index pro))))
-	 ;; (cats '(("start-me-up") ("nice-to-know")))
-	 (cat-number-one (car cats))
+	 ;;	 (cat-number-one (car cats))
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (header-start (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
 			       "\nProject: " (car pro)
-			       "\nControl: " (or (superman-view-control) (concat "press `I' to initialize git"))
+			       "\n" (or (superman-view-control) (concat "Control: press `I' to initialize git"))
 			       "\n\n"))
 
 	 (shared-header
@@ -179,11 +177,12 @@ or by adding whitespace characters."
 	  (if cats
 	      (mapcar '(lambda (cat)
 			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" (car cat) "\"")
-			       (let ((hdr (if (eq (car cat) "") ;;(eq cat cat-number-one)
-					      (concat header-start shared-header) ;; "[" (car cat) "]" );;shared-header)
+			       (let ((hdr (if (eq (car cat) "")
+					      (concat header-start shared-header) 
 					    (concat "[" (car cat) "]"))))
 				 `((org-agenda-overriding-header ,hdr))
 				 )))
+;;		      cats)
 		      (add-to-list 'cats '("")))
 	    `((tags "FileName={.+}" ((org-agenda-overriding-header (concat ,header-start ,shared-header)))))))
 	 (org-agenda-custom-commands
@@ -1042,6 +1041,7 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-mode-on ()
   (interactive)
+  (hl-line-mode 1)
   (superman-view-mode t))
    
 (define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode

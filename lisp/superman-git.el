@@ -339,19 +339,29 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 
 (defun superman-git-log-mode-on ()
   (interactive)
+  (hl-line-mode 1)
   (superman-git-log-mode t))
+
 
 (defun superman-git-log-format (hdr level category tags-list prop-list)
   (concat " " 
-	  (let ((cprops prop-list)
-		(pstring ""))
+	  (let* ((cprops prop-list)
+		 (pstring "")
+		 (ntrim))
 	    (while cprops
 	      (let ((val (cdr (car cprops))))
-		(cond ((string= (downcase (caar cprops)) (down-case)"filename")
-		       (setq val (file-name-nondirectory (org-link-display-format val)))))
-		(setq pstring (concat pstring "  " (superman-trim-string val  10))))
+		(cond ((string= (downcase (caar cprops)) (downcase (superman-property 'decoration)))
+		       (setq ntrim 22)
+		       (if (string= val "not set") (setq val " ")))		      
+		      ((string= (downcase (caar cprops)) (downcase (superman-property 'date)))
+		       (setq ntrim 10))
+		      (t (setq ntrim 7)))
+		;; (cond ((string= (downcase (caar cprops)) (down-case)"filename")
+		;;        (setq val (file-name-nondirectory (org-link-display-format val)))))
+		(setq pstring (concat pstring "  " (superman-trim-string val ntrim))))
 	      (setq cprops (cdr cprops)))
 	    pstring) "    " (superman-trim-string hdr 70)))
+
 
 (defun superman-git-setup-log-buffer (file dir git-switches decorationonly)
   (let* ((file (superman-relative-name file dir))
@@ -381,8 +391,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	      (setq val (delete "" (split-string x ":#:")))
 	      (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:"
 				 (superman-property 'hash) ": " (car val) "\n:"
-				 (when (nth 4 val) (concat "\n:"
-							   (superman-property 'decoration) ": " (nth 4 val)))
+				 (when (nth 4 val) (concat (superman-property 'decoration) ": " (nth 4 val) "\n:"))
 				 (superman-property 'date) ": " (nth 2 val) "\n:"
 				 (superman-property 'author) ": " (nth 3 val) 
 				 "\n:END:\n"))
