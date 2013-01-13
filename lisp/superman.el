@@ -120,6 +120,7 @@
 	;; (org-let lprops '(superman-tags-view-plus nil "InitialVisit={.+}" '("NickName" "LastVisit" "Location" "Others")))
 	;; (rename-buffer view-buf-name)
 	;; (put 'org-agenda-redo-command 'org-lprops lprops)))))
+
 ;;}}}
 ;;{{{
 

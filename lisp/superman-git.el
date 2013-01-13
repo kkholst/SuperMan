@@ -303,6 +303,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 (define-key superman-git-log-mode-map "t" 'superman-git-tag-at-point)
 (define-key superman-git-log-mode-map "?" 'superman-git-show-help)
 (define-key superman-git-log-mode-map "r" (lambda () (interactive) (org-agenda-redo) (superman-git-log-mode-on)))
+(define-key superman-git-log-mode-map "!" 'superman-start-shell)
 (define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
 
 (defun superman-git-show-help ()
@@ -318,6 +319,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	"[d]:    \t\t Show difference between revisions ([D] ediff)\n"
 	"[space]:\t\t Show full commit message\n"
 	"[t]:    \t\t Alter tag (empty string to remove)\n"
+	"[!]:     \t\t Shell\n"
 	 "------------------\n")))
     (funcall superman-help-fun msg)))
 

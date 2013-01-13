@@ -1043,6 +1043,16 @@ If dont-redo the agenda is not reversed."
   (interactive)
   (hl-line-mode 1)
   (superman-view-mode t))
+
+(defun superman-start-shell ()
+  (interactive)
+  (let* ((filedir (file-name-directory (superman-filename-at-point)))
+	 (pro (superman-view-current-project))
+	 (dir (concat (superman-get-location pro) (car pro))))
+    (shell "*superman shell*")
+    (comint-send-string (current-buffer) (concat "cd " (or filedir dir) "\r"))
+    (erase-buffer))
+  )
    
 (define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
 (define-key superman-view-mode-map "l" 'superman-view-git-log) 
@@ -1050,6 +1060,7 @@ If dont-redo the agenda is not reversed."
 (define-key superman-view-mode-map "n" 'superman-view-register-document)
 (define-key superman-view-mode-map "r" 'org-agenda-redo)
 (define-key superman-view-mode-map "h" 'superman-view-git-history)
+(define-key superman-view-mode-map "!" 'superman-start-shell)
 (define-key superman-view-mode-map "g" 'superman-view-git-grep)
 (define-key superman-view-mode-map "v" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "d" 'superman-view-git-diff)
@@ -1089,6 +1100,7 @@ If dont-redo the agenda is not reversed."
 	 "[v]:    \t\t View annotated file\n"
 	 "[g]:    \t\t Grep in git controlled files (Prefix-arg: fine-tune)\n"
 	 "[d]:    \t\t Show difference between revisions ([D] ediff)\n"
+	 "[!]:     \t\t Shell\n"
 	 "------------------")))
     ;;	"[q]:    \t\t Quit view mode\n"
     (funcall superman-help-fun msg)))
