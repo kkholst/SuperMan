@@ -139,3 +139,26 @@ Each file contains information about the project, workflow, files, links, etc.
 ** Optional: backup some or all projects (git)
 ** Setting a publishing directory (with automatic push to public_html server) 
 ** connect collaborators to bbdb and gnus-search
+** TODO superman sorting. categories/key(todo)/date
+** DONE in documents-view do not repeat header (header gitstauts lastcommit ...) for each category
+** TODO jump to next category in superman/view-mode! (e.g. by TAB/S-TAB key)
+** TODO sorting/rearranging documents from document-view?
+** TODO FIX: When categories present: also show files without category!
+** TODO Hide/unhide category in document-view/superman mode
+** TODO probably need a method to show a view-buffer for all git-controlled files!
+  git ls-tree -r master | cut -f2
+  git ls-tree -r HEAD --name-only
+** TODO adding file. Check for duplicates
+** TODO git stuff (revert, vc-revision)
+  - revert (i.e., git checkout -- file)
+  - vc-revision
+** TODO color/faces
+  http://lists.gnu.org/archive/html/emacs-orgmode/2009-12/msg00320.html
+  http://www.gnu.org/software/emacs/manual/html_node/elisp/Changing-Properties.html
+  http://emacs-fu.blogspot.dk/2008/12/highlighting-todo-fixme-and-friends.html
+  http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/Point-and-mark.html
+** TODO shell-access from document-list
+** TODO Create documents section for all git-controlled files.
+** DONE choice on how to represent project in org-pro-switch-to-project,
+  e.g.: projectname/category/collaborators instead of category/collaborators/projectname
+** TODO directory hierachy in documents section (indentation in 'category' view?)
