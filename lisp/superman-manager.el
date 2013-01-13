@@ -57,6 +57,7 @@
     (others . "Others")
     (category . "Category")
     (git . "Git")
+    (date . "Date")
     (lastcommit . "LastCommit")
     (capturedate . "CaptureDate")
     (project . "Project")

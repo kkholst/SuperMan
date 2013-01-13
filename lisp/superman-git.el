@@ -261,6 +261,7 @@ or if the file is not inside the location."
 
 ;;}}}
 ;;{{{ updating and pushing projects
+
 ;; (defun superman-git-push-directory (dir silent)
   ;; "Git push directory DIR."
   ;; (let* ((status (shell-command-to-string  (concat "cd " dir ";" superman-cmd-git " status")))
@@ -300,8 +301,25 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 (define-key superman-git-log-mode-map [return] 'superman-git-revision-at-point)
 (define-key superman-git-log-mode-map "D" (lambda () (interactive) (superman-git-revision-at-point 1)))
 (define-key superman-git-log-mode-map "t" 'superman-git-tag-at-point)
-(define-key superman-git-log-mode-map "b" 'superman-view-git-blame)
+(define-key superman-git-log-mode-map "?" 'superman-git-show-help)
+(define-key superman-git-log-mode-map "r" (lambda () (interactive) (org-agenda-redo) (superman-git-log-mode-on)))
+(define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
 
+(defun superman-git-show-help ()
+  (interactive)
+  (let ((msg
+	(concat 
+	 "------------------\n"
+	"[return]:\t\t Open revision at point\n"
+	"[l]:     \t\t Show git log ([L] tags only. Prefix-arg: limit)\n"
+	"[S]:    \t\t Search for revision introducing change (Prefix-arg: limit)\n"
+	"[v]:    \t\t View annotated file\n"
+	"[g]:    \t\t Grep in git controlled files (Prefix-arg: fine-tune)\n"
+	"[d]:    \t\t Show difference between revisions ([D] ediff)\n"
+	"[space]:\t\t Show full commit message\n"
+	"[t]:    \t\t Alter tag (empty string to remove)\n"
+	 "------------------\n")))
+    (funcall superman-help-fun msg)))
 
 
 (define-minor-mode superman-git-log-mode 
@@ -323,15 +341,27 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
   (interactive)
   (superman-git-log-mode t))
 
+(defun superman-git-log-format (hdr level category tags-list prop-list)
+  (concat " " 
+	  (let ((cprops prop-list)
+		(pstring ""))
+	    (while cprops
+	      (let ((val (cdr (car cprops))))
+		(cond ((string= (downcase (caar cprops)) (down-case)"filename")
+		       (setq val (file-name-nondirectory (org-link-display-format val)))))
+		(setq pstring (concat pstring "  " (superman-trim-string val  10))))
+	      (setq cprops (cdr cprops)))
+	    pstring) "    " (superman-trim-string hdr 70)))
+
 (defun superman-git-setup-log-buffer (file dir git-switches decorationonly)
   (let* ((file (superman-relative-name file dir))
 	 (dir dir)
 	 (gitlog (shell-command-to-string
 		  (concat
 		   "cd " dir "; " superman-cmd-git git-switches " -- " file)))
-	 (logbuf (concat " #" (file-name-nondirectory file) ".org"))
-	 (logfile (concat "/tmp/" logbuf)) ;; Use (make-temp-file name-of-application) instead?!
-	 (log-view-buf (concat "*Git-log[" logfile "]*"))
+	 (logbuf (file-name-nondirectory file))
+	 (logbuf (concat (make-temp-file logbuf) ".org"))
+	 (log-view-buf (concat "*Git-log[" file "]*"))
 	 item val)
     (if (get-buffer log-view-buf)
 	(switch-to-buffer log-view-buf)
@@ -349,11 +379,18 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	(loop for x in (split-string (substring gitlog 0 -1) "\n")
 	      do 
 	      (setq val (delete "" (split-string x ":#:")))
-	      (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:Hash: " (car val) "\n:Date: " (nth 2 val) "\n:Author: " (nth 3 val) (when (nth 4 val) (concat "\n:Decoration: " (nth 4 val))) "\n:END:\n"))
+	      (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:"
+				 (superman-property 'hash) ": " (car val) "\n:"
+				 (when (nth 4 val) (concat "\n:"
+							   (superman-property 'decoration) ": " (nth 4 val)))
+				 (superman-property 'date) ": " (nth 2 val) "\n:"
+				 (superman-property 'author) ": " (nth 3 val) 
+				 "\n:END:\n"))
 	      (if (or (not decorationonly) (nth 4 val)) (insert item)))
 	;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
-	(write-file logfile nil)
-	;;(delete-buffer logfile)
+	;;	(bury-buffer)
+	(write-file logbuf nil)
+	(kill-buffer)
 	(goto-char (point-min))
 	(let* ((org-agenda-overriding-buffer-name (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-finalize-hook 'superman-finalize-git-log)
@@ -361,12 +398,12 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	       (org-agenda-custom-commands
 		`(("L" "view file history"
 		   ((tags "Hash={.+}"
-			  ((org-agenda-files (quote (,logfile)))
-			   (org-agenda-overriding-header (concat "Git-log of " ,file "\th: help, C:commit, l: log, H:history\n\n"))
-			   (org-agenda-property-list '("Hash" "Date" "Author" "Decoration"))
+			  ((org-agenda-files (quote (,logbuf)))
+			   (org-agenda-overriding-header (concat "Git-log of " ,file "\t?: help\n\n"))
+			   (org-agenda-property-list '("Hash" "Decoration" "Date" "Author"))
 			   (org-agenda-view-columns-initially nil)
-			   (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-			   (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
+			   (org-agenda-overriding-agenda-format 'superman-git-log-format)
+			   (org-agenda-buffer-name  ,(concat "*Log[" (file-name-nondirectory file) "]*"))
 			   (org-agenda-finalize-hook 'superman-finalize-git-log)  
 			   )))))))
 	  (push ?L unread-command-events)
@@ -386,6 +423,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 			 (if limit (concat "-n " (int-to-string limit))))))
     (superman-git-setup-log-buffer file gitpath gitcmd decorationonly)))
 
+
 (defun superman-git-log-at-point (arg)
   (interactive "p")
   (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
@@ -403,6 +441,13 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
   (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
 	 (file (superman-filename-at-point)))
     (superman-git-log file nil limit (read-string "Search string: ")) nil))
+
+(defun superman-git-comment-at-point ()
+  (interactive)
+  (let* ((pom (org-get-at-bol 'org-hd-marker))
+	 (path (superman-get-property pom (superman-property 'gitpath) t))
+	 (hash (superman-get-property pom (superman-property 'hash) nil)))
+    (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
 
 (defun superman-git-tag-at-point ()
   "Shows git tag "
