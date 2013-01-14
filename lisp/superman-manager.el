@@ -29,8 +29,8 @@
 
 ;; External dependencies
 (require 'org)  
-(require 'deft) ;; http://jblevins.org/git/deft.git
-(require 'popup) ;; https://github.com/auto-complete/popup-el.git
+(require 'deft nil t) ;; http://jblevins.org/git/deft.git
+(require 'popup nil t) ;; https://github.com/auto-complete/popup-el.git
 (require 'winner) 
 (require 'ido)
 (require 'org-colview)
@@ -39,7 +39,8 @@
 ;; Loading extensions
 (require 'superman) ;; a project to manage projects
 (require 'superman-summary)  ;; project summary
-(require 'superman-git)      ;; git contro,
+(require 'superman-capture)  ;; capture information
+(require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
 (require 'superman-deft)     ;; selecting projects via deft
 
@@ -87,16 +88,16 @@ category: Name of the category property
 (defvar superman-default-directory
   (file-name-as-directory org-directory)
   "A place for new projects.")
-;;(defvar superman-file (concat (file-name-as-directory org-directory) "projects.org") ;
+;;(defvar superman-home (concat (file-name-as-directory org-directory) "projects.org") ;
 ;;  "File for managing projects. See the manual
 ;;    for structure and syntax.")
-(defvar superman-file (concat (file-name-directory (locate-library "superman")) "../help/" "help-superman.org")
+(defvar superman-home (concat (file-name-directory (locate-library "superman")) "../help/" "help-superman.org")
   "File for managing projects. See the manual
     for structure and syntax.")
 (defvar superman-default-content "" "Initial contents of org project index file.")
 (defvar superman-project-subdirectories nil)
 (defvar superman-project-level 4
-"Subheading level at which projects are defined in `superman-file'.")
+"Subheading level at which projects are defined in `superman-home'.")
 (defvar superman-manager-mode-map (make-sparse-keymap)
   "Keymap used for `superman-manager-mode' commands.")
 (defvar superman-project-alist nil
@@ -112,7 +113,7 @@ category: Name of the category property
   'org' then the index file will be placed
   in a subdirectory 'org' of the project directory.
  The project directory is set by a property LOCATION in
-the `superman-file'.")
+the `superman-home'.")
 (defvar superman-default-category "Unsorted" "Category for new projects.")
 (defvar superman-select-project-summary-format
   "%c/%o/%n"
@@ -131,6 +132,7 @@ the `superman-file'.")
 				    ("LOCATION" . superman-location)
 				    ("DOCUMENTS" . superman-view-documents)
 				    ("FILELIST" . superman-file-list)
+				    ("PROJECT" . superman-view-project)
 				    ("magit" . superman-magit)
 				    ("recent.org" . superman-recent-org)
 				    ("*shell*" . (lambda (project) (if (get-buffer "*shell*") (switch-to-buffer "*shell*") (shell))))
@@ -151,7 +153,6 @@ the `superman-file'.")
  to always prompt for new project")
 (defvar superman-human-readable-ext "^[^\\.].*\\.org\\|\\.[rR]\\|\\.tex\\|\\.txt\\|\\.el$" "Extensions of human readable files")
 (defvar superman-config-cycle-pos 0 "Position in the current window configuration cycle. Starts at 0.")
-
 (defvar superman-export-subdirectory "export")
 (defvar superman-public-directory "~/public_html/")
 (defvar superman-public-server "" "Place on the web where pages are published.")
@@ -218,13 +219,13 @@ the `superman-file'.")
 (add-hook 'find-file-hooks 
         (lambda ()
           (let ((file (buffer-file-name)))
-            (when (and file (equal file (expand-file-name superman-file)))
+            (when (and file (equal file (expand-file-name superman-home)))
               (superman-manager-mode)))))
 
 
 (defun superman-goto-project-manager ()
   (interactive)
-  (find-file superman-file))
+  (find-file superman-home))
 
 (defun superman-project-at-point (&optional noerror)
   "Check if point is at project heading and return the project,
@@ -245,7 +246,7 @@ the `superman-file'.")
 
 (defun superman-goto-profile (project)
   (let ((case-fold-search t))
-    (find-file superman-file)
+    (find-file superman-home)
     (unless (superman-manager-mode 1))
     (goto-char (point-min))
     (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
@@ -295,11 +296,11 @@ the `superman-file'.")
     (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
   
 (defun superman-parse-projects (&optional all)
-  "Parse the file `superman-file' and update `superman-project-alist'."
+  "Parse the file `superman-home' and update `superman-project-alist'."
   (interactive)
   (save-excursion
     (setq superman-project-alist nil)
-    (set-buffer (find-file-noselect superman-file))
+    (set-buffer (find-file-noselect superman-home))
     (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
@@ -348,15 +349,15 @@ the `superman-file'.")
     props))
   
 (defun superman-parse-categories ()
-  "Parse the file `superman-file' and update `superman-project-categories'."
+  "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)
-  (set-buffer (find-file-noselect superman-file))
+  (set-buffer (find-file-noselect superman-home))
   (unless (superman-manager-mode 1))
   (setq superman-project-categories
 	(reverse (superman-get-buffer-props (superman-property 'category)))))
   
 (defun superman-refresh ()
-  "Parses the categories and projects in file `superman-file' and also
+  "Parses the categories and projects in file `superman-home' and also
              updates the currently selected project."
   (interactive)
   (superman-parse-categories)
@@ -388,7 +389,7 @@ the `superman-file'.")
 	  (make-directory dir)
 	  (loop for subdir in superman-project-subdirectories
 		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-	(find-file superman-file)
+	(find-file superman-home)
 	(unless (superman-manager-mode 1))
 	(goto-char (point-min))
 	(re-search-forward (concat (make-string superman-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
@@ -411,7 +412,7 @@ the `superman-file'.")
     ;; a local capture command places the new project
     (let ((org-capture-templates
 	   `(("p" "Project" plain
-	      (file+headline superman-file ,category)
+	      (file+headline superman-home ,category)
 	      ,(concat (make-string superman-project-level (string-to-char "*"))
 		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:" 
 		       (superman-property 'nickname) ": "
@@ -483,7 +484,7 @@ the `superman-file'.")
     (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
       (when (file-exists-p dir) (move-file-to-trash dir))
       (when (file-exists-p index) (move-file-to-trash index))
-      (find-file superman-file)
+      (find-file superman-home)
       (unless (superman-manager-mode 1))
       (goto-char (point-min))
       (re-search-forward (concat ":" (superman-property 'nickname) ":[ \t]?.*" (car pro)) nil t)
@@ -500,7 +501,7 @@ the `superman-file'.")
     "Show an agenda of all the projects. Useful, e.g. for toggling
 the active status of projects."
     (interactive)
-    (find-file superman-file)
+    (find-file superman-home)
     (push ?t unread-command-events)
     (push ?< unread-command-events)
     (call-interactively 'org-agenda))  
@@ -527,9 +528,9 @@ the active status of projects."
 	  "[,\t ]+$" ""     (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
 (defun superman-fix-others ()
-  "Update the others property (collaborator names) of all projects in `superman-file'."
+  "Update the others property (collaborator names) of all projects in `superman-home'."
   (interactive "P")
-  (set-buffer (find-file-noselect superman-file))
+  (set-buffer (find-file-noselect superman-home))
   (unless (superman-manager-mode 1))
   (goto-char (point-min))
   (while (superman-forward-project)
@@ -604,8 +605,8 @@ Examples:
             Start git, if the project is under git control, and git is not up and running yet."
   (setq superman-current-project project)
   (if superman-frame-title-format (superman-set-frame-title))
-  (with-current-buffer (or (find-buffer-visiting superman-file)
-			   (find-file-noselect superman-file))
+  (with-current-buffer (or (find-buffer-visiting superman-home)
+			   (find-file-noselect superman-home))
     (save-excursion
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)

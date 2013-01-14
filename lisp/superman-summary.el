@@ -25,12 +25,6 @@
 
 ;;{{{ summary views
 
-;; (defun superman-view-project (&optional project)
-  ;; (interactive)
-  ;; (let ((pro (or project superman-current-project (superman-select-project))))
-    ;; (switch-to-buffer (concat "*" (car pro) " view*"))
-    ;; (local-set-key "d" 'superman-view-documents)))
-
 (defun superman-summary ()
   (interactive)
   (let ((org-agenda-files (superman-get-index superman-current-project)))
@@ -164,7 +158,7 @@ or by adding whitespace characters."
     ))
 
 (defun superman-parse-document-categories (buf)
-  "Parse the file `superman-file' and update `superman-project-categories'."
+  "Parse the file `superman-home' and update `superman-project-categories'."
   (save-excursion
     (set-buffer buf)
     (reverse (superman-get-buffer-props (superman-property 'category)))))
@@ -1183,102 +1177,7 @@ If dont-redo the agenda is not reversed."
   org-columns-redo)
 
 ;;}}}
-;;{{{ capture documents, notes, etc.
 
-(defun superman-goto-project (&optional project heading create prop-alist)
-  (interactive)
-  (let* ((pro (or project (superman-select-project)))
-	 (index (superman-get-index pro))
-	 hiddenp
-	 (head (or heading (read-string "Goto heading: "))))
-    (if index
-	(find-file index)
-      (error (concat "Project " pro " does not have an index.")))
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (cond ((re-search-forward
-	      (format org-complex-heading-regexp-format (regexp-quote head))
-	      nil t))
-	    (create
-	     (insert "* " head "\n")
-	     (org-set-property "Project" pro)
-	     (forward-line -1))
-	    (t (error (concat "Heading " head " not found in index file of " (car pro)))))
-      (org-narrow-to-element)
-      (if prop-alist (mapcar (lambda (p)
-			       (unless (org-entry-get nil (car p))
-				 (org-set-property (car p) (car (cdr p))))) prop-alist))
-      (goto-char (point-max)))))
-      ;; (forward-line)
-      ;; (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1))))))
-
-(defun superman-goto-project-workflow ()
-  (interactive)
-  (or (superman-goto-project nil "WorkFlow" 'create)))
-
-(defun superman-goto-project-notes ()
-  (interactive)
-  (or (superman-goto-project nil "Notes" 'create)))
-
-(defun superman-goto-project-documents (&optional narrow)
-  (interactive)
-  (or (superman-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
-      (if narrow (superman-view-mode t))))
-
-(defun superman-insert-list-files (&optional postfix)
-  (interactive)
-  (let ((files (superman-list-files "." 
-				   (or postfix (concat (read-string "Postfix: ") "$")) nil)))
-    (insert "\n")
-    (loop for x in files
-	  do 
-	  (insert (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:filename: [[" (file-relative-name x) "]]\n:END:\n")))))
-
-(defun superman-goto-project-taskpool (&optional arg)
-  (interactive)
-  (if arg (org-store-link nil))
-  (let* ((buf (current-buffer))
-	 (pro (car (superman-select-project)))
-	 ;;             (pro (ido-completing-read "Select project: " superman-project-alist))
-	 (entry (assoc pro superman-project-alist))
-	 (index (superman-get-index entry)))
-    (if index
-	(find-file index)
-      (error (concat "Project " pro " does not have an index.")))
-    (goto-char (point-min))
-    (or (re-search-forward "^[*]+ TaskPool" nil t)
-	(progn
-	  (goto-char (point-max))
-	  (insert "\n\n* TaskPool [0/0]\n")
-	  (point))) 
-    (org-end-of-line)))
-
-
-;; Choose a prefix
-(setq superman-capture-prefix "P")
-(add-to-list 'org-capture-templates `(,superman-capture-prefix "Project management") 'append)
-(defun superman-capture() 
-  (interactive)
-  (push (string-to-char superman-capture-prefix) unread-command-events)
-  (call-interactively 'org-capture))
-;; Capturing links 
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
-				      (function (lambda () (superman-goto-project nil "Links" 'yes))) "\n - %x%?") 'append)
-;; Capturing tasks
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "t") "Add task" plain
-				      (function superman-goto-project-taskpool) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
-				      (function superman-goto-project-taskpool) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-;; Capturing notes
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "n") "Add note" plain
-				      (function superman-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-;; Capturing documents
-(add-to-list 'org-capture-templates
-	     `(,(concat superman-capture-prefix "d") "Add document" plain
-	       (function superman-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append)
-
-;;}}}
 ;;{{{ Adding documents from file-list
 
 (defun superman-add-documents (&optional file-list)

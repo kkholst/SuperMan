@@ -55,14 +55,16 @@
 
 
 (defun superman-find-thing (thing project)
-  (let* ((case-fold-search t)
-	 (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  (car thing))
-			     superman-config-action-alist))))
-    (cond ((functionp action) (funcall action project))
-	  ((and (car thing) (file-name-directory (car thing)))
-	   (find-file (expand-file-name
-		       (car thing) (concat (superman-get-location project) (car project)))))
-	  (t (switch-to-buffer (car thing))))))
+  (save-window-excursion
+    (let* ((case-fold-search t)
+	   (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
+			       superman-config-action-alist))))
+      (cond ((functionp action) (funcall action project))
+	    ((and thing (file-name-directory thing))
+	     (find-file (expand-file-name
+			 thing (concat (superman-get-location project) (car project)))))
+	    (t (switch-to-buffer thing))))
+    (current-buffer)))
 
 (defun superman-read-config-list (string)
   ;; return a list of lists with vertical splits 
@@ -75,6 +77,7 @@
   (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
 	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
     hlist))
+
 
 
 (defun superman-save-config (&optional config project)
@@ -125,29 +128,36 @@
       config)))
 
 
+(defun superman-split-windows (window-config project)
+  (let ((ncolumns (length window-config))
+	(nrows (mapcar 'length window-config))
+	top-windows)
+    (delete-other-windows)
+    (setq top-windows (list (selected-window)))
+    ;; first create the windows 
+    (loop for c from 1 to (- ncolumns 1) do
+	  (split-window-horizontally)
+	  (other-window 1)
+	  (setq top-windows (append top-windows (list (selected-window)))))
+    (loop for c from 0 to (- ncolumns 1) do
+	  (select-window (nth c top-windows)) ;; switch to the top-window in this column
+	  (let ((nrow (nth c nrows)));; number of rows in this column
+	    (loop for r from 0 to (- nrow 1) do
+		  (switch-to-buffer (superman-find-thing (nth r (nth c window-config)) project))
+		  (when (and (< r (- nrow 1)) (> nrow 1 ))
+		    (split-window-vertically)
+		    (other-window 1)))))
+    (select-window (nth 0 top-windows))))
+    
 (defun superman-set-config (&optional project config pos)
+  "Set a user defined window configuration."
   (interactive)
   (let* ((pro (or project superman-current-project (superman-select-project)))
 	 (conf (or config (superman-get-config pro)))
 	 (pos (or pos superman-config-cycle-pos 0))
-	 (window-config (superman-read-config (nth pos (superman-read-config-list conf))))
-	 (ncolumns (length window-config))
-	 top-windows)
+	 (window-config (superman-read-config (nth pos (superman-read-config-list conf)))))
     ;;(message conf)
-    (delete-other-windows)
-    (setq top-windows (list (selected-window)))
-    (loop for n from 1 to (- ncolumns 1) do
-	  (split-window-horizontally)
-	  (other-window 1)
-	  (setq top-windows (append top-windows (list (selected-window)))))
-    (loop for n from 0 to (- ncolumns 1) do 
-	  (select-window (nth n top-windows))
-	  (let ((el (nth n window-config)))
-	    (while el
-	      (superman-find-thing el pro)
-	      (setq el (cdr el))
-	      (when el (split-window-vertically) (other-window 1)))))
-    (select-window (nth 0 top-windows))))
+    (superman-split-windows window-config pro)))
 
 
 (defun superman-magit (project)

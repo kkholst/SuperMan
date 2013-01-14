@@ -31,6 +31,15 @@
 
 ;;{{{
 
+(defvar superman '(("SuperMan" ("location" . (file-name-directory superman-home))
+		   ("index" . superman-home)
+		   ("category" . nil)
+		   ("config" . nil)
+		   ("state" . "ACTIVE"))))
+
+;; (defun superman-super-config ()
+  ;; (superman-save-config
+
 ;; (defun superman ()
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
@@ -84,7 +93,7 @@
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
 	     ((tags "NickName={.+}"
-		    ((org-agenda-files (quote (,superman-file)))
+		    ((org-agenda-files (quote (,superman-home)))
 		     (org-agenda-finalize-hook 'superman-finalize-superman)
 		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		     (org-agenda-overriding-header
@@ -108,7 +117,7 @@
     ;; (if (get-buffer view-buf-name)
 	;; (switch-to-buffer view-buf-name)
       ;; (let ((lprops
-	     ;; `((org-agenda-files (quote (,superman-file)))
+	     ;; `((org-agenda-files (quote (,superman-home)))
 	       ;; (org-agenda-finalize-hook 'superman-finalize-superman)
 	       ;; (org-agenda-overriding-header
 		;; (concat "h: help, n: new project, s[S]: set property[all]"
