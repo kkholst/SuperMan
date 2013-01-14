@@ -100,10 +100,22 @@ or by adding whitespace characters."
 (defun superman-view-finalize-documents ()
   (let* ((pro (or (superman-view-current-project)
 		  (superman-select-project)))
-	 (loc (concat (superman-get-location pro) (car pro))))
-    (superman-view-mode-on)))
-    ;; (let ((buffer-read-only nil))
-      ;; (superman-view-set-marks))))
+	 (loc (concat (superman-get-location pro) (car pro)))
+	 (header-end (save-excursion
+		       (next-single-property-change (point) 'org-marker)))
+	 (git-string (concat "Control: "
+			     (if (superman-git-p loc)
+				 (concat "Git repository at "
+					 loc)
+			       "press `I' to initialize git"))))
+	 (save-excursion
+	   (goto-char (point-min))
+	   (if (re-search-forward "^Control:[ \t]*\\(.*\\)[ \t]*$" header-end t)
+	       (replace-match git-string)))
+	 (superman-view-mode-on)))
+
+;; (let ((buffer-read-only nil))
+;; (superman-view-set-marks))))
 
 (defun superman-view-project (&optional project)
   "View documents of the current project."
@@ -126,9 +138,9 @@ or by adding whitespace characters."
 						(concat "press `I' to initialize git"))
 			      "\n\nDocuments: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '
-							     (("GitStatus" .  "GitStatus") 
-							      ("LastCommit" . "LastCommit") 
-							      ("FileName" . "FileName")))))
+							      (("GitStatus" .  "GitStatus") 
+							       ("LastCommit" . "LastCommit") 
+							       ("FileName" . "FileName")))))
 		     (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
 		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 		     (org-agenda-view-columns-initially nil)
@@ -1210,7 +1222,7 @@ If dont-redo the agenda is not reversed."
 	 (fl (or file-list `(,(read-file-name (concat "Choose: ") (file-name-as-directory dir))))))
     ;; FIXME need to write superman-get-documents and filter duplicates
     (save-window-excursion
-      (superman-goto-project pro "Documents")
+      (superman-goto-project pro "Documents" 'create)
       (while fl
 	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
 		"\n:PROPERTIES:\n:"
