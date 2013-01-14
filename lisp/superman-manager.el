@@ -29,8 +29,9 @@
 
 ;; External dependencies
 (require 'org)  
-(require 'deft)
-(require 'winner)
+(require 'deft) ;; http://jblevins.org/git/deft.git
+(require 'popup) ;; https://github.com/auto-complete/popup-el.git
+(require 'winner) 
 (require 'ido)
 (require 'org-colview)
 (require 'org-publish)
@@ -57,6 +58,7 @@
     (others . "Others")
     (category . "Category")
     (git . "Git")
+    (date . "Date")
     (lastcommit . "LastCommit")
     (capturedate . "CaptureDate")
     (project . "Project")
