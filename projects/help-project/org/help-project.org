@@ -2,6 +2,6 @@
 
 * TODO Getting started
 
-* TODO Creating new projects
+* TODO [#B] Creating new projects
 
 
