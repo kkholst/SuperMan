@@ -110,6 +110,26 @@
 	(setq prev-row row)))
     config))
 
+;; New suggestion..
+;; (defun superman-get-config (project)
+;;   (let* ((config (or superman-sticky-config superman-default-config nil))
+;; 	 (config-file  (concat (superman-get-location project) (car project) "/.superman-window-config"))
+;; 	 (str)
+;; 	 (filed-config (when (file-exists-p config-file)
+;; 			 (save-window-excursion
+;; 			   (find-file config-file)
+;; 			   (setq str (replace-regexp-in-string "\n" " : "  (replace-regexp-in-string "[\n\t ]+$" "" (buffer-string))))
+;; 			   (kill-buffer)
+;; 			   str)))
+;; 	 (prop-config (cdr (assoc "config" (cadr project)))))
+;;     (if (not config)
+;; 	(setq config prop-config))
+;;     (if filed-config
+;; 	(setq config (concat (if config (concat config " : ")) filed-config)))
+;;     (if prop-config
+;; 	(setq config (concat (if config (concat config " : ")) prop-config)))
+;;     (if (not config) (setq config "DOCUMENTS"))
+;;     config))
 
 (defun superman-get-config (project)
   (let* ((config (or superman-sticky-config superman-default-config "INDEX"))
@@ -126,7 +146,6 @@
       (when prop-config
 	(setq config (concat config " : " prop-config)))
       config)))
-
 
 (defun superman-split-windows (window-config project)
   (let ((ncolumns (length window-config))

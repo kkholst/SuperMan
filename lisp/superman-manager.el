@@ -137,10 +137,14 @@ the `superman-home'.")
 				    ("recent.org" . superman-recent-org)
 				    ("*shell*" . (lambda (project) (if (get-buffer "*shell*") (switch-to-buffer "*shell*") (shell))))
                                     ("*ielm*" . (lambda (project) (if (get-buffer "*ielm*") (switch-to-buffer "*ielm*") (ielm))))
-				    ("*R*" . superman-find-R-function)))
-(setq superman-default-config "INDEX")
-(setq superman-sticky-config nil)
+				    ("*R*" . superman-find-R-function)
+				    ("" . (lambda (project) ))))
+
+;; TODO Add description
+(defvar superman-default-config INDEX "default window configuration") ;;"INDEX")
+(defvar superman-sticky-config nil "sticky window configuration")
 ;; (setq superman-sticky-config "recent.org / *R* | TODO")
+
 (defvar superman-file-manager "file-list")
 (defvar superman-find-R-function
   "Function used to find *R*"

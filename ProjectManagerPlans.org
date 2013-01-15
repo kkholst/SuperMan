@@ -157,8 +157,9 @@ Each file contains information about the project, workflow, files, links, etc.
   http://www.gnu.org/software/emacs/manual/html_node/elisp/Changing-Properties.html
   http://emacs-fu.blogspot.dk/2008/12/highlighting-todo-fixme-and-friends.html
   http://www.gnu.org/software/emacs/emacs-lisp-intro/html_node/Point-and-mark.html
-** TODO shell-access from document-list
+** DONE shell-access from document-list
 ** TODO Create documents section for all git-controlled files.
 ** DONE choice on how to represent project in org-pro-switch-to-project,
   e.g.: projectname/category/collaborators instead of category/collaborators/projectname
 ** TODO directory hierachy in documents section (indentation in 'category' view?)
+** TODO Decision: do we want to have seperate config files or only in Projects.org as a property for each project?

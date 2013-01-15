@@ -105,16 +105,16 @@
 
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
-(add-to-list 'org-capture-templates
-	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
-	       (function superman-goto-project-calendar)
-	       (concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
-		       "\n:Participants:"
-		       "\n:Location:"
-		       "\n:CaptureDate: %U"
-		       "\n:END:"
-		       "\n**** Agenda\n"
-		       "\n**** TODO Minutes\n") 'append)
+;; (add-to-list 'org-capture-templates
+;; 	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
+;; 	       (function superman-goto-project-calendar)
+;; 	       (concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
+;; 		       "\n:Participants:"
+;; 		       "\n:Location:"
+;; 		       "\n:CaptureDate: %U"
+;; 		       "\n:END:"
+;; 		       "\n**** Agenda\n"
+;; 		       "\n**** TODO Minutes\n") 'append)
 
 ;;}}}
 

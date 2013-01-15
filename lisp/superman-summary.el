@@ -114,7 +114,7 @@ or by adding whitespace characters."
 (defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
+  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
@@ -166,7 +166,7 @@ or by adding whitespace characters."
 (defun superman-view-documents (&optional project)
   "View documents of the current project."
   (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
+  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (cats (superman-parse-document-categories (get-file-buffer (superman-get-index pro))))
