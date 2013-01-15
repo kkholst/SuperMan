@@ -90,6 +90,10 @@
   (let* ((view-buf-name (concat "*Superman*"))
 	 ;;	 (org-agenda-overriding-buffer-name view-buf-name)
 	 (org-agenda-finalize-hook 'superman-finalize-superman)
+	 (org-agenda-window-setup 'current-window)
+	 (org-agenda-buffer-name (concat "*S*"))
+	 (org-agenda-sticky nil)
+	 ;; (org-agenda-overriding-buffer-name (concat "*S*"))
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
 	     ((tags "NickName={.+}"
@@ -152,7 +156,9 @@
 (defalias 'S 'superman)
 
 (defun S-todo ()
-  (let ((org-agenda-custom-commands
+  (let ((org-agenda-buffer-name (concat "*S-todo*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands
 	 `(("P" "Projects-TODO neither B or C"
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
@@ -169,7 +175,9 @@
 ;; (rename-buffer "*S-todo*"))
 
 (defun S-agenda ()
-  (let ((org-agenda-custom-commands nil))
+  (let ((org-agenda-buffer-name (concat "*S-agenda*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
 		 '("A" "Superman agenda"
 		   ((agenda ""
@@ -183,7 +191,9 @@
     (call-interactively 'org-agenda)))
 
 (defun S-todo-B ()
-  (let ((org-agenda-custom-commands
+  (let ((org-agenda-buffer-name (concat "*S-todo-B*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands
 	 `(("B" "Projects-TODO class B"
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
@@ -197,7 +207,9 @@
     (call-interactively 'org-agenda)))
 
 (defun S-todo-C ()
-  (let ((org-agenda-custom-commands
+  (let ((org-agenda-buffer-name (concat "*S-todo-C*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands
 	 `(("C" "Projects-TODO class C"
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
