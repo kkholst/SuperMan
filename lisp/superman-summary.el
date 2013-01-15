@@ -117,6 +117,7 @@ or by adding whitespace characters."
   (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-window-setup 'current-window)
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-finalize-hook 'superman-view-finalize-documents)
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
@@ -169,6 +170,7 @@ or by adding whitespace characters."
   (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-window-setup 'current-window)
 	 (cats (superman-parse-document-categories
 		(find-file (superman-get-index pro))))
 		;; (get-file-buffer (superman-get-index pro))))
