@@ -466,6 +466,7 @@ If dont-redo the agenda is not reversed."
 	 (default-directory (expand-file-name (or filedir dir))))
     (shell "*shell*superman")
     (comint-send-string (current-buffer) (concat "\ncd " default-directory "\n"))
+    (dirs)
     ))
 
 
