@@ -149,7 +149,10 @@ or by adding whitespace characters."
 (defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
-  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
+  (let* ((pro (or project
+		  superman-current-project
+		  (setq superman-current-project
+		  (superman-select-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
@@ -165,7 +168,7 @@ or by adding whitespace characters."
 		      (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
 			      "\nProject: "  ,(car pro)
 			      "\n" (or (superman-view-control) 
-						(concat "\nControl: " "press `I' to initialize git"))
+				       (concat "\nControl: " "press `I' to initialize git"))
 			      "\n\nDocuments: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '
 							      (("GitStatus" .  "GitStatus") 
@@ -208,7 +211,8 @@ or by adding whitespace characters."
   (interactive)
   (let* ((pro (or project
 		  superman-current-project
-		  (superman-select-project)))
+		  (setq superman-current-project
+		  (superman-select-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
