@@ -169,7 +169,9 @@ or by adding whitespace characters."
   (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-overriding-buffer-name (concat "*Project[" (car pro) "]*"))
-	 (cats (superman-parse-document-categories (get-file-buffer (superman-get-index pro))))
+	 (cats (superman-parse-document-categories
+		(find-file (superman-get-index pro))))
+		;; (get-file-buffer (superman-get-index pro))))
 	 ;;	 (cat-number-one (car cats))
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (header-start (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"

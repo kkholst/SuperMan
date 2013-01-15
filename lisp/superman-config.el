@@ -111,21 +111,22 @@
     config))
 
 (defun superman-get-config (project)
-  (let* ((filed-config (when (file-exists-p config-file)
+  (let* ((config-file (concat
+		       (superman-get-location project)
+		       (car project) "/.superman-window-config"))
+	 (filed-config (when (file-exists-p config-file)
 			 (save-window-excursion
-			   (with-temp-buffer (find-file (concat
-							 (superman-get-location project)
-							 (car project) "/.superman-window-config"))
+			   (with-temp-buffer (find-file config-file)
 					     (setq str (replace-regexp-in-string
 							"\n" " : "
 							(replace-regexp-in-string "[\n\t ]+$" ""
 										  (buffer-string))))))))
 	 config
- 	 (prop-config (cdr (assoc "config" (cadr project)))))
+	 (prop-config (cdr (assoc "config" (cadr project)))))
     (when filed-config
- 	(setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
+      (setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
     (when prop-config
- 	(setq config (concat (if config (concat config " : ")) prop-config)))
+      (setq config (concat (if config (concat config " : ")) prop-config)))
     (when (not config) (setq config superman-default-config))
     config))
 
