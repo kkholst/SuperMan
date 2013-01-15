@@ -88,7 +88,7 @@
   "Manage projects."
   (interactive)
   (let* ((view-buf-name (concat "*Superman*"))
-;;	 (org-agenda-overriding-buffer-name view-buf-name)
+	 ;;	 (org-agenda-overriding-buffer-name view-buf-name)
 	 (org-agenda-finalize-hook 'superman-finalize-superman)
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
@@ -101,8 +101,9 @@
 			      "\n\nProjects: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
 		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-		     (org-agenda-view-columns-initially nil)
-;;		     (org-agenda-buffer-name "*Superman*")
+		     (org-agenda-window-setup 'current-window)
+		     ;; (org-agenda-view-columns-initially nil)
+		     ;; (org-agenda-buffer-name "*Superman*")
 		     )))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
@@ -135,7 +136,8 @@
 ;;{{{ cycle view 
 
 (defvar superman-views nil)
-(setq superman-views (list 'S-todo 'S-todo-B 'S-todo-C 'S-agenda 'S))
+(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-todo-C 'S-agenda))
+
 (defun superman-change-view  (&optional arg)
   (interactive "p")
   ;; cycle view list
@@ -158,12 +160,13 @@
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
 		     (superman-parse-categories))
-	    ((org-agenda-finalize-hook 'superman-clean-up 'superman-on))))))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook '(lambda () (superman-clean-up) (superman-on))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
-  ;; (when (get-buffer "*S-todo*")
-    ;; (kill-buffer "*S-todo*"))
-  ;; (rename-buffer "*S-todo*"))
+;; (when (get-buffer "*S-todo*")
+;; (kill-buffer "*S-todo*"))
+;; (rename-buffer "*S-todo*"))
 
 (defun S-agenda ()
   (let ((org-agenda-custom-commands nil))
@@ -174,12 +177,8 @@
 			      (superman-index-list)))))
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
+		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-overriding-header "Superman agenda"))))
-    ;; '(("A" "Projects-agenda"
-    ;; ((agenda "agenda"
-    ;; ((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
-    ;; (org-agenda-files (superman-index-list))
-    ;; (org-agenda-show-all-dates nil))))))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -192,7 +191,8 @@
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
 		     (superman-parse-categories))
-	    ((org-agenda-finalize-hook 'superman-clean-up))))))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook 'superman-clean-up))))))
     (push ?B unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -205,7 +205,8 @@
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
 		     (superman-parse-categories))
-	    ((org-agenda-finalize-hook 'superman-clean-up))))))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook 'superman-clean-up))))))
     (push ?C unread-command-events)
     (call-interactively 'org-agenda)))
 
