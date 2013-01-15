@@ -1052,15 +1052,17 @@ If dont-redo the agenda is not reversed."
   (hl-line-mode 1)
   (superman-view-mode t))
 
-(defun superman-start-shell ()
+(defun superman-start-shell (&optional dir)
   (interactive)
-  (let* ((filedir (file-name-directory (superman-filename-at-point)))
-	 (pro (superman-view-current-project))
-	 (dir (concat (superman-get-location pro) (car pro))))
-    (shell "*superman shell*")
-    (comint-send-string (current-buffer) (concat "cd " (or filedir dir) "\r"))
-    (erase-buffer))
-  )
+  (let* ((filedir (or dir (file-name-directory (superman-filename-at-point))))
+	 (pro (or dir (superman-view-current-project)))
+	 (dir (or dir (concat (superman-get-location pro) (car pro))))
+	 (default-directory (expand-file-name (or filedir dir))))
+    (shell "*shell*superman")
+    (comint-send-string (current-buffer) (concat "\ncd " default-directory "\n"))
+    ))
+
+
    
 (define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
 (define-key superman-view-mode-map "l" 'superman-view-git-log) 

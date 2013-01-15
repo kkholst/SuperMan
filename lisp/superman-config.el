@@ -60,6 +60,8 @@
 	   (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
 			       superman-config-action-alist))))
       (cond ((functionp action) (funcall action project))
+	    ((and thing (string= (substring thing 0 1) "!"))
+	     (superman-start-shell (substring thing 1 (length thing))))
 	    ((and thing (file-name-directory thing))
 	     (find-file (expand-file-name
 			 thing (concat (superman-get-location project) (car project)))))
@@ -252,7 +254,7 @@
 (defun superman-switch-config (&optional project)
   "Switch to the next window configuration (if any)."
   (interactive)
-  (let* ((pro (or project superman-current-project))
+  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (curpos (or superman-config-cycle-pos 0))
 	 (config-list (superman-read-config-list
 		       (superman-get-config pro))))

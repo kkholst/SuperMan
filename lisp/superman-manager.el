@@ -135,13 +135,17 @@ the `superman-home'.")
 				    ("PROJECT" . superman-view-project)
 				    ("magit" . superman-magit)
 				    ("recent.org" . superman-recent-org)
-				    ("*shell*" . (lambda (project) (if (get-buffer "*shell*") (switch-to-buffer "*shell*") (shell))))
-                                    ("*ielm*" . (lambda (project) (if (get-buffer "*ielm*") (switch-to-buffer "*ielm*") (ielm))))
+				    ("*shell*" . superman-start-shell)
+                                    ("*ielm*" . 
+				     (lambda (project) 
+				       (if (get-buffer "*ielm*") 
+					   (switch-to-buffer "*ielm*") 
+					 (ielm))))
 				    ("*R*" . superman-find-R-function)
 				    ("" . (lambda (project) ))))
 
 ;; TODO Add description
-(defvar superman-default-config "INDEX" "default window configuration") ;;"INDEX")
+(defvar superman-default-config "INDEX" "default window configuration") 
 (defvar superman-sticky-config nil "sticky window configuration")
 ;; (setq superman-sticky-config "recent.org / *R* | TODO")
 
