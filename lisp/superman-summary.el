@@ -113,8 +113,8 @@ or by adding whitespace characters."
 	(setq new-item (concat new-item "  " (superman-trim-string val  23))))
       (setq prop-values (cdr prop-values)))
     (beginning-of-line)
-    (kill-line)
-    (insert (concat " " (superman-trim-string hdr 20) new-item) "\n")
+    (looking-at ".*")
+    (replace-match (concat " " (superman-trim-string hdr 20) new-item) "\n")
     (beginning-of-line 1)
     (add-text-properties (point-at-bol) (point-at-eol) text-props)))
 
@@ -466,7 +466,6 @@ If dont-redo the agenda is not reversed."
 	 (default-directory (expand-file-name (or filedir dir))))
     (shell "*shell*superman")
     (comint-send-string (current-buffer) (concat "\ncd " default-directory "\n"))
-    (dirs)
     ))
 
 
