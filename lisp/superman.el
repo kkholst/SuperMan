@@ -88,7 +88,7 @@
   "Manage projects."
   (interactive)
   (let* ((view-buf-name (concat "*Superman*"))
-;;	 (org-agenda-overriding-buffer-name view-buf-name)
+	 ;;	 (org-agenda-overriding-buffer-name view-buf-name)
 	 (org-agenda-finalize-hook 'superman-finalize-superman)
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
@@ -101,8 +101,9 @@
 			      "\n\nProjects: " "\n"
 			      (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
 		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-		     (org-agenda-view-columns-initially nil)
-;;		     (org-agenda-buffer-name "*Superman*")
+		     (org-agenda-window-setup 'current-window)
+		     ;; (org-agenda-view-columns-initially nil)
+		     ;; (org-agenda-buffer-name "*Superman*")
 		     )))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
@@ -131,7 +132,86 @@
 	;; (put 'org-agenda-redo-command 'org-lprops lprops)))))
 
 ;;}}}
-;;{{{
+
+;;{{{ cycle view 
+
+(defvar superman-views nil)
+(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-todo-C 'S-agenda))
+
+(defun superman-change-view  (&optional arg)
+  (interactive "p")
+  ;; cycle view list
+  (when (eq major-mode 'org-agenda-mode)
+    (let ((current  (car superman-views))
+	  (rest  (cdr superman-views)))
+      (setq superman-views rest)
+      (add-to-list 'superman-views current 'append)))
+  (eval `(,(car superman-views)))
+  (superman-on))
+  
+(defalias 'S 'superman)
+
+(defun S-todo ()
+  (let ((org-agenda-custom-commands
+	 `(("P" "Projects-TODO neither B or C"
+	    ,(mapcar '(lambda (cat)
+			;; (list 'todo "TODO"
+			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
+			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
+				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+		     (superman-parse-categories))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook '(lambda () (superman-clean-up) (superman-on))))))))
+    (push ?P unread-command-events)
+    (call-interactively 'org-agenda)))
+;; (when (get-buffer "*S-todo*")
+;; (kill-buffer "*S-todo*"))
+;; (rename-buffer "*S-todo*"))
+
+(defun S-agenda ()
+  (let ((org-agenda-custom-commands nil))
+    (add-to-list 'org-agenda-custom-commands
+		 '("A" "Superman agenda"
+		   ((agenda ""
+			    ((org-agenda-files
+			      (superman-index-list)))))
+		   ((org-agenda-compact-blocks nil)
+		    (org-agenda-show-all-dates nil)
+		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-overriding-header "Superman agenda"))))
+    (push ?A unread-command-events)
+    (call-interactively 'org-agenda)))
+
+(defun S-todo-B ()
+  (let ((org-agenda-custom-commands
+	 `(("B" "Projects-TODO class B"
+	    ,(mapcar '(lambda (cat)
+			;; (list 'todo "TODO"
+			(list 'tags-todo "PRIORITY=\"B\""
+			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
+				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+		     (superman-parse-categories))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook 'superman-clean-up))))))
+    (push ?B unread-command-events)
+    (call-interactively 'org-agenda)))
+
+(defun S-todo-C ()
+  (let ((org-agenda-custom-commands
+	 `(("C" "Projects-TODO class C"
+	    ,(mapcar '(lambda (cat)
+			;; (list 'todo "TODO"
+			(list 'tags-todo "PRIORITY=\"C\""
+			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
+				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+		     (superman-parse-categories))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook 'superman-clean-up))))))
+    (push ?C unread-command-events)
+    (call-interactively 'org-agenda)))
+
+;;}}}
+;;{{{ superman-mode-map
 
 (defvar superman-mode-map (make-sparse-keymap)
   "Keymap used for `superman-mode' commands.")
@@ -158,11 +238,20 @@ Enabling superman mode electrifies the superman buffer for project management."
     (superman-new-project))
   (org-agenda-redo))
 
+(defun superman-clean-up ()
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "^Project category:" nil t)
+      (when (progn (forward-line 1) (looking-at "^[ \t]*$"))
+	(kill-line 2)
+	(kill-line -1)))))
+
 (define-key superman-mode-map [return] 'org-superman-return) ;; Return is not used anyway in column mode
-(define-key superman-mode-map "n" 'superman-new-project)
-(define-key superman-mode-map [(f1)] 'superman-switch-to-project)
-(define-key superman-mode-map " " 'superman-switch-to-project)
+(define-key superman-mode-map "N" 'superman-new-project)
+;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
+;; (define-key superman-mode-map " " 'superman-switch-to-project)
 (define-key superman-mode-map "S" 'superman-set-property)
+(define-key superman-mode-map "V" 'superman-change-view)
 (define-key superman-mode-map "?" 'superman-show-help)
 
 (defun superman-show-help ()
@@ -177,6 +266,8 @@ Enabling superman mode electrifies the superman buffer for project management."
     (funcall superman-help-fun msg)))
 
 ;;}}}  
+
+
 
 (provide 'superman)
 ;;; superman.el ends here
