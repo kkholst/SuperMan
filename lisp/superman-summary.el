@@ -69,11 +69,12 @@ or by adding whitespace characters."
 (defun superman-view-current-project ()
   ;; FIXME: may give problems when property "Project" does
   ;; not match currently viewed project
-  (or (superman-property-at-point "Project")
-      (save-excursion (goto-char (point-min))
-		      (if (re-search-forward "^Project:[ \t]*\\(.*\\)[ \t]*$" nil t)
-			  (assoc (match-string-no-properties 1) superman-project-alist)
-			(superman-select-project)))))
+  ;; (or (superman-property-at-point "Project")
+  (save-excursion (goto-char (point-min))
+		  (if (re-search-forward "^Project:[ \t]*\\(.*\\)[ \t]*$" nil t)
+		      (assoc (match-string-no-properties 1) superman-project-alist)
+		    (superman-select-project))))
+;; )
 
 (defun superman-view-control ()
   ;; FIXME: this is a hack to distinguish between
@@ -554,13 +555,13 @@ The function is only run on items marked in this way."
 	(while (next-single-property-change (point-at-eol) 'org-marker)
 	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
 	  (when (or (not marked)
-		    (eq (get-text-property (point) (car marked)) (cdr marked)))
+		    (eq (get-text-property (point) (car marked)) (cadr marked)))
 	    (setq loop-out (append (list (apply fun args)) loop-out))))
 	loop-out))))
 
 (defun superman-view-git-add-all (&optional dont-redo)
   (interactive)
-  (superman-loop 'superman-view-git-add (list 'dont) nil nil '(face superman-mark-face))
+  (superman-loop 'superman-view-git-add (list 'dont) nil nil `(face ,superman-mark-face))
   (unless dont-redo (org-agenda-redo)))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
