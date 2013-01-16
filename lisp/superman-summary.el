@@ -54,17 +54,17 @@ or by adding whitespace characters."
       (substring str 0 len))))
 
 ;; FIXME: use gnus-user-date-format-alist to trim date
-(defun superman-view-documents-format (hdr level category tags-list prop-list)
-  (concat " " (superman-trim-string hdr 20)
-	  (let ((cprops prop-list)
-		(pstring ""))
-	    (while cprops
-	      (let ((val (cdr (car cprops))))
-		(cond ((string= (downcase (caar cprops)) "filename")
-		       (setq val (file-name-nondirectory (org-link-display-format val)))))
-		(setq pstring (concat pstring "  " (superman-trim-string val  23))))
-		(setq cprops (cdr cprops)))
-	      pstring) "\t"))
+;; (defun superman-view-documents-format (hdr level category tags-list prop-list)
+  ;; (concat " " (superman-trim-string hdr 20)
+	  ;; (let ((cprops prop-list)
+		;; (pstring ""))
+	    ;; (while cprops
+	      ;; (let ((val (cdr (car cprops))))
+		;; (cond ((string= (downcase (caar cprops)) "filename")
+		       ;; (setq val (file-name-nondirectory (org-link-display-format val)))))
+		;; (setq pstring (concat pstring "  " (superman-trim-string val  23))))
+		;; (setq cprops (cdr cprops)))
+	      ;; pstring) "\t"))
 
 (defun superman-view-current-project ()
   ;; FIXME: may give problems when property "Project" does
@@ -144,15 +144,16 @@ or by adding whitespace characters."
     (beginning-of-line)
     (add-text-properties (point-at-bol) (point-at-eol) text-props)))
 
-(defvar superman-view-format-alist '(("Documents" . ("GitStatus" "LastCommit" "FileName"))
+(defvar superman-view-format-alist '(("Meetings" . ("Date" "Participants" "Status"))
+				     ("Documents" . ("GitStatus" "LastCommit" "FileName"))
 				     ("Notes" . ("NoteDate"))
 				     ("Mail" . ("EmailDate" "Link"))
 				     ("Tasks" . ("CaptureDate"))
 				     ("Bookmarks" . ("Bookmark"))))
 
-(defun superman-reformat-document-lines ()
-  (superman-loop
-   'superman-reformat-item (list '("GitStatus" "LastCommit" "FileName"))))
+;; (defun superman-reformat-document-lines ()
+;; (superman-loop
+;; 'superman-reformat-item (list '("GitStatus" "LastCommit" "FileName"))))
 
 (defun superman-finalize-project-view ()
   (let (cat-head
@@ -206,7 +207,40 @@ or by adding whitespace characters."
       (goto-char (point-min))
       (if (re-search-forward "^Control:[ \t]*\\(.*\\)[ \t]*$" header-end t)
 	  (replace-match git-string)))
-    (superman-reformat-document-lines)
+    (let (cat-head
+	  cat-tail
+	  done
+	  (buffer-read-only nil))
+      (save-excursion
+	(goto-char (point-min))
+	(while (not done)
+	  ;; Either there is a next header or we are almost done
+	  (unless (setq cat-tail (next-single-property-change (point-at-eol) 'org-agenda-structural-header))
+	    (setq cat-tail (point-max))
+	    (setq done t))
+	  (let* ((cat (progn (re-search-forward "^\\[\\(.*\\)\\]" nil t) (match-string-no-properties 1)))
+		 (cat-fun '("GitStatus" "LastCommit" "FileName"))
+		 header
+		 delete
+		 (next-item-pos (next-single-property-change (point-at-eol) 'org-marker)))
+	    (beginning-of-line)
+	    (setq cat-head (point))
+	    (if (or (not next-item-pos) (< cat-tail next-item-pos))
+		;; no items in this block
+		(progn (setq delete t)
+		       (delete-region cat-head cat-tail))
+	      (setq header (superman-make-item
+			    (mapcar '(lambda (cat) (cons cat cat)) cat-fun) "header" 23))
+	      (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+	      (end-of-line)
+	      (insert "\n" header)
+	      (superman-loop 'superman-reformat-item (list cat-fun) cat-head cat-tail))
+	    (goto-char cat-head)
+	    (unless delete
+	      (setq cat-head (next-single-property-change (point-at-eol) 'org-agenda-structural-header)))
+	    (unless done 
+	      (goto-char cat-head))))))
+    ;; (superman-reformat-document-lines)
     (superman-view-mode-on)))
 
 
@@ -219,7 +253,7 @@ or by adding whitespace characters."
 
 
 
-(defvar superman-cats '(("Documents" . "FileName") ("Notes" . "NoteDate") ("Tasks" . "TaskDate") ("Mail" . "EmailDate") ("Bookmarks" . "Bookmark")))
+(defvar superman-cats '(("Meetings" . "Date") ("Documents" . "FileName") ("Notes" . "NoteDate") ("Tasks" . "TaskDate") ("Mail" . "EmailDate") ("Bookmarks" . "Bookmark")))
 
 (defun superman-view-project (&optional project)
   "View documents of the current project."
@@ -348,10 +382,10 @@ Can also be set to (string-to-char \"~\") with any string in place of ~.")
 			       "\n" (or (superman-view-control)
 					(concat "Control: not set. <> Press `I' to initialize git"))
 			       "\n\n"))
-	 (shared-header
-	  (superman-view-documents-format
-	   "header" 0 nil nil
-	   '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName"))))
+	 (shared-header "")
+	 ;; (superman-view-documents-format
+	 ;; "header" 0 nil nil
+	 ;; '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName"))))
 	 (cats-and-one-dog (append `((,(car pro))) cats))
 	 (cmd-block
 	  (if cats 

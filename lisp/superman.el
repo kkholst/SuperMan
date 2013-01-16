@@ -66,6 +66,12 @@
     (superman-switch-to-project 'force pro)))
 
 (defun superman-finalize-superman ()
+  (save-excursion
+    (let* ((props '("NickName" "LastVisit" "Location" "Others"))
+	   (header (superman-make-item
+		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23)))
+      (superman-loop 'superman-reformat-item
+		     (list props) (point-min) (point-max))))
   (superman-on))
 
 ;;}}}
@@ -102,38 +108,14 @@
 		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		     (org-agenda-overriding-header
 		      (concat "?: help, n: new project, s[S]: set property[all]"
-			      "\n\nProjects: " "\n"
-			      (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
-		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+			      "\n\nProjects: " "\n"))
 		     (org-agenda-window-setup 'current-window)
-		     ;; (org-agenda-view-columns-initially nil)
-		     ;; (org-agenda-buffer-name "*Superman*")
+		     (org-agenda-view-columns-initially nil)
+		     (org-agenda-buffer-name "*Superman*")
 		     )))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
 
- ;; (rename-buffer view-buf-name)
- ;; (put 'org-agenda-redo-command 'org-lprops lprops)))))
-
-;; (defun superman (&optional project)
-  ;; "Manage projects."
-  ;; (interactive)
-  ;; (let* ((view-buf-name (concat "*Superman*")))
-    ;; (if (get-buffer view-buf-name)
-	;; (switch-to-buffer view-buf-name)
-      ;; (let ((lprops
-	     ;; `((org-agenda-files (quote (,superman-home)))
-	       ;; (org-agenda-finalize-hook 'superman-finalize-superman)
-	       ;; (org-agenda-overriding-header
-		;; (concat "h: help, n: new project, s[S]: set property[all]"
-			;; "\n\nProjects: " "\n"
-			;; (superman-view-documents-format "header" 0 nil nil '(("NickName" . "NickName") ("LastVisit" . "LastVisit") ("Location" . "Location") ("Others" . "Others")))))
-	       ;; (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-	       ;; (org-agenda-view-columns-initially nil)
-	       ;; (org-agenda-buffer-name "*Superman*"))))
-	;; (org-let lprops '(superman-tags-view-plus nil "InitialVisit={.+}" '("NickName" "LastVisit" "Location" "Others")))
-	;; (rename-buffer view-buf-name)
-	;; (put 'org-agenda-redo-command 'org-lprops lprops)))))
 
 ;;}}}
 
