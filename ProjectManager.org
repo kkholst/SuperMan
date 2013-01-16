@@ -1,0 +1,92 @@
+* Bookmarks
+  *** [[http://staff.pubhealth.ku.dk/~kkho/start.html][sdflkfjasd]]
+  *** [[file:ProjectManagerPlans.org]]
+* Documents
+:PROPERTIES:
+:COLUMNS:  %19ITEM(Title) %15GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)
+:Category: Lisp-files
+:END:
+
+*** superman-config
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-config.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:54>
+:GitInit: <2012-12-18 Tue 07:25> initial commit
+:LastCommit: <2013-01-15 Tue 09:32> 
+:END:
+*** superman
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:54>
+:GitInit:  <2012-12-20 Thu 08:47> initial commit
+:LastCommit: <2013-01-14 Mon 16:57> 
+:END:
+*** superman-deft
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-deft.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:53>
+:GitInit:  <2012-12-18 Tue 07:25> initial commit
+:LastCommit: <2013-01-11 Fri 16:17> 
+:END:
+*** superman-git
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-git.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:52>
+:GitInit: <2013-01-07 Mon 16:10> first commit
+:LastCommit: <2013-01-13 Sun 19:37> 
+:END:
+*** superman-summary
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-summary.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-11 Fri 15:14>
+:GitInit: <2013-01-06 Sun 15:12> first working edition of agenda hack
+
+:LastCommit: <2013-01-15 Tue 09:32> 
+:END:
+*** superman-manager
+
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-manager.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:11>
+:GitInit: <2013-01-06 Sun 18:41> new project-manager after move from one long org file to multiple lisp files
+:LastCommit: <2013-01-15 Tue 09:32> 
+:END:
+*** superman-capture
+:PROPERTIES:
+:FileName: [[/Users/klaus/.sitelisp/ProjectManager/lisp/superman-capture.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-14 Mon 21:21>
+:GitInit:  <2013-01-14 Mon 17:28> first commit of capture el
+:LastCommit: <2013-01-15 Tue 09:32> 
+:END:
+
+** Misc
+   :PROPERTIES:
+   :Category: Misc
+   :END:
+
+*** OLD stuff
+:PROPERTIES:
+:FileName: [[~/.sitelisp/ProjectManager/code/org-project-manager.org]]
+:CaptureDate: <2012-10-31 Wed 11:27>
+:GitStatus: Committed
+:GitInit: <2012-08-29 Wed 14:23> Moved code from ProjectManager.el to org-project-manager.org (load via org-babel-load-file)
+:LastCommit: <2013-01-10 Thu 06:29> 
+:END:
+
+*** ProjectManagerPlans
+:PROPERTIES:
+:FileName: [[/Users/klaus/.sitelisp/ProjectManager/ProjectManagerPlans.org]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-13 Sun 18:38>
+:GitInit: <2012-08-24 Fri 10:07> git-hub repos started
+
+:LastCommit: <2013-01-15 Tue 09:32> minor fixes
+:END:
+    
