@@ -69,9 +69,13 @@
   (save-excursion
     (let* ((props '("NickName" "LastVisit" "Location" "Others"))
 	   (header (superman-make-item
-		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23)))
-      (superman-loop 'superman-reformat-item
-		     (list props) (point-min) (point-max))))
+		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23))
+	   (buffer-read-only nil))
+      (re-search-forward "^Projects:" nil t)
+      (forward-line 1)
+      (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+      (insert "\n" header)
+      (superman-loop 'superman-reformat-item (list props) (point-min) (point-max))))
   (superman-on))
 
 ;;}}}
