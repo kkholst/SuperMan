@@ -639,9 +639,12 @@ Examples:
       (superman-switch-to-project)
     (superman-switch-config)))
 
-(defun superman-switch-to-project (&optional force project)
+(defun superman-switch-to-project (&optional force project noselect)
   "Select project via 'superman-select-project', activate it
- via 'superman-activate-project',  find the associated index file."
+ via 'superman-activate-project',  find the associated index file.
+
+Unless NOSELECT is set the next window config of project.
+If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
 	 (change-maybe (or force
@@ -653,7 +656,9 @@ Examples:
       (superman-save-project curpro)
       (setq superman-config-cycle-pos 0)
       (superman-activate-project pro))
-    (superman-find-project pro superman-config-cycle-pos)))
+    (if noselect
+	superman-current-project
+	(superman-find-project pro superman-config-cycle-pos))))
 
 (defun superman-list-files (dir ext sort-by)
   (if (featurep 'file-list)

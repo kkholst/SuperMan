@@ -217,7 +217,6 @@
 (defun superman-find-project (project pos)
   (superman-set-config project nil (or pos superman-config-cycle-pos 0)))
 
-
 (defun superman-get (project el)
   (cdr (assoc el (cadr project))))
 

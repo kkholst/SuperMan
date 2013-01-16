@@ -91,6 +91,37 @@ or by adding whitespace characters."
 ;; (buffer-read-only nil))
 ;; (if (org-get-at-bol 'superman-view-mark) (insert m) )))
 
+(defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
+
+(defun superman-toggle-mark ()
+  (interactive)
+  (save-excursion
+    (beginning-of-line)
+    (let* ((buffer-read-only nil)
+	   (cur (get-text-property (point) 'face))
+	   (item (progn (looking-at ".*") (match-string 0)))
+	   (new (if (eq cur 'default) superman-mark-face 'default)))
+      (put-text-property 0 (length item) 'face new item)
+      (replace-match item t t))))
+
+
+(defun superman-make-item (list hdr len)
+  (let ((prop-values list)
+	(item ""))
+    (while prop-values
+      (let ((val (cdr (car prop-values))))
+	(cond ((string= (downcase (caar prop-values)) "filename")
+	       (setq val (file-name-nondirectory (org-link-display-format val))))
+	      ((string-match org-bracket-link-regexp val)
+	       ;; (string= (downcase (caar prop-values)) "link")
+	       (let ((link (org-match-string-no-properties 1 val))
+		     (desc (if (match-end 3) (org-match-string-no-properties 3 val) "link")))
+		 (setq val (org-make-link-string link (superman-trim-string desc len)))))
+	      (t (setq val (superman-trim-string val len))))
+	(setq item (concat item "  " val)))
+      (setq prop-values (cdr prop-values)))
+    (concat " " (superman-trim-string hdr 20) item)))
+    
 (defun superman-reformat-item (prop-list)
   (let* ((pom (org-get-at-bol 'org-hd-marker))
 	 (hdr (org-with-point-at pom
@@ -100,27 +131,64 @@ or by adding whitespace characters."
 	    (mapcar
 	     '(lambda (prop)
 		(cons prop (or (superman-get-property (point) prop 'inherit)
-			       "not set"
+			       "--"
 			       "")))
 	     prop-list)))
 	 (text-props  (text-properties-at (point)))
-	 (new-item "")
+	 (new-item (superman-make-item prop-values hdr 23))
 	 (buffer-read-only nil))
-    (while prop-values
-      (let ((val (cdr (car prop-values))))
-	(cond ((string= (downcase (caar prop-values)) "filename")
-	       (setq val (file-name-nondirectory (org-link-display-format val)))))
-	(setq new-item (concat new-item "  " (superman-trim-string val  23))))
-      (setq prop-values (cdr prop-values)))
     (beginning-of-line)
     (looking-at ".*")
-    (replace-match (concat " " (superman-trim-string hdr 20) new-item) "\n")
-    (beginning-of-line 1)
+    (replace-match new-item)
+    (beginning-of-line)
     (add-text-properties (point-at-bol) (point-at-eol) text-props)))
+
+(defvar superman-view-format-alist '(("Documents" . ("GitStatus" "LastCommit" "FileName"))
+				     ("Notes" . ("NoteDate"))
+				     ("Mail" . ("EmailDate" "Link"))
+				     ("Tasks" . ("CaptureDate"))
+				     ("Bookmarks" . ("Bookmark"))))
 
 (defun superman-reformat-document-lines ()
   (superman-loop
    'superman-reformat-item (list '("GitStatus" "LastCommit" "FileName"))))
+
+(defun superman-finalize-project-view ()
+  (let (cat-head
+	cat-tail
+	done
+	(buffer-read-only nil))
+    (save-excursion
+      (goto-char (point-min))
+      (while (not done)
+	;; Either there is a next header or we are almost done
+	(unless (setq cat-tail (next-single-property-change (point-at-eol) 'org-agenda-structural-header))
+	  (setq cat-tail (point-max))
+	  (setq done t))
+	(let* ((cat (progn (re-search-forward "^\\[\\(.*\\)\\]" nil t) (match-string-no-properties 1)))
+	       (cat-fun (cdr (assoc cat superman-view-format-alist)))
+	       header
+	       delete
+	       (next-item-pos (next-single-property-change (point-at-eol) 'org-marker)))
+	  (beginning-of-line)
+	  (setq cat-head (point))
+	  (if (or (not next-item-pos) (< cat-tail next-item-pos))
+	      ;; no items in this block
+	      (progn (setq delete t)
+		     (delete-region cat-head cat-tail))
+	    (setq header (superman-make-item
+			  (mapcar '(lambda (cat) (cons cat cat)) cat-fun) "header" 23))
+	    (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+	    (end-of-line)
+	    (insert "\n" header)
+	    (superman-loop 'superman-reformat-item
+			   (list cat-fun) cat-head cat-tail))
+	  (goto-char cat-head)
+	  (unless delete
+	    (setq cat-head (next-single-property-change (point-at-eol) 'org-agenda-structural-header)))
+	  (unless done 
+	    (goto-char cat-head)))))
+    (superman-view-mode-on)))
 
 (defun superman-view-finalize-documents ()
   (let* ((pro (or (superman-view-current-project)
@@ -140,61 +208,107 @@ or by adding whitespace characters."
     (superman-reformat-document-lines)
     (superman-view-mode-on)))
 
+
+
 ;; (org-agenda-property-list
 	  ;; (quote (,(superman-property 'gitstatus)
 		  ;; ,(superman-property 'lastcommit) ,(superman-property 'filename))))
 ;; (let ((buffer-read-only nil))
 ;; (superman-view-set-marks))))
 
+
+
+(defvar superman-cats '(("Documents" . "FileName") ("Notes" . "NoteDate") ("Tasks" . "TaskDate") ("Mail" . "EmailDate") ("Bookmarks" . "Bookmark")))
+
 (defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
   (let* ((pro (or project
 		  superman-current-project
-		  (setq superman-current-project
-		  (superman-select-project))))
+		  (superman-switch-to-project 'force nil t)))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-finalize-hook 'superman-view-finalize-documents)
-	 (view-buf (concat "*Documents[" (car pro) "]*"))
+	 ;; FIXME: either scan index file for existing entries or find a way to have special header
+	 ;;        for empty match lists
+	 (cats superman-cats)
+	 ;; (view-buf (concat "*Project[" (car pro) "]*"))
+	 (cat-number-one (car cats))
+	 (header-start (concat superman-view-project-helpline
+			       "\nProject: " (car pro)
+			       "\n" (or (superman-view-control)
+					(concat "Control: not set. <> Press `I' to initialize git"))
+			       "\n\n"))
+	 (shared-header "")
+	 (cmd-block
+	  (mapcar '(lambda (cat)
+		     (list 'tags (concat (cdr cat) "={.+}")
+			   (let ((hdr (if (eq (car cat) (car cat-number-one))
+					  (concat header-start "[" (car cat) "]" shared-header)
+					(concat "[" (car cat) "]"))))
+			     `((org-agenda-overriding-header ,hdr)))))
+		  cats))
 	 (org-agenda-custom-commands
 	  `(("p" "view Project"
-	     ((tags (concat ,(superman-property 'filename)  "={.+}")
-		    ((org-agenda-files (quote (,(superman-get-index pro))))
-		     (org-agenda-finalize-hook 'superman-view-finalize-documents)
-		     (org-agenda-overriding-header
-		      (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-			      "\nProject: "  ,(car pro)
-			      "\n" (or (superman-view-control) 
-				       (concat "\nControl: " "press `I' to initialize git"))
-			      "\n\nDocuments: " "\n"
-			      (superman-view-documents-format "header" 0 nil nil '
-							      (("GitStatus" .  "GitStatus") 
-							       ("LastCommit" . "LastCommit") 
-							       ("FileName" . "FileName")))))
-		     (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
-		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-		     (org-agenda-view-columns-initially nil)
-		     (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
-		     (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
-		     ))
-	      (tags "NoteDate={.+}"
-		    ((org-agenda-files (quote (,(superman-get-index pro))))
-		     (org-agenda-finalize-hook 'superman-view-finalize-documents)
-		     (org-agenda-overriding-header "")
-		     (org-agenda-overriding-header (concat "\n"
-							   (superman-view-documents-format "header" 0 nil nil '(("NoteDate" .  "NoteDate")))))
-		     (org-agenda-property-list '("NoteDate"))
-		     (org-agenda-overriding-agenda-format 'superman-view-documents-format)
-		     (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
-		     (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
-		     (org-agenda-view-columns-initially nil))))))))
-    (push ?p unread-command-events)
-    (call-interactively 'org-agenda)
-    ;; (rename-buffer view-buf)
-    ))
+	     ,cmd-block
+	     ((org-agenda-finalize-hook 'superman-finalize-project-view)
+	      (org-agenda-block-separator superman-document-category-separator)
+	      (org-agenda-view-columns-initially nil)
+	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
+	      (org-agenda-files (quote (,(superman-get-index pro))))
+	      )))))
+    (org-agenda nil "p")))
+
+;; (defun superman-view-project (&optional project)
+  ;; "View documents of the current project."
+  ;; (interactive)
+  ;; (let* ((pro (or project
+		  ;; superman-current-project
+		  ;; (setq superman-current-project
+		  ;; (superman-select-project))))
+	 ;; (loc (concat (superman-get-location pro) (car pro)))
+	 ;; (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
+	 ;; (org-agenda-sticky nil)
+	 ;; (org-agenda-window-setup 'current-window)
+	 ;; (org-agenda-finalize-hook 'superman-view-finalize-documents)
+	 ;; (view-buf (concat "*Documents[" (car pro) "]*"))
+	 ;; (org-agenda-custom-commands
+	  ;; `(("p" "view Project"
+	     ;; ((tags (concat ,(superman-property 'filename)  "={.+}")
+		    ;; ((org-agenda-files (quote (,(superman-get-index pro))))
+		     ;; (org-agenda-finalize-hook 'superman-view-finalize-documents)
+		     ;; (org-agenda-overriding-header
+		      ;; (concat "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
+			      ;; "\nProject: "  ,(car pro)
+			      ;; "\n" (or (superman-view-control) 
+				       ;; (concat "\nControl: " "press `I' to initialize git"))
+			      ;; "\n\nDocuments: " "\n"
+			      ;; (superman-view-documents-format "header" 0 nil nil '
+							      ;; (("GitStatus" .  "GitStatus") 
+							       ;; ("LastCommit" . "LastCommit") 
+							       ;; ("FileName" . "FileName")))))
+		     ;; (org-agenda-property-list '("GitStatus" "LastCommit" "FileName"))
+		     ;; (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+		     ;; (org-agenda-view-columns-initially nil)
+		     ;; (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; ))
+	      ;; (tags "NoteDate={.+}"
+		    ;; ((org-agenda-files (quote (,(superman-get-index pro))))
+		     ;; (org-agenda-finalize-hook 'superman-view-finalize-documents)
+		     ;; (org-agenda-overriding-header "")
+		     ;; (org-agenda-overriding-header (concat "\n"
+							   ;; (superman-view-documents-format "header" 0 nil nil '(("NoteDate" .  "NoteDate")))))
+		     ;; (org-agenda-property-list '("NoteDate"))
+		     ;; (org-agenda-overriding-agenda-format 'superman-view-documents-format)
+		     ;; (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
+		     ;; (org-agenda-view-columns-initially nil))))))))
+    ;; (push ?p unread-command-events)
+    ;; (call-interactively 'org-agenda)
+    ;; ;; (rename-buffer view-buf)
+    ;; ))
 
 (defun superman-parse-document-categories (buf)
   "Parse the file `superman-home' and update `superman-project-categories'."
@@ -204,21 +318,29 @@ or by adding whitespace characters."
 
 (defvar superman-view-documents-helpline
   "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-  "First line of document view buffer, by default showing keystrokes")
+  "First line of document view buffer which -- by default -- is showing some keystrokes")
+
+
+(defvar superman-view-project-helpline
+  "?: help, add document [d], note [n], task [t], bookmark [b]"
+  "First line of project view buffer which -- by default -- is showing some keystrokes")
+
+(defvar superman-document-category-separator '32 "Symbol for separating categories in document views.
+See `org-agenda-block-separator'. Set to '0 to get a       line.
+Can also be set to (string-to-char \"~\") with any string in place of ~.")
 
 (defun superman-view-documents (&optional project)
   "View documents of the current project."
   (interactive)
   (let* ((pro (or project
 		  superman-current-project
-		  (setq superman-current-project
-		  (superman-select-project))))
+		  (superman-switch-to-project 'force nil t)))
 	 (loc (concat (superman-get-location pro) (car pro)))
-	 (org-agenda-buffer-name (concat "*Project[" (car pro) "]*"))
+	 (org-agenda-buffer-name (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-window-setup 'current-window)
 	 (cats (superman-parse-document-categories
-		 (find-file-noselect (superman-get-index pro))))
+		(find-file-noselect (superman-get-index pro))))
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (header-start (concat superman-view-documents-helpline
 			       "\nProject: " (car pro)
@@ -229,28 +351,31 @@ or by adding whitespace characters."
 	  (superman-view-documents-format
 	   "header" 0 nil nil
 	   '(("GitStatus" .  "GitStatus") ("LastCommit" . "LastCommit") ("FileName" . "FileName"))))
+	 (cats-and-one-dog (append `((,(car pro))) cats))
 	 (cmd-block
 	  (if cats 
 	      (mapcar '(lambda (cat)
 			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" (car cat) "\"")
-			       (let ((hdr (if (eq (car cat) "")
-					      (concat header-start shared-header) 
+			       (let ((hdr (if (eq (car cat) (caar cats-and-one-dog))
+					      (concat header-start shared-header (concat "\n[" (car cat) "]"))
 					    (concat "[" (car cat) "]"))))
 				 `((org-agenda-overriding-header ,hdr)))))
-		      (add-to-list 'cats '("")))
+		      cats-and-one-dog)
 	    `((tags "FileName={.+}" ((org-agenda-overriding-header (concat ,header-start ,shared-header)))))))
 	 (org-agenda-custom-commands
 	  `(("d" "view Project-DOCUMENTS"
 	     ,cmd-block
 	     ((org-agenda-finalize-hook 'superman-view-finalize-documents)
+	      (org-agenda-block-separator superman-document-category-separator)
 	      (org-agenda-view-columns-initially nil)
 	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
 	      ;; (org-agenda-overriding-agenda-format 'superman-view-documents-format)
 	      (org-agenda-files (quote (,(superman-get-index pro))))
 	      ;; (org-agenda-overriding-buffer-name (concat "*Project[" ,(car pro) "]*"))
 	      )))))
-    (push ?d unread-command-events)
-    (call-interactively 'org-agenda)))
+    (org-agenda nil "d")))
+;; (push ?d unread-command-events)
+;; (call-interactively 'org-agenda)))
 
 
 ;; (if org-agenda-overriding-agenda-format
@@ -414,21 +539,29 @@ If dont-redo the agenda is not reversed."
     (superman-git-add file dir 'commit nil)
   (superman-view-git-set-status 'save (not dont-redo) nil)))
 
-;; test
-(defun superman-loop (fun args)
-  "Call function on all items."
-  (let (loop-out)
-    (save-excursion
-      (goto-char (point-min))
-      (while (next-single-property-change (point-at-eol) 'org-marker)
-	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
-	(setq loop-out (append (list (apply fun args)) loop-out)))
-      loop-out)))
+(defun superman-loop (fun args &optional begin end marked)
+  "Call function FUN on all items in the range BEGIN to END.
+MARKED should be a cons where the car is the name of a text property
+and the cdr the value, e.g. (face . 'bold).
+The function is only run on items marked in this way."
+  (let (loop-out
+	(begin (or begin (point-min)))
+	(end (or end (point-max))))
+    (save-restriction
+      (narrow-to-region begin end)
+      (save-excursion
+	(goto-char (point-min))
+	(while (next-single-property-change (point-at-eol) 'org-marker)
+	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
+	  (when (or (not marked)
+		    (eq (get-text-property (point) (car marked)) (cdr marked)))
+	    (setq loop-out (append (list (apply fun args)) loop-out))))
+	loop-out))))
 
 (defun superman-view-git-add-all (&optional dont-redo)
   (interactive)
-   (superman-loop 'superman-view-git-add (list 'dont))
-   (unless dont-redo (org-agenda-redo)))
+  (superman-loop 'superman-view-git-add (list 'dont) nil nil '(face superman-mark-face))
+  (unless dont-redo (org-agenda-redo)))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
@@ -478,6 +611,7 @@ If dont-redo the agenda is not reversed."
 (define-key superman-view-mode-map "l" 'superman-view-git-log) 
 (define-key superman-view-mode-map "L" 'superman-view-git-log-decorationonly)
 (define-key superman-view-mode-map "n" 'superman-view-register-document)
+(define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "r" 'org-agenda-redo)
 (define-key superman-view-mode-map "h" 'superman-view-git-history)
 (define-key superman-view-mode-map "!" 'superman-start-shell)
