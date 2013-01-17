@@ -103,21 +103,25 @@ Else return FILE as it is."
 ;;}}}
 ;;{{{ property and filename at point
 
-(defun superman-property-at-point (prop)
+(defun superman-property-at-point (prop noerror)
   (interactive)
-  (let* ((pom (cond ((eq major-mode 'org-mode) (point))
-		    ((eq major-mode 'org-agenda-mode) (org-get-at-bol 'org-hd-marker))
-		    (t (error "This function works only in org-mode, org-agenda-mode, superman-git-log-mode, superman-view-mode."))))
-	 (propval  (superman-get-property pom prop t)))
+  (let* ((pom (cond
+	       ((eq major-mode 'org-mode) (point))
+	       ((eq major-mode 'org-agenda-mode) (org-get-at-bol 'org-hd-marker))
+	       (t (error (concat  "This function works only in org-mode, org-agenda-mode, superman-git-log-mode, superman-view-mode." (buffer-name (current-buffer)))))))
+	 (propval
+	  (superman-get-property pom prop t)))
     propval))
 
-(defun superman-filename-at-point ()
+(defun superman-filename-at-point (&optional noerror)
   "If property FileName exists at point return its value."
-  (let* ((file-or-link (superman-property-at-point (superman-property 
-'filename))))
+  (let* ((file-or-link
+	  (superman-property-at-point
+	   (superman-property 'filename) noerror)))
     (if (not (stringp file-or-link))
-	(error "No proper(ty) FileName at point."))
-    (org-link-display-format file-or-link)))
+	(unless noerror
+	  (error "No proper(ty) FileName at point."))
+      (org-link-display-format file-or-link))))
 
 ;;}}}
 ;;{{{ get status and commit from git
@@ -407,27 +411,35 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	       (org-agenda-finalize-hook 'superman-finalize-git-log)
 	       (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	       (org-agenda-custom-commands
-		`(("L" "view file history"
+		`(("h" "view file history"
 		   ((tags "Hash={.+}"
 			  ((org-agenda-files (quote (,logbuf)))
 			   (org-agenda-overriding-header (concat "Git-log of " ,file "\t?: help\n\n"))
 			   (org-agenda-property-list '("Hash" "Decoration" "Date" "Author"))
 			   (org-agenda-view-columns-initially nil)
-			   (org-agenda-overriding-agenda-format 'superman-git-log-format)
 			   (org-agenda-buffer-name  ,(concat "*Log[" (file-name-nondirectory file) "]*"))
 			   (org-agenda-finalize-hook 'superman-finalize-git-log)  
 			   )))))))
-	  (push ?L unread-command-events)
-	  (call-interactively 'org-agenda))))))
+	  (org-agenda nil "h"))))))
 
 (defun superman-finalize-git-log ()
-    (superman-git-log-mode-on))
+  (save-excursion
+    (let* ((props '("Hash" "Decoration" "Date" "Author"))
+	   (header (superman-make-item
+		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23))
+	   (buffer-read-only nil))
+      (re-search-forward "^Projects:" nil t)
+      (forward-line 1)
+      (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+      (insert "\n" header)
+      (superman-loop 'superman-reformat-item (list props) (point-min) (point-max))))
+   (superman-git-log-mode-on))
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)
 		   (superman-get-property nil (superman-property 'filename) t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (or gitpath (or (superman-property-at-point (superman-property 'gitpath))
+	 (gitpath (or gitpath (or (superman-property-at-point (superman-property 'gitpath) t)
 				  (superman-git-toplevel file))))
 	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "

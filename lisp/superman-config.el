@@ -59,6 +59,7 @@
     (let* ((case-fold-search t)
 	   (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
 			       superman-config-action-alist))))
+      (message thing)
       (cond ((functionp action) (funcall action project))
 	    ((and thing (string= (substring thing 0 1) "!"))
 	     (superman-start-shell (substring thing 1 (length thing))))
@@ -133,7 +134,9 @@
     config))
 
 
-(defun superman-split-windows (window-config project)
+(defun superman-smash-windows (window-config project)
+  "Smash windows according to the WINDOW-CONFIG and
+then fill relative to project."
   (let ((ncolumns (length window-config))
 	(nrows (mapcar 'length window-config))
 	top-windows)
@@ -162,7 +165,20 @@
 	 (pos (or pos superman-config-cycle-pos 0))
 	 (window-config (superman-read-config (nth pos (superman-read-config-list conf)))))
     ;;(message conf)
-    (superman-split-windows window-config pro)))
+    (superman-smash-windows window-config pro)))
+
+
+(defun superman-switch-config (&optional project)
+  "Switch to the next window configuration (if any)."
+  (interactive)
+  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
+	 (curpos (or superman-config-cycle-pos 0))
+	 (config-list (superman-read-config-list
+		       (superman-get-config pro))))
+    (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
+	(setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
+      (setq superman-config-cycle-pos 0))
+    (superman-find-project pro superman-config-cycle-pos)))
 
 
 (defun superman-magit (project)
@@ -173,40 +189,79 @@
     (find-file loc)))
 
 (defun superman-timeline (project)
-  (let (tbuf)
-    (save-window-excursion
-      (let ((index (superman-get-index project))
-            (org-agenda-sticky nil)
-            (bufname (concat "*" (car project) "-timeline*")))
-        (if (not (file-exists-p index))
-            (progn
-              (switch-to-buffer bufname)
-              (setq tbuf (get-buffer bufname))
-              (toggle-read-only -1)
-	      (erase-buffer)
-              (insert "TIMELINE: Project index file does not exist yet"))
-          (when (get-buffer bufname)
-            (kill-buffer bufname))
-          (find-file index)
-          (org-timeline 'yeah)
-	  (rename-buffer bufname)
-	  (local-set-key [(return)] 'org-return)
-	  (setq tbuf (current-buffer)))))
-    (switch-to-buffer tbuf)))
+  "Display a project specific timeline based on the index file."
+  (interactive)
+  (let* ((index (superman-get-index project))
+	 (org-agenda-window-setup 'current-window)
+	 (org-agenda-buffer-name (concat "*T*"))
+	 (org-agenda-sticky nil)
+	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
+    (find-file index)
+     (push ?L unread-command-events)
+     (call-interactively 'org-agenda)))
+;; (let ((tmp-file-name (concat "/tmp/timeline" index)))
+;; (find-file-noselect tmp-file-name)
+;; (with-temp-buffer (get-file-buffer tmp-file-name)
+;; (erase-buffer)
+;; (insert-buffer (get-file-buffer index))
+;; (save-buffer)
+;; ;; (switch-to-buffer (get-file-buffer index))
+;; (message (buffer-name (current-buffer)))
+;; (test)
+;; (org-timeline 'yeah)
+;; (test)))))
+
+
+;; (defun superman-timeline (project)
+  ;; (let (tbuf)
+    ;; (save-window-excursion
+      ;; (let ((index (superman-get-index project))
+            ;; (org-agenda-sticky nil)
+            ;; (org-agenda-buffer-name (concat "*" (car project) "-timeline*")))
+        ;; (if (not (file-exists-p index))
+            ;; (progn
+              ;; (switch-to-buffer bufname)
+              ;; (setq tbuf (get-buffer bufname))
+              ;; (toggle-read-only -1)
+	      ;; (erase-buffer)
+              ;; (insert "TIMELINE: Project index file does not exist yet"))
+          ;; ;; (when (get-buffer bufname)
+            ;; ;; (kill-buffer bufname))
+          ;; (find-file index)
+          ;; (org-timeline 'yeah)
+	  ;; ;; (rename-buffer bufname)
+	  ;; (local-set-key [(return)] 'org-return)
+	  ;; (setq tbuf (current-buffer)))))
+    ;; (switch-to-buffer tbuf)))
 
 (defun superman-recent-org (project)
   (car (superman-list-files
 	(concat (superman-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
 
 
-(defun superman-todo (project)
+(defun superman-todo (&optional project)
+  "Display a project specific timeline based on the index file."
+  (interactive)
+  (let* ((index (superman-get-index (or project superman-current-project)))
+	 (org-agenda-window-setup 'current-window)
+	 (org-agenda-buffer-name (concat "*T*"))
+	 (org-agenda-sticky nil)
+	 (org-agenda-files (list index))
+	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
+    (find-file index)
+    ))
+     ;; (push ?T unread-command-events)
+     ;; (call-interactively 'org-agenda)))
+  ;; (find-file (superman-find-index project))
+
+(defun old-superman-todo (project)
   (let (tbuf)
     (save-window-excursion
       (let* ((location (concat (superman-get-location project) (car project)))
 	     (org-files (superman-list-files location "^[^\\.].*\\.org$" nil))
-	     (org-agenda-sticky t) ;; to enable multiple agenda buffers
+	     (org-agenda-sticky nil) 
 	     (org-agenda-files org-files)
-	     (bufname (concat "*" (car project) "-todo*")))
+	     (bufname (concat "*TODO[" (car project) "]*")))
 	(when (get-buffer bufname)
 	  (kill-buffer bufname))
 	(org-todo-list org-match)
@@ -250,17 +305,6 @@
   (cdr (assoc "state" (cadr project))))
 
 
-(defun superman-switch-config (&optional project)
-  "Switch to the next window configuration (if any)."
-  (interactive)
-  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
-	 (curpos (or superman-config-cycle-pos 0))
-	 (config-list (superman-read-config-list
-		       (superman-get-config pro))))
-    (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
-	(setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
-      (setq superman-config-cycle-pos 0))
-    (superman-find-project pro superman-config-cycle-pos)))
 
 
 (provide 'superman-config)

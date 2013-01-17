@@ -82,19 +82,19 @@
 ;;{{{ superman 
 
 ;; FIXME: use gnus-user-date-format-alist to trim date
-(defun superman-format (hdr level category tags-list prop-list)
-  (concat " " (superman-trim-string hdr 20)
-	  (let ((cprops prop-list)
-		(pstring ""))
-	    (while cprops
-	      (let ((val (cdr (car cprops))))
-		(cond ((string= (downcase (caar cprops)) "filename")
-		       (setq val (file-name-nondirectory (org-link-display-format val)))))
-		(setq pstring (concat pstring "  " (superman-trim-string val  23))))
-		(setq cprops (cdr cprops)))
-	      pstring) "\t"))
+;; (defun superman-format (hdr level category tags-list prop-list)
+  ;; (concat " " (superman-trim-string hdr 20)
+	  ;; (let ((cprops prop-list)
+		;; (pstring ""))
+	    ;; (while cprops
+	      ;; (let ((val (cdr (car cprops))))
+		;; (cond ((string= (downcase (caar cprops)) "filename")
+		       ;; (setq val (file-name-nondirectory (org-link-display-format val)))))
+		;; (setq pstring (concat pstring "  " (superman-trim-string val  23))))
+		;; (setq cprops (cdr cprops)))
+	      ;; pstring) "\t"))
 
-(defun superman (&optional project)
+(defun superman ()
   "Manage projects."
   (interactive)
   (let* ((view-buf-name (concat "*Superman*"))
