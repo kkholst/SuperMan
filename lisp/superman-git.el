@@ -227,7 +227,7 @@ buffer is in org-agenda-mode."
 
 (defun superman-git-commit (&optional dir query)
   (let* ((dir (or dir
-		  (let ((pro (assoc (superman-property-at-point "Project") superman-project-alist)))
+		  (let ((pro (assoc (superman-property-at-point "Project" nil) superman-project-alist)))
 		    (concat (superman-get-location pro) (car pro)))))
 	 (message (read-string query))
 	 (cmd (concat (concat "cd " dir ";" superman-cmd-git " commit -m \"" message "\""))))
@@ -258,7 +258,7 @@ or if the file is not inside the location."
 (defun superman-git-add-at-point (&optional commit message check)
   "Add or update file FILE to git repository DIR."
   (interactive)
-  (let* ((file (superman-property-at-point (superman-property 'filename)))
+  (let* ((file (superman-property-at-point (superman-property 'filename) nil))
 	 (pro (assoc (superman-property-at-point (superman-property 'project)) superman-project-alist)))
     (superman-git-add (org-link-display-format file) pro commit message)
     (superman-git-set-status-at-point check)))
