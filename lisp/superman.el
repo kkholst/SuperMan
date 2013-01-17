@@ -62,7 +62,10 @@
 
 (defun org-superman-return ()
   (interactive)
-  (let ((pro (assoc (superman-property-at-point (superman-property 'nickname)) superman-project-alist)))
+  (let ((pro (assoc
+	      (superman-property-at-point
+	       (superman-property 'nickname) nil)
+	      superman-project-alist)))
     (superman-switch-to-project 'force pro)))
 
 (defun superman-finalize-superman ()
