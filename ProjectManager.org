@@ -4,7 +4,7 @@
 * Documents
 :PROPERTIES:
 :COLUMNS:  %19ITEM(Title) %15GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)
-:Category: Lisp-files
+:CATEGORY: Lisp-files
 :END:
 
 *** superman-config
@@ -68,7 +68,7 @@
 
 ** Misc
    :PROPERTIES:
-   :Category: Misc
+   :CATEGORY: Misc
    :END:
 
 *** OLD stuff
