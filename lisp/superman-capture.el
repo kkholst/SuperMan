@@ -47,11 +47,12 @@
 	     (org-set-property "Project" pro)
 	     (forward-line -1))
 	    (t (error (concat "Heading " head " not found in index file of " (car pro)))))
-      (org-narrow-to-element)
+      (org-narrow-to-subtree)
       (if prop-alist (mapcar (lambda (p)
 			       (unless (org-entry-get nil (car p))
 				 (org-set-property (car p) (car (cdr p))))) prop-alist))
-      (goto-char (point-max)))))
+      (goto-char (point-max))
+      )))
       ;; (forward-line)
       ;; (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1))))))
 
@@ -76,6 +77,10 @@
   (interactive)
   (or (superman-goto-project nil "Mailbox" 'create)))
 
+(defun superman-goto-project-config ()
+  (interactive)
+  (or (superman-goto-project nil "Configuration" 'create)))
+
 (defun superman-goto-project-calendar ()
   (interactive)
   (or (superman-goto-project nil "Calendar" 'create)))
@@ -91,8 +96,10 @@
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
 				      (function superman-goto-project-bookmarks) "\n *** %a%?") 'append)
 ;; Capturing tasks
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "t") "Add task" plain
-				      (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
+(add-to-list 'org-capture-templates
+	     `(,(concat superman-capture-prefix "t") "Add task" plain
+	       (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:")
+	     'append)
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
 				      (function superman-goto-project-tasks) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing notes
