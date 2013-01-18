@@ -668,7 +668,7 @@ If NOSELECT is set return the project."
       (superman-activate-project pro))
     (if noselect
 	superman-current-project
-	(superman-find-project pro superman-config-cycle-pos))))
+	(superman-switch-config pro))))
 
 (defun superman-list-files (dir ext sort-by)
   (if (featurep 'file-list)
