@@ -97,6 +97,9 @@
 		;; (setq cprops (cdr cprops)))
 	      ;; pstring) "\t"))
 
+
+(setq org-agenda-show-inherited-tags (list))
+
 (defun superman ()
   "Manage projects."
   (interactive)
@@ -109,7 +112,8 @@
 	 ;; (org-agenda-overriding-buffer-name (concat "*S*"))
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
-	     ((tags "NickName={.+}"
+	     ;; ((tags "NickName={.+}"
+	     ((search "NickName"
 		    ((org-agenda-files (quote (,superman-home)))
 		     (org-agenda-finalize-hook 'superman-finalize-superman)
 		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
@@ -118,8 +122,7 @@
 			      "\n\nProjects: " "\n"))
 		     (org-agenda-window-setup 'current-window)
 		     (org-agenda-view-columns-initially nil)
-		     (org-agenda-buffer-name "*Superman*")
-		     )))))))
+		     (org-agenda-buffer-name "*Superman*"))))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -267,8 +270,5 @@ Enabling superman mode electrifies the superman buffer for project management."
     (funcall superman-help-fun msg)))
 
 ;;}}}  
-
-
-
 (provide 'superman)
 ;;; superman.el ends here
