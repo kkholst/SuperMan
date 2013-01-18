@@ -300,8 +300,18 @@ the `superman-home'.")
 
 (defun superman-get-property  (pom property &optional inherit literal-nil)
   "Read property and remove leading and trailing whitespace."
-  (let ((prop (if (or (not (markerp pom)) (marker-buffer pom)) (org-entry-get pom property inherit literal-nil))))
-    (if (stringp prop) (replace-regexp-in-string "[ \t]+$" "" prop))))
+  (let ((prop
+	 (if (not (markerp pom))
+	     (org-entry-get pom property inherit literal-nil)
+	   (if (marker-buffer pom)
+	       ;;FIXME: maybe the following widen is unnecessary?
+	       (save-excursion
+		 (save-restriction
+		   (set-buffer (marker-buffer pom))
+		   (widen)
+		   (org-entry-get pom property inherit literal-nil)))))))
+    (if (stringp prop)
+	(replace-regexp-in-string "[ \t]+$" "" prop))))
   
 (defun superman-parse-projects (&optional all)
   "Parse the file `superman-home' and update `superman-project-alist'."
