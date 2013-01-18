@@ -170,20 +170,33 @@ then fill relative to project."
 		    (other-window 1)))))
     (select-window (nth 0 top-windows))))
     
-(defun superman-switch-config (&optional project)
-  "Switch to the next user defined window configuration. If
-none exist switch to `superman-default-config' instead."
+(defun superman-switch-config (&optional project position)
+  "Switch to the next user defined window configuration of PROJECT.
+
+If no window configuration exists, as specified in the subtree
+Configuration in index file of PROJECT, use
+ `superman-default-config' instead.
+
+If POSITION is an integer n then switch to the nth window configuration
+of PROJECT and set `superman-default-config',
+else cycle the value `superman-config-cycle-pos' and use it to
+find the next window configuration."
   (interactive)
-  (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
-	 (curpos (or superman-config-cycle-pos 0))
+  (let* ((pro (or project
+		  superman-current-project
+		  (superman-switch-to-project 'force nil t)))
+	 (position (when (integerp position) position)) 
 	 (config-list (superman-distangle-config-list
 		       (superman-read-config pro)))
 	 window-config)
-    (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
-	(setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
-      (setq superman-config-cycle-pos 0))
-    ;; 
-    (setq window-config (superman-distangle-config (nth superman-config-cycle-pos config-list)))
+    (if position
+	(setq superman-config-cycle-pos position)
+      (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
+	  (setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
+	(setq superman-config-cycle-pos 0)))
+    (setq window-config
+	  (superman-distangle-config
+	   (nth superman-config-cycle-pos config-list)))
     (superman-smash-windows window-config pro)))
 
 

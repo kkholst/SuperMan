@@ -44,7 +44,7 @@
 	      nil t))
 	    (create
 	     (insert "* " head "\n")
-	     (org-set-property "Project" pro)
+	     ;; (org-set-property "Project" pro)
 	     (forward-line -1))
 	    (t (error (concat "Heading " head " not found in index file of " (car pro)))))
       (org-narrow-to-subtree)
@@ -125,6 +125,92 @@
 
 ;;}}}
 
+;;{{{ capture mails
+(setq
+ org-capture-templates
+ (append org-capture-templates
+	 '(("E"  "Store email (and attachments) in project"
+	    plain (function superman-gnus-project-mailbox)
+	    "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))))
 
+(defun superman-gnus-project-mailbox (&optional arg)
+  (interactive)
+  (unless (or  (eq major-mode 'gnus-article-mode)
+               (eq major-mode 'gnus-summary-mode))
+    (error "Can only capture mails from gnus-article-buffers"))
+  (if arg (org-store-link))
+  (let* ((buf (current-buffer))
+         ;; (pro (completing-read "Select project: " superman-project-alist))
+         (entry (superman-select-project))
+         (pro (car entry))
+         (loc (superman-get-location entry))
+         (org (superman-get-index entry))
+	 (region (buffer-substring (region-beginning) (region-end)))
+         (mailbox (file-name-as-directory
+                   (concat (file-name-as-directory loc) pro "/" "Mailbox"))))
+    (gnus-summary-select-article-buffer)
+    (if region
+	(plist-put org-store-link-plist :initial
+		   (concat (plist-get org-store-link-plist :initial)
+			   (concat "----\n" region "\n----\n"))))
+    (superman-save-attachments pro mailbox buf)
+    (if org
+        (find-file org)
+      (error "Project " pro " does not have an org-file."))
+    (goto-char (point-min))
+    (if (re-search-forward "^[*]+ Mailbox" nil t)
+	(progn
+	  (end-of-line)
+	  (insert "\n"))
+      ;; (goto-char (point-max))
+      (insert "\n\n* Mailbox\n"))))
+
+(defun superman-save-attachments (project dir buf)
+  "Interactively save mail contents in project org file
+and MIME parts in sub-directory 'mailAttachments' of the project."
+  (interactive)
+  (gnus-article-check-buffer)
+  (let* ((mime-line ""))
+    (unless (file-exists-p dir)
+      (if (featurep 'xemacs)
+          (make-directory-path dir)
+        (make-directory dir t)))
+    (save-excursion
+      (switch-to-buffer buf)
+      (gnus-summary-display-buttonized 't))
+    (goto-char (point-min))
+    (while (re-search-forward "\\[[0-9]+\\." nil t)
+      ;; modified code from `mm-save-data'
+      (save-excursion
+        (let* ((data (get-text-property (point) 'gnus-data))
+               (filename (or (mail-content-type-get
+                              (mm-handle-disposition data) 'filename)
+                             (mail-content-type-get
+                              (mm-handle-type data) 'name)))
+               file)
+          (when filename
+            (setq filename (gnus-map-function
+                            mm-file-name-rewrite-functions
+                            (file-name-nondirectory filename))))
+          (when (and data filename)
+            (setq file (read-file-name
+                        "Save attached file to: "
+                        dir nil nil (replace-regexp-in-string "[ ]+" "" filename)))
+            (if (file-directory-p file)
+                (message "file not saved")
+              (when (or (not (file-exists-p file))
+                        (y-or-n-p (concat "File " file " exists, overwrite?" )))
+                (mm-save-part-to-file data file))
+              (setq mime-line (concat "\n**** Attachment file: " (file-name-nondirectory file)
+				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
+				      "\n:Link:"
+				      "[[file:" file "][" (file-name-nondirectory file) "]]"
+                                      "\n:END:\n"
+                                      mime-line)))))))
+    ;; information about the saved attachments is
+    ;; saved such that capture can put it via %i
+    (plist-put org-store-link-plist :initial
+               (concat (plist-get org-store-link-plist :initial) mime-line))))
+;;}}}
 (provide 'superman-capture)
 ;;; superman-capture.el ends here

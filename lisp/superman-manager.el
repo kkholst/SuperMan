@@ -145,7 +145,7 @@ the `superman-home'.")
 				    ("" . (lambda (project) ))))
 
 ;; TODO Add description
-(defvar superman-default-config "INDEX" "default window configuration") 
+(defvar superman-default-config "PROJECT" "default window configuration") 
 (defvar superman-sticky-config nil "sticky window configuration")
 ;; (setq superman-sticky-config "recent.org / *R* | TODO")
 
@@ -664,11 +664,14 @@ If NOSELECT is set return the project."
 	 (stay (eq pro curpro)))
     (unless stay
       (superman-save-project curpro)
-      (setq superman-config-cycle-pos 0)
       (superman-activate-project pro))
     (if noselect
 	superman-current-project
-	(superman-switch-config pro))))
+      (if stay 
+	  (superman-switch-config pro nil)
+	;; the next command 
+	;; re-sets superman-config-cycle-pos 
+	(superman-switch-config pro 0)))))
 
 (defun superman-list-files (dir ext sort-by)
   (if (featurep 'file-list)
