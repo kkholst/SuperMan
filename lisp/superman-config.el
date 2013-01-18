@@ -69,12 +69,12 @@
 	    (t (switch-to-buffer thing))))
     (current-buffer)))
 
-(defun superman-read-config-list (string)
+(defun superman-distangle-config-list (string)
   ;; return a list of lists with vertical splits 
   ;; where each element can have horizontal splits
   (split-string string "[ \t]+:[ \t]+"))
 
-(defun superman-read-config (config &optional pos)
+(defun superman-distangle-config (config)
   ;; return a list with horizontal splits 
   ;; where each element can have vertical splits
   (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
@@ -85,13 +85,19 @@
 
 (defun superman-save-config (&optional config project)
   (interactive)
-  (let ((conf (or config (superman-current-config)))
-	(pro (or project superman-current-project (superman-select-project))))
-    (find-file-other-window (concat (superman-get-location pro) (car pro) "/.superman-window-config"))
-    (goto-char (point-max))
-    (unless (looking-at "^$") (insert "\n"))
-    (insert conf)
-    (save-buffer)))
+  (let* ((conf (or config (superman-current-config)))
+	(pro (or project superman-current-project (superman-select-project)))
+	(org-capture-mode-hook 'org-narrow-to-subtree)
+	(org-capture-templates `(("s" "save" plain
+				  (file+headline (superman-get-index pro) "Configuration")
+				  ,(concat "windows:" conf "%?") :unnarrowed t))))
+    (org-capture nil "s")))
+    ;; (superman-goto-project-config)
+    ;; (find-file-other-window (concat (superman-get-location pro) (car pro) "/.superman-window-config"))
+    ;; (goto-char (point-max))
+    ;; (unless (looking-at "^$") (insert "\n"))
+    ;; (insert conf)
+    ;; (save-buffer)))
 
 (defun superman-current-config ()
   (let* ((windata (winner-win-data))
@@ -113,25 +119,31 @@
 	(setq prev-row row)))
     config))
 
-(defun superman-get-config (project)
-  (let* ((config-file (concat
-		       (superman-get-location project)
-		       (car project) "/.superman-window-config"))
-	 (filed-config (when (file-exists-p config-file)
-			 (save-window-excursion
-			   (with-temp-buffer (find-file config-file)
-					     (setq str (replace-regexp-in-string
-							"\n" " : "
-							(replace-regexp-in-string "[\n\t ]+$" ""
-										  (buffer-string))))))))
-	 config
-	 (prop-config (cdr (assoc "config" (cadr project)))))
-    (when filed-config
-      (setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
-    (when prop-config
-      (setq config (concat (if config (concat config " : ")) prop-config)))
+
+(defun superman-read-config (project)
+  (let* (config)
+    (save-window-excursion
+      (superman-goto-project project "Configuration" 'create nil)
+      (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t]*windows:[ \t]*" (point-max) t)
+	(if config
+	    (setq config (concat config " : "
+				 (replace-regexp-in-string
+				  "[ \t]*$" ""
+				  (buffer-substring-no-properties (point) (point-at-eol)))))
+	  (setq config
+		(replace-regexp-in-string
+		 "[ \t]*$" ""
+		 (buffer-substring-no-properties (point) (point-at-eol)))))))
     (when (not config) (setq config superman-default-config))
     config))
+;; (when filed-config
+;; (setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
+;; (when prop-config
+;; (setq config (concat (if config (concat config " : ")) prop-config)))
+;; (when (not config) (setq config superman-default-config))
+;; config))
 
 
 (defun superman-smash-windows (window-config project)
@@ -151,34 +163,29 @@ then fill relative to project."
 	  (select-window (nth c top-windows)) ;; switch to the top-window in this column
 	  (let ((nrow (nth c nrows)));; number of rows in this column
 	    (loop for r from 0 to (- nrow 1) do
-		  (switch-to-buffer (superman-find-thing (nth r (nth c window-config)) project))
+		  (switch-to-buffer
+		   (superman-find-thing (nth r (nth c window-config)) project))
 		  (when (and (< r (- nrow 1)) (> nrow 1 ))
 		    (split-window-vertically)
 		    (other-window 1)))))
     (select-window (nth 0 top-windows))))
     
-(defun superman-set-config (&optional project config pos)
-  "Set a user defined window configuration."
-  (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
-	 (conf (or config (superman-get-config pro)))
-	 (pos (or pos superman-config-cycle-pos 0))
-	 (window-config (superman-read-config (nth pos (superman-read-config-list conf)))))
-    ;;(message conf)
-    (superman-smash-windows window-config pro)))
-
-
 (defun superman-switch-config (&optional project)
-  "Switch to the next window configuration (if any)."
+  "Switch to the next user defined window configuration. If
+none exist switch to `superman-default-config' instead."
   (interactive)
   (let* ((pro (or project superman-current-project ((lambda () (interactive) (superman-switch-to-project) superman-current-project))))
 	 (curpos (or superman-config-cycle-pos 0))
-	 (config-list (superman-read-config-list
-		       (superman-get-config pro))))
+	 (config-list (superman-distangle-config-list
+		       (superman-read-config pro)))
+	 window-config)
     (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
 	(setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
       (setq superman-config-cycle-pos 0))
-    (superman-find-project pro superman-config-cycle-pos)))
+    ;; 
+    (setq window-config (superman-distangle-config (nth superman-config-cycle-pos config-list)))
+    (superman-smash-windows window-config pro)))
+
 
 
 (defun superman-magit (project)
@@ -268,9 +275,6 @@ then fill relative to project."
 	(rename-buffer bufname)
 	(setq tbuf (current-buffer))))
     (switch-to-buffer tbuf)))
-
-(defun superman-find-project (project pos)
-  (superman-set-config project nil (or pos superman-config-cycle-pos 0)))
 
 (defun superman-get (project el)
   (cdr (assoc el (cadr project))))
