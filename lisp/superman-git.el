@@ -143,8 +143,8 @@ file FILE in directory DIR where n is determined by ARG."
 	 (mess (shell-command-to-string
 		(if (string= arg "first")
 		    (concat "cd " dir ";" superman-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
-		  (concat superman-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
-    (concat date " " mess)))
+		  (concat "cd " dir ";"  superman-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
+    (concat date " " (replace-regexp-in-string "\n+" "" mess))))
 
 (defun superman-git-get-status-at-point (&optional check)
   "Report the status of the document-file at point.
@@ -174,17 +174,18 @@ buffer is in org-agenda-mode."
       (if (string= git-status "!") (setq git-status "?"))
       (if (or  (string= git-status "") (string= git-status "E") (string= git-status "?"))
 	  (setq git-last-commit "")
-	(setq git-last-commit  (superman-git-get-commit "1" file dir)))
+	(setq git-last-commit
+	      (superman-git-get-commit "1" file dir)))
       (cond ((string= git-status "?")
 	     (setq label "Untracked"))
 	    ((string= git-status "E")
-	     (setq label "File does not exist"))
+	     (setq label "NA"))
 	    ((string= git-status "M")
-	     (setq label "Modified and staged"))
+	     (setq label "Staged"))
 	    ((string= git-status "A")
 	     (setq label "New file"))
 	    ((string= git-status " ")
-	     (setq label "Modified but unstaged"))
+	     (setq label "Modified"))
 	    ((string= git-status "C")
 	     (setq label "Committed"))
 	    (t (setq label "Unknown")))
