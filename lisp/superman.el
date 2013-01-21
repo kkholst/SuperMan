@@ -72,14 +72,33 @@
   (save-excursion
     (let* ((props '("NickName" "LastVisit" "Location" "Others"))
 	   (header (superman-make-item
-		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23))
+		    "Status"
+		    (mapcar '(lambda (cat) (cons cat cat)) props)
+		    "Project" 23))
 	   (buffer-read-only nil))
+      (goto-char (point-min))
       (re-search-forward "^Projects:" nil t)
       (forward-line 1)
       (put-text-property 0 (length header) 'face 'org-agenda-structure header)
       (insert "\n" header)
-      (superman-loop 'superman-reformat-item (list props) (point-min) (point-max))))
+      (superman-loop 'superman-reformat-item
+		     (list props) (point-min) (point-max))))
   (superman-on))
+
+
+(defun superman-count-projects-in-bloke (beg end)
+  (save-excursion
+    (let ((n 0))
+      (goto-char beg)
+      (while (and (< (point) end) (next-single-property-change (point-at-eol) 'org-marker))
+	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
+	(end-of-line)
+	(setq n (+ 1 n)))
+      n)))
+
+(defun superman-count-projects ()
+  (superman-structure-loop
+   'superman-count-projects-in-bloke nil))
 
 ;;}}}
 ;;{{{ superman 
@@ -109,20 +128,59 @@
 	 (org-agenda-window-setup 'current-window)
 	 (org-agenda-buffer-name (concat "*S*"))
 	 (org-agenda-sticky nil)
-	 ;; (org-agenda-overriding-buffer-name (concat "*S*"))
 	 (org-agenda-custom-commands
 	  `(("S" "Superman"
 	     ;; ((tags "NickName={.+}"
 	     ((search "NickName"
-		    ((org-agenda-files (quote (,superman-home)))
-		     (org-agenda-finalize-hook 'superman-finalize-superman)
-		     (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
-		     (org-agenda-overriding-header
-		      (concat "?: help, n: new project, s[S]: set property[all]"
-			      "\n\nProjects: " "\n"))
-		     (org-agenda-window-setup 'current-window)
-		     (org-agenda-view-columns-initially nil)
-		     (org-agenda-buffer-name "*Superman*"))))))))
+		      ((org-agenda-files (quote (,superman-home)))
+		       (org-agenda-finalize-hook 'superman-finalize-superman)
+		       (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
+		       (org-agenda-overriding-header
+			(concat "?: help, n: new project, s[S]: set property[all]"
+				"\n\nProjects: " "\n"))
+		       (org-agenda-window-setup 'current-window)
+		       (org-agenda-view-columns-initially nil)
+		       (org-agenda-buffer-name "*S*"))))
+	     ((org-agenda-finalize-hook 'superman-finalize-superman)
+	      (org-agenda-buffer-name "*S*"))))))
+    (push ?S unread-command-events)
+    (call-interactively 'org-agenda)))
+
+
+(defun superman-bloke-view ()
+  "Manage projects."
+  (interactive)
+  (let* ((blokes (mapcar 'car
+			 (save-window-excursion
+			   (find-file superman-home)
+			   org-todo-kwd-alist)))
+	 (bloke-number-one (car blokes))
+	 (org-agenda-finalize-hook 'superman-finalize-superman)
+	 (org-agenda-window-setup 'current-window)
+	 (org-agenda-buffer-name (concat "*S*"))
+	 (org-agenda-sticky nil)
+	 (header-start 
+	  (concat "?: help, n: new project, RET: choose project"
+		  "\n\nProjects: " "\n"))
+	 (shared-header "")
+	 (cmd-block
+	  (mapcar '(lambda (bloke)
+		     (list 'todo bloke
+			   (let ((hdr (if (eq bloke bloke-number-one)
+					  (concat header-start "\n* " bloke "" shared-header)
+					(concat "* " bloke ""))))
+			     `((org-agenda-overriding-header ,hdr)))))
+		  blokes))
+	 (org-agenda-custom-commands
+	  `(("S" "Superman"
+	     ,cmd-block
+	     ;; commands for all blokes
+	     ((org-agenda-finalize-hook 'superman-finalize-superman)
+	      (org-agenda-block-separator superman-document-category-separator)
+	      (org-agenda-view-columns-initially nil)
+	      (org-agenda-buffer-name (concat "*Superman*"))
+	      (org-agenda-files (quote (,superman-home))))
+	     (org-agenda-buffer-name "*Superman*")))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
 

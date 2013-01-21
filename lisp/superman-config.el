@@ -81,8 +81,6 @@
 	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
     hlist))
 
-
-
 (defun superman-save-config (&optional config project)
   (interactive)
   (let* ((conf (or config (superman-current-config)))
@@ -119,6 +117,63 @@
 	(setq prev-row row)))
     config))
 
+
+(defun superman-read-rsync (project)
+  (let* (rsync)
+    (save-window-excursion
+      (superman-goto-project project "Configuration" 'create nil)
+      (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
+	(if rsync
+	    (setq rsync (concat rsync " ; "
+				 (replace-regexp-in-string
+				  "[ \t]*$" ""
+				  (buffer-substring-no-properties (point) (point-at-eol)))))
+	  (setq rsync
+		(replace-regexp-in-string
+		 "[ \t]*$" ""
+		 (buffer-substring-no-properties (point) (point-at-eol)))))))
+    rsync))
+
+(defun superman-save-rsync (&optional config project)
+  (interactive)
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (org-capture-mode-hook 'org-narrow-to-subtree)
+	 (org-capture-templates `(("s" "save" plain
+				   (file+headline (superman-get-index pro) "Configuration")
+				   ,(concat "rsync:" "%(read-directory-name \"Rsync from: \") "
+					    "%(read-directory-name \"Rsync to: \")") :unnarrowed t))))
+    (org-capture nil "s")))
+
+(defun superman-synchronize-project (&optional project)
+  (interactive)
+  (let* ((pro (or project
+		  superman-current-project
+		  (superman-switch-to-project 'force nil t)))
+	 (rsync-list (superman-distangle-config
+		      (superman-read-rsync pro)))
+	 (rsync-cmd (when rsync-list
+		      (if (eq 1 (length rsync-list))
+			  (caar rsync-list)
+			(caar (completing-read "Choose rsync: " rsync-list)))))
+	 (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
+    (when (yes-or-no-p (concat "Do this? " cmd))
+	(shell-command-to-string cmd))))
+
+(defun superman-unison-project (&optional project)
+  (interactive)
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (rsync-list (superman-distangle-config (superman-read-rsync pro)))
+	 (rsync-cmd (when rsync-list
+		      (if (eq 1 (length rsync-list))
+			  (caar rsync-list)
+			(caar (completing-read "Choose rsync: " rsync-list)))))
+	 ;; (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
+	 (cmd (concat "unison-gtk " rsync-cmd)))
+    ;; (when (yes-or-no-p (concat "Do this? " cmd))
+    (shell-command-to-string cmd)))
+;; )
 
 (defun superman-read-config (project)
   (let* (config)

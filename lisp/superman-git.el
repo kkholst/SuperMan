@@ -429,6 +429,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
   (save-excursion
     (let* ((props '("Hash" "Decoration" "Date" "Author"))
 	   (header (superman-make-item
+		    "Status"
 		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23))
 	   (buffer-read-only nil))
       (re-search-forward "^Projects:" nil t)
