@@ -94,11 +94,11 @@
   (call-interactively 'org-capture))
 ;; Capturing links 
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
-				      (function superman-goto-project-bookmarks) "\n*** %a%?\n:PROPERTIES:\n:Bookmark: t\n:CaptureDate: %T\n\:END:") 'append)
+				      (function superman-goto-project-bookmarks) "\n*** %a%?\n:PROPERTIES:\n:Bookmark: t\n:BookmarkDate: %T\n\:END:") 'append)
 ;; Capturing tasks
 (add-to-list 'org-capture-templates
 	     `(,(concat superman-capture-prefix "t") "Add task" plain
-	       (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:")
+	       (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:TaskDate: <%<%Y-%m-%d %a>>\n:END:")
 	     'append)
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
 				      (function superman-goto-project-tasks) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
