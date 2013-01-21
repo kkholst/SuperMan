@@ -92,9 +92,11 @@
   (interactive)
   (push (string-to-char superman-capture-prefix) unread-command-events)
   (call-interactively 'org-capture))
+
+;;(setq org-capture-templates nil)
 ;; Capturing links 
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
-				      (function superman-goto-project-bookmarks) "\n*** %a%?\n:PROPERTIES:\n:Bookmark: t\n:BookmarkDate: %T\n\:END:") 'append)
+				      (function superman-goto-project-bookmarks) "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:") 'append)
 ;; Capturing tasks
 (add-to-list 'org-capture-templates
 	     `(,(concat superman-capture-prefix "t") "Add task" plain
@@ -112,16 +114,17 @@
 
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
+
 (add-to-list 'org-capture-templates
  	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
  	       (function superman-goto-project-calendar)
- 	       (concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
+ 	       ,(concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
  		       "\n:Participants:"
  		       "\n:Location:"
  		       "\n:CaptureDate: %U"
  		       "\n:END:"
  		       "\n**** Agenda\n"
- 		       "\n**** TODO Minutes\n") 'append))
+ 		       "\n**** TODO Minutes\n")))
 
 ;;}}}
 

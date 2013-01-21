@@ -36,17 +36,17 @@
 (defvar superman-cats '(("Meetings" . "Date")
 			("Documents" . "FileName") ("Notes" . "NoteDate")
 			("Tasks" . "TaskDate") ("Mail" . "EmailDate")
-			("Bookmarks" . "Bookmark"))
+			("Bookmarks" . "Link"))
   "Alist of the form ((cat.1 . term.1)(cat.2 . term.2) ...)  where cat.i
 refers to the ith bloke in the project view and term.i identifies
 headlines in the project index file to be shown in that bloke.")
 
-(defvar superman-view-format-alist '(("Meetings" . ("Date" "Participants" "Status"))
+(setq superman-view-format-alist '(("Meetings" . ("Date" "Participants" "Status"))
 				     ("Documents" . ("GitStatus" "LastCommit" "FileName"))
 				     ("Notes" . ("NoteDate"))
 				     ("Mail" . ("EmailDate" "Link"))
 				     ("Tasks" . ("TaskDate"))
-				     ("Bookmarks" . nil))) ;;("BookmarkDate"))))
+				     ("Bookmarks" . ("BookmarkDate" "Link")))) ;;("BookmarkDate"))))
 
 (defvar superman-view-documents-helpline
   "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
@@ -411,6 +411,7 @@ or by adding whitespace characters."
 
 ;;}}}
 ;;{{{ actions 
+
 (defun superman-view-git-diff ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
