@@ -119,8 +119,6 @@
 
 (setq org-agenda-show-inherited-tags (list))
 
-(make-)
-
 (defun superman ()
   "Manage projects."
   (interactive)

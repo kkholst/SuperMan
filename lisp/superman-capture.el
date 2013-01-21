@@ -94,7 +94,7 @@
   (call-interactively 'org-capture))
 ;; Capturing links 
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
-				      (function superman-goto-project-bookmarks) "\n *** %a%?") 'append)
+				      (function superman-goto-project-bookmarks) "\n*** %a%?\n:PROPERTIES:\n:Bookmark: t\n:CaptureDate: %T\n\:END:") 'append)
 ;; Capturing tasks
 (add-to-list 'org-capture-templates
 	     `(,(concat superman-capture-prefix "t") "Add task" plain
