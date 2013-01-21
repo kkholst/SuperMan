@@ -52,6 +52,13 @@
 ;;
 ;;; Code:
 
+
+
+
+(defvar superman-google-cmd
+  "PYTHONUSERBASE=~/local/; google"
+  "Full path to google command line utility")
+
 (defvar superman-google-calendars
   nil
   "List of google calendar names. E.g. '(\"Work\" \"Family\").")
@@ -109,7 +116,7 @@
                    (text (progn (outline-previous-heading)
                                 (looking-at org-complex-heading-regexp)
                                 (match-string-no-properties 4))))
-              (let* ((g-command (concat "/usr/bin/google calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))
+              (let* ((g-command (concat superman-google-cmd " calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))
                      (g-doit (y-or-n-p (concat "Add to google calendar?: " g-command))))
                 (when g-doit
                   (shell-command g-command)))))))))
