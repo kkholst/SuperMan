@@ -80,7 +80,7 @@
       (re-search-forward "^Projects:" nil t)
       (forward-line 1)
       (put-text-property 0 (length header) 'face 'org-agenda-structure header)
-      (insert "\n" header)
+;;      (insert "\n" header)
       (superman-loop 'superman-reformat-item
 		     (list props) (point-min) (point-max))))
   (superman-on))
@@ -118,6 +118,8 @@
 
 
 (setq org-agenda-show-inherited-tags (list))
+
+(make-)
 
 (defun superman ()
   "Manage projects."
