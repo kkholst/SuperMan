@@ -1,6 +1,19 @@
-* Bookmarks
-  *** [[http://staff.pubhealth.ku.dk/~kkho/start.html][sdflkfjasd]]
-  *** [[file:ProjectManagerPlans.org]]
+* Notes
+*** Memo 1
+:PROPERTIES:
+:NoteDate: <2013-01-21 Mon>
+:END:
+Husk alle ting 
+* Tasks
+*** TODO Some task 
+:PROPERTIES:
+:TaskDate: <2013-01-21 Mon>
+:END:
+* Configuration
+windows:PROJECT
+windows:DOCUMENTS
+
+
 * Documents
 :PROPERTIES:
 :COLUMNS:  %19ITEM(Title) %15GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)
@@ -9,61 +22,61 @@
 
 *** superman-config
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-config.el]]
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-config.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:54>
 :GitInit: <2012-12-18 Tue 07:25> initial commit
-:LastCommit: <2013-01-15 Tue 09:32> 
+:LastCommit: <2013-01-21 Mon 10:01> fixed links
 :END:
 *** superman
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman.el]]
-:GitStatus: Committed
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman.el]]
+:GitStatus: Modified
 :CaptureDate: <2013-01-08 Tue 12:54>
 :GitInit:  <2012-12-20 Thu 08:47> initial commit
-:LastCommit: <2013-01-14 Mon 16:57> 
+:LastCommit: <2013-01-21 Mon 10:01> fixed links
 :END:
 *** superman-deft
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-deft.el]]
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-deft.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:53>
 :GitInit:  <2012-12-18 Tue 07:25> initial commit
-:LastCommit: <2013-01-11 Fri 16:17> 
+:LastCommit: <2013-01-11 Fri 16:17> superman -- forget org-pro forever
 :END:
 *** superman-git
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-git.el]]
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-git.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:52>
 :GitInit: <2013-01-07 Mon 16:10> first commit
-:LastCommit: <2013-01-13 Sun 19:37> 
+:LastCommit: <2013-01-21 Mon 10:01> fixed links
 :END:
 *** superman-summary
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-summary.el]]
-:GitStatus: Committed
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-summary.el]]
+:GitStatus: Modified
 :CaptureDate: <2013-01-11 Fri 15:14>
 :GitInit: <2013-01-06 Sun 15:12> first working edition of agenda hack
 
-:LastCommit: <2013-01-15 Tue 09:32> 
+:LastCommit: <2013-01-21 Mon 10:01> fixed links
 :END:
 *** superman-manager
 
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/lisp/superman-manager.el]]
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-manager.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:11>
 :GitInit: <2013-01-06 Sun 18:41> new project-manager after move from one long org file to multiple lisp files
-:LastCommit: <2013-01-15 Tue 09:32> 
+:LastCommit: <2013-01-21 Mon 10:27> Revert "iconv --from-code UTF-8 --to-code US-ASCII -c inputfile > outputfile"
 :END:
 *** superman-capture
 :PROPERTIES:
-:FileName: [[/Users/klaus/.sitelisp/ProjectManager/lisp/superman-capture.el]]
+:FileName: [[~/.sitelisp/SuperMan/lisp/superman-capture.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-14 Mon 21:21>
 :GitInit:  <2013-01-14 Mon 17:28> first commit of capture el
-:LastCommit: <2013-01-15 Tue 09:32> 
+:LastCommit: <2013-01-18 Fri 21:45> fixed some issues
 :END:
 
 ** Misc
@@ -73,16 +86,16 @@
 
 *** OLD stuff
 :PROPERTIES:
-:FileName: [[~/.sitelisp/ProjectManager/code/org-project-manager.org]]
+:FileName: [[~/.sitelisp/SuperMan/code/org-project-manager.org]]
 :CaptureDate: <2012-10-31 Wed 11:27>
 :GitStatus: Committed
-:GitInit: <2012-08-29 Wed 14:23> Moved code from ProjectManager.el to org-project-manager.org (load via org-babel-load-file)
-:LastCommit: <2013-01-10 Thu 06:29> 
+:GitInit: <2012-08-29 Wed 14:23> Moved code from SuperMan.el to org-project-manager.org (load via org-babel-load-file)
+:LastCommit: <2013-01-10 Thu 06:29> test of commit all
 :END:
 
-*** ProjectManagerPlans
+*** SuperManPlans
 :PROPERTIES:
-:FileName: [[/Users/klaus/.sitelisp/ProjectManager/ProjectManagerPlans.org]]
+:FileName: [[~/.sitelisp/SuperMan/ProjectManagerPlans.org]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-13 Sun 18:38>
 :GitInit: <2012-08-24 Fri 10:07> git-hub repos started
@@ -90,3 +103,16 @@
 :LastCommit: <2013-01-15 Tue 09:32> minor fixes
 :END:
     
+
+
+* Bookmarks
+*** [[file:~/.sitelisp/SuperMan/SuperMan.org::*Bookmarks][Bookmarks]]
+:PROPERTIES:
+:Bookmark: t
+:CaptureDate: <2013-01-21 Mon>
+:END:
+* All The Rest
+sdsdf
+sdf
+sdf
+sdf
