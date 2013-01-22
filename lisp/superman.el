@@ -215,7 +215,7 @@
 			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
-		     (superman-parse-categories))
+		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook '(lambda () (superman-clean-up) (superman-on))))))))
     (push ?P unread-command-events)
@@ -250,7 +250,7 @@
 			(list 'tags-todo "PRIORITY=\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
-		     (superman-parse-categories))
+		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook 'superman-clean-up))))))
     (push ?B unread-command-events)
@@ -266,7 +266,7 @@
 			(list 'tags-todo "PRIORITY=\"C\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
 				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
-		     (superman-parse-categories))
+		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook 'superman-clean-up))))))
     (push ?C unread-command-events)
@@ -290,7 +290,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (defun superman-on ()
   (interactive)
-  (hl-line-mode 1)
+  (when superman-hl-line (hl-line-mode 1))
   (superman-mode t))
 
 

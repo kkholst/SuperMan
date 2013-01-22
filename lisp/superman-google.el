@@ -67,21 +67,20 @@
   nil
   "Name of your default google calendar.")
 
-(defun superman-google-export-appointment (&optional set)
-  (interactive "P")
+(defun superman-google-export-appointment ()
+  (interactive)
   (org-back-to-heading t)
   (let ((g-cal (org-entry-get nil "GoogleCalendar")))
     (if (or g-cal
-            (and set
-                 (progn
-                   (setq g-cal
-                         (completing-read
-			  (concat "Choose google calendar (default: " superman-google-default-calendar "): ")
-			  (mapcar '(lambda (entry) (cons entry nil)) superman-google-calendars)
-			  nil t nil nil
-			  superman-google-default-calendar))
-                   (org-set-property "GoogleCalendar" g-cal)
-                   g-cal)))
+	    (progn
+	      (setq g-cal
+		    (completing-read
+		     (concat "Choose google calendar (default: " superman-google-default-calendar "): ")
+		     (mapcar '(lambda (entry) (cons entry nil)) superman-google-calendars)
+		     nil t nil nil
+		     superman-google-default-calendar))
+	      (org-set-property "GoogleCalendar" g-cal)
+	      g-cal))
         ;; search for time-stamp
         (if (and (not (org-at-timestamp-p nil))
                  (progn

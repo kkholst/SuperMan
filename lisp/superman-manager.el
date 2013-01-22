@@ -38,7 +38,7 @@
 
 ;; Loading extensions
 (require 'superman) ;; a project to manage projects
-(require 'superman-summary)  ;; project summary
+(require 'superman-views)  ;; project views
 (require 'superman-capture)  ;; capture information
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
@@ -366,23 +366,35 @@ the `superman-home'.")
 			      nil property nil)))))
     props))
   
-(defun superman-parse-categories ()
+(defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)
   (set-buffer (find-file-noselect superman-home))
   (unless (superman-manager-mode 1))
-  (setq superman-project-categories
-	(reverse (superman-get-buffer-props (superman-property 'category)))))
-  
+  (save-restriction
+    (widen)
+    (superman-parse-categories (current-buffer) (point-min) (point-max))))
+
+(defun superman-parse-categories (buffer beg end)
+  "Parse the buffer BUFFER and return categories."
+  (save-excursion
+    (set-buffer buffer)
+    (reverse
+     (superman-get-buffer-props (superman-property 'category)))))
+
 (defun superman-refresh ()
   "Parses the categories and projects in file `superman-home' and also
              updates the currently selected project."
   (interactive)
-  (superman-parse-categories)
+  (superman-parse-project-categories)
   (superman-parse-projects)
   (when superman-current-project
     (setq superman-current-project
 	  (assoc (car superman-current-project) superman-project-alist))))
+
+
+
+
 
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
@@ -426,7 +438,7 @@ the `superman-home'.")
     (while (assoc nickname superman-project-alist)
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (setq category (or category (completing-read "Category: " (superman-parse-categories) nil nil)))
+    (setq category (or category (completing-read "Category: " (superman-parse-project-categories) nil nil)))
     ;; a local capture command places the new project
     (let ((org-capture-templates
 	   `(("p" "Project" plain
@@ -747,6 +759,26 @@ If NOSELECT is set return the project."
 		       :components (,(concat nickname "-export") ,(concat nickname "-copy")))))
       (setq p-alist (cdr p-alist)))))
 
+;;}}}
+;;{{{ superman-shell
+(defun superman-goto-shell ()
+  "Switches to *shell* buffer and. "
+  (interactive)
+  (let ((sbuf (get-buffer "*shell*"))
+	(cmd (concat "cd " default-directory))
+	input)
+    (if sbuf
+	(switch-to-buffer-other-window sbuf)
+      (split-window-vertically)
+      (shell))
+    (goto-char (point-max))
+    (comint-bol)
+    (when (looking-at ".*")
+      (setq input (match-string 0))
+      (replace-match ""))
+    (insert cmd)
+    (comint-send-input)
+    (if input (insert input))))
 ;;}}}
 (provide 'superman-manager)
 ;;; superman-manager.el ends here

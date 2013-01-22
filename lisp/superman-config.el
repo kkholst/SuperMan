@@ -121,15 +121,14 @@
 (defun superman-read-rsync (project)
   (let* (rsync)
     (save-window-excursion
-      (superman-goto-project project "Configuration" 'create nil)
-      (org-narrow-to-subtree)
+      (superman-goto-project project "Configuration" 'create)
       (goto-char (point-min))
       (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
 	(if rsync
 	    (setq rsync (concat rsync " ; "
-				 (replace-regexp-in-string
-				  "[ \t]*$" ""
-				  (buffer-substring-no-properties (point) (point-at-eol)))))
+				(replace-regexp-in-string
+				 "[ \t]*$" ""
+				 (buffer-substring-no-properties (point) (point-at-eol)))))
 	  (setq rsync
 		(replace-regexp-in-string
 		 "[ \t]*$" ""
@@ -159,40 +158,27 @@
 			(caar (completing-read "Choose rsync: " rsync-list)))))
 	 (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
     (when (yes-or-no-p (concat "Do this? " cmd))
-	(shell-command-to-string cmd))))
+      (shell-command-to-string cmd))))
 
-(defun superman-unison-project (&optional project)
-  (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
-	 (rsync-list (superman-distangle-config (superman-read-rsync pro)))
-	 (rsync-cmd (when rsync-list
-		      (if (eq 1 (length rsync-list))
-			  (caar rsync-list)
-			(caar (completing-read "Choose rsync: " rsync-list)))))
-	 ;; (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
-	 (cmd (concat "unison-gtk " rsync-cmd)))
-    ;; (when (yes-or-no-p (concat "Do this? " cmd))
-    (shell-command-to-string cmd)))
-;; )
 
 (defun superman-read-config (project)
   (let* (config)
     (save-window-excursion
-      (superman-goto-project project "Configuration" 'create nil)
-      (org-narrow-to-subtree)
-      (goto-char (point-min))
-      (while (re-search-forward "^[ \t]*windows:[ \t]*" (point-max) t)
-	(if config
-	    (setq config (concat config " : "
-				 (replace-regexp-in-string
-				  "[ \t]*$" ""
-				  (buffer-substring-no-properties (point) (point-at-eol)))))
-	  (setq config
-		(replace-regexp-in-string
-		 "[ \t]*$" ""
-		 (buffer-substring-no-properties (point) (point-at-eol)))))))
-    (when (not config) (setq config superman-default-config))
-    config))
+      (save-restriction
+	(superman-goto-project project "Configuration" 'create)
+	(goto-char (point-min))
+	(while (re-search-forward "^[ \t]*windows:[ \t]*" (point-max) t)
+	  (if config
+	      (setq config (concat config " : "
+				   (replace-regexp-in-string
+				    "[ \t]*$" ""
+				    (buffer-substring-no-properties (point) (point-at-eol)))))
+	    (setq config
+		  (replace-regexp-in-string
+		   "[ \t]*$" ""
+		   (buffer-substring-no-properties (point) (point-at-eol)))))))
+      (when (not config) (setq config superman-default-config))
+      config)))
 ;; (when filed-config
 ;; (setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
 ;; (when prop-config
@@ -355,9 +341,8 @@ find the next window configuration."
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
 
-(defun superman-get-git-location (project)
-  (or (cdr (assoc "git-location" (cadr project)))
-      (concat (superman-get-location project) (car project))))
+(defun superman-project-home (project)
+  (concat (superman-get-location project) (car project)))
 
 (defun superman-get-location (project)
   "Get the directory associated with PROJECT."

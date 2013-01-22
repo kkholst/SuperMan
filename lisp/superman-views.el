@@ -1,4 +1,4 @@
-;;; superman-summary.el --- Summary of project contents and adding information to projects
+;;; superman-views.el --- Superman views of project contents 
 
 ;; Copyright (C) 2012  Klaus Kaehler Holst, Thomas Alexander Gerds
 
@@ -25,6 +25,8 @@
 
 ;;{{{ Variables
 
+(defvar superman-hl-line nil "Set to non-nil in order to
+highlight the current line in superman views.")
 (defvar superman-view-marks nil "Marks for items in agenda.")
 (make-variable-buffer-local 'superman-view-marks)
 
@@ -41,36 +43,69 @@
 refers to the ith bloke in the project view and term.i identifies
 headlines in the project index file to be shown in that bloke.")
 
-(setq superman-view-format-alist '(("Meetings" . ("Date" "Participants" "Status"))
-				     ("Documents" . ("GitStatus" "LastCommit" "FileName"))
-				     ("Notes" . ("NoteDate"))
-				     ("Mail" . ("EmailDate" "Link"))
-				     ("Tasks" . ("TaskDate"))
-				     ("Bookmarks" . ("BookmarkDate" "Link")))) ;;("BookmarkDate"))))
+(setq superman-view-format-alist
+      '(("Meetings" . ("Date" "Participants" "Status"))
+	("Documents" . ("GitStatus" "LastCommit" "FileName"))
+	("Notes" . ("NoteDate"))
+	("Mail" . ("EmailDate" "Link"))
+	("Tasks" . ("TaskDate"))
+	("Bookmarks" . ("BookmarkDate" "Link"))))
 
 (defvar superman-view-documents-helpline
   "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
   "First line of document view buffer which -- by default -- is showing some keystrokes")
 
 
-(defvar superman-view-project-helpline
-  "?: help, add document [d], note [n], task [t], bookmark [b]"
-  "First line of project view buffer which -- by default -- is showing some keystrokes")
+(defvar superman-view-project-helpline "")
+(defvar superman-view-project-action-prefix "A")
+(defvar superman-view-project-news-prefix "N")
+(setq superman-view-project-actions '((list "shell" superman-goto-shell "S")
+				      (list "git push" superman-git-push "P")
+				      (list "unison" superman-unison "U")))
+(setq superman-view-project-news '((list "Note" superman-new-note "n")
+				   (list "Document" superman-new-document "d")
+				   (list "Meeting" superman-new-meeting "m")
+				   (list "Task" superman-new-task "t")
+				   (list "Bookmark" superman-new-bookmark "b")))
+
+(defun superman-view-project-action-line ()
+  (concat "Actions: " (apply 'concat 
+    (mapcar '(lambda (x) (concat "`" superman-view-project-action-prefix
+				 (nth 3 x)
+				 "': "
+				 (nth 1 x) "\t")) superman-view-project-actions))))
+(defun superman-view-project-news-line ()
+  (concat "New: " (apply 'concat 
+    (mapcar '(lambda (x) (concat "`" superman-view-project-news-prefix
+				 (nth 3 x)
+				 "': "
+				 (nth 1 x) "\t")) superman-view-project-news))))
+
+(defun superman-view-project-set-action-keys ()
+  (mapcar
+   '(lambda (x)
+      (define-key superman-view-mode-map
+	(concat superman-view-project-action-prefix (nth 3 x))
+	(nth 2 x)))
+   superman-view-project-actions))
+
+(defun superman-view-project-set-news-keys ()
+  (mapcar
+   '(lambda (x)
+      (define-key superman-view-mode-map
+	(concat superman-view-project-news-prefix (nth 3 x))
+	(nth 2 x)))
+   superman-view-project-news))
+
+;; (superman-view-project-set-action-keys)	
+  
 
 (defvar superman-document-category-separator '32 "Symbol for separating categories in document views.
 See `org-agenda-block-separator'. Set to '0 to get a funny line.
 Can also be set to (string-to-char \"~\") with any string in place of ~.")
 
 ;;}}}
-;;{{{ misc functions
-
-(defun superman-parse-document-categories (buf)
-  "Parse the file `superman-home' and update `superman-project-categories'."
-  (save-excursion
-      (set-buffer buf)
-      (save-restriction
-	(widen)
-	(reverse (superman-get-buffer-props (superman-property 'category))))))
+;;{{{ Trim strings and links
 
 (defun superman-trim-string (str len)
   "Trim string STR to a given length by either calling substring
@@ -125,7 +160,7 @@ or by adding whitespace characters."
       "press `I' to initialize git")))
 
 ;;}}}
-;;{{{ marking
+;;{{{ Marking elements
 
 (defun superman-toggle-mark ()
   (interactive)
@@ -140,7 +175,7 @@ or by adding whitespace characters."
   (forward-line 1))
 
 ;;}}}
-;;{{{ formatting agenda items
+;;{{{ Formatting agenda items
 
 (defvar superman-column-width '(("GitStatus" . 10)))
   
@@ -214,7 +249,6 @@ or by adding whitespace characters."
 
 ;;}}}
 ;;{{{ project views
-
 (defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
@@ -230,10 +264,13 @@ or by adding whitespace characters."
 	 (cats superman-cats)
 	 ;; (view-buf (concat "*Project[" (car pro) "]*"))
 	 (cat-number-one (car cats))
-	 (header-start (concat superman-view-project-helpline
-			       "\nProject: " (car pro)
+	 (header-start (concat "Project: " (car pro)
 			       "\n" (or (superman-view-control)
 					(concat "Control: not set. <> Press `I' to initialize git"))
+			       "\n"
+			       (superman-view-project-action-line)
+			       "\n"
+			       (superman-view-project-news-line)
 			       "\n\n"))
 	 (shared-header "")
 	 (cmd-block
@@ -251,8 +288,7 @@ or by adding whitespace characters."
 	      (org-agenda-block-separator superman-document-category-separator)
 	      (org-agenda-view-columns-initially nil)
 	      (org-agenda-buffer-name (concat "*Project[" ,(car pro) "]*"))
-	      (org-agenda-files (quote (,(superman-get-index pro))))
-	      )))))
+	      (org-agenda-files (quote (,(superman-get-index pro)))))))))
     (org-agenda nil "p")))
 
 (defun superman-finalize-project-view ()
@@ -297,6 +333,9 @@ or by adding whitespace characters."
     (while (org-activate-bracket-links (point-max))
       (add-text-properties (match-beginning 0) (match-end 0)
 			   '(face org-link))))
+  (setq default-directory
+	(superman-project-home
+	 (superman-view-current-project)))
   (superman-view-mode-on))
 
 ;;}}}
@@ -312,8 +351,12 @@ or by adding whitespace characters."
 	 (org-agenda-buffer-name (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-window-setup 'current-window)
-	 (cats (superman-parse-document-categories
-		(find-file-noselect (superman-get-index pro))))
+	 (cats (superman-parse-categories
+		(progn
+		  (superman-goto-project pro "Documents" nil)
+		  (current-buffer))
+		(point-min)
+		(point-max)))
 	 (view-buf (concat "*Documents[" (car pro) "]*"))
 	 (header-start (concat superman-view-documents-helpline
 			       "\nProject: " (car pro)
@@ -407,10 +450,13 @@ or by adding whitespace characters."
 	(add-text-properties (match-beginning 0) (match-end 0)
 			     '(face org-link))))
     ;; (superman-reformat-document-lines)
+    (setq default-directory
+	  (superman-project-home
+	   (superman-view-current-project)))
     (superman-view-mode-on)))
 
 ;;}}}
-;;{{{ actions 
+;;{{{ Document specific actions (mostly git) 
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -630,8 +676,7 @@ The function is only run on items marked in this way."
     (unless dont-redo (org-agenda-redo))))
 
 ;;}}}
-;;{{{ summary-view-mode
-
+;;{{{ project-view-mode
 (defvar superman-view-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
    
@@ -648,43 +693,25 @@ The function is only run on items marked in this way."
 
 (defun superman-view-mode-on ()
   (interactive)
-   (hl-line-mode 1)
+  (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
-(defun superman-start-shell (&optional pro)
-  (interactive)
-  (let* ((filedir (file-name-directory (superman-get-index pro)))
-	 (default-directory (expand-file-name filedir)))
-    (shell "*shell*superman")
-    (comint-send-string (current-buffer) (concat "\ncd " default-directory "\n"))))
-
-
-(defun superman-start-shell-view-mode (&optional dir)
-  (interactive)
-  (let* ((filedir (or dir (file-name-directory (superman-filename-at-point))))
-	 (pro (or dir (superman-view-current-project)))
-	 (dir (or dir (concat (superman-get-location pro) (car pro))))
-	 (default-directory (expand-file-name (or filedir dir))))
-    (shell "*shell*superman")
-    (comint-send-string (current-buffer) (concat "\ncd " default-directory "\n"))
-    ))
-
-
-   
+(superman-view-project-set-action-keys)
+(superman-view-project-set-news-keys)
 (define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
 (define-key superman-view-mode-map "l" 'superman-view-git-log) 
 (define-key superman-view-mode-map "L" 'superman-view-git-log-decorationonly)
-(define-key superman-view-mode-map "n" 'superman-view-register-document)
+;; (define-key superman-view-mode-map "n" 'superman-new-document)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "r" 'org-agenda-redo)
 (define-key superman-view-mode-map "h" 'superman-view-git-history)
-(define-key superman-view-mode-map "!" 'superman-start-shell)
+(define-key superman-view-mode-map "!" 'superman-goto-shell)
 (define-key superman-view-mode-map "g" 'superman-view-git-grep)
 (define-key superman-view-mode-map "v" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "d" 'superman-view-git-diff)
 (define-key superman-view-mode-map "D" 'superman-view-git-ediff)
 (define-key superman-view-mode-map "a" 'superman-view-git-add)
-(define-key superman-view-mode-map "A" 'superman-view-git-add-all)
+;; (define-key superman-view-mode-map "A" 'superman-view-git-add-all)
 (define-key superman-view-mode-map "S" 'superman-view-git-search)
 (define-key superman-view-mode-map "?" 'superman-view-show-help)
 (define-key superman-view-mode-map "u" 'superman-view-update)
@@ -722,36 +749,27 @@ The function is only run on items marked in this way."
 	 "------------------")))
     ;;	"[q]:    \t\t Quit view mode\n"
     (funcall superman-help-fun msg)))
- 
-;; (split-window-vertically)  
-;; (other-window 1)
-;; (switch-to-buffer "*superman-help-buffer*")
-;; (toggle-read-only -1)
-;; (erase-buffer)
-;; (goto-char (point-min))
-;; (toggle-read-only 1)
-;; (other-window -1))
 
 ;;}}}
 ;;{{{ Adding documents from file-list
 
-(defun superman-add-documents (&optional file-list)
-  (interactive)
-  (let* ((fl (or file-list file-list-current-file-list)))
-    ;; FIXME need to write superman-get-documents and filter duplicates
-    (superman-goto-project-documents)
-    (while fl
-      (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (file-list-make-file-name (car fl))))
-	      "\n:PROPERTIES:\n:filename: [["(file-list-make-file-name (car fl))"]]\n:CaptureDate: ")
-      (org-insert-time-stamp (current-time) t)
-      (insert "\n:END:")
-      (setq fl (cdr fl)))))
+;; (defun superman-add-documents (&optional file-list)
+;; (interactive)
+;; (let* ((fl (or file-list file-list-current-file-list)))
+;; ;; FIXME need to write superman-get-documents and filter duplicates
+;; (superman-goto-project-documents)
+;; (while fl
+;; (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (file-list-make-file-name (car fl))))
+;; "\n:PROPERTIES:\n:filename: [["(file-list-make-file-name (car fl))"]]\n:CaptureDate: ")
+;; (org-insert-time-stamp (current-time) t)
+;; (insert "\n:END:")
+;; (setq fl (cdr fl)))))
 
-(defun superman-view-register-document (&optional file-list)
+(defun superman-new-document (&optional file-list)
   (interactive)
   (let* ((pro (superman-view-current-project))
 	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	 (fl (or file-list `(,(read-file-name (concat "Choose: ") (file-name-as-directory dir))))))
+	 (fl (or file-list `(,(read-file-name (concat "Add document: ") (file-name-as-directory dir))))))
     ;; FIXME need to write superman-get-documents and filter duplicates
     (save-window-excursion
       (superman-goto-project pro "Documents" 'create)
@@ -768,9 +786,21 @@ The function is only run on items marked in this way."
   (org-agenda-redo))
 ;; (switch-to-buffer (other-buffer)))
 
+(defun superman-new-task ()
+  (interactive)
+  (superman-capture-task (superman-view-current-project)))
+
+(defun superman-new-meeting ()
+  (interactive)
+  (superman-capture-meeting (superman-view-current-project)))
+
+(defun superman-new-note ()
+  (interactive)
+  (superman-capture-note (superman-view-current-project)))
+
 ;;}}}
 
-(provide 'superman-summary)
+(provide 'superman-views)
 ;;; superman-summary.el ends here
 
 

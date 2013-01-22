@@ -267,6 +267,16 @@ or if the file is not inside the location."
 ;;}}}
 ;;{{{ updating and pushing projects
 
+(defun superman-git-push (&optional project)
+  (interactive)
+  (let* ((pro (or project (superman-view-current-project) (superman-select-project)))
+	 (loc (concat (superman-get-location pro) (car pro)))
+	 (cmd (concat "cd loc;" superman-cmd-git " push")))
+    (superman-goto-shell)
+    (insert cmd)))
+    ;; (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " push"))
+    
+  
 ;; (defun superman-git-push-directory (dir silent)
   ;; "Git push directory DIR."
   ;; (let* ((status (shell-command-to-string  (concat "cd " dir ";" superman-cmd-git " status")))

@@ -27,34 +27,36 @@
 
 ;;{{{ capture documents, notes, etc.
 
-(defun superman-goto-project (&optional project heading create prop-alist)
+(defun superman-goto-project (&optional project heading create)
+  "Goto project index file call `widen' and then search for HEADING
+and narrow the buffer to this subtree.
+
+If HEADING is not found and CREATE is non-nil create the HEADING.
+Leaves point at the end of the section."
   (interactive)
   (let* ((pro (or project (superman-select-project)))
 	 (index (superman-get-index pro))
 	 hiddenp
 	 (head (or heading (read-string "Goto heading: "))))
     (if index
-	(find-file index)
+      	(progn
+	  (find-file index)
+	  (unless (file-exists-p (file-name-directory index))
+	    (make-directory  (file-name-directory index))))
       (error (concat "Project " pro " does not have an index.")))
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (cond ((re-search-forward
-	      (format org-complex-heading-regexp-format (regexp-quote head))
-	      nil t))
-	    (create
-	     (insert "* " head "\n")
-	     ;; (org-set-property "Project" pro)
-	     (forward-line -1))
-	    (t (error (concat "Heading " head " not found in index file of " (car pro)))))
-      (org-narrow-to-subtree)
-      (if prop-alist (mapcar (lambda (p)
-			       (unless (org-entry-get nil (car p))
-				 (org-set-property (car p) (car (cdr p))))) prop-alist))
-      (goto-char (point-max))
-      )))
-      ;; (forward-line)
-      ;; (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1))))))
+    (widen)
+    (goto-char (point-min))
+    (cond ((re-search-forward
+	    (format org-complex-heading-regexp-format (regexp-quote head))
+	    nil t))
+	  (create
+	   (goto-char (point-max))
+	   (insert "\n* " head "\n")
+	   ;; (org-set-property "Project" pro)
+	   (forward-line -1))
+	  (t (error (concat "Heading " head " not found in index file of " (car pro)))))
+    (org-narrow-to-subtree)
+    (goto-char (point-max))))
 
 
 (defun superman-goto-project-notes ()
@@ -98,6 +100,16 @@
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
 				      (function superman-goto-project-bookmarks) "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:") 'append)
 ;; Capturing tasks
+(defun superman-capture-task (&optional project)
+  (interactive)
+  (let* ((pro (or project (superman-select-project)))
+	 (org-capture-templates
+	  `(("t" "Add a task" plain
+	     (function
+	      (lambda () (interactive)
+		(superman-goto-project pro "Tasks" 'create)))
+	     ,(concat "\n*** TODO %? \n:PROPERTIES:\n:TaskDate: <%<%Y-%m-%d %a>>\n:END:")))))
+    (org-capture nil "t")))
 (add-to-list 'org-capture-templates
 	     `(,(concat superman-capture-prefix "t") "Add task" plain
 	       (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:TaskDate: <%<%Y-%m-%d %a>>\n:END:")
@@ -105,6 +117,17 @@
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
 				      (function superman-goto-project-tasks) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing notes
+(defun superman-capture-note (&optional project)
+  (interactive)
+  (let* ((pro (or project (superman-select-project)))
+	 (org-capture-templates
+	  `(("n" "Add a note" plain
+	     (function
+	      (lambda () (interactive)
+		(superman-goto-project pro "Notes" 'create)))
+	     ,(concat "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:")))))
+    (org-capture nil "n")))
+  
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "n") "Add note" plain
 				      (function superman-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing documents
@@ -119,22 +142,98 @@
  	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
  	       (function superman-goto-project-calendar)
  	       ,(concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
- 		       "\n:Participants:"
- 		       "\n:Location:"
- 		       "\n:CaptureDate: %U"
- 		       "\n:END:"
- 		       "\n**** Agenda\n"
- 		       "\n**** TODO Minutes\n")))
+			"\n:Participants:"
+			"\n:Location:"
+			"\n:CaptureDate: %U"
+			"\n:END:"
+			"\n**** Agenda\n"
+			"\n**** TODO Minutes\n")))
+
+(defun superman-capture-meeting (&optional project)
+  (interactive)
+  (let* ((pro (or project (superman-select-project)))
+	 (org-capture-templates
+	  `(("m" "Arrange a meeting" plain
+	     (function
+	      (lambda () (interactive)
+		(superman-goto-project pro "Calendar" 'create)))
+	     ,(concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
+		      "\n:Participants:"
+		      "\n:Location:"
+		      "\n:CaptureDate: %U"
+		      "\n:END:"
+		      "\n**** Agenda\n"
+		      "\n**** TODO Minutes\n"))))
+	 (org-capture-before-finalize-hook
+	  'superman-google-export-appointment))
+    (org-capture nil "m")))
+	 
+;;}}}
+;;{{{ capture synchronization commands
+(setq superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
+      ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
+(defun superman-capture-unison (&optional config project)
+  (interactive)
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (org-capture-mode-hook 'org-narrow-to-subtree)
+	 (org-capture-templates
+	  `(("u" "unison" plain
+	     (file+headline (superman-get-index pro) "Configuration")
+	     ,(concat "*** unison%?\n:PROPERTIES:"
+		      "\n:UNISON:"
+		      "unison-gtk"
+		      "\n:ROOT-1:"
+		      "%(read-directory-name \"Unison root directory 1: \") "
+		      "\n:ROOT-2:"
+		      "%(read-directory-name \"Unison root directory 2: \") "
+		      "\n:SWITCHES:default"
+		      "\n:END:\n") :unnarrowed t))))
+    (org-capture nil "u")))
+
+(defun superman-unison (&optional project)
+  (interactive)
+  (save-excursion
+    (save-restriction
+      (let ((pro (or project
+		     superman-current-project
+		     (superman-switch-to-project 'force nil t)))
+	    cmd)
+	(superman-goto-project pro "Configuration")
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(if (re-search-forward ":UNISON:" nil t)
+	    (progn
+	      (setq cmd
+		    (concat
+		     (superman-get-property (point) "UNISON")
+		     " "
+		     (superman-get-property (point) "ROOT-1")
+		     " "
+		     (superman-get-property (point) "ROOT-2")
+		     " "
+		     (if (string= (superman-get-property (point) "SWITCHES") "default")
+			 superman-unison-switches
+		       (superman-get-property (point) "SWITCHES"))))
+	      (superman-goto-shell)
+	      (insert cmd)
+	      (comint-send-input))
+	  (when (y-or-n-p (concat "No unison configuration found for project "
+				(car pro)
+				". Create one? "))
+	      (superman-capture-unison pro)))))))
 
 ;;}}}
-
 ;;{{{ capture mails
-(setq
- org-capture-templates
- (append org-capture-templates
-	 '(("E"  "Store email (and attachments) in project"
-	    plain (function superman-gnus-project-mailbox)
-	    "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))))
+
+(defun superman-capture-mail ()
+  (interactive)
+  (let ((org-capture-templates
+    '(("E"  "Store email (and attachments) in project"
+       plain (function superman-gnus-project-mailbox)
+       "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))
+    ))
+    (push ?E unread-command-events)
+    (call-interactively 'org-capture)))
 
 (defun superman-gnus-project-mailbox (&optional arg)
   (interactive)
@@ -158,7 +257,10 @@
 			   (concat "----\n" region "\n----\n"))))
     (superman-save-attachments pro mailbox buf)
     (if org
-        (find-file org)
+	(progn
+	  (find-file org)
+	  (unless (file-exists-p (file-name-directory org))
+	    (make-directory  (file-name-directory org))))
       (error "Project " pro " does not have an org-file."))
     (goto-char (point-min))
     (if (re-search-forward "^[*]+ Mailbox" nil t)
