@@ -271,7 +271,7 @@ or if the file is not inside the location."
   (interactive)
   (let* ((pro (or project (superman-view-current-project) (superman-select-project)))
 	 (loc (concat (superman-get-location pro) (car pro)))
-	 (cmd (concat "cd loc;" superman-cmd-git " push")))
+	 (cmd (concat "cd " loc ";" superman-cmd-git " push")))
     (superman-goto-shell)
     (insert cmd)))
     ;; (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " push"))
