@@ -45,47 +45,6 @@ refers to the ith bloke in the project view and term.i identifies
 headlines in the project index file to be shown in that bloke.")
 
 
-(defvar superman-view-documents-helpline
-  "?: help, n: new document, a[A]: git add[all], c[C]:commit[all], l: git log, u[U]: update[all]"
-  "First line of document view buffer which -- by default -- is showing some keystrokes")
-
-
-(defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
-(setq superman-view-project-hot-keys
-      '((list "Shell" superman-goto-shell "!")
-	(list "Index" superman-view-index "i")
-	(list "File-list" superman-view-file-list "F")
-	(list "Git-push" superman-git-push "P")
-	(list "Unison" superman-unison "U")
-	(list "Note" superman-new-note "n")
-	(list "Document" superman-new-document "d")
-	(list "Meeting" superman-new-meeting "m")
-	(list "Task" superman-new-task "t")
-	(list "Bookmark" superman-new-bookmark "b")))
-
-(defun superman-view-hot-keys ()
-  "Show hot keybindings in header of project view."
-  ;; FIXME: this should be made window width adaptive
-  (let ((hot-key-string "")
-	(hot-keys superman-view-project-hot-keys))
-    (while hot-keys
-      (let ((x (car hot-keys)))
-	(setq hot-key-string
-	      (concat hot-key-string
-		      (concat "" 
-			      (nth 3 x)
-			      ": "
-			      (nth 1 x) "  "))))
-      (setq hot-keys (cdr hot-keys)))
-    hot-key-string))
-
-(defun superman-view-project-set-hot-keys ()
-  (mapcar
-   '(lambda (x)
-      (define-key superman-view-mode-map
-	(nth 3 x)
-	(nth 2 x)))
-   superman-view-project-hot-keys))
 
 ;; (defun superman-view-project-news-line ()
   ;; (concat "New: " (apply 'concat 
@@ -93,8 +52,6 @@ headlines in the project index file to be shown in that bloke.")
 						      ;; (nth 3 x)
 						      ;; "': "
 						      ;; (nth 1 x) "\t")) superman-view-project-news))))
-
-
 
 ;; (defun superman-view-project-set-news-keys ()
   ;; (mapcar
@@ -197,6 +154,16 @@ and the keybinding to initialize git control otherwise."
 	(concat "Control: Git repository at "(concat (superman-get-location pro) (car pro)))
       "Control: not set. <> press `I' to initialize git")))
 
+(defun superman-view-others (project)
+  "Insert the names and emails of the others (if any)." 
+  (let ((pro (or project (superman-view-current-project)))
+	(others (superman-get-others pro)))
+    (if others
+	(concat "Others: " others "\n")
+      "")))
+
+
+
 ;;}}}
 ;;{{{ Marking elements
 
@@ -207,9 +174,17 @@ and the keybinding to initialize git control otherwise."
     (let* ((buffer-read-only nil)
 	   (cur (get-text-property (point) 'face))
 	   (item (progn (looking-at ".*") (match-string 0)))
-	   (new (if (eq cur 'default) superman-mark-face 'default)))
+	   (new (if (eq cur superman-mark-face) 'default superman-mark-face)))
       (put-text-property 0 (length item) 'face new item)
-      (replace-match item t t)))
+      (replace-match item t t)
+      ;; redo link highlightning
+      (beginning-of-line)
+      (if (eq new 'default)
+	  (while (or (org-activate-bracket-links (point-at-eol))
+		     (org-activate-plain-links (point-at-eol)))
+	    (add-text-properties
+	     (match-beginning 0) (match-end 0)
+	     '(face org-link))))))
   (forward-line 1))
 
 ;;}}}
@@ -339,11 +314,11 @@ The function is only run on items marked in this way."
 	 (cat-number-one (car cats))
 	 (cmd-block
 	  (mapcar '(lambda (cat)
-		     (list 'tags (concat (cdr cat) "={.+}")
-			   (let ((hdr (if (eq (car cat) (car cat-number-one))
-					  (concat project-header "** " (car cat))
-					(concat "** " (car cat)))))
-			     `((org-agenda-overriding-header ,hdr)))))
+		    (list 'tags (concat (cdr cat) "={.+}")
+			  (let ((hdr (if (eq (car cat) (car cat-number-one))
+					 (concat project-header "** " (car cat))
+				       (concat "** " (car cat)))))
+			    `((org-agenda-overriding-header ,hdr)))))
 		  cats))
 	 (org-agenda-custom-commands
 	  `(("p" "view Project"
@@ -393,7 +368,7 @@ A ball can have one of the following alternative forms:
 (setq superman-document-balls
       '((hdr nil 23)
 	("GitStatus" nil 10)
-	("LastCommit" superman-trim-date nil)
+	("LastCommit" superman-trim-date 13)
 	("FileName" superman-trim-bracketed-filename 23)))
 (setq superman-meeting-balls
       '((hdr nil 23)
@@ -401,16 +376,16 @@ A ball can have one of the following alternative forms:
 	;; ("Status" 10 nil)
 	("Participants" nil 23)))
 (setq superman-note-balls
-      '(("NoteDate" superman-trim-date nil)
+      '(("NoteDate" superman-trim-date 13)
 	(hdr nil 49)))
 (setq superman-task-balls
-      '(("TaskDate" superman-trim-date nil)
+      '(("TaskDate" superman-trim-date 13)
 	(hdr nil 49)))
 (setq superman-bookmark-balls
-      '(("BookmarkDate" superman-trim-date nil)
+      '(("BookmarkDate" superman-trim-date 13)
 	(hdr superman-trim-link nil)))
 (setq superman-mail-balls
-      '(("EmailDate" superman-trim-date 17)
+      '(("EmailDate" superman-trim-date 13)
 	(hdr nil 23)
 	("Attachment" superman-trim-link nil)
 	("Link" superman-trim-link nil)))
@@ -459,14 +434,16 @@ A ball can have one of the following alternative forms:
 
 (defun superman-project-view-header (pro)
   "Construct extra heading lines for project views." 
-  (concat "\n" (superman-view-control pro)
-	  "\n" (superman-view-hot-keys)))
+  (concat "\n"
+	  (superman-view-others pro)
+	  (superman-view-control pro)
+	  "\n" (superman-view-hot-keys superman-view-project-hot-keys)))
 
 
 (defun superman-documents-view-header (pro)
   "Construct extra heading lines for project views." 
   (concat "\n" (superman-view-control pro)
-	  "\n" (superman-view-hot-keys)))
+	  "\n" (superman-view-hot-keys superman-view-documents-hot-keys)))
 
 (setq superman-cat-headers
       '(("Documents" . superman-documents-view-header)))
@@ -501,7 +478,10 @@ A ball can have one of the following alternative forms:
 	  (superman-project-home
 	   (superman-view-current-project)))
     ;; minor-mode
-    (superman-view-mode-on)))
+    (cond ((not cat) (superman-project-view-mode-on))
+	  ((string= (car cat) "Documents")
+	   (superman-documents-view-mode-on))
+	  (t (superman-view-mode-on)))))
 
 ;;}}}
 ;;{{{ Document views
@@ -547,7 +527,59 @@ A ball can have one of the following alternative forms:
     (org-agenda nil "d")))
 
 ;;}}}
-;;{{{ Document specific actions (mostly git) 
+;;{{{ View commands (including git) 
+
+(defun superman-next-entry ()
+  (interactive)
+  (goto-char
+   (or (next-single-property-change (point-at-eol) 'org-marker)
+       (point))))
+
+(defun superman-previous-entry ()
+  (interactive)
+  (let ((pos (previous-single-property-change (point-at-bol) 'org-marker)))
+    (when pos
+	(progn (goto-char pos) (beginning-of-line)))))
+
+
+(defun superman-new-document (&optional file-list)
+  (interactive)
+  (let* ((pro (superman-view-current-project))
+	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	 (fl (or file-list `(,(read-file-name (concat "Add document: ") (file-name-as-directory dir))))))
+    ;; FIXME need to write superman-get-documents and filter duplicates
+    (save-window-excursion
+      (superman-goto-project pro "Documents" 'create)
+      (while fl
+	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
+		"\n:PROPERTIES:\n:"
+		(superman-property 'filename) ": [["(car fl)"]]\n:"
+		(superman-property 'gitstatus) ": Unknown\n:"
+		(superman-property 'capturedate) ": ")
+	(org-insert-time-stamp (current-time) t)
+	(insert "\n:END:\n")
+	(setq fl (cdr fl)))
+      (save-buffer)))
+  (org-agenda-redo))
+;; (switch-to-buffer (other-buffer)))
+
+(defun superman-new-task ()
+  (interactive)
+  (superman-capture-task (superman-view-current-project)))
+
+(defun superman-new-meeting ()
+  (interactive)
+  (superman-capture-meeting (superman-view-current-project)))
+
+(defun superman-new-note ()
+  (interactive)
+  (superman-capture-note (superman-view-current-project))
+  (superman-view-documents))
+
+
+(defun superman-new-bookmark ()
+  (interactive)
+  (superman-capture-bookmark (superman-view-current-project)))
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -572,21 +604,13 @@ A ball can have one of the following alternative forms:
     (vc-annotate (org-link-display-format file) "HEAD")
   ))
 
-(defun superman-view-git-grep (&optional arg)
-  (interactive)
-  (let ((pro (superman-view-current-project))
-	(st (read-string "Grep: ")))
-    (if arg
-	(vc-git-grep)
-	(vc-git-grep st "*" (concat (superman-get-location pro) (car pro))))))
-
 
 (defun superman-view-git-grep (&optional arg)
   (interactive)
   (let ((pro (superman-view-current-project))
 	(st (read-string "Grep: ")))
     (if arg
-	(vc-git-grep)
+	(vc-git-grep st)
 	(vc-git-grep st "*" (concat (superman-get-location pro) (car pro))))))
 
 (defun superman-view-git-history ()
@@ -596,6 +620,8 @@ A ball can have one of the following alternative forms:
 
 (defun superman-view-index ()
   (interactive)
+    (split-window-vertically)
+  (other-window 1)
   (let ((pro (superman-view-current-project)))
     (find-file
      (superman-get-index pro))))
@@ -603,6 +629,8 @@ A ball can have one of the following alternative forms:
 (defun superman-view-file-list ()
   (interactive)
   (let ((pro (superman-view-current-project)))
+    (split-window-vertically)
+      (other-window 1)
     (superman-file-list pro)))
 
 (defun superman-view-git-init ()
@@ -746,7 +774,7 @@ If dont-redo the agenda is not reversed."
     (unless dont-redo (org-agenda-redo))))
 
 ;;}}}
-;;{{{ project-view-mode + keybindings
+;;{{{ view-mode and keybindings
 
 (defvar superman-view-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
@@ -758,7 +786,7 @@ If dont-redo the agenda is not reversed."
                    
                    Enabling superman-view mode electrifies the column view for documents
                    for git and other actions like commit, history search and pretty log-view."
-     :lighter "S-view"
+     :lighter " S-V"
      :group 'org
      :keymap 'superman-view-mode-map)
 
@@ -767,35 +795,122 @@ If dont-redo the agenda is not reversed."
   (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
+(defun superman-view-hot-keys (keys)
+  "Show hot keybindings in header of project view."
+  ;; FIXME: this should be made window width adaptive
+  (let ((hot-key-string "")
+	(hot-keys keys))
+    (while hot-keys
+      (let ((x (car hot-keys)))
+	(setq hot-key-string
+	      (concat hot-key-string
+		      (concat "" 
+			      (nth 3 x)
+			      ": "
+			      (nth 1 x) "  "))))
+      (setq hot-keys (cdr hot-keys)))
+    hot-key-string))
 
-;; adding things to the project
-
-
-;; (superman-view-project-set-action-keys)
-(superman-view-project-set-hot-keys)
 (define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
-(define-key superman-view-mode-map "l" 'superman-view-git-log) 
-(define-key superman-view-mode-map "L" 'superman-view-git-log-decorationonly)
-;; (define-key superman-view-mode-map "n" 'superman-new-document)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
+(define-key superman-view-mode-map "n" 'superman-next-entry)
+(define-key superman-view-mode-map "p" 'superman-previous-entry)
 (define-key superman-view-mode-map "r" 'org-agenda-redo)
-(define-key superman-view-mode-map "h" 'superman-view-git-history)
 (define-key superman-view-mode-map "!" 'superman-goto-shell)
-(define-key superman-view-mode-map "g" 'superman-view-git-grep)
-(define-key superman-view-mode-map "v" 'superman-view-git-annotate)
-(define-key superman-view-mode-map "d" 'superman-view-git-diff)
-(define-key superman-view-mode-map "D" 'superman-view-git-ediff)
-(define-key superman-view-mode-map "a" 'superman-view-git-add)
-;; (define-key superman-view-mode-map "A" 'superman-view-git-add-all)
-(define-key superman-view-mode-map "S" 'superman-view-git-search)
 (define-key superman-view-mode-map "?" 'superman-view-show-help)
-(define-key superman-view-mode-map "u" 'superman-view-update)
 (define-key superman-view-mode-map "I" 'superman-view-git-init)
-(define-key superman-view-mode-map "U" 'superman-view-update-all)
-(define-key superman-view-mode-map "c" 'superman-view-git-commit)
-(define-key superman-view-mode-map "C" 'superman-view-git-commit-all)
-;; (define-key superman-view-mode-map "c" 'org-agenda-columns)
+;;}}}
+;;{{{ documents view
 
+(defvar superman-documents-view-mode-map
+  (copy-keymap superman-view-mode-map)
+  "Keymap used for `superman-documents-view-mode' commands.")
+
+(define-minor-mode superman-documents-view-mode 
+  "Toggle superman documents view mode.
+ With argument ARG turn superman-documents-view-mode on if ARG
+is positive, otherwise turn it off."
+  :lighter " *S*-docs"
+  :group 'org
+  :keymap 'superman-documents-view-mode-map)
+
+(defun superman-documents-view-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-documents-view-mode t))
+
+(defun superman-documents-view-set-hot-keys ()
+  (mapcar
+   '(lambda (x)
+      (define-key superman-documents-view-mode-map
+	(nth 3 x)
+	(nth 2 x)))
+   superman-view-documents-hot-keys))
+
+(setq superman-view-documents-hot-keys
+      '((list "grep" superman-view-git-grep "g")
+	(list "history" superman-view-git-history "h")
+	(list "grep" superman-view-git-grep "g")
+	(list "annotate" superman-view-git-annotate "v")
+	(list "diff" superman-view-git-diff "d")
+	(list "ediff" superman-view-git-ediff "D")
+	(list "Add" superman-view-git-add-all "A")
+	(list "add" superman-view-git-add "a")
+	(list "Search" superman-view-git-search "S")
+	(list "update" superman-view-update "u")
+	(list "Update" superman-view-update-all "U")
+	(list "commit" superman-view-git-commit "c")
+	(list "Commit" superman-view-git-commit-all "C")
+	(list "log" superman-view-git-log "l") 
+	(list "Log" superman-view-git-log-decorationonly "L")))
+
+(superman-documents-view-set-hot-keys)
+
+
+;;}}}
+;;{{{ project view
+(defvar superman-project-view-mode-map
+  (copy-keymap superman-view-mode-map)
+  "Keymap used for `superman-project-view-mode' commands.")
+
+(define-minor-mode superman-project-view-mode 
+  "Toggle superman project view mode.
+ With argument ARG turn superman-project-view-mode on if ARG
+is positive, otherwise turn it off."
+  :lighter " *S*-pro"
+  :group 'org
+  :keymap 'superman-project-view-mode-map)
+
+(defun superman-project-view-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-project-view-mode t))
+
+(defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
+(setq superman-view-project-hot-keys
+      '((list "Shell" superman-goto-shell "!")
+	(list "Index" superman-view-index "i")
+	(list "File-list" superman-view-file-list "F")
+	(list "Git-push" superman-git-push "P")
+	(list "Unison" superman-unison "U")
+	(list "Note" superman-new-note "N")
+	(list "Document" superman-new-document "D")
+	(list "Meeting" superman-new-meeting "M")
+	(list "Task" superman-new-task "T")
+	(list "Bookmark" superman-new-bookmark "B")))
+
+(defun superman-view-project-set-hot-keys ()
+  (mapcar
+   '(lambda (x)
+      (define-key superman-project-view-mode-map
+	(nth 3 x)
+	(nth 2 x)))
+   superman-view-project-hot-keys))
+
+(superman-view-project-set-hot-keys)
+
+;;}}}
+;;{{{ help 
 
 (defun superman-popup-tip (msg)
   (save-excursion
@@ -824,54 +939,6 @@ If dont-redo the agenda is not reversed."
 	 "------------------")))
     ;;	"[q]:    \t\t Quit view mode\n"
     (funcall superman-help-fun msg)))
-
-;;}}}
-;;{{{ Adding things
-
-;; (defun superman-add-documents (&optional file-list)
-;; (interactive)
-;; (let* ((fl (or file-list file-list-current-file-list)))
-;; ;; FIXME need to write superman-get-documents and filter duplicates
-;; (superman-goto-project-documents)
-;; (while fl
-;; (insert "\n*** " (file-name-nondirectory (file-name-sans-extension (file-list-make-file-name (car fl))))
-;; "\n:PROPERTIES:\n:filename: [["(file-list-make-file-name (car fl))"]]\n:CaptureDate: ")
-;; (org-insert-time-stamp (current-time) t)
-;; (insert "\n:END:")
-;; (setq fl (cdr fl)))))
-
-(defun superman-new-document (&optional file-list)
-  (interactive)
-  (let* ((pro (superman-view-current-project))
-	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	 (fl (or file-list `(,(read-file-name (concat "Add document: ") (file-name-as-directory dir))))))
-    ;; FIXME need to write superman-get-documents and filter duplicates
-    (save-window-excursion
-      (superman-goto-project pro "Documents" 'create)
-      (while fl
-	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-		"\n:PROPERTIES:\n:"
-		(superman-property 'filename) ": [["(car fl)"]]\n:"
-		(superman-property 'gitstatus) ": Unknown\n:"
-		(superman-property 'capturedate) ": ")
-	(org-insert-time-stamp (current-time) t)
-	(insert "\n:END:\n")
-	(setq fl (cdr fl)))
-      (save-buffer)))
-  (org-agenda-redo))
-;; (switch-to-buffer (other-buffer)))
-
-(defun superman-new-task ()
-  (interactive)
-  (superman-capture-task (superman-view-current-project)))
-
-(defun superman-new-meeting ()
-  (interactive)
-  (superman-capture-meeting (superman-view-current-project)))
-
-(defun superman-new-note ()
-  (interactive)
-  (superman-capture-note (superman-view-current-project)))
 
 ;;}}}
 

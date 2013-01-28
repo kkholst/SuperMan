@@ -789,6 +789,9 @@ If NOSELECT is set return the project."
 (defun superman-get-category (project)
   (cdr (assoc "category" (cadr project))))
 
+(defun superman-get-others (project)
+  (cdr (assoc "others" (cadr project))))
+
 (defun superman-get-state (project)
   (cdr (assoc "state" (cadr project))))
 ;;}}}

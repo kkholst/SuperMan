@@ -72,35 +72,37 @@
   (org-back-to-heading t)
   (let ((g-cal (org-entry-get nil "GoogleCalendar")))
     (if (or g-cal
-	    (progn
-	      (setq g-cal
-		    (completing-read
-		     (concat "Choose google calendar (default: " superman-google-default-calendar "): ")
-		     (mapcar '(lambda (entry) (cons entry nil)) superman-google-calendars)
-		     nil t nil nil
-		     superman-google-default-calendar))
-	      (org-set-property "GoogleCalendar" g-cal)
-	      g-cal))
-        ;; search for time-stamp
-        (if (and (not (org-at-timestamp-p nil))
-                 (progn
-                   (re-search-forward ":Schedule:" nil t)
-                   (re-search-forward ">" nil t)
-                   (not (org-at-timestamp-p nil))))
-            (message "Cursor not in time-stamp")
-          (save-excursion
-            (beginning-of-line)
-            (re-search-forward "<" nil t)
-            (or (looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?-?--?\\(\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)>\\)")
-                (looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)>\\)")
-                (looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)>\\)"))
-            (let* ((g-date (format "%s/%s/%s" 
-                                   (match-string-no-properties 2)
-                                   (match-string-no-properties 3)
-                                   (match-string-no-properties 4)))
-                   (g-start (match-string-no-properties 6))
-                   (g-stop (match-string-no-properties 9))
-                   (g-time
+	    (and
+	     (org-entry-get nil "MeetingDate")
+	     (progn
+	       (setq g-cal
+		     (completing-read
+		      (concat "Choose google calendar (default: " superman-google-default-calendar "): ")
+		      (mapcar '(lambda (entry) (cons entry nil)) superman-google-calendars)
+		      nil t nil nil
+		      superman-google-default-calendar))
+	       (org-set-property "GoogleCalendar" g-cal)
+	       g-cal)))
+	;; search for time-stamp
+	(if (and (not (org-at-timestamp-p nil))
+		 (progn
+		   (re-search-forward ":Schedule:" nil t)
+		   (re-search-forward ">" nil t)
+		   (not (org-at-timestamp-p nil))))
+	    (message "Cursor not in time-stamp")
+	  (save-excursion
+	    (beginning-of-line)
+	    (re-search-forward "<" nil t)
+	    (or (looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?-?--?\\(\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)>\\)")
+		(looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)\\( \\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)>\\)")
+		(looking-at "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\) *\\([^]+0-9>\r\n -]*\\)>\\)"))
+	    (let* ((g-date (format "%s/%s/%s" 
+				   (match-string-no-properties 2)
+				   (match-string-no-properties 3)
+				   (match-string-no-properties 4)))
+		   (g-start (match-string-no-properties 6))
+		   (g-stop (match-string-no-properties 9))
+		   (g-time
 		    (if g-start
 			(if g-stop
 			    (format " from %s to %s"
@@ -115,10 +117,10 @@
 					   ":"
 					   (match-string-no-properties 8)))))
 		      ""))
-                   (text (progn (outline-previous-heading)
-                                (looking-at org-complex-heading-regexp)
-                                (match-string-no-properties 4))))
-              (let* ((g-command
+		   (text (progn (outline-previous-heading)
+				(looking-at org-complex-heading-regexp)
+				(match-string-no-properties 4))))
+	      (let* ((g-command
 		      (read-string "Google calendar entry: "
 				   (concat superman-google-cmd " calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))))
 		;; (g-doit (y-or-n-p (concat "Add to google calendar?: " g-command))))

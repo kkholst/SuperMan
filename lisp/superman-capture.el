@@ -99,6 +99,19 @@ Leaves point at the end of the section."
 ;; Capturing links 
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
 				      (function superman-goto-project-bookmarks) "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:") 'append)
+
+(defun superman-capture-bookmark (&optional project)
+  (interactive)
+  (let* ((pro (or project (superman-select-project)))
+	 (org-capture-templates
+	  `(("n" "Add a bookmark/link" plain
+	     (function
+	      (lambda () (interactive)
+		(superman-goto-project pro "Bookmarks" 'create)))
+	     ,(concat
+	       "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:")))))
+    (org-capture nil "n")))
+
 ;; Capturing tasks
 (defun superman-capture-task (&optional project)
   (interactive)
@@ -141,7 +154,7 @@ Leaves point at the end of the section."
 (add-to-list 'org-capture-templates
  	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
  	       (function superman-goto-project-calendar)
- 	       ,(concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
+ 	       ,(concat "\n*** %? \n:PROPERTIES:\n:MeetingDate: %^T"
 			"\n:Participants:"
 			"\n:Location:"
 			"\n:CaptureDate: %U"
@@ -157,7 +170,7 @@ Leaves point at the end of the section."
 	     (function
 	      (lambda () (interactive)
 		(superman-goto-project pro "Calendar" 'create)))
-	     ,(concat "\n*** %? \n:PROPERTIES:\n:Date: %^T"
+	     ,(concat "\n*** %? \n:PROPERTIES:\n:MeetingDate: %^T"
 		      "\n:Participants:"
 		      "\n:Location:"
 		      "\n:CaptureDate: %U"

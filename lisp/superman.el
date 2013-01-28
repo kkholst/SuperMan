@@ -83,34 +83,34 @@
 			  (point-at-eol) 'org-marker)))
 	   (buffer-read-only nil))
       ;; (put-text-property 0 (length header) 'face 'org-agenda-structure header)
-      (goto-char start)
-      ;; (re-search-forward "^Projects:" nil t)
-      ;; (forward-line 1)
-      ;; (insert "\n" header)
-      (superman-loop 'superman-format-item superman-balls)
-      ;; column names
-      (goto-char start)
-      ;; (goto-char (point-min))
-      (if (next-single-property-change
-	   (point-at-eol) 'org-marker)
-	  (progn
-	    ;; (beginning-of-line)
-	    (insert "\n")
-	    (insert (apply
-		     'superman-column-names
-		     (list (list "Status" "Title" "LastVisit" "Others" "Location")
-			   superman-balls)))
-	    (insert "\n")
-	    (beginning-of-line 0)
-	    (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
-	    )))
-    ;; facings
-    (save-excursion
-      (goto-char (point-min))
-      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-	(add-text-properties
-	 (match-beginning 0) (match-end 0)
-	 '(face org-link))))
+      (when start 
+	(goto-char start)
+	;; (re-search-forward "^Projects:" nil t)
+	;; (forward-line 1)
+	;; (insert "\n" header)
+	(superman-loop 'superman-format-item superman-balls)
+	;; column names
+	(goto-char start)
+	(if (next-single-property-change
+	     (point-at-eol) 'org-marker)
+	    (progn
+	      ;; (beginning-of-line)
+	      (insert "\n")
+	      (insert (apply
+		       'superman-column-names
+		       (list (list "Status" "Title" "LastVisit" "Others" "Location")
+			     superman-balls)))
+	      (insert "\n")
+	      (beginning-of-line 0)
+	      (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
+	      )))
+      ;; facings
+      (save-excursion
+	(goto-char (point-min))
+	(while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	  (add-text-properties
+	   (match-beginning 0) (match-end 0)
+	   '(face org-link)))))
     (superman-on)))
 ;; (header (superman-make-item
 ;; "Status"
