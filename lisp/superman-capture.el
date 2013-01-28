@@ -164,6 +164,7 @@ Leaves point at the end of the section."
 		      "\n:END:"
 		      "\n**** Agenda\n"
 		      "\n**** TODO Minutes\n"))))
+	 ;; FIXME the hook does not seem to get activated
 	 (org-capture-before-finalize-hook
 	  'superman-google-export-appointment))
     (org-capture nil "m")))

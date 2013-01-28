@@ -100,25 +100,30 @@
                                    (match-string-no-properties 4)))
                    (g-start (match-string-no-properties 6))
                    (g-stop (match-string-no-properties 9))
-                   (g-time (if g-stop
-                               (format " from %s to %s"
-                                       (org-agenda-time-of-day-to-ampm g-start)
-                                       (org-agenda-time-of-day-to-ampm g-stop))
-                             (format " from %s to %s"
-                                     (org-agenda-time-of-day-to-ampm g-start)
-                                     (org-agenda-time-of-day-to-ampm
-                                      (concat (number-to-string
-                                               (+ 1 (string-to-number
-                                                     (match-string-no-properties 7))))
-                                              ":"
-                                              (match-string-no-properties 8))))))
+                   (g-time
+		    (if g-start
+			(if g-stop
+			    (format " from %s to %s"
+				    (org-agenda-time-of-day-to-ampm g-start)
+				    (org-agenda-time-of-day-to-ampm g-stop))
+			  (format " from %s to %s"
+				  (org-agenda-time-of-day-to-ampm g-start)
+				  (org-agenda-time-of-day-to-ampm
+				   (concat (number-to-string
+					    (+ 1 (string-to-number
+						  (match-string-no-properties 7))))
+					   ":"
+					   (match-string-no-properties 8)))))
+		      ""))
                    (text (progn (outline-previous-heading)
                                 (looking-at org-complex-heading-regexp)
                                 (match-string-no-properties 4))))
-              (let* ((g-command (concat superman-google-cmd " calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))
-                     (g-doit (y-or-n-p (concat "Add to google calendar?: " g-command))))
-                (when g-doit
-                  (shell-command g-command)))))))))
+              (let* ((g-command
+		      (read-string "Google calendar entry: "
+				   (concat superman-google-cmd " calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))))
+		;; (g-doit (y-or-n-p (concat "Add to google calendar?: " g-command))))
+		;; (when g-doit
+		(shell-command g-command))))))))
 
 (provide 'superman-google)
 ;;; superman-google.el ends here

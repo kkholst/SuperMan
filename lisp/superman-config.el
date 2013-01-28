@@ -34,31 +34,18 @@
 
 ;;; Code:
 
-(defun superman-find-index (project)
-  (let* ((index (superman-get-index project)))
-    (unless (file-exists-p index)
-      (unless (file-exists-p (file-name-directory index))
-	(make-directory (file-name-directory index) 'with-parents))
-      (make-directory (file-name-directory index) 'with-parents))
-    (find-file index)))
 
-(defun superman-file-list (project)
-  (if (featurep 'file-list)
-      (let ((loc (concat (superman-get-location project) (car project))))
-	(cond ((file-list-select-internal nil "." nil nil loc (concat "*File-list-" (car project) "*")))
-	      (t
-	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
-	       (toggle-read-only -1)
-	       (erase-buffer)
-	       (insert "FILE-LIST: No files in project"))))
-    (error "file-list.el not loaded.")))
-
+;{{{ finding buffers
 
 (defun superman-find-thing (thing project)
+  "Extract THING from `superman-config-action-alist' and apply it to PROJECT.
+Returns the corresponding buffer."
   (save-window-excursion
     (let* ((case-fold-search t)
-	   (action (cdr (assoc (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
-			       superman-config-action-alist))))
+	   (action (cdr
+		    (assoc
+		     (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
+		     superman-config-action-alist))))
       (message thing)
       (cond ((functionp action) (funcall action project))
 	    ((and thing (string= (substring thing 0 1) "!"))
@@ -68,18 +55,8 @@
 			 thing (concat (superman-get-location project) (car project)))))
 	    (t (switch-to-buffer thing))))
     (current-buffer)))
-
-(defun superman-distangle-config-list (string)
-  ;; return a list of lists with vertical splits 
-  ;; where each element can have horizontal splits
-  (split-string string "[ \t]+:[ \t]+"))
-
-(defun superman-distangle-config (config)
-  ;; return a list with horizontal splits 
-  ;; where each element can have vertical splits
-  (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
-	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
-    hlist))
+;;}}}
+;;{{{ saving window configs
 
 (defun superman-save-config (&optional config project)
   (interactive)
@@ -90,12 +67,6 @@
 				  (file+headline (superman-get-index pro) "Configuration")
 				  ,(concat "windows:" conf "%?") :unnarrowed t))))
     (org-capture nil "s")))
-    ;; (superman-goto-project-config)
-    ;; (find-file-other-window (concat (superman-get-location pro) (car pro) "/.superman-window-config"))
-    ;; (goto-char (point-max))
-    ;; (unless (looking-at "^$") (insert "\n"))
-    ;; (insert conf)
-    ;; (save-buffer)))
 
 (defun superman-current-config ()
   (let* ((windata (winner-win-data))
@@ -104,62 +75,34 @@
     (while windata
       (let* ((buf (cdr (car windata)))
 	     (pos (car (car windata)))
-	     ;;	     (col (nth 0 pos))
 	     (row (nth 1 pos))
+	     (bname (buffer-name buf))
 	     (thing
 	      (cond 
 	       ((buffer-file-name buf)
 		(replace-regexp-in-string (getenv "HOME") "~"  (buffer-file-name buf)))
-	       ;; (get-buffer-process buf)
-	       (t (buffer-name buf)))))
+	       ((string-match "\\*Documents\\[.*\\]\\*" bname) "DOCUMENTS")
+	       ((string-match "\\*Project\\[.*\\]\\*" bname) "PROJECT")
+	       (t bname))))
 	(setq config (concat config (when prev-row (if (< prev-row row) " / " " | ")) thing))
 	(setq windata (cdr windata))
 	(setq prev-row row)))
     config))
 
 
-(defun superman-read-rsync (project)
-  (let* (rsync)
-    (save-window-excursion
-      (superman-goto-project project "Configuration" 'create)
-      (goto-char (point-min))
-      (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
-	(if rsync
-	    (setq rsync (concat rsync " ; "
-				(replace-regexp-in-string
-				 "[ \t]*$" ""
-				 (buffer-substring-no-properties (point) (point-at-eol)))))
-	  (setq rsync
-		(replace-regexp-in-string
-		 "[ \t]*$" ""
-		 (buffer-substring-no-properties (point) (point-at-eol)))))))
-    rsync))
+;;}}}
+;;{{{ reading window configs
+(defun superman-distangle-config-list (string)
+   ;; return a list of lists with vertical splits 
+  ;; where each element can have horizontal splits
+  (split-string string "[ \t]+:[ \t]+"))
 
-(defun superman-save-rsync (&optional config project)
-  (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
-	 (org-capture-mode-hook 'org-narrow-to-subtree)
-	 (org-capture-templates `(("s" "save" plain
-				   (file+headline (superman-get-index pro) "Configuration")
-				   ,(concat "rsync:" "%(read-directory-name \"Rsync from: \") "
-					    "%(read-directory-name \"Rsync to: \")") :unnarrowed t))))
-    (org-capture nil "s")))
-
-(defun superman-synchronize-project (&optional project)
-  (interactive)
-  (let* ((pro (or project
-		  superman-current-project
-		  (superman-switch-to-project 'force nil t)))
-	 (rsync-list (superman-distangle-config
-		      (superman-read-rsync pro)))
-	 (rsync-cmd (when rsync-list
-		      (if (eq 1 (length rsync-list))
-			  (caar rsync-list)
-			(caar (completing-read "Choose rsync: " rsync-list)))))
-	 (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
-    (when (yes-or-no-p (concat "Do this? " cmd))
-      (shell-command-to-string cmd))))
-
+(defun superman-distangle-config (config)
+  ;; return a list with horizontal splits 
+  ;; where each element can have vertical splits
+  (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
+	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
+    hlist))
 
 (defun superman-read-config (project)
   (let* (config)
@@ -179,14 +122,8 @@
 		   (buffer-substring-no-properties (point) (point-at-eol)))))))
       (when (not config) (setq config superman-default-config))
       config)))
-;; (when filed-config
-;; (setq config (concat (if superman-sticky-config (concat superman-sticky-config " : ")) filed-config)))
-;; (when prop-config
-;; (setq config (concat (if config (concat config " : ")) prop-config)))
-;; (when (not config) (setq config superman-default-config))
-;; config))
-
-
+;;}}}
+;;{{{ smashing window configs
 (defun superman-smash-windows (window-config project)
   "Smash windows according to the WINDOW-CONFIG and
 then fill relative to project."
@@ -239,7 +176,28 @@ find the next window configuration."
 	  (superman-distangle-config
 	   (nth superman-config-cycle-pos config-list)))
     (superman-smash-windows window-config pro)))
+;;}}}
+;;{{{ functions that find things
 
+(defun superman-find-index (project)
+  (let* ((index (superman-get-index project)))
+    (unless (file-exists-p index)
+      (unless (file-exists-p (file-name-directory index))
+	(make-directory (file-name-directory index) 'with-parents))
+      (make-directory (file-name-directory index) 'with-parents))
+    (find-file index)))
+
+
+(defun superman-file-list (project)
+  (if (featurep 'file-list)
+      (let ((loc (concat (superman-get-location project) (car project))))
+	(cond ((file-list-select-internal nil "." nil nil loc (concat "*File-list-" (car project) "*")))
+	      (t
+	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
+	       (toggle-read-only -1)
+	       (erase-buffer)
+	       (insert "FILE-LIST: No files in project"))))
+    (error "file-list.el not loaded.")))
 
 
 (defun superman-magit (project)
@@ -330,39 +288,71 @@ find the next window configuration."
 	(setq tbuf (current-buffer))))
     (switch-to-buffer tbuf)))
 
-(defun superman-get (project el)
-  (cdr (assoc el (cadr project))))
+;;}}}
+;;{{{ superman-shell
+(defun superman-goto-shell ()
+  "Switches to *shell* buffer and. "
+  (interactive)
+  (let ((sbuf (get-buffer "*shell*"))
+	(cmd (concat "cd " default-directory))
+	input)
+    (if sbuf
+	(switch-to-buffer-other-window sbuf)
+      (split-window-vertically)
+      (shell))
+    (goto-char (point-max))
+    (comint-bol)
+    (when (looking-at ".*")
+      (setq input (match-string 0))
+      (replace-match ""))
+    (insert cmd)
+    (comint-send-input)
+    (if input (insert input))))
+;;}}}
+;;{{{ synchronization
 
-(defun superman-get-index (project)
-"Extract the index file of PROJECT."
-  (cdr (assoc "index" (cadr project))))
+(defun superman-read-rsync (project)
+  (let* (rsync)
+    (save-window-excursion
+      (superman-goto-project project "Configuration" 'create)
+      (goto-char (point-min))
+      (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
+	(if rsync
+	    (setq rsync (concat rsync " ; "
+				(replace-regexp-in-string
+				 "[ \t]*$" ""
+				 (buffer-substring-no-properties (point) (point-at-eol)))))
+	  (setq rsync
+		(replace-regexp-in-string
+		 "[ \t]*$" ""
+		 (buffer-substring-no-properties (point) (point-at-eol)))))))
+    rsync))
+(defun superman-save-rsync (&optional config project)
+  (interactive)
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (org-capture-mode-hook 'org-narrow-to-subtree)
+	 (org-capture-templates `(("s" "save" plain
+				   (file+headline (superman-get-index pro) "Configuration")
+				   ,(concat "rsync:" "%(read-directory-name \"Rsync from: \") "
+					    "%(read-directory-name \"Rsync to: \")") :unnarrowed t))))
+    (org-capture nil "s")))
+
+(defun superman-synchronize-project (&optional project)
+  (interactive)
+  (let* ((pro (or project
+		  superman-current-project
+		  (superman-switch-to-project 'force nil t)))
+	 (rsync-list (superman-distangle-config
+		      (superman-read-rsync pro)))
+	 (rsync-cmd (when rsync-list
+		      (if (eq 1 (length rsync-list))
+			  (caar rsync-list)
+			(caar (completing-read "Choose rsync: " rsync-list)))))
+	 (cmd (concat "rsync -e ssh -avzAHX --delete-after " rsync-cmd)))
+    (when (yes-or-no-p (concat "Do this? " cmd))
+      (shell-command-to-string cmd))))
 
 
-(defun superman-get-git (project)
-  (or (cdr (assoc "git" (cadr project))) ""))
-
-(defun superman-project-home (project)
-  (concat (superman-get-location project) (car project)))
-
-(defun superman-get-location (project)
-  "Get the directory associated with PROJECT."
-  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-;;                (if loc 
-;;                                (concat (file-name-as-directory loc)
-;;                                        (car project)))))
-
-(defun superman-get-publish-directory (project)
-  (cdr (assoc "publish-directory" (cadr project))))
-
-(defun superman-get-category (project)
-  (cdr (assoc "category" (cadr project))))
-
-(defun superman-get-state (project)
-  (cdr (assoc "state" (cadr project))))
-
-
-
-
+;;}}}
 (provide 'superman-config)
 ;;; superman-config.el ends here

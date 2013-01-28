@@ -70,20 +70,52 @@
 
 (defun superman-finalize-superman ()
   (save-excursion
-    (let* ((props '("NickName" "LastVisit" "Location" "Others"))
-	   (header (superman-make-item
-		    "Status"
-		    (mapcar '(lambda (cat) (cons cat cat)) props)
-		    "Project" 23))
+    (let* ((superman-balls
+	    '((todo nil 9)
+	      ;; ("NickName" nil 27)
+	      (hdr nil 19)
+	      ("LastVisit" superman-trim-date nil)
+	      ("Others" superman-trim-string 30)
+	      ;; ("Location" superman-trim-filename 23)
+	      ))
+	   (start (progn (goto-char (point-min))
+			 (next-single-property-change
+			  (point-at-eol) 'org-marker)))
 	   (buffer-read-only nil))
+      ;; (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+      (goto-char start)
+      ;; (re-search-forward "^Projects:" nil t)
+      ;; (forward-line 1)
+      ;; (insert "\n" header)
+      (superman-loop 'superman-format-item superman-balls)
+      ;; column names
+      (goto-char start)
+      ;; (goto-char (point-min))
+      (if (next-single-property-change
+	   (point-at-eol) 'org-marker)
+	  (progn
+	    ;; (beginning-of-line)
+	    (insert "\n")
+	    (insert (apply
+		     'superman-column-names
+		     (list (list "Status" "Title" "LastVisit" "Others" "Location")
+			   superman-balls)))
+	    (insert "\n")
+	    (beginning-of-line 0)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
+	    )))
+    ;; facings
+    (save-excursion
       (goto-char (point-min))
-      (re-search-forward "^Projects:" nil t)
-      (forward-line 1)
-      (put-text-property 0 (length header) 'face 'org-agenda-structure header)
-;;      (insert "\n" header)
-      (superman-loop 'superman-reformat-item
-		     (list props) (point-min) (point-max))))
-  (superman-on))
+      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	(add-text-properties
+	 (match-beginning 0) (match-end 0)
+	 '(face org-link))))
+    (superman-on)))
+;; (header (superman-make-item
+;; "Status"
+;; (mapcar '(lambda (cat) (cons cat cat)) props)
+;; "Project" 23))
 
 
 (defun superman-count-projects-in-bloke (beg end)
@@ -122,9 +154,7 @@
 (defun superman ()
   "Manage projects."
   (interactive)
-  (let* ((view-buf-name (concat "*Superman*"))
-	 ;;	 (org-agenda-overriding-buffer-name view-buf-name)
-	 (org-agenda-finalize-hook 'superman-finalize-superman)
+  (let* ((org-agenda-finalize-hook 'superman-finalize-superman)
 	 (org-agenda-window-setup 'current-window)
 	 (org-agenda-buffer-name (concat "*S*"))
 	 (org-agenda-sticky nil)

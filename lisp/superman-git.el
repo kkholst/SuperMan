@@ -106,9 +106,13 @@ Else return FILE as it is."
 (defun superman-property-at-point (prop noerror)
   (interactive)
   (let* ((pom (cond
-	       ((eq major-mode 'org-mode) (point))
-	       ((eq major-mode 'org-agenda-mode) (org-get-at-bol 'org-hd-marker))
-	       (t (error (concat  "This function works only in org-mode, org-agenda-mode, superman-git-log-mode, superman-view-mode." (buffer-name (current-buffer)))))))
+	       ;; ((or (superman-view-mode) (superman-mode) (superman-git-log-mode))
+	       ((org-get-at-bol 'org-hd-marker))
+	       ((point))
+	       (t (error "Don't know where to look for property."))))
+	 ;; ((eq major-mode 'org-mode) (point))
+	 ;; ((eq major-mode 'org-agenda-mode) (org-get-at-bol 'org-hd-marker))
+	 ;; (t (error (concat  "This function works only in org-mode, org-agenda-mode, superman-git-log-mode, superman-view-mode." (buffer-name (current-buffer)))))))
 	 (propval
 	  (superman-get-property pom prop t)))
     propval))
@@ -437,17 +441,33 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 
 (defun superman-finalize-git-log ()
   (save-excursion
-    (let* ((props '("Hash" "Decoration" "Date" "Author"))
-	   (header (superman-make-item
-		    "Status"
-		    (mapcar '(lambda (cat) (cons cat cat)) props) "Project" 23))
+    (let* ((log-balls '((hdr nil 40)
+			("Date" superman-trim-date nil)
+			("Author" nil 29)
+			("Decoration" nil 19)
+			("Hash" nil 30)))
+	   (start (progn (goto-char (point-min))
+			 (next-single-property-change
+			  (point-at-eol) 'org-marker)))
 	   (buffer-read-only nil))
-      (re-search-forward "^Projects:" nil t)
-      (forward-line 1)
-      (put-text-property 0 (length header) 'face 'org-agenda-structure header)
-      (insert "\n" header)
-      (superman-loop 'superman-reformat-item (list props) (point-min) (point-max))))
-   (superman-git-log-mode-on))
+      ;; (put-text-property 0 (length header) 'face 'org-agenda-structure header)
+      (when start
+	(goto-char start)
+	(superman-loop 'superman-format-item log-balls)
+	(goto-char start)
+	(if (next-single-property-change
+	     (point-at-eol) 'org-marker)
+	    (progn
+	      (insert "\n")
+	      (insert (apply
+		       'superman-column-names
+		       (list (list "Title" "Date" "Author" "Decoration" "Hash")
+			     log-balls)))
+	      (insert "\n")
+	      (beginning-of-line 0)
+	      (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
+	      ))))
+    (superman-git-log-mode-on)))
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)

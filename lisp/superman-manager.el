@@ -760,25 +760,38 @@ If NOSELECT is set return the project."
       (setq p-alist (cdr p-alist)))))
 
 ;;}}}
-;;{{{ superman-shell
-(defun superman-goto-shell ()
-  "Switches to *shell* buffer and. "
-  (interactive)
-  (let ((sbuf (get-buffer "*shell*"))
-	(cmd (concat "cd " default-directory))
-	input)
-    (if sbuf
-	(switch-to-buffer-other-window sbuf)
-      (split-window-vertically)
-      (shell))
-    (goto-char (point-max))
-    (comint-bol)
-    (when (looking-at ".*")
-      (setq input (match-string 0))
-      (replace-match ""))
-    (insert cmd)
-    (comint-send-input)
-    (if input (insert input))))
+;;{{{ extracting properties from a project 
+(defun superman-get (project el)
+  (cdr (assoc el (cadr project))))
+
+(defun superman-get-index (project)
+"Extract the index file of PROJECT."
+  (cdr (assoc "index" (cadr project))))
+
+
+(defun superman-get-git (project)
+  (or (cdr (assoc "git" (cadr project))) ""))
+
+(defun superman-project-home (project)
+  (concat (superman-get-location project) (car project)))
+
+(defun superman-get-location (project)
+  "Get the directory associated with PROJECT."
+  (file-name-as-directory (cdr (assoc "location" (cadr project)))))
+;;  (let ((loc (cdr (assoc "location" (cadr project)))))
+;;                (if loc 
+;;                                (concat (file-name-as-directory loc)
+;;                                        (car project)))))
+
+(defun superman-get-publish-directory (project)
+  (cdr (assoc "publish-directory" (cadr project))))
+
+(defun superman-get-category (project)
+  (cdr (assoc "category" (cadr project))))
+
+(defun superman-get-state (project)
+  (cdr (assoc "state" (cadr project))))
 ;;}}}
+
 (provide 'superman-manager)
 ;;; superman-manager.el ends here
