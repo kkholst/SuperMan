@@ -2,8 +2,8 @@
 
 ;; Copyright (C) 2012  Klaus Kaehler Holst, Thomas Alexander Gerds
 
-;; Authors: Klaus Kaehler Holst <kkho@biostat.ku.dk>
-;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
+;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
+;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>
 ;; Keywords: tools
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -160,7 +160,7 @@ and the keybinding to initialize git control otherwise."
 	(others (superman-get-others pro)))
     (if others
 	(concat "Others: " others "\n")
-      "")))
+"")))
 
 
 
@@ -622,9 +622,12 @@ A ball can have one of the following alternative forms:
   (interactive)
     (split-window-vertically)
   (other-window 1)
-  (let ((pro (superman-view-current-project)))
-    (find-file
-     (superman-get-index pro))))
+  (let ((pom (org-get-at-bol 'org-hd-marker)))
+    (if pom
+	(progn (switch-to-buffer (marker-buffer pom))
+	       (goto-char pom))
+      (find-file
+       (superman-get-index (superman-view-current-project))))))
 
 (defun superman-view-file-list ()
   (interactive)
@@ -852,6 +855,7 @@ is positive, otherwise turn it off."
 	(list "history" superman-view-git-history "h")
 	(list "grep" superman-view-git-grep "g")
 	(list "annotate" superman-view-git-annotate "v")
+	(list "Index" superman-view-index "i")
 	(list "diff" superman-view-git-diff "d")
 	(list "ediff" superman-view-git-ediff "D")
 	(list "Add" superman-view-git-add-all "A")
@@ -897,6 +901,7 @@ is positive, otherwise turn it off."
 	(list "Document" superman-new-document "D")
 	(list "Meeting" superman-new-meeting "M")
 	(list "Task" superman-new-task "T")
+	(list "ToggleView" superman-toggle-view "V")
 	(list "Bookmark" superman-new-bookmark "B")))
 
 (defun superman-view-project-set-hot-keys ()
