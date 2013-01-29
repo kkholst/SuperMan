@@ -413,7 +413,9 @@ the `superman-home'.")
 	(when (and index (not (file-exists-p index)))
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
-	  (find-file index))
+	  (find-file index)
+	  (insert "This is the index file of project " (car pro) "\n")
+	  (save-buffer))
 	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
 	  (make-directory dir)
@@ -427,9 +429,8 @@ the `superman-home'.")
 
 (defun superman-new-project (&optional nickname category)
   "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-                  This function modifies the 'superman' and creates and visits the index file of the new project.
-                  Thus, to undo all this you may want to call 'superman-delete-project'. 
-                  " 
+This function modifies the 'superman' and creates and visits the index file of the new project.
+To undo all this you can try to call 'superman-delete-project'. "
   (interactive)
   (superman-refresh)
   (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
@@ -459,7 +460,6 @@ the `superman-home'.")
       ;;(add-hook 'org-capture-mode-hook 'superman-show-properties nil 'local)
       (org-capture nil "p")
       (message "Press Control-c Control-c when done editing."))))
-
 
 ;; (defun superman-show-properties ()
   ;; (let ((pop-up-windows t)
@@ -662,8 +662,8 @@ Examples:
     (superman-switch-config)))
 
 (defun superman-switch-to-project (&optional force project noselect)
-  "Select project via 'superman-select-project', activate it
- via 'superman-activate-project',  find the associated index file.
+  "Select project via `superman-select-project', activate it
+ via `superman-activate-project',  find the associated index file.
 
 Unless NOSELECT is set the next window config of project.
 If NOSELECT is set return the project."
