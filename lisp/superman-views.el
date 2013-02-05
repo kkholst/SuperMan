@@ -383,7 +383,8 @@ A ball can have one of the following alternative forms:
 	(hdr nil 49)))
 (setq superman-bookmark-balls
       '(("BookmarkDate" superman-trim-date 13)
-	(hdr superman-trim-link nil)))
+	(hdr superman-trim-string 23)
+	("Link" superman-trim-link nil)))
 (setq superman-mail-balls
       '(("EmailDate" superman-trim-date 13)
 	(hdr nil 23)
