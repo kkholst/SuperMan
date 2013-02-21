@@ -154,8 +154,7 @@
 (defun superman ()
   "Manage projects."
   (interactive)
-  (let* ((org-agenda-finalize-hook 'superman-finalize-superman)
-	 (org-agenda-window-setup 'current-window)
+  (let* ((org-agenda-window-setup 'current-window)
 	 (org-agenda-buffer-name (concat "*S*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-custom-commands
@@ -163,7 +162,6 @@
 	     ;; ((tags "NickName={.+}"
 	     ((search "NickName"
 		      ((org-agenda-files (quote (,superman-home)))
-		       (org-agenda-finalize-hook 'superman-finalize-superman)
 		       (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		       (org-agenda-overriding-header
 			(concat "?: help, n: new project, s[S]: set property[all]"
@@ -172,9 +170,12 @@
 		       (org-agenda-view-columns-initially nil)
 		       (org-agenda-buffer-name "*S*"))))
 	     ((org-agenda-finalize-hook 'superman-finalize-superman)
+	      ;; (org-agenda-cmp-user-defined (lambda (a b) (if  ))
+	      (org-agenda-sorting-strategy '(user-defined-up))
 	      (org-agenda-buffer-name "*S*"))))))
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
+
 
 
 (defun superman-bloke-view ()
@@ -243,8 +244,8 @@
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
-			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
-				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
+				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook '(lambda () (superman-clean-up) (superman-on))))))))
@@ -278,8 +279,8 @@
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"B\""
-			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
-				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
+				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook 'superman-clean-up))))))
@@ -294,8 +295,8 @@
 	    ,(mapcar '(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"C\""
-			      `((org-agenda-overriding-header  (concat "Project category: ",(car cat)))
-				(org-agenda-files (quote ,(superman-index-list (car cat)))))))
+			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
+				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook 'superman-clean-up))))))
@@ -360,3 +361,4 @@ Enabling superman mode electrifies the superman buffer for project management."
 ;;}}}  
 (provide 'superman)
 ;;; superman.el ends here
+

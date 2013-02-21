@@ -54,7 +54,7 @@ Leaves point at the end of the section."
 	   (insert "\n* " head "\n")
 	   ;; (org-set-property "Project" pro)
 	   (forward-line -1))
-	  (t (error (concat "Heading " head " not found in index file of " (car pro)))))
+	  (t (message (concat "Heading " head " not found in index file of " (car pro)))))
     (org-narrow-to-subtree)
     (goto-char (point-max))))
 
@@ -230,6 +230,7 @@ Leaves point at the end of the section."
 		       (superman-get-property (point) "SWITCHES"))))
 	      (superman-goto-shell)
 	      (insert cmd)
+	      (insert "&")
 	      (comint-send-input))
 	  (when (y-or-n-p (concat "No unison configuration found for project "
 				(car pro)
@@ -320,10 +321,10 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
               (when (or (not (file-exists-p file))
                         (y-or-n-p (concat "File " file " exists, overwrite?" )))
                 (mm-save-part-to-file data file))
-              (setq mime-line (concat "\n**** Attachment file: " (file-name-nondirectory file)
+              (setq mime-line (concat "\n**** Attac: " (file-name-nondirectory file)
 				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
-				      "\n:Link:"
-				      "[[file:" file "][" (file-name-nondirectory file) "]]"
+				      "\n:EmailDate:%:date" ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
+				      "\n:Link:" "[[file:" file "][" (file-name-nondirectory file) "]]"
                                       "\n:END:\n"
                                       mime-line)))))))
     ;; information about the saved attachments is
