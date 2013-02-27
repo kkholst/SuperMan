@@ -593,7 +593,7 @@ A ball can have one of the following alternative forms:
       (while fl
 	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
 		"\n:PROPERTIES:\n:"
-		(superman-property 'filename) ": [["(car fl)"]]\n:"
+		"DataFileName" ": [["(car fl)"]]\n:"
 		(superman-property 'gitstatus) ": Unknown\n:"
 		(superman-property 'capturedate) ": ")
 	(org-insert-time-stamp (current-time) t)
@@ -604,7 +604,7 @@ A ball can have one of the following alternative forms:
 
 (defun superman-new-note ()
   (interactive)
-  (superman-capture-data (superman-view-current-project))
+  (superman-capture-note (superman-view-current-project))
   (superman-view-documents))
 
 
