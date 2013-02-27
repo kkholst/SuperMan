@@ -355,16 +355,6 @@ the `superman-home'.")
     superman-project-alist))
   
   
-(defun superman-get-buffer-props (property)
-  "Get a table of all values of PROPERTY used in the buffer, for completion."
-  (let (props)
-    (save-excursion
-      (goto-char (point-min))
-      (while (re-search-forward (concat ":" property ":") nil t)
-	(add-to-list 'props (list
-			     (org-entry-get
-			      nil property nil)))))
-    props))
   
 (defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
@@ -373,14 +363,24 @@ the `superman-home'.")
   (unless (superman-manager-mode 1))
   (save-restriction
     (widen)
-    (superman-parse-categories (current-buffer) (point-min) (point-max))))
+    (save-excursion
+      (reverse
+       (superman-property-values "category")))))
 
-(defun superman-parse-categories (buffer beg end)
-  "Parse the buffer BUFFER and return categories."
+(defun superman-property-values (key)
+  "Return a list of all values of property KEY in the current buffer. This
+is a copy of `org-property-values' with one difference. The matches are
+returned without text-properties."
   (save-excursion
-    (set-buffer buffer)
-    (reverse
-     (superman-get-buffer-props (superman-property 'category)))))
+    (save-restriction
+      (widen)
+      (goto-char (point-min))
+      (let ((re (org-re-property key))
+	    values)
+	(while (re-search-forward re nil t)
+	  (add-to-list 'values (org-trim (match-string-no-properties 1))))
+	(delete "" values)))))
+
 
 (defun superman-refresh ()
   "Parses the categories and projects in file `superman-home' and also
@@ -414,7 +414,7 @@ the `superman-home'.")
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
 	  (find-file index)
-	  (insert "This is the index file of project " (car pro) "\n")
+	  (insert "Index of project " (car pro) " (this line can be deleted.)\n")
 	  (save-buffer))
 	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
@@ -439,7 +439,9 @@ To undo all this you can try to call 'superman-delete-project'. "
     (while (assoc nickname superman-project-alist)
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (setq category (or category (completing-read "Category: " (superman-parse-project-categories) nil nil)))
+    (setq category (or category
+		       (completing-read "Category: "
+					(mapcar (lambda (x) (list x)) (superman-parse-project-categories)) nil nil)))
     ;; a local capture command places the new project
     (let ((org-capture-templates
 	   `(("p" "Project" plain
@@ -452,7 +454,8 @@ To undo all this you can try to call 'superman-delete-project'. "
 		       (superman-property 'category) ": " category 
 		       "\n:" (superman-property 'index) 
 		       ":\n:" (superman-property 'initialvisit) ": " 
-		       (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)) 
+		       (format-time-string (cdr org-time-stamp-custom-formats))
+		       ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
 		       " \n:" (superman-property 'others) ": \n:END:\n"))))
 	  (org-capture-bookmark nil))
       (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'superman-complete-property)) nil 'local)
@@ -571,11 +574,11 @@ the active status of projects."
 
 (defun superman-index-list (&optional category state extension not-exist-ok update)
   "Return a list of project specific indexes.
-              Projects are filtered by CATEGORY unless CATEGORY is nil.
-              Projects are filtered by the todo-state regexp STATE unless STATE is nil.
-              Only existing files are returned unless NOT-EXIST-OK is non-nil.
-              Only files ending on EXTENSION are returned unless EXTENSION is nil.
-              If UPDATE is non-nil first parse the file superman.
+Projects are filtered by CATEGORY unless CATEGORY is nil.
+Projects are filtered by the todo-state regexp STATE unless STATE is nil.
+Only existing files are returned unless NOT-EXIST-OK is non-nil.
+Only files ending on EXTENSION are returned unless EXTENSION is nil.
+If UPDATE is non-nil first parse the file superman.
 Examples:
  (superman-index-list nil \"ACTIVE\")
  (superman-index-list nil \"DONE\")
@@ -583,9 +586,14 @@ Examples:
   (interactive "P")
   (when update
     (superman-refresh))
-  (let* ((testfun (lambda (p) (when (and
-				     (or (not category) (string= category (superman-get-category p)))
-				     (or (not state) (string-match state (superman-get-state p)))) p)))
+  (let* ((testfun (lambda (p)
+		    (let ((p-cat (superman-get-category p)))
+		    (when (and
+			   (or (not category)
+			       (not p-cat)
+			       (string= (downcase category) (downcase p-cat)))
+			   (or (not state)
+			       (string-match state (superman-get-state p)))) p))))
 	 (palist (if (or category state)
 		     (delq nil (mapcar testfun superman-project-alist))
 		   superman-project-alist)))
@@ -640,7 +648,10 @@ Examples:
     (save-excursion
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
-      (org-entry-put (point) "LastVisit" (with-temp-buffer (org-insert-time-stamp (current-time) 'hm)))
+      (org-entry-put (point) "LastVisit"
+		     (format-time-string (cdr org-time-stamp-custom-formats))
+		     ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
+		     )
       (save-buffer))))
 
 (defun superman-save-project (&optional project)

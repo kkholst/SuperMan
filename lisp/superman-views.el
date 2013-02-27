@@ -36,10 +36,12 @@ highlight the current line in superman views.")
 (defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
 
 (defvar superman-cats '(("Meetings" . "Date")
-			("Documents" . "FileName") ("Notes" . "NoteDate")
+			("Documents" . "FileName")
+			("Data" . "DataFileName")
+			("Notes" . "NoteDate")
 			("Tasks" . "TaskDate")
 			("Mail" . "EmailDate")
-			("Bookmarks" . "Link"))
+			("Bookmarks" . "BookmarkDate"))
   "Alist of the form ((cat.1 . term.1)(cat.2 . term.2) ...)  where cat.i
 refers to the ith bloke in the project view and term.i identifies
 headlines in the project index file to be shown in that bloke.")
@@ -284,6 +286,9 @@ The function is only run on items marked in this way."
 (defun superman-finalize-notes (&rest balls)
   (superman-loop 'superman-format-item balls))
 
+(defun superman-finalize-data (&rest balls)
+  (superman-loop 'superman-format-item balls))
+
 (defun superman-finalize-meetings (&rest balls)
   (superman-loop 'superman-format-item balls))
 
@@ -298,6 +303,25 @@ The function is only run on items marked in this way."
 
 ;;}}}
 ;;{{{ Project views
+(defvar superman-finalize-cat-alist nil
+
+  "List of functions and variables used to finalize superman-views.
+
+Elements are of the form '(cat fun balls) where cat is the name
+of the heading in which the function fun is applied with arguments given by
+balls (a list).
+
+A ball can have one of the following alternative forms:
+
+ ('todo len) : the todo-status of the item is trimmed to length len
+ ('todo fun args) : function fun is applied to the todo-status of the current item with arguments args 
+
+ ('hdr len) : the heading of the item is trimmed to length len
+ ('hdr fun args) : function fun is applied to the heading of the current item with arguments args 
+
+ (prop len) : the property prop (a string) of the current item is trimmed to length len
+ (prop fun args) : function fun is applied to the property prop (a string) of the current item with arguments args
+")
 
 (defun superman-view-project (&optional project)
   "View documents of the current project."
@@ -333,28 +357,9 @@ The function is only run on items marked in this way."
 ;;}}}
 ;;{{{ Finalizing project views
 
-(defvar superman-finalize-cat-alist nil
-
-  "List of functions and variables used to finalize superman-views.
-
-Elements are of the form '(cat fun balls) where cat is the name
-of the heading in which the function fun is applied with arguments given by
-balls (a list).
-
-A ball can have one of the following alternative forms:
-
- ('todo len) : the todo-status of the item is trimmed to length len
- ('todo fun args) : function fun is applied to the todo-status of the current item with arguments args 
-
- ('hdr len) : the heading of the item is trimmed to length len
- ('hdr fun args) : function fun is applied to the heading of the current item with arguments args 
-
- (prop len) : the property prop (a string) of the current item is trimmed to length len
- (prop fun args) : function fun is applied to the property prop (a string) of the current item with arguments args
-")
-
 (setq superman-finalize-cat-alist
       '(("Documents" superman-finalize-documents superman-document-balls superman-document-columns)
+	("Data" superman-finalize-data superman-data-balls)
 	("Notes" superman-finalize-notes superman-note-balls)
 	("Mail" superman-finalize-mails superman-mail-balls)
 	("Tasks" superman-finalize-tasks superman-task-balls)
@@ -363,33 +368,41 @@ A ball can have one of the following alternative forms:
 
 
 (setq superman-document-columns
-      (list "Info" "GitStatus" "LastCommit" "FileName"))
+      (list "Description" "GitStatus" "LastCommit" "FileName"))
 
 (setq superman-document-balls
       '((hdr nil 23)
 	("GitStatus" nil 10)
 	("LastCommit" superman-trim-date 13)
-	("FileName" superman-trim-bracketed-filename 23)))
+	;; ("FileName" superman-trim-bracketed-filename 23)
+	("FileName" (lambda (x len) x) nil)))
 (setq superman-meeting-balls
       '((hdr nil 23)
 	("Date" superman-trim-date nil)
 	;; ("Status" 10 nil)
 	("Participants" nil 23)))
 (setq superman-note-balls
-      '(("NoteDate" superman-trim-date 13)
+      '((todo nil 7)
+	("NoteDate" superman-trim-date 13)
 	(hdr nil 49)))
+(setq superman-data-balls
+      '(("CaptureDate" superman-trim-date 13)
+	(hdr nil 23)
+	("DataFileName" (lambda (x len) x) nil)))
 (setq superman-task-balls
-      '(("TaskDate" superman-trim-date 13)
+      '((todo nil 7)
+	("TaskDate" superman-trim-date 13)
 	(hdr nil 49)))
 (setq superman-bookmark-balls
       '(("BookmarkDate" superman-trim-date 13)
-	(hdr superman-trim-string 23)
-	("Link" superman-trim-link nil)))
+	(hdr superman-trim-string nil)
+	("Link" superman-trim-link 48)))
 (setq superman-mail-balls
-      '(("EmailDate" superman-trim-date 13)
+      '((todo nil 7)
+	("EmailDate" superman-trim-date 13)
 	(hdr nil 23)
-	("Attachment" superman-trim-link nil)
-	("Link" superman-trim-link nil)))
+	;; ("Attachment" superman-trim-link nil)
+	("Link" superman-trim-link 48)))
 
 
 (defun superman-trim-date (date &optional len)
@@ -451,7 +464,7 @@ A ball can have one of the following alternative forms:
 
 (defun superman-finalize-view (&optional cat)
   (let* ((org-startup-folded nil)
-	 (buffer-read-only nil)
+	 (bufferq-read-only nil)
 	 (pro (superman-view-current-project))
 	 (header (if cat
 		     (apply (cdr (assoc (car cat) superman-cat-headers))
@@ -496,21 +509,18 @@ A ball can have one of the following alternative forms:
 	 (org-agenda-buffer-name (concat "*Documents[" (car pro) "]*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-window-setup 'current-window)
-	 (cats (superman-parse-categories
-		(progn
-		  (superman-goto-project pro "Documents" nil)
-		  (current-buffer))
-		(point-min)
-		(point-max)))
+	 (cats (progn
+		 (superman-goto-project pro "Documents" nil)
+		 (superman-property-values "category")))
 	 (documents-header (concat "Documents: " (car pro) "\n\n"))
-	 (cats-and-one-dog (append `((,(car pro))) cats))
+	 (cats-and-one-dog (append `(,(car pro)) cats))
 	 (cmd-block
 	  (if cats 
 	      (mapcar '(lambda (cat)
-			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" (car cat) "\"")
-			       (let ((hdr (if (eq (car cat) (caar cats-and-one-dog))
-					      (concat documents-header (concat "\n** " (car cat) ""))
-					    (concat "** " (car cat) ""))))
+			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" cat "\"")
+			       (let ((hdr (if (eq cat (car cats-and-one-dog))
+					      (concat documents-header (concat "\n** " cat ""))
+					    (concat "** " cat ""))))
 				 `((org-agenda-overriding-header ,hdr)))))
 		      cats-and-one-dog)
 	    `((tags "FileName={.+}"
@@ -572,9 +582,29 @@ A ball can have one of the following alternative forms:
   (interactive)
   (superman-capture-meeting (superman-view-current-project)))
 
+(defun superman-new-data (&optional file-list)
+  (interactive)
+  (let* ((pro (superman-view-current-project))
+	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	 (fl (or file-list `(,(read-file-name (concat "Add data: ") (file-name-as-directory dir))))))
+    ;; FIXME need to write superman-get-documents and filter duplicates
+    (save-window-excursion
+      (superman-goto-project pro "Data" 'create)
+      (while fl
+	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
+		"\n:PROPERTIES:\n:"
+		(superman-property 'filename) ": [["(car fl)"]]\n:"
+		(superman-property 'gitstatus) ": Unknown\n:"
+		(superman-property 'capturedate) ": ")
+	(org-insert-time-stamp (current-time) t)
+	(insert "\n:END:\n")
+	(setq fl (cdr fl)))
+      (save-buffer)))
+  (org-agenda-redo))
+
 (defun superman-new-note ()
   (interactive)
-  (superman-capture-note (superman-view-current-project))
+  (superman-capture-data (superman-view-current-project))
   (superman-view-documents))
 
 
@@ -621,14 +651,19 @@ A ball can have one of the following alternative forms:
 
 (defun superman-view-index ()
   (interactive)
-    (split-window-vertically)
-  (other-window 1)
-  (let ((pom (org-get-at-bol 'org-hd-marker)))
-    (if pom
-	(progn (switch-to-buffer (marker-buffer pom))
-	       (goto-char pom))
-      (find-file
-       (superman-get-index (superman-view-current-project))))))
+  (let* ((pom (org-get-at-bol 'org-hd-marker))
+	 (index (superman-get-index (superman-view-current-project)))
+	 (ibuf (if pom (marker-buffer pom)
+		 (get-file-buffer index)))
+	 (iwin (when ibuf (get-buffer-window ibuf nil))))
+    (if (and ibuf iwin)
+	(select-window (get-buffer-window ibuf nil))
+      ;; FIXME this should be customizable
+      (split-window-vertically)
+      (other-window 1)
+      (if ibuf (switch-to-buffer ibuf)
+	(find-file index)))
+    (when pom (goto-char pom))))
 
 (defun superman-view-file-list ()
   (interactive)
@@ -824,7 +859,7 @@ If dont-redo the agenda is not reversed."
 (define-key superman-view-mode-map "?" 'superman-view-show-help)
 (define-key superman-view-mode-map "I" 'superman-view-git-init)
 ;;}}}
-;;{{{ documents view
+;;{{{ document view mode
 
 (defvar superman-documents-view-mode-map
   (copy-keymap superman-view-mode-map)
@@ -858,7 +893,7 @@ is positive, otherwise turn it off."
 	(list "annotate" superman-view-git-annotate "v")
 	(list "Index" superman-view-index "i")
 	(list "diff" superman-view-git-diff "d")
-	(list "ediff" superman-view-git-ediff "D")
+	(list "Document" superman-new-document "D")
 	(list "Add" superman-view-git-add-all "A")
 	(list "add" superman-view-git-add "a")
 	(list "Search" superman-view-git-search "S")
@@ -873,7 +908,7 @@ is positive, otherwise turn it off."
 
 
 ;;}}}
-;;{{{ project view
+;;{{{ project view mode
 (defvar superman-project-view-mode-map
   (copy-keymap superman-view-mode-map)
   "Keymap used for `superman-project-view-mode' commands.")
@@ -903,7 +938,9 @@ is positive, otherwise turn it off."
 	(list "Meeting" superman-new-meeting "M")
 	(list "Task" superman-new-task "T")
 	(list "ToggleView" superman-toggle-view "V")
-	(list "Bookmark" superman-new-bookmark "B")))
+	(list "Bookmark" superman-new-bookmark "B")
+	(list "commit" superman-view-git-commit "c")
+	(list "Commit" superman-view-git-commit-all "C")))
 
 (defun superman-view-project-set-hot-keys ()
   (mapcar
@@ -916,6 +953,28 @@ is positive, otherwise turn it off."
 (superman-view-project-set-hot-keys)
 
 ;;}}}
+;;{{{ sorting
+
+(defun superman-sort-by-status (a b)
+  (let ((A  (substring a 0 4))
+	(B  (substring b 0 4)))
+    (if (string= A B) nil 
+      (if (string-lessp A B)
+	  1 -1))))
+    
+;; see org-agenda-manipulate-query
+(defun superman-sort-superman ()
+  (let* ((options (cadr (cadar (cddr org-agenda-redo-command))))
+	 (column 1)
+	 (org-agenda-cmp-user-defined 'superman-sort-by-status))
+    ;; (new-options
+    ;; (append options
+    ;; '((org-agenda-sorting-strategy '(user-defined-up))))))
+    ;; (setcdr (cadr (cadar (cddr org-agenda-redo-command))) new-options)
+    (org-agenda-redo)))
+
+;;}}}
+
 ;;{{{ help 
 
 (defun superman-popup-tip (msg)
@@ -951,3 +1010,5 @@ is positive, otherwise turn it off."
 (provide 'superman-views)
 
 ;;; superman-summary.el ends here
+
+

@@ -35,7 +35,7 @@
 ;;; Code:
 
 
-;{{{ finding buffers
+;;{{{ finding buffers
 
 (defun superman-find-thing (thing project)
   "Extract THING from `superman-config-action-alist' and apply it to PROJECT.
