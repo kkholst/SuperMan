@@ -214,7 +214,6 @@
     (push ?S unread-command-events)
     (call-interactively 'org-agenda)))
 
-
 ;;}}}
 
 ;;{{{ cycle view 
