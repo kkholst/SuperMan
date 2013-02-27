@@ -73,20 +73,22 @@ Can also be set to (string-to-char \"~\") with any string in place of ~.")
 ;;}}}
 ;;{{{ Trim strings and links
 
-(defun superman-trim-string (str len)
+(defun superman-trim-string (str &rest args)
   "Trim string STR to a given length by either calling substring
 or by adding whitespace characters."
   (let* ((slen (length str))
+	 (len (car args))
 	 (diff (- len slen)))
     (if (> diff 0)
 	(concat str (make-string diff (string-to-char " ")))
       (substring str 0 len))))
 
-(defun superman-trim-link (link len)
+(defun superman-trim-link (link &rest args)
   ;;  Bracket links
   (if (string-match org-bracket-link-regexp link)
-      (let ((rawlink (org-match-string-no-properties 1 link))
-	    tlink)
+      (let* ((rawlink (org-match-string-no-properties 1 link))
+	     (len (car args))
+	     tlink)
 	(if (match-end 3)
 	    (setq tlink
 		  (replace-match
@@ -102,10 +104,11 @@ or by adding whitespace characters."
 	(concat "[[" link "]["
 		(superman-trim-string link len) "]]"))))
 
-(defun superman-trim-bracketed-filename (file &optional len)
+(defun superman-trim-bracketed-filename (file &rest args)
   ;;  Links to files
   (string-match org-bracket-link-regexp file)
   (let ((filename (org-match-string-no-properties 1 file))
+	(len (car args))
 	trimmed-file-name)
     (if (match-end 3)
 	(setq trimmed-file-name
@@ -120,9 +123,10 @@ or by adding whitespace characters."
 	      (file-name-nondirectory filename) len))))
     trimmed-file-name))
 
-(defun superman-trim-filename (filename &optional len)
+(defun superman-trim-filename (filename &rest args)
   ;;  raw filenames
-  (let ((linkname (file-name-nondirectory filename)))
+  (let ((linkname (file-name-nondirectory filename))
+	(len (car args)))
     (when (string= linkname "") ;; for directories show the mother
       (setq linkname (file-name-nondirectory (directory-file-name filename))))
     (org-make-link-string
@@ -371,38 +375,38 @@ A ball can have one of the following alternative forms:
       (list "Description" "GitStatus" "LastCommit" "FileName"))
 
 (setq superman-document-balls
-      '((hdr nil 23)
-	("GitStatus" nil 10)
-	("LastCommit" superman-trim-date 13)
+      '((hdr nil (23))
+	("GitStatus" nil (10) 'font-lock-function-name-face)
+	("LastCommit" superman-trim-date (13))
 	;; ("FileName" superman-trim-bracketed-filename 23)
 	("FileName" (lambda (x len) x) nil)))
 (setq superman-meeting-balls
-      '((hdr nil 23)
+      '((hdr nil (23))
 	("Date" superman-trim-date nil)
 	;; ("Status" 10 nil)
-	("Participants" nil 23)))
+	("Participants" nil (23))))
 (setq superman-note-balls
-      '((todo nil 7)
-	("NoteDate" superman-trim-date 13)
-	(hdr nil 49)))
+      '((todo nil (7))
+	("NoteDate" superman-trim-date (13))
+	(hdr nil (49))))
 (setq superman-data-balls
-      '(("CaptureDate" superman-trim-date 13)
-	(hdr nil 23)
+      '(("CaptureDate" superman-trim-date (13))
+	(hdr nil (23))
 	("DataFileName" (lambda (x len) x) nil)))
 (setq superman-task-balls
-      '((todo nil 7)
-	("TaskDate" superman-trim-date 13)
-	(hdr nil 49)))
+      '((todo nil (7))
+	("TaskDate" superman-trim-date (13))
+	(hdr nil (49))))
 (setq superman-bookmark-balls
-      '(("BookmarkDate" superman-trim-date 13)
+      '(("BookmarkDate" superman-trim-date (13))
 	(hdr superman-trim-string nil)
-	("Link" superman-trim-link 48)))
+	("Link" superman-trim-link (48))))
 (setq superman-mail-balls
-      '((todo nil 7)
-	("EmailDate" superman-trim-date 13)
-	(hdr nil 23)
+      '((todo nil (7))
+	("EmailDate" superman-trim-date (13))
+	(hdr nil (23))
 	;; ("Attachment" superman-trim-link nil)
-	("Link" superman-trim-link 48)))
+	("Link" superman-trim-link (48))))
 
 
 (defun superman-trim-date (date &optional len)
@@ -431,12 +435,14 @@ A ball can have one of the following alternative forms:
 			     (or (superman-get-property (point) (car b) 'inherit) "--"))
 			    ((eq (car b) 'todo) (nth 2 hdr-comp))
 			    ((eq (car b) 'hdr) (nth 4 hdr-comp))))
-		 (fun (or (cadr b) 'superman-trim-string))
-		 (args (if (caddr b) (cddr b) (list 23))))
+		 (fun (or (nth 1 b) 'superman-trim-string))
+		 (args (if (nth 2 b) (nth 2 b) '(23)))
+		 (face (nth 3 b)))
 	    (setq item
 		  (concat item "  "
-			  (apply fun val args)
-			  )))
+			  (let ((x (apply fun val args)))
+			    (when face (put-text-property 0 (length x) 'face face x))
+			    x))))
 	  (setq balls (cdr balls)))))
     (beginning-of-line)
     (looking-at ".*")
