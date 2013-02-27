@@ -63,6 +63,10 @@ Leaves point at the end of the section."
   (interactive)
   (or (superman-goto-project nil "Notes" 'create)))
 
+(defun superman-goto-project-data ()
+  (interactive)
+  (or (superman-goto-project nil "Data" 'create)))
+
 (defun superman-goto-project-bookmarks ()
   (interactive)
   (or (superman-goto-project nil "Bookmarks" 'create)))

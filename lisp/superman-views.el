@@ -36,7 +36,9 @@ highlight the current line in superman views.")
 (defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
 
 (defvar superman-cats '(("Meetings" . "Date")
-			("Documents" . "FileName") ("Notes" . "NoteDate")
+			("Documents" . "FileName")
+			("Data" . "DataFileName")
+			("Notes" . "NoteDate")
 			("Tasks" . "TaskDate")
 			("Mail" . "EmailDate")
 			("Bookmarks" . "BookmarkDate"))
@@ -284,6 +286,9 @@ The function is only run on items marked in this way."
 (defun superman-finalize-notes (&rest balls)
   (superman-loop 'superman-format-item balls))
 
+(defun superman-finalize-data (&rest balls)
+  (superman-loop 'superman-format-item balls))
+
 (defun superman-finalize-meetings (&rest balls)
   (superman-loop 'superman-format-item balls))
 
@@ -298,6 +303,25 @@ The function is only run on items marked in this way."
 
 ;;}}}
 ;;{{{ Project views
+(defvar superman-finalize-cat-alist nil
+
+  "List of functions and variables used to finalize superman-views.
+
+Elements are of the form '(cat fun balls) where cat is the name
+of the heading in which the function fun is applied with arguments given by
+balls (a list).
+
+A ball can have one of the following alternative forms:
+
+ ('todo len) : the todo-status of the item is trimmed to length len
+ ('todo fun args) : function fun is applied to the todo-status of the current item with arguments args 
+
+ ('hdr len) : the heading of the item is trimmed to length len
+ ('hdr fun args) : function fun is applied to the heading of the current item with arguments args 
+
+ (prop len) : the property prop (a string) of the current item is trimmed to length len
+ (prop fun args) : function fun is applied to the property prop (a string) of the current item with arguments args
+")
 
 (defun superman-view-project (&optional project)
   "View documents of the current project."
@@ -333,28 +357,9 @@ The function is only run on items marked in this way."
 ;;}}}
 ;;{{{ Finalizing project views
 
-(defvar superman-finalize-cat-alist nil
-
-  "List of functions and variables used to finalize superman-views.
-
-Elements are of the form '(cat fun balls) where cat is the name
-of the heading in which the function fun is applied with arguments given by
-balls (a list).
-
-A ball can have one of the following alternative forms:
-
- ('todo len) : the todo-status of the item is trimmed to length len
- ('todo fun args) : function fun is applied to the todo-status of the current item with arguments args 
-
- ('hdr len) : the heading of the item is trimmed to length len
- ('hdr fun args) : function fun is applied to the heading of the current item with arguments args 
-
- (prop len) : the property prop (a string) of the current item is trimmed to length len
- (prop fun args) : function fun is applied to the property prop (a string) of the current item with arguments args
-")
-
 (setq superman-finalize-cat-alist
       '(("Documents" superman-finalize-documents superman-document-balls superman-document-columns)
+	("Data" superman-finalize-data superman-data-balls)
 	("Notes" superman-finalize-notes superman-note-balls)
 	("Mail" superman-finalize-mails superman-mail-balls)
 	("Tasks" superman-finalize-tasks superman-task-balls)
@@ -380,6 +385,10 @@ A ball can have one of the following alternative forms:
       '((todo nil 7)
 	("NoteDate" superman-trim-date 13)
 	(hdr nil 49)))
+(setq superman-data-balls
+      '(("CaptureDate" superman-trim-date 13)
+	(hdr nil 23)
+	("DataFileName" (lambda (x len) x) nil)))
 (setq superman-task-balls
       '((todo nil 7)
 	("TaskDate" superman-trim-date 13)
@@ -573,9 +582,29 @@ A ball can have one of the following alternative forms:
   (interactive)
   (superman-capture-meeting (superman-view-current-project)))
 
+(defun superman-new-data (&optional file-list)
+  (interactive)
+  (let* ((pro (superman-view-current-project))
+	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	 (fl (or file-list `(,(read-file-name (concat "Add data: ") (file-name-as-directory dir))))))
+    ;; FIXME need to write superman-get-documents and filter duplicates
+    (save-window-excursion
+      (superman-goto-project pro "Data" 'create)
+      (while fl
+	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
+		"\n:PROPERTIES:\n:"
+		(superman-property 'filename) ": [["(car fl)"]]\n:"
+		(superman-property 'gitstatus) ": Unknown\n:"
+		(superman-property 'capturedate) ": ")
+	(org-insert-time-stamp (current-time) t)
+	(insert "\n:END:\n")
+	(setq fl (cdr fl)))
+      (save-buffer)))
+  (org-agenda-redo))
+
 (defun superman-new-note ()
   (interactive)
-  (superman-capture-note (superman-view-current-project))
+  (superman-capture-data (superman-view-current-project))
   (superman-view-documents))
 
 
@@ -830,7 +859,7 @@ If dont-redo the agenda is not reversed."
 (define-key superman-view-mode-map "?" 'superman-view-show-help)
 (define-key superman-view-mode-map "I" 'superman-view-git-init)
 ;;}}}
-;;{{{ documents view
+;;{{{ document view mode
 
 (defvar superman-documents-view-mode-map
   (copy-keymap superman-view-mode-map)
@@ -879,7 +908,7 @@ is positive, otherwise turn it off."
 
 
 ;;}}}
-;;{{{ project view
+;;{{{ project view mode
 (defvar superman-project-view-mode-map
   (copy-keymap superman-view-mode-map)
   "Keymap used for `superman-project-view-mode' commands.")
