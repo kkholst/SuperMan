@@ -173,14 +173,19 @@ and the keybinding to initialize git control otherwise."
 ;;}}}
 ;;{{{ Marking elements
 
-(defun superman-toggle-mark ()
+
+(defun superman-toggle-mark (&optional on dont-move)
+  "Toggle mark for item at point in project view.
+If ON is non-nil keep mark for already marked items."
   (interactive)
   (save-excursion
     (beginning-of-line)
     (let* ((buffer-read-only nil)
 	   (cur (get-text-property (point) 'face))
 	   (item (progn (looking-at ".*") (match-string 0)))
-	   (new (if (eq cur superman-mark-face) 'default superman-mark-face)))
+	   (new (if on
+		    superman-mark-face
+		  (if (eq cur superman-mark-face) 'default superman-mark-face))))
       (put-text-property 0 (length item) 'face new item)
       (replace-match item t t)
       ;; redo link highlightning
@@ -191,8 +196,14 @@ and the keybinding to initialize git control otherwise."
 	    (add-text-properties
 	     (match-beginning 0) (match-end 0)
 	     '(face org-link))))))
-  (forward-line 1))
+  (unless dont-move (forward-line 1)))
 
+(defun superman-mark-all ()
+  (interactive)
+  (save-excursion
+    (save-restriction
+      (org-narrow-to-subtree)
+       (superman-loop 'superman-toggle-mark (list 'on 'dont)))))
 ;;}}}
 ;;{{{ Loops
 
@@ -244,10 +255,14 @@ The function is only run on items marked in this way."
     (goto-char (point-min)) 
     (if (next-single-property-change
 	 (point-at-eol) 'org-marker)
-	;; insert column names if there are any elements
 	(progn
 	  (end-of-line)
+	  ;; insert hot keys for section
+	  (insert "\n")
+	  (insert (superman-view-show-hot-keys
+		superman-view-project-hot-keys cat))
 	  (insert "\n\n")
+	  ;; insert column names for section
 	  (insert (apply 'superman-column-names
 			 (list (eval (caddr rest)) (eval balls))))
 	  (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face))
@@ -279,8 +294,7 @@ The function is only run on items marked in this way."
 		      ((eq 'todo ball-name) "Status")
 		      (t (symbol-name ball-name)))
 		;; width of this column
-		(or (nth 2 (nth c defaults)) 23))
-	       )))
+		(or (car (nth 2 (nth c defaults))) 23)))))
       (setq c (+ 1 c)))
     cnames))
 
@@ -374,10 +388,15 @@ A ball can have one of the following alternative forms:
 (setq superman-document-columns
       (list "Description" "GitStatus" "LastCommit" "FileName"))
 
+(defun superman-get-git-status-face (str)
+  (cond ((string-match "Committed" str ) 'font-lock-function-name-face)
+	((string-match  "Modified" str) 'font-lock-warning-face)
+	(t 'font-lock-comment-face)))
+
 (setq superman-document-balls
       '((hdr nil (23))
-	("GitStatus" nil (10) 'font-lock-function-name-face)
-	("LastCommit" superman-trim-date (13))
+	("GitStatus" nil (10) superman-get-git-status-face)
+	("LastCommit" superman-trim-date (13) 'font-lock-function-name-face)
 	;; ("FileName" superman-trim-bracketed-filename 23)
 	("FileName" (lambda (x len) x) nil)))
 (setq superman-meeting-balls
@@ -437,18 +456,23 @@ A ball can have one of the following alternative forms:
 			    ((eq (car b) 'hdr) (nth 4 hdr-comp))))
 		 (fun (or (nth 1 b) 'superman-trim-string))
 		 (args (if (nth 2 b) (nth 2 b) '(23)))
-		 (face (nth 3 b)))
+		 (face-or-fun (nth 3 b)))
 	    (setq item
 		  (concat item "  "
 			  (let ((x (apply fun val args)))
-			    (when face (put-text-property 0 (length x) 'face face x))
-			    x))))
-	  (setq balls (cdr balls)))))
-    (beginning-of-line)
-    (looking-at ".*")
-    (replace-match item t t)
-    (beginning-of-line)
-    (add-text-properties (point-at-bol) (point-at-eol) text-props)))
+			    (cond ((facep face-or-fun)
+				   (propertize x 'face face-or-fun))
+				  ((functionp face-or-fun)
+				   (propertize
+				    x 'face
+				    (funcall face-or-fun x)))
+				  (t x))))))
+			  (setq balls (cdr balls)))))
+	  (beginning-of-line)
+	  (looking-at ".*")
+	  (replace-match item t t)
+	  (beginning-of-line)
+	  (add-text-properties (point-at-bol) (point-at-eol) text-props)))
 
 (setq superman-cat-heads '(("Documents" "Documents:\n")))
 
@@ -457,7 +481,8 @@ A ball can have one of the following alternative forms:
   (concat "\n"
 	  (superman-view-others pro)
 	  (superman-view-control pro)
-	  "\n" (superman-view-hot-keys superman-view-project-hot-keys)))
+	  "\n" (superman-view-show-hot-keys
+		superman-view-project-hot-keys)))
 
 
 (defun superman-documents-view-header (pro)
@@ -701,7 +726,7 @@ A ball can have one of the following alternative forms:
       ;; (let ((buffer-read-only nil))
 	;; (add-text-properties (point-at-bol) (point-at-eol) '(:org-view-mark nil)))))
 
-(defun superman-view-return ()
+(defun superman-hot-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
 	 (b (org-get-heading t t)))
@@ -840,6 +865,26 @@ If dont-redo the agenda is not reversed."
   (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
+(defun superman-view-show-hot-keys (keys &optional cat)
+  "Show keybindings in project view header or in section CAT."
+  (let ((hot-key-string "")
+	(hot-keys keys))
+    (while hot-keys
+      (let* ((x (car hot-keys))
+	     (f (intern (concat "superman-" (or cat "project") "-hot-" x))))
+	(if (or (not cat) (fboundp f))
+	    (setq hot-key-string
+		  (concat hot-key-string
+			  (concat "" 
+				  x
+				  ": "
+				  (if (boundp f)
+				      (eval f)
+				    (symbol-name f))
+				  "  ")))))
+	(setq hot-keys (cdr hot-keys)))
+      hot-key-string))
+
 (defun superman-view-hot-keys (keys)
   "Show hot keybindings in header of project view."
   ;; FIXME: this should be made window width adaptive
@@ -856,7 +901,7 @@ If dont-redo the agenda is not reversed."
       (setq hot-keys (cdr hot-keys)))
     hot-key-string))
 
-(define-key superman-view-mode-map [return] 'superman-view-return) ;; Return is not used anyway in column mode
+(define-key superman-view-mode-map [return] 'superman-hot-return) 
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "n" 'superman-next-entry)
 (define-key superman-view-mode-map "p" 'superman-previous-entry)
@@ -915,6 +960,9 @@ is positive, otherwise turn it off."
 
 ;;}}}
 ;;{{{ project view mode
+
+;; (setq superman-project-view-mode-map
+  ;; (copy-keymap superman-view-mode-map))
 (defvar superman-project-view-mode-map
   (copy-keymap superman-view-mode-map)
   "Keymap used for `superman-project-view-mode' commands.")
@@ -933,30 +981,119 @@ is positive, otherwise turn it off."
   (superman-project-view-mode t))
 
 (defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
+
 (setq superman-view-project-hot-keys
-      '((list "Shell" superman-goto-shell "!")
-	(list "Index" superman-view-index "i")
-	(list "File-list" superman-view-file-list "F")
-	(list "Git-push" superman-git-push "P")
-	(list "Unison" superman-unison "U")
-	(list "Note" superman-new-note "N")
-	(list "Document" superman-new-document "D")
-	(list "Meeting" superman-new-meeting "M")
-	(list "Task" superman-new-task "T")
-	(list "ToggleView" superman-toggle-view "V")
-	(list "Bookmark" superman-new-bookmark "B")
-	(list "commit" superman-view-git-commit "c")
-	(list "Commit" superman-view-git-commit-all "C")))
+      '("i" "f" "F" "N" "P" "u" "U" "m" "M" "c" "C" "B" "v" "V" "D"))
 
 (defun superman-view-project-set-hot-keys ()
   (mapcar
    '(lambda (x)
       (define-key superman-project-view-mode-map
-	(nth 3 x)
-	(nth 2 x)))
+	x
+	(intern (concat "superman-hot-" x))))
    superman-view-project-hot-keys))
 
+
+(defun superman-current-heading ()
+  "Safely call `outline-back-to-heading' and return heading. If error return nil."
+  (condition-case nil
+      (save-excursion
+	(outline-back-to-heading t)
+	(nth 4 (org-heading-components)))
+    (error nil)))
+
+(defun superman-view-choose-hot-key (key)
+  (let* ((cat (superman-current-heading))
+	 (S-call (intern (concat "superman-project-hot-" key)))	 ;; use project key if no hot key is defined in section
+	 (hot-cat (if cat (intern (concat "superman-" cat "-hot-" key))
+		    (intern (concat "superman-project-hot-" key)))))
+    (cond ((and cat (fboundp hot-cat))
+	   (funcall hot-cat))
+	  ;; (condition-case nil
+	  ;; (funcall hot-cat)
+	  ;; (error (progn (message
+	  ;; (concat "Call to " hot-cat " resulted in an error. ")
+	  ;; nil)))))
+	  ((fboundp S-call) (funcall S-call))
+	  (t (message (concat "Hot-key "key" not defined (in this section)"))))))
+  
+(defun superman-hot-i () (interactive) (superman-view-choose-hot-key "i"))
+(defun superman-hot-f () (interactive) (superman-view-choose-hot-key "f"))
+(defun superman-hot-F () (interactive) (superman-view-choose-hot-key "F"))
+(defun superman-hot-m () (interactive) (superman-view-choose-hot-key "m"))
+(defun superman-hot-M () (interactive) (superman-view-choose-hot-key "M"))
+(defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
+(defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
+(defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
+(defun superman-hot-C () (interactive) (superman-view-choose-hot-key "C"))
+(defun superman-hot-v () (interactive) (superman-view-choose-hot-key "v"))
+(defun superman-hot-V () (interactive) (superman-view-choose-hot-key "V"))
+(defun superman-hot-U () (interactive) (superman-view-choose-hot-key "U"))
+
+(fset 'superman-project-hot-i 'superman-view-index)
+(setq superman-project-hot-i "index")
+(fset 'superman-project-hot-! 'superman-goto-shell)
+(setq superman-project-hot-! "shell")
+(fset 'superman-project-hot-F 'superman-view-file-list)
+(setq superman-project-hot-F "FileList")
+(fset 'superman-project-hot-f 'org-agenda-follow-mode)
+(setq superman-project-hot-f "follow")
+(fset 'superman-project-hot-P 'superman-git-push)
+(setq superman-project-hot-P "GitPush")
+(fset 'superman-project-hot-U 'superman-unison)
+(setq superman-project-hot-U "Unison")
+(fset 'superman-project-hot-N 'superman-new-note)
+(setq superman-project-hot-N "Note")
+(fset 'superman-project-hot-d 'superman-new-data)
+(setq superman-project-hot-d "data")
+(fset 'superman-project-hot-D 'superman-new-document)
+(setq superman-project-hot-D "Document")
+(fset 'superman-project-hot-M 'superman-new-meeting)
+(setq superman-project-hot-M "Meeting")
+(fset 'superman-project-hot-T 'superman-new-task)
+(setq superman-project-hot-T "Task")
+(fset 'superman-project-hot-B 'superman-new-bookmark)
+(setq superman-project-hot-B "Bookmark")
+(fset 'superman-project-hot-V 'superman-toggle-view)
+(setq superman-project-hot-V "toggleView")
+(fset 'superman-project-hot-c '(lambda () (message "Nothing to commit in this section")))
+(fset 'superman-project-hot-C 'superman-view-git-commit-all)
+(setq superman-project-hot-C "GitCommit")
+
+(fset 'superman-Documents-hot-c 'superman-view-git-commit)
+(setq superman-Documents-hot-c "CommitFile")
+
+(fset 'superman-Documents-hot-U 'superman-view-update-all)
+(setq superman-Documents-hot-U "UpdateGit")
+
+(fset 'superman-Documents-hot-m 'superman-toggle-mark)
+(setq superman-Documents-hot-m "mark-item")
+
+(fset 'superman-Documents-hot-M 'superman-mark-all)
+(setq superman-Documents-hot-M "mark-all")
+
+(fset 'superman-Data-hot-c 'superman-view-git-commit)
+(setq superman-Data-hot-c "GitCommit")
+
 (superman-view-project-set-hot-keys)
+
+
+;; (setq superman-view-project-hot-keys
+;; (list "Shell" superman-goto-shell "!")
+;; (list "Index" superman-view-index "i")
+;; (list "File-list" superman-view-file-list "F")
+;; (list "Git-push" superman-git-push "P")
+;; (list "Unison" superman-unison "U")
+;; (list "Note" superman-new-note "N")
+;; (list "Document" superman-new-document "D")
+;; (list "Meeting" superman-new-meeting "M")
+;; (list "Task" superman-new-task "T")
+;; (list "ToggleView" superman-toggle-view "V")
+;; (list "Bookmark" superman-new-bookmark "B")
+;; (list "commit" superman-view-git-commit "c")
+;; (list "Commit" superman-view-git-commit-all "C")
+
+
 
 ;;}}}
 ;;{{{ sorting
