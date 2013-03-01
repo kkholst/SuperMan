@@ -649,7 +649,7 @@ Examples:
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
       (org-entry-put (point) "LastVisit"
-		     (format-time-string (cdr org-time-stamp-custom-formats))
+		     (format-time-string "<%Y-%m-%d %a %H:%M>")
 		     ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
 		     )
       (save-buffer))))
