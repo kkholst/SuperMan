@@ -1037,7 +1037,8 @@ is positive, otherwise turn it off."
 (defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
 
 (setq superman-view-project-hot-keys
-      '("i" "f" "F" "N" "P" "u" "U" "m" "M" "c" "C" "B" "v" "V" "D"))
+      '("r" "i" "F" "N" "D" "B" "M" "P" "U" "C"))
+;; '("i" "f" "F" "N" "P" "u" "U" "m" "M" "c" "C" "B" "v" "V" "D"))
 
 (defun superman-view-project-set-hot-keys ()
   (mapcar
@@ -1079,12 +1080,14 @@ is positive, otherwise turn it off."
 (defun superman-hot-N () (interactive) (superman-view-choose-hot-key "N"))
 (defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
 (defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
+(defun superman-hot-B () (interactive) (superman-view-choose-hot-key "B"))
 (defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
 (defun superman-hot-C () (interactive) (superman-view-choose-hot-key "C"))
 (defun superman-hot-v () (interactive) (superman-view-choose-hot-key "v"))
 (defun superman-hot-V () (interactive) (superman-view-choose-hot-key "V"))
 (defun superman-hot-U () (interactive) (superman-view-choose-hot-key "U"))
 (defun superman-hot-P () (interactive) (superman-view-choose-hot-key "P"))
+(defun superman-hot-r () (interactive) (superman-view-choose-hot-key "r"))
 
 (fset 'superman-project-hot-i 'superman-view-index)
 (setq superman-project-hot-i "index")
@@ -1096,8 +1099,12 @@ is positive, otherwise turn it off."
 (setq superman-project-hot-f "follow")
 (fset 'superman-project-hot-P 'superman-git-push)
 (setq superman-project-hot-P "GitPush")
-(fset 'superman-project-hot-U 'superman-unison)
-(setq superman-project-hot-U "Unison")
+;; (fset 'superman-project-hot-U 'superman-unison)
+;; (setq superman-project-hot-U "Unison")
+(fset 'superman-project-hot-U 'superman-update-all)
+(setq superman-project-hot-U "Update")
+(fset 'superman-project-hot-r 'org-agenda-redo)
+(setq superman-project-hot-r "redo")
 (fset 'superman-project-hot-N 'superman-new-note)
 (setq superman-project-hot-N "Note")
 (fset 'superman-project-hot-d 'superman-new-data)
