@@ -267,8 +267,8 @@ The function is only run on items marked in this way."
 	  (let ((hotkeys (superman-view-show-hot-keys
 			  superman-view-project-hot-keys cat)))
 	    (if (> (length hotkeys) 0)
-	    (insert "\n\n" hotkeys "\n\n")
-	    (insert "\n\n")))
+		(insert "\n\n" hotkeys "\n\n")
+	      (insert "\n\n")))
 	  ;; insert column names for section
 	  (let ((cols (apply 'superman-column-names
 			     (list (eval (caddr rest)) (eval balls)))))
@@ -281,12 +281,16 @@ The function is only run on items marked in this way."
 	  (end-of-line)
 	  (insert " [" (int-to-string (superman-count-items) ) "]")
 	  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2))
-      (if (and superman-views-delete-empty-cats
-	       (not (member cat superman-views-permanent-cats)))
-	  (kill-region (point-min) (point-max))
-	(end-of-line 2)
-	(kill-region (point) (point-max))))
-    (goto-char (point-max))))
+      (if (member cat superman-views-permanent-cats)
+	  (progn
+	    (end-of-line)
+	    (insert " [0]")
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2))
+	(if superman-views-delete-empty-cats
+	    (kill-region (point-min) (point-max))))
+      (end-of-line 2)
+      (kill-region (point) (point-max))
+  (goto-char (point-max)))))
   
 
 (defun superman-column-names (names defaults)
@@ -402,7 +406,6 @@ A ball can have one of the following alternative forms:
 	("Bookmarks" superman-finalize-bookmarks superman-bookmark-balls)
 	("Meetings" superman-finalize-meetings superman-meeting-balls)))
 
-
 (setq superman-document-columns
       (list "Description" "GitStatus" "LastCommit" "FileName"))
 
@@ -414,33 +417,33 @@ A ball can have one of the following alternative forms:
 (setq superman-document-balls
       '((hdr nil (23))
 	("GitStatus" nil (10) superman-get-git-status-face)
-	("LastCommit" superman-trim-date (13) 'font-lock-function-name-face)
+	("LastCommit" superman-trim-date (13) font-lock-type-face)
 	;; ("FileName" superman-trim-bracketed-filename 23)
 	("FileName" (lambda (x len) x) nil)))
 (setq superman-meeting-balls
       '((hdr nil (23))
-	("Date" superman-trim-date nil)
+	("Date" superman-trim-date nil font-lock-type-face)
 	;; ("Status" 10 nil)
 	("Participants" nil (23))))
 (setq superman-note-balls
       '((todo nil (7))
-	("NoteDate" superman-trim-date (13))
+	("NoteDate" superman-trim-date (13) font-lock-type-face)
 	(hdr nil (49))))
 (setq superman-data-balls
-      '(("CaptureDate" superman-trim-date (13))
+      '(("CaptureDate" superman-trim-date (13) font-lock-type-face)
 	(hdr nil (23))
 	("DataFileName" (lambda (x len) x) nil)))
 (setq superman-task-balls
       '((todo nil (7))
-	("TaskDate" superman-trim-date (13))
+	("TaskDate" superman-trim-date (13) font-lock-type-face)
 	(hdr nil (49))))
 (setq superman-bookmark-balls
-      '(("BookmarkDate" superman-trim-date (13))
+      '(("BookmarkDate" superman-trim-date (13) font-lock-type-face)
 	(hdr superman-trim-string nil)
 	("Link" superman-trim-link (48))))
 (setq superman-mail-balls
       '((todo nil (7))
-	("EmailDate" superman-trim-date (13))
+	("EmailDate" superman-trim-date (13) font-lock-type-face)
 	(hdr nil (23))
 	;; ("Attachment" superman-trim-link nil)
 	("Link" superman-trim-link (48))))
@@ -775,13 +778,13 @@ A ball can have one of the following alternative forms:
     ;; (beginning-of-line)
     ;; (looking-at "\\[\\([a-zA-Z]+\\)\\]")
     ;; (match-string-no-properties 1))))
-    (cond ((string= b "Mail")
+    (cond ((string-match "Mail" b)
 	   (save-excursion
 	     (beginning-of-line)
 	     (if (re-search-forward org-bracket-link-regexp nil t)
 		 (org-open-at-point))))
 	  ;; (message "Open mail"))
-	  ((string= b "Bookmarks")
+	  ((string-match "Bookmarks" b)
 	   (save-excursion
 	     (beginning-of-line)
 	     (if (re-search-forward org-bracket-link-regexp nil t)
@@ -1145,9 +1148,29 @@ is positive, otherwise turn it off."
 ;;}}}
 ;;{{{ sorting
 
+(defun superman-sort-section (&optional field)
+  (interactive "N")
+  (let ((buffer-read-only nil)
+	beg end)
+    (save-excursion
+      (org-back-to-heading)
+      (goto-char (next-single-property-change (point-at-eol) 'org-marker))
+      (setq beg (point))
+      (while (not (looking-at "^[ \t]*\n"))
+	(forward-line 1))
+      (setq end (point))
+      (if field
+	  (sort-fields-1 field beg end
+			 (function (lambda ()
+				     (sort-skip-fields field)
+				     nil))
+			 (function (lambda () (skip-chars-forward "^ \t\n"))))
+	(sort-lines nil beg end)))))
+      
+
 (defun superman-sort-by-status (a b)
-  (let ((A  (substring a 0 4))
-	(B  (substring b 0 4)))
+  (let ((A  (substring-no-properties a 0 12))
+	(B  (substring-no-properties b 0 12)))
     (if (string= A B) nil 
       (if (string-lessp A B)
 	  1 -1))))
