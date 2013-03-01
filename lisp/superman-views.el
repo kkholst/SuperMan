@@ -193,6 +193,9 @@ If DONT-MOVE is non-nil stay at item."
       ;; (org-agenda-bulk-mark-all))))
       (superman-loop 'superman-toggle-mark (list 'on nil)))))
 
+(defun superman-marked-p ()
+  (org-agenda-bulk-marked-p))
+
 ;;}}}
 ;;{{{ Loops
 
@@ -213,7 +216,8 @@ The function is only run on items marked in this way."
 	  (goto-char (next-single-property-change
 		      (point-at-eol) 'org-marker))
 	  (when (or (not marked)
-		    (eq (get-text-property (point) (car marked)) (cadr marked)))
+		    (superman-marked-p))
+		    ;; (eq (get-text-property (point) (car marked)) (cadr marked)))
 	    (setq loop-out
 		  (append (list (apply fun args)) loop-out))))
 	loop-out))))
@@ -295,28 +299,28 @@ The function is only run on items marked in this way."
 
 (defun superman-column-names (names defaults)
   (let ((cnames "")
+	col
 	(ncols (length defaults))
+	cw
 	cwidth
 	(c 0))
     (while (< c ncols)
-      (let (ball-name)
-	(setq cnames
-	      (concat
-	       cnames
-	       "  "
-	       (superman-trim-string
-		;; special or user defined column name
-		;; given by superman-finalize-cat-alist entry
-		(cond ((nth c names))
-		      ((stringp (setq ball-name (nth 0 (nth c defaults))))
-		       ball-name)
-		      ((eq 'hdr ball-name) "Heading")
-		      ((eq 'todo ball-name) "Status")
-		      (t (symbol-name ball-name)))
-		;; width of this column (+ 2 is for "  "
-		(setq cw (+ 2 (or (car (nth 2 (nth c defaults))) 23)))))))
-      (setq cwidth (append cwidth (list cw)))
-      (setq c (+ 1 c)))
+      (let (ball-name
+	    (col (superman-trim-string
+		  ;; special or user defined column name
+		  ;; given by superman-finalize-cat-alist entry
+		  (cond ((nth c names))
+			((stringp (setq ball-name (nth 0 (nth c defaults))))
+			 ball-name)
+			((eq 'hdr ball-name) "Heading")
+			((eq 'todo ball-name) "Status")
+			(t (symbol-name ball-name)))
+		  ;; width of this column (+ 2 is for "  "
+		  (or (car (nth 2 (nth c defaults))) 23)))
+	    (cw (length col)))
+	(setq cnames (concat cnames "  " col))
+	(setq cwidth (append cwidth (list cw)))
+	(setq c (+ 1 c))))
     (list cnames cwidth)))
 
 (defun superman-finalize-documents (&rest balls)
@@ -485,7 +489,7 @@ A ball can have one of the following alternative forms:
 			     (nth 2 hdr-comp))
 			    ((eq (car b) 'hdr) 
 			     (setq type "hdr")
-			     (setq face-or-fun 'org-level-3)
+			     (setq face-or-fun 'font-lock-keyword-face)
 			     (nth 4 hdr-comp))))
 		 (fun (or (nth 1 b) 'superman-trim-string))
 		 (args (if (nth 2 b) (nth 2 b) '(23)))
@@ -679,12 +683,13 @@ A ball can have one of the following alternative forms:
 (defun superman-new-note ()
   (interactive)
   (superman-capture-note (superman-view-current-project))
-  (superman-view-documents))
+  (superman-view-project))
 
 
 (defun superman-new-bookmark ()
   (interactive)
-  (superman-capture-bookmark (superman-view-current-project)))
+  (superman-capture-bookmark (superman-view-current-project))
+  (superman-view-project))
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -876,7 +881,7 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-git-add-all (&optional dont-redo)
   (interactive)
-  (superman-loop 'superman-view-git-add (list 'dont) nil nil `(face ,superman-mark-face))
+  (superman-loop 'superman-view-git-add (list 'dont) nil nil 'marked)
   (unless dont-redo (org-agenda-redo)))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
@@ -1071,6 +1076,7 @@ is positive, otherwise turn it off."
 (defun superman-hot-F () (interactive) (superman-view-choose-hot-key "F"))
 (defun superman-hot-m () (interactive) (superman-view-choose-hot-key "m"))
 (defun superman-hot-M () (interactive) (superman-view-choose-hot-key "M"))
+(defun superman-hot-N () (interactive) (superman-view-choose-hot-key "N"))
 (defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
 (defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
 (defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
@@ -1149,7 +1155,7 @@ is positive, otherwise turn it off."
 ;;{{{ sorting
 
 (defun superman-sort-section (&optional field)
-  (interactive "N")
+  (interactive)
   (let ((buffer-read-only nil)
 	beg end)
     (save-excursion

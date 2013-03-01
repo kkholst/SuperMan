@@ -89,7 +89,8 @@
 	(goto-char start)
 	(superman-loop 'superman-format-item superman-balls)
 	;; Title, columns and highlight
-	(goto-char start)
+	(goto-char (point-min))
+	(end-of-line)
 	(if (next-single-property-change
 	     (point-at-eol) 'org-marker)
 	    (let ((cols
@@ -115,6 +116,9 @@
       (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
       (end-of-line)
       (insert "N: new project RET: select project\n")
+      ;;
+      (insert "\n** Projects:\n")
+      (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
       ;; facings
       (save-excursion
 	(goto-char (point-min))
@@ -123,10 +127,6 @@
 	   (match-beginning 0) (match-end 0)
 	   '(face org-link)))))
     (superman-on)))
-;; (header (superman-make-item
-;; "Status"
-;; (mapcar '(lambda (cat) (cons cat cat)) props)
-;; "Project" 23))
 
 
 (defun superman-count-projects-in-bloke (beg end)
