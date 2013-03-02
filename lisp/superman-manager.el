@@ -42,7 +42,8 @@
 (require 'superman-capture)  ;; capture information
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
-(require 'superman-deft)     ;; selecting projects via deft
+(if (featurep 'deft)
+    (require 'superman-deft))     ;; selecting projects via deft
 
 ;;{{{ variables and user options
 
@@ -91,7 +92,7 @@ category: Name of the category property
 ;;(defvar superman-home (concat (file-name-as-directory org-directory) "projects.org") ;
 ;;  "File for managing projects. See the manual
 ;;    for structure and syntax.")
-(defvar superman-home (concat (file-name-directory (locate-library "superman")) "../help/" "help-superman.org")
+(defvar superman-home (concat (file-name-directory (locate-library "superman")) "../manager/" "Projects.org")
   "File for managing projects. See the manual
     for structure and syntax.")
 (defvar superman-default-content "" "Initial contents of org project index file.")
@@ -649,7 +650,7 @@ Examples:
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
       (org-entry-put (point) "LastVisit"
-		     (format-time-string (cdr org-time-stamp-custom-formats))
+		     (format-time-string "<%Y-%m-%d %a %H:%M>")
 		     ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
 		     )
       (save-buffer))))

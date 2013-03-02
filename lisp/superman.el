@@ -68,42 +68,57 @@
 	      superman-project-alist)))
     (superman-switch-to-project 'force pro)))
 
+(defun superman-get-todo-face (str)
+  (cond ((string-match "TODO" str ) 'org-todo)
+	(t 'org-done)))
+
 (defun superman-finalize-superman ()
   (save-excursion
     (let* ((superman-balls
-	    '((todo nil 9)
-	      ;; ("NickName" nil 27)
-	      (hdr nil 19)
+	    '((todo nil (9) superman-get-todo-face nil (27))
+	      (hdr nil (19))
 	      ("LastVisit" superman-trim-date nil)
-	      ("Others" superman-trim-string 30)
+	      ("Others" superman-trim-string (30))
 	      ;; ("Location" superman-trim-filename 23)
 	      ))
 	   (start (progn (goto-char (point-min))
 			 (next-single-property-change
 			  (point-at-eol) 'org-marker)))
 	   (buffer-read-only nil))
-      ;; (put-text-property 0 (length header) 'face 'org-agenda-structure header)
       (when start 
 	(goto-char start)
-	;; (re-search-forward "^Projects:" nil t)
-	;; (forward-line 1)
-	;; (insert "\n" header)
 	(superman-loop 'superman-format-item superman-balls)
-	;; column names
-	(goto-char start)
+	;; Title, columns and highlight
+	(goto-char (point-min))
+	(end-of-line)
 	(if (next-single-property-change
 	     (point-at-eol) 'org-marker)
-	    (progn
-	      ;; (beginning-of-line)
-	      (insert "\n")
-	      (insert (apply
-		       'superman-column-names
-		       (list (list "Status" "Title" "LastVisit" "Others" "Location")
-			     superman-balls)))
-	      (insert "\n")
-	      (beginning-of-line 0)
-	      (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
-	      )))
+	    (let ((cols
+		   (apply
+		    'superman-column-names
+		    (list (list "Status" "Title" "LastVisit" "Others" "Location")
+			  superman-balls))))
+	      (progn
+		;; (beginning-of-line)
+		(insert "\n")
+		(insert (car cols))
+		(insert "\n")
+		(beginning-of-line 0)
+		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)
+		(goto-char (point-min))
+		(put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols))
+		(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)))))
+      ;; keys
+      (end-of-line)
+      ;; (point)
+      (insert "\n\nKeys: ")
+      ;; (point)
+      (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
+      (end-of-line)
+      (insert "N: new project RET: select project\n")
+      ;;
+      (insert "\n** Projects:\n")
+      (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
       ;; facings
       (save-excursion
 	(goto-char (point-min))
@@ -112,10 +127,6 @@
 	   (match-beginning 0) (match-end 0)
 	   '(face org-link)))))
     (superman-on)))
-;; (header (superman-make-item
-;; "Status"
-;; (mapcar '(lambda (cat) (cons cat cat)) props)
-;; "Project" 23))
 
 
 (defun superman-count-projects-in-bloke (beg end)
@@ -164,8 +175,7 @@
 		      ((org-agenda-files (quote (,superman-home)))
 		       (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
 		       (org-agenda-overriding-header
-			(concat "?: help, n: new project, s[S]: set property[all]"
-				"\n\nProjects: " "\n"))
+			(concat "SuperMan(ager)"))
 		       (org-agenda-window-setup 'current-window)
 		       (org-agenda-view-columns-initially nil)
 		       (org-agenda-buffer-name "*S*"))))
