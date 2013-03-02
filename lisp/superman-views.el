@@ -301,26 +301,26 @@ The function is only run on items marked in this way."
   (let ((cnames "")
 	col
 	(ncols (length defaults))
-	cw
+	(cw 0)
 	cwidth
+	ball-name
 	(c 0))
     (while (< c ncols)
-      (let (ball-name
-	    (col (superman-trim-string
-		  ;; special or user defined column name
-		  ;; given by superman-finalize-cat-alist entry
-		  (cond ((nth c names))
-			((stringp (setq ball-name (nth 0 (nth c defaults))))
-			 ball-name)
-			((eq 'hdr ball-name) "Heading")
-			((eq 'todo ball-name) "Status")
-			(t (symbol-name ball-name)))
-		  ;; width of this column (+ 2 is for "  "
-		  (or (car (nth 2 (nth c defaults))) 23)))
-	    (cw (length col)))
-	(setq cnames (concat cnames "  " col))
-	(setq cwidth (append cwidth (list cw)))
-	(setq c (+ 1 c))))
+      (setq col (superman-trim-string
+		 ;; special or user defined column name
+		 ;; given by superman-finalize-cat-alist entry
+		 (cond ((nth c names))
+		       ((stringp (setq ball-name (nth 0 (nth c defaults))))
+			ball-name)
+		       ((eq 'hdr ball-name) "Heading")
+		       ((eq 'todo ball-name) "Status")
+		       (t (symbol-name ball-name)))
+		 (or (car (nth 2 (nth c defaults))) 23)))
+      ;; width of this column (+ 2 is for "  "
+      (setq cw (+ 2 cw (length col)))
+      (setq cnames (concat cnames "  " col))
+      (setq cwidth (append cwidth (list cw)))
+      (setq c (+ 1 c)))
     (list cnames cwidth)))
 
 (defun superman-finalize-documents (&rest balls)
@@ -1037,7 +1037,7 @@ is positive, otherwise turn it off."
 (defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
 
 (setq superman-view-project-hot-keys
-      '("r" "i" "F" "N" "D" "B" "M" "P" "U" "C"))
+      '("r" "s" "i" "F" "N" "D" "T" "B" "M" "P" "U" "c" "C"))
 ;; '("i" "f" "F" "N" "P" "u" "U" "m" "M" "c" "C" "B" "v" "V" "D"))
 
 (defun superman-view-project-set-hot-keys ()
@@ -1081,6 +1081,8 @@ is positive, otherwise turn it off."
 (defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
 (defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
 (defun superman-hot-B () (interactive) (superman-view-choose-hot-key "B"))
+(defun superman-hot-T () (interactive) (superman-view-choose-hot-key "T"))
+(defun superman-hot-s () (interactive) (superman-view-choose-hot-key "s"))
 (defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
 (defun superman-hot-C () (interactive) (superman-view-choose-hot-key "C"))
 (defun superman-hot-v () (interactive) (superman-view-choose-hot-key "v"))
@@ -1115,6 +1117,8 @@ is positive, otherwise turn it off."
 (setq superman-project-hot-M "Meeting")
 (fset 'superman-project-hot-T 'superman-new-task)
 (setq superman-project-hot-T "Task")
+(fset 'superman-project-hot-s 'superman-sort-section)
+(setq superman-project-hot-s "sort")
 (fset 'superman-project-hot-B 'superman-new-bookmark)
 (setq superman-project-hot-B "Bookmark")
 (fset 'superman-project-hot-V 'superman-toggle-view)
@@ -1125,6 +1129,9 @@ is positive, otherwise turn it off."
 
 (fset 'superman-Documents-hot-c 'superman-view-git-commit)
 (setq superman-Documents-hot-c "CommitFile")
+
+(fset 'superman-project-hot-U 'superman-view-update-all)
+(setq superman-project-hot-U "UpdateGit")
 
 (fset 'superman-Documents-hot-U 'superman-view-update-all)
 (setq superman-Documents-hot-U "UpdateGit")
@@ -1162,23 +1169,33 @@ is positive, otherwise turn it off."
 ;;{{{ sorting
 
 (defun superman-sort-section (&optional field)
-  (interactive)
-  (let ((buffer-read-only nil)
-	beg end)
+  (interactive "P")
+  (let* ((buffer-read-only nil)
+	 ;; (col (if field (if (numberp field) field nil)))
+	 (cc (current-column))
+	 (col 1)
+	 cols
+	 beg end)
     (save-excursion
-      (org-back-to-heading)
-      (goto-char (next-single-property-change (point-at-eol) 'org-marker))
-      (setq beg (point))
-      (while (not (looking-at "^[ \t]*\n"))
-	(forward-line 1))
-      (setq end (point))
-      (if field
-	  (sort-fields-1 field beg end
-			 (function (lambda ()
-				     (sort-skip-fields field)
-				     nil))
-			 (function (lambda () (skip-chars-forward "^ \t\n"))))
-	(sort-lines nil beg end)))))
+      (when (superman-current-heading)
+	(org-back-to-heading)
+	(setq cols (get-text-property (point) 'columns))
+	(while (> cc (car cols))
+	  (setq col (+ col 1))
+	  (setq cols (cdr cols)))
+	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
+	(setq beg (point))
+	(while (not (looking-at "^[ \t]*\n"))
+	  (forward-line 1))
+	(setq end (point))
+	(if col
+	    (sort-fields-1 col beg end
+			   (function (lambda ()
+				       (sort-skip-fields col)
+				       nil))
+			   (function (lambda () (skip-chars-forward "^ \t\n"))))
+	  (sort-lines nil beg end))))
+    (if col (forward-char cc))))
       
 
 (defun superman-sort-by-status (a b)
