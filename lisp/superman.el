@@ -69,8 +69,12 @@
     (superman-switch-to-project 'force pro)))
 
 (defun superman-get-todo-face (kwd)
-  (if (member kwd org-done-keywords-for-agenda) 'org-done
-  'org-todo))
+  (or (org-face-from-face-or-color
+       'todo 'org-todo (cdr (assoc kwd org-todo-keyword-faces)))
+      (and (member kwd org-done-keywords) 'org-done)
+      'org-todo))
+;; (if (member kwd org-done-keywords-for-agenda) 'org-done
+;; 'org-todo))
 
 (defun superman-finalize-superman ()
   (save-excursion
