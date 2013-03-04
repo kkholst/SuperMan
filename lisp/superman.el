@@ -68,9 +68,9 @@
 	      superman-project-alist)))
     (superman-switch-to-project 'force pro)))
 
-(defun superman-get-todo-face (str)
-  (cond ((string-match "TODO" str ) 'org-todo)
-	(t 'org-done)))
+(defun superman-get-todo-face (kwd)
+  (if (member kwd org-done-keywords-for-agenda) 'org-done
+  'org-todo))
 
 (defun superman-finalize-superman ()
   (save-excursion
@@ -90,6 +90,14 @@
 	(superman-loop 'superman-format-item superman-balls)
 	;; Title, columns and highlight
 	(goto-char (point-min))
+	;; keys
+	(end-of-line)
+	(insert "\n\nKeys: ")
+	(put-text-property (point) (length "Keys: ") 'face 'org-level-2)
+	(end-of-line)
+	(insert "N: new project RET: select project\n")
+	(insert "\n** Projects:\n")
+	(put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
 	(end-of-line)
 	(if (next-single-property-change
 	     (point-at-eol) 'org-marker)
@@ -102,23 +110,15 @@
 		;; (beginning-of-line)
 		(insert "\n")
 		(insert (car cols))
-		(insert "\n")
-		(beginning-of-line 0)
 		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)
-		(goto-char (point-min))
-		(put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols))
-		(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)))))
-      ;; keys
-      (end-of-line)
-      ;; (point)
-      (insert "\n\nKeys: ")
-      ;; (point)
-      (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
-      (end-of-line)
-      (insert "N: new project RET: select project\n")
-      ;;
-      (insert "\n** Projects:\n")
-      (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
+		(org-back-to-heading)
+		(put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols)))
+	      ;; (insert "\n")
+	      (beginning-of-line 0)
+	      (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)
+	      (goto-char (point-min))
+	      (put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols))
+	      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1))))
       ;; facings
       (save-excursion
 	(goto-char (point-min))

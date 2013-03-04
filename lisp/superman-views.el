@@ -497,7 +497,8 @@ A ball can have one of the following alternative forms:
 		 (f (cond ((facep face-or-fun)
 			   face-or-fun)
 			  ((functionp face-or-fun)
-			   (funcall face-or-fun it))
+			   (funcall face-or-fun
+				    (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" "" it)))
 			  (t nil))))
 	    (setq cols (append cols (list (length it))))
 	    (setq faces (append faces (list f)))
@@ -1053,8 +1054,7 @@ is positive, otherwise turn it off."
   "Safely call `outline-back-to-heading' and return heading. If error return nil."
   (condition-case nil
       (save-excursion
-	(outline-back-to-heading t)
-	(car (split-string (nth 4 (org-heading-components)) "[ ]+")))
+	(car (split-string (org-get-heading) "[ ]+")))
     (error nil)))
 
 (defun superman-view-choose-hot-key (key)
@@ -1175,7 +1175,8 @@ is positive, otherwise turn it off."
 	 (cc (current-column))
 	 (col 1)
 	 cols
-	 beg end)
+	 next
+	 beg end sec-end)
     (save-excursion
       (when (superman-current-heading)
 	(org-back-to-heading)
@@ -1185,9 +1186,18 @@ is positive, otherwise turn it off."
 	  (setq cols (cdr cols)))
 	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
 	(setq beg (point))
-	(while (not (looking-at "^[ \t]*\n"))
-	  (forward-line 1))
-	(setq end (point))
+	(if (outline-next-heading)
+	    (setq sec-end (point))
+	  (setq sec-end (point-max)))
+	(goto-char beg)
+	(while (not end)
+	  (setq next
+		(condition-case nil
+		    (next-single-property-change (point-at-eol) 'org-marker)
+		    (error nil)))
+	  (if (or (not next) (> next sec-end))
+	      (setq end (point))
+	    (goto-char next)))
 	(if col
 	    (sort-fields-1 col beg end
 			   (function (lambda ()
