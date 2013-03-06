@@ -330,7 +330,9 @@ the `superman-home'.")
 	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
 	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
 		       (nth 4 (org-heading-components))))
-	     (git (superman-get-property nil (superman-property 'git) 'inherit))
+	     (marker (org-agenda-new-marker (match-beginning 0)))
+	     (hdr  (org-get-heading t t))
+	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
 	     (config (superman-get-property nil (superman-property 'config) 'inherit))
 	     (todo (substring-no-properties (or (org-get-todo-state) "")))
 	     (index (or (superman-get-property nil (superman-property 'index) nil)
@@ -340,6 +342,10 @@ the `superman-home'.")
 					superman-org-location)))
 			  ;; (make-directory default-org-home t)
 			  (concat (file-name-as-directory default-org-home) name ".org")))))
+	(set-text-properties 0 (length hdr) nil hdr)
+	;; (add-text-properties
+	 ;; 0 (length hdr)
+	 ;; (list 'org-marker marker 'org-hd-marker marker) hdr)
 	(unless (file-name-absolute-p index)
 	  (setq index
 		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
@@ -349,7 +355,9 @@ the `superman-home'.")
 				 (cons "index" index)
 				 (cons "category" category)
 				 (cons "others" others)
-				 (cons "git" git)
+				 (cons "hdr" hdr)
+				 (cons "marker" marker)				 
+				 (cons "lastvisit" lastvisit)
 				 (cons "config" config)
 				 (cons "state" todo)
 				 (cons "publish-directory" publish-dir))))))
@@ -387,7 +395,7 @@ returned without text-properties."
   "Parses the categories and projects in file `superman-home' and also
              updates the currently selected project."
   (interactive)
-  (superman-parse-project-categories)
+  ;; (superman-parse-project-categories)
   (superman-parse-projects)
   (when superman-current-project
     (setq superman-current-project
@@ -465,18 +473,6 @@ To undo all this you can try to call 'superman-delete-project'. "
       (org-capture nil "p")
       (message "Press Control-c Control-c when done editing."))))
 
-;; (defun superman-show-properties ()
-  ;; (let ((pop-up-windows t)
-	;; (obuf (current-buffer))
-	;; (pbuf (get-buffer "*Org project manager properties*")))
-    ;; (set-buffer pbuf)
-    ;; (erase-buffer)
-    ;; (insert "Current project categories:\n\n")
-    ;; (mapcar '(lambda (x) (if (car x) (insert (car x) ", "))) superman-project-categories)
-    ;; (delete-backward-char 2)
-    ;; (insert "\n\n")
-    ;; (pop-to-buffer pbuf)
-    ;; (pop-to-buffer obuf)))
 
 (defun superman-complete-property ()
   (interactive)
@@ -803,6 +799,9 @@ If NOSELECT is set return the project."
 
 (defun superman-get-others (project)
   (cdr (assoc "others" (cadr project))))
+
+(defun superman-get-lastvisit (project)
+  (cdr (assoc "lastvisit" (cadr project))))
 
 (defun superman-get-state (project)
   (cdr (assoc "state" (cadr project))))

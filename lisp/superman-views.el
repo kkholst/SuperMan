@@ -1163,8 +1163,6 @@ is positive, otherwise turn it off."
 ;; (list "commit" superman-view-git-commit "c")
 ;; (list "Commit" superman-view-git-commit-all "C")
 
-
-
 ;;}}}
 ;;{{{ sorting
 
