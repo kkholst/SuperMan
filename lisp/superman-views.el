@@ -1192,9 +1192,10 @@ is positive, otherwise turn it off."
 	  (setq next
 		(condition-case nil
 		    (next-single-property-change (point-at-eol) 'org-marker)
-		    (error nil)))
+		  (error nil)))
 	  (if (or (not next) (> next sec-end))
-	      (setq end (point))
+	      (progn (end-of-line)
+		     (setq end (point)))
 	    (goto-char next)))
 	(if col
 	    (sort-fields-1 col beg end
