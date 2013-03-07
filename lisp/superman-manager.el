@@ -35,6 +35,7 @@
 (require 'ido)
 (require 'org-colview)
 (require 'org-publish)
+(require 'vc)
 
 ;; Loading extensions
 (require 'superman) ;; a project to manage projects
