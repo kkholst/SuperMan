@@ -60,7 +60,7 @@
     (org-entry-put pom prop val))
   (org-agenda-redo))
 
-(defun org-superman-return ()
+(defun superman-return ()
   (interactive)
   (let ((pro (assoc
 	      (superman-property-at-point
@@ -123,7 +123,8 @@
 	  (add-text-properties
 	   (match-beginning 0) (match-end 0)
 	   '(face org-link)))))
-    (superman-on)))
+    (superman-on)
+    (superman-view-mode-on)))
 
 
 
@@ -302,7 +303,8 @@
 	(goto-char (point-max))
 	(setq cat-alist (cdr cat-alist)))))
     (goto-char (point-min))
-    (superman-mode)
+    (superman-on)
+    (superman-view-mode-on)
     (setq buffer-read-only t))
   ;; (superman-format-project)
 	 
@@ -394,7 +396,8 @@
       (setq superman-views rest)
       (add-to-list 'superman-views current 'append)))
   (eval `(,(car superman-views)))
-  (superman-on))
+  (superman-on)
+  (superman-view-mode-on))
   
 (defalias 'S 'superman)
 
@@ -516,7 +519,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(find-file home)))
     (when pom (goto-char pom))))
 		 
-(define-key superman-mode-map [return] 'org-superman-return) ;; Return is not used anyway in column mode
+(define-key superman-mode-map [return] 'superman-return) ;; Return is not used anyway in column mode
 (define-key superman-mode-map "N" 'superman-new-project)
 ;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
 ;; (define-key superman-mode-map " " 'superman-switch-to-project)
