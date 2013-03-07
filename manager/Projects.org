@@ -1,20 +1,13 @@
 * Work
 * Privat
 * Krypton
-**** ACTIVE test
-:PROPERTIES:
-:NickName: test
-:Location: ~/tmp/
-:Category: Krypton
-:InitialVisit: <03/01/13 Fri 14:01> 
-:END:
 **** ACTIVE Kal-El
 :PROPERTIES:
 :NickName: Kal-El
-:Location: ~/emacs-genome/snps/ProjectManager/help/
+:Location: ~/emacs-genome/genes/SuperMan/projects/
 :Category: Krypton
-:Index:~/emacs-genome/snps/ProjectManager/help/Kal-El/Kal-El.org
 :InitialVisit: <2013-01-11 Fri 18:41> 
+:Index: ~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org
 :Others: Jor-El
-:LastVisit: <2013-03-01 Fri 14:01>
+:LastVisit: <2013-03-07 Thu 11:38>
 :END:
