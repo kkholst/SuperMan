@@ -647,6 +647,14 @@ The function is only run on items marked in this way."
     (find-file file)
   (vc-diff file "HEAD")))
 
+
+(defun superman-view-git-version-diff ()
+  (interactive)
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (file (org-link-display-format (superman-get-property m "filename"))))
+    (find-file file)
+    (vc-version-diff file "master" nil)))
+
 (defun superman-view-git-ediff ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -911,7 +919,7 @@ If dont-redo the agenda is not reversed."
 (setq superman-view-hot-keys
 '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"
      "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z"
-     "!" "?" "*"))
+     "!" "?" "*" "="))
 (defun superman-view-set-hot-keys ()
   "Define hot keys for superman-view"
   (mapcar
@@ -990,6 +998,8 @@ If dont-redo the agenda is not reversed."
 (defun superman-hot-Y () (interactive) (superman-view-choose-hot-key "Y"))
 (defun superman-hot-Z () (interactive) (superman-view-choose-hot-key "Z"))
 (defun superman-hot-! () (interactive) (superman-view-choose-hot-key "!"))
+(defun superman-hot-? () (interactive) (superman-view-choose-hot-key "?"))
+(defun superman-hot-= () (interactive) (superman-view-choose-hot-key "="))
 (defun superman-hot-* () (interactive) (superman-view-choose-hot-key "*"))
 
 (setq superman-global-hot-keys
@@ -1047,30 +1057,32 @@ If dont-redo the agenda is not reversed."
 	("Z" nil)
 	("!" superman-goto-shell)
 	("?" superman-view-help)
+	("=" nil)
 	("*" nil)))
 
 (setq superman-documents-hot-keys
-      '(( "c" 'superman-view-git-commit "commit")
-	( "C" 'superman-view-git-commit-all "Commit")
-	( "d" 'superman-view-git-diff "diff")
-	( "h" 'superman-view-git-history "history")
-	( "l" 'superman-view-git-log "log")
-	( "L" 'superman-view-git-log-decorationonly)
-	;; ( "v" 'superman-view-git-annotate "annotate")
-	("M" 'superman-view-mark-all "Mark")
-	( "N" 'superman-view-new-document "New")))
+      '(( "c" superman-view-git-commit "commit")
+	( "C" superman-view-git-commit-all "Commit")
+	( "d" superman-view-git-diff "diff")
+	( "h" superman-view-git-history "history")
+	( "l" superman-view-git-log "log")
+	( "L" superman-view-git-log-decorationonly)
+	;; ( "v" superman-view-git-annotate "annotate")
+	("M" superman-view-mark-all "Mark")
+	( "N" superman-view-new-document "New")
+	("=" superman-view-git-version-diff)))
 
 (setq superman-meetings-hot-keys
-      '(("M" 'superman-view-mark-all)
-	( "N" 'superman-new-meeting)))
+      '(("M" superman-view-mark-all)
+	( "N" superman-new-meeting)))
 
 (setq superman-notes-hot-keys
-      '(("M" 'superman-view-mark-all)
-	( "N" 'superman-new-note)))
+      '(("M" superman-view-mark-all)
+	( "N" superman-new-note)))
 
 (setq superman-bookmarks-hot-keys
-      '(("M" 'superman-view-mark-all)
-	( "N" 'superman-new-bookmark)))
+      '(("M" superman-view-mark-all)
+	( "N" superman-new-bookmark)))
 
 
 (defun superman-view-new-thing ()
