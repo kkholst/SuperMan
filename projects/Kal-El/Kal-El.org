@@ -1,0 +1,76 @@
+* Configuration
+unison-gtk:~/emacs-genome/snps/ProjectManager/help/Kal-El/ ~/Dropbox/ProjectManager/help/Kal-El/
+*** unison
+:PROPERTIES:
+:UNISON:unison-gtk
+:ROOT-1:~/emacs-genome/snps/ProjectManager/help/Kal-El/ 
+:ROOT-2:~/emacs-genome/genes/SuperMan/projects/Kal-El/
+:SWITCHES:default
+:END:
+* Mailbox
+* Bookmarks
+** Links
+   :PROPERTIES:
+   :CATEGORY: url
+   :END:
+*** http://en.wikipedia.org/wiki/Superboy_%28Kal-El%29
+   :PROPERTIES:
+   :Bookmark: t
+   :CATEGORY: url
+   :END:
+*** [[file:~/emacs-genome/snps/ProjectManager/lisp/superman-capture.el::(function%20superman-goto-project-bookmarks)%20"\n%20-%20%25a%25?")%20'append)][file:~/emacs-genome/snps/ProjectManager/lisp/superman-capture.el::(function superman-goto-project-bookmarks) "\n - %a%?") 'append)]]
+   :PROPERTIES:
+   :Bookmark: t
+   :CATEGORY: url
+   :END:
+* Notes
+*** Alias name: Man in Steel
+:PROPERTIES:
+:NoteDate: <2013-01-16 Wed>
+:END:
+* Calendar
+* Tasks
+** Save Smallville
+   :PROPERTIES:
+   :CATEGORY: Home
+   :END:
+   
+*** DONE Help Mrs Kent milking the cows
+    CLOSED: [2013-01-15 Tue 16:42]
+:PROPERTIES:
+:CaptureDate: <1958-01-13 Mon>
+:END:
+
+*** TODO Help Mr Kent mow the lawn 
+:PROPERTIES:
+:CaptureDate: <1957-02-16 Sat>
+:END:
+*** TODO Learn org-mode 
+:PROPERTIES:
+:TaskDate: <2013-03-07 Thu>
+:END:
+* Documents
+** Getting started
+   :PROPERTIES:
+   :CATEGORY: start-me-up
+   :END:
+*** smash
+:PROPERTIES:
+:FileName: [[~/emacs-genome/snps/ProjectManager/help/Kal-El/smash.org]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-11 Fri 16:41>
+:GitInit:  <2013-01-11 Fri 20:48> first smash
+:LastCommit: <2013-01-11 Fri 20:48> first smash
+:END:
+
+
+
+
+*** sample-beamer
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/sample-beamer.org]]
+:GitStatus: Committed
+:CaptureDate: <2013-03-07 Thu 12:05>
+:GitInit:  <2013-03-07 Thu 12:05> first commit
+:LastCommit: <2013-03-07 Thu 12:09> set emacs-lisp block to eval never
+:END:
