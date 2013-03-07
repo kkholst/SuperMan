@@ -889,7 +889,7 @@ If dont-redo the agenda is not reversed."
 	  (setq hot-key-string (concat hot-key-string this-key-string))
 	  (setq len (+ len (length this-key-string)))
 	  (when (> len fill-column)
-	    (setq hot-key-string (concat hot-key-string "\n")
+	    (setq hot-key-string (concat hot-key-string "\n       ")
 		  len 0)))
 	  (setq key-alist (cdr key-alist))))
     (unless cat
@@ -1013,7 +1013,7 @@ If dont-redo the agenda is not reversed."
 	("j" nil)
 	("k" nil)
 	("l" nil)
-	("m" superman-view-toggle-mark "mark")
+	("m" superman-toggle-mark "mark")
 	("n" superman-next-entry "next")
 	("o" nil)
 	("p" superman-previous-entry "previous")
@@ -1077,16 +1077,19 @@ If dont-redo the agenda is not reversed."
 	( "N" superman-new-meeting)))
 
 (setq superman-notes-hot-keys
-      '(("M" superman-view-mark-all)
-	( "N" superman-new-note)))
+      '(("M" superman-view-mark-all "Mark all")
+	( "N" superman-new-note "New note")))
 
 (setq superman-bookmarks-hot-keys
       '(("M" superman-view-mark-all)
-	( "N" superman-new-bookmark)))
+	( "N" superman-new-bookmark "New bookmark")))
 
 (setq superman-tasks-hot-keys
       '(("M" superman-view-mark-all)
-	( "N" superman-new-task)))
+	( "N" superman-new-task "New Task")))
+
+(setq superman-mail-hot-keys
+      '(("M" superman-view-mark-all)))
 
 
 
