@@ -346,8 +346,7 @@ The function is only run on items marked in this way."
 	(progn
 	  (end-of-line)
 	  ;; insert hot keys for section
-	  (let ((hotkeys (superman-view-show-hot-keys
-			  superman-view-hot-keys cat)))
+	  (let ((hotkeys (superman-view-show-hot-keys cat)))
 	    (if (> (length hotkeys) 0)
 		(insert "\n\n" hotkeys "\n\n")
 	      (insert "\n\n")))
@@ -552,8 +551,7 @@ The function is only run on items marked in this way."
 		      (superman-view-others pro)
 		      (superman-view-control pro)
 		      "\n"
-		      (superman-view-show-hot-keys
-			    superman-view-hot-keys))))
+		      (superman-view-show-hot-keys))))
     hdr))
 
 
@@ -876,24 +874,24 @@ If dont-redo the agenda is not reversed."
   (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
-(defun superman-view-show-hot-keys (keys &optional cat)
+(defun superman-view-show-hot-keys (&optional cat)
   "Show keybindings in project view header or in section CAT."
   (let ((hot-key-string "")
-	(hot-keys keys))
-    (while hot-keys
-      (let* ((x (car hot-keys))
-	     (f (intern (concat "superman-" (or cat "project") "-hot-" x))))
-	(if (or (not cat) (fboundp f))
-	    (setq hot-key-string
-		  (concat hot-key-string
-			  (concat "" 
-				  x
-				  ": "
-				  (if (boundp f)
-				      (eval f)
-				    (symbol-name f))
-				  "  ")))))
-      (setq hot-keys (cdr hot-keys)))
+	(len 0)
+	this-key-string
+	(key-alist (eval (intern (concat "superman-" (if cat (downcase cat) "global") "-hot-keys")))))
+    (while key-alist
+      (let* ((x (car key-alist))
+	     ;; (f (nth 1 x))
+	     (s (nth 2 x)))
+	(when s
+	  (setq this-key-string (concat (car x) ": " s "  "))
+	  (setq hot-key-string (concat hot-key-string this-key-string))
+	  (setq len (+ len (length this-key-string)))
+	  (when (> len fill-column)
+	    (setq hot-key-string (concat hot-key-string "\n")
+		  len 0)))
+	  (setq key-alist (cdr key-alist))))
     (unless cat
       (setq hot-key-string (concat "Keys: " hot-key-string))
       (put-text-property 0 (length "Keys: ") 'face 'org-level-2 hot-key-string))
@@ -1072,6 +1070,8 @@ If dont-redo the agenda is not reversed."
 	( "N" superman-view-new-document "New")
 	("=" superman-view-git-version-diff)))
 
+(setq superman-data-hot-keys superman-documents-hot-keys)
+
 (setq superman-meetings-hot-keys
       '(("M" superman-view-mark-all)
 	( "N" superman-new-meeting)))
@@ -1083,6 +1083,13 @@ If dont-redo the agenda is not reversed."
 (setq superman-bookmarks-hot-keys
       '(("M" superman-view-mark-all)
 	( "N" superman-new-bookmark)))
+
+(setq superman-tasks-hot-keys
+      '(("M" superman-view-mark-all)
+	( "N" superman-new-task)))
+
+
+
 
 
 (defun superman-view-new-thing ()
