@@ -56,11 +56,11 @@ unison-gtk:~/emacs-genome/snps/ProjectManager/help/Kal-El/ ~/Dropbox/ProjectMana
    :END:
 *** smash
 :PROPERTIES:
-:FileName: [[~/emacs-genome/snps/ProjectManager/help/Kal-El/smash.org]]
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/smash.org]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-11 Fri 16:41>
 :GitInit:  <2013-01-11 Fri 20:48> first smash
-:LastCommit: <2013-01-11 Fri 20:48> first smash
+:LastCommit: <2013-03-07 Thu 12:10> first commit
 :END:
 
 
