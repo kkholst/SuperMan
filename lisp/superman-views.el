@@ -752,6 +752,8 @@ The function is only run on items marked in this way."
 	     (beginning-of-line)
 	     (if (re-search-forward org-bracket-link-regexp nil t)
 		 (org-open-at-point))))
+	  (superman-mode
+	   (superman-return))
 	  ;; (message "Follow-link"))
 	  (t (org-open-link-from-string
 	      (superman-get-property m "filename"))))))
@@ -933,8 +935,17 @@ If dont-redo the agenda is not reversed."
 (defun superman-view-choose-hot-key (key)
   "Find command bound to key in current section. If undefined use global key."
   (let* ((cat (superman-current-heading))
-	 (cmd (or (and cat (nth 1 (assoc key (eval (intern (concat "superman-" (downcase cat) "-hot-keys"))))))
-		  (nth 1 (assoc key superman-global-hot-keys)))))
+	 (alist (if cat
+		    (condition-case nil
+			(eval (intern (concat "superman-" (downcase cat) "-hot-keys")))
+		      (error nil))
+		  superman-global-hot-keys))
+	 cmd)
+    (unless alist
+      (setq alist superman-global-hot-keys))
+    (setq cmd (nth 1 (assoc key alist)))
+    (unless cmd
+      (setq cmd (nth 1 (assoc key superman-global-hot-keys))))
     (cond
      ((not cmd)
       (message (concat "Hot-key "key" not bound (in this section)")))
