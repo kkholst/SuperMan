@@ -7,7 +7,7 @@
 
 *** Slide 2 
 
-#+BEGIN_SRC  emacs-lisp :export code
+#+BEGIN_SRC  emacs-lisp :export code :eval never
 M-j to export to latex and start latexmk
 C-u M-j to debug
 #+END_SRC
