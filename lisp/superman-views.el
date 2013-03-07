@@ -27,6 +27,10 @@
 
 (defvar superman-hl-line nil "Set to non-nil in order to
 highlight the current line in superman views.")
+
+(defvar superman-view-current-project nil "Buffer local project variable" )
+(make-variable-buffer-local 'superman-view-current-project)
+
 (defvar superman-view-marks nil "Marks for items in agenda.")
 (make-variable-buffer-local 'superman-view-marks)
 
@@ -46,32 +50,80 @@ highlight the current line in superman views.")
 refers to the ith bloke in the project view and term.i identifies
 headlines in the project index file to be shown in that bloke.")
 
+(setq superman-views-delete-empty-cats t)
+(setq superman-views-permanent-cats '("Documents"))
+(setq superman-cat-headers
+      '(("Documents" . superman-documents-view-header)))
 
-
-;; (defun superman-view-project-news-line ()
-  ;; (concat "New: " (apply 'concat 
-			 ;; (mapcar '(lambda (x) (concat "`" superman-view-project-news-prefix
-						      ;; (nth 3 x)
-						      ;; "': "
-						      ;; (nth 1 x) "\t")) superman-view-project-news))))
-
-;; (defun superman-view-project-set-news-keys ()
-  ;; (mapcar
-   ;; '(lambda (x)
-      ;; (define-key superman-view-mode-map
-	;; (concat superman-view-project-news-prefix (nth 3 x))
-	;; (nth 2 x)))
-   ;; superman-view-project-news))
-
-;; (superman-view-project-set-action-keys)	
-  
 
 (defvar superman-document-category-separator '32 "Symbol for separating categories in document views.
 See `org-agenda-block-separator'. Set to '0 to get a funny line.
 Can also be set to (string-to-char \"~\") with any string in place of ~.")
 
+(defvar superman-finalize-cat-alist nil
+
+  "List of functions and variables used to finalize superman-views.
+
+Elements are of the form '(cat fun balls) where cat is the name
+of the heading in which the function fun is applied with arguments given by
+balls (a list).
+
+A ball can have one of the following alternative forms:
+
+ (key fun args face) : function fun (default is superman-trim-string) is applied
+with arguments args to the key, which is either of 'hdr (the header) 'todo (todo-status)
+or \"prop\" (a property of the heading) of the current item.
+Optionaly face is a face or a function which gets the value of key as argument to
+determine the face.")
+
+(setq superman-finalize-cat-alist
+      '(("Documents" superman-finalize-documents superman-document-balls superman-document-columns)
+	("Data" superman-finalize-data superman-data-balls)
+	("Notes" superman-finalize-notes superman-note-balls)
+	("Mail" superman-finalize-mails superman-mail-balls)
+	("Tasks" superman-finalize-tasks superman-task-balls)
+	("Bookmarks" superman-finalize-bookmarks superman-bookmark-balls)
+	("Meetings" superman-finalize-meetings superman-meeting-balls)))
+
+(setq superman-document-columns
+      (list "Description" "GitStatus" "LastCommit" "FileName"))
+
+(setq superman-document-balls
+      '((hdr nil (23))
+	("GitStatus" nil (10) superman-get-git-status-face)
+	("LastCommit" superman-trim-date (13) font-lock-type-face)
+	;; ("FileName" superman-trim-bracketed-filename 23)
+	("FileName" (lambda (x len) x) nil)))
+(setq superman-meeting-balls
+      '((hdr nil (23))
+	("Date" superman-trim-date nil font-lock-type-face)
+	;; ("Status" 10 nil)
+	("Participants" nil (23))))
+(setq superman-note-balls
+      '((todo nil (7))
+	("NoteDate" superman-trim-date (13) font-lock-type-face)
+	(hdr nil (49))))
+(setq superman-data-balls
+      '(("CaptureDate" superman-trim-date (13) font-lock-type-face)
+	(hdr nil (23))
+	("DataFileName" (lambda (x len) x) nil)))
+(setq superman-task-balls
+      '((todo nil (7))
+	("TaskDate" superman-trim-date (13) font-lock-type-face)
+	(hdr nil (49))))
+(setq superman-bookmark-balls
+      '(("BookmarkDate" superman-trim-date (13) font-lock-type-face)
+	(hdr superman-trim-string nil)
+	("Link" superman-trim-link (48))))
+(setq superman-mail-balls
+      '((todo nil (7))
+	("EmailDate" superman-trim-date (13) font-lock-type-face)
+	(hdr nil (23))
+	;; ("Attachment" superman-trim-link nil)
+	("Link" superman-trim-link (48))))
+
 ;;}}}
-;;{{{ Trim strings and links
+;;{{{ Trim stuff and frequently used funs
 
 (defun superman-trim-string (str &rest args)
   "Trim string STR to a given length by either calling substring
@@ -135,8 +187,23 @@ or by adding whitespace characters."
 
 
 
-(defvar superman-view-current-project nil "Buffer local project variable" )
-(make-variable-buffer-local 'superman-view-current-project)
+(defun superman-get-git-status-face (str)
+  (cond ((string-match "Committed" str ) 'font-lock-function-name-face)
+	((string-match  "Modified" str) 'font-lock-warning-face)
+	(t 'font-lock-comment-face)))
+
+(defun superman-trim-date (date &optional len)
+  (let ((len (or len 13)))
+    (if (string-match org-ts-regexp0 date)
+	;; (setq org-display-custom-times t)
+	(let ((age (abs (org-time-stamp-to-now date))))
+	  (cond ((= age 0)
+		 (setq date "today"))
+		((= age 1)
+		 (setq date "yesterday"))
+		(t (setq date (concat (int-to-string age) " days ago"))))
+	  (superman-trim-string date len))
+      (superman-trim-string date len))))
 
 (defun superman-view-current-project ()
   "Identifies the project associated with the current view buffer
@@ -172,26 +239,36 @@ and the keybinding to initialize git control otherwise."
 	  (concat key others "\n"))
       "")))
 
+
+
+(defun superman-current-heading ()
+  "Safely call `outline-back-to-heading' and return heading. If error return nil."
+  (condition-case nil
+      (save-excursion
+	(car (split-string (org-get-heading) "[ ]+")))
+    (error nil)))
+
+
 ;;}}}
 ;;{{{ Marking elements
 
-(defun superman-toggle-mark (&optional on dont-move)
+(defun superman-toggle-mark (&optional on)
   "Toggle mark for item at point in project view.
 If ON is non-nil keep mark for already marked items.
 If DONT-MOVE is non-nil stay at item."
   (interactive)
   (if (org-agenda-bulk-marked-p)
       (unless on (org-agenda-bulk-unmark))
-    (org-agenda-bulk-mark))
-  (when dont-move (forward-line -1)))
+    (org-agenda-bulk-mark)))
 
-(defun superman-mark-all ()
-  (interactive)
+(defun superman-mark-all (&optional arg)
+  (interactive "P")
+  arg
   (save-excursion
     (save-restriction
       (org-narrow-to-subtree)
-      ;; (org-agenda-bulk-mark-all))))
-      (superman-loop 'superman-toggle-mark (list 'on nil)))))
+      (superman-loop 'superman-toggle-mark
+		     (list (if arg nil 'on))))))
 
 (defun superman-marked-p ()
   (org-agenda-bulk-marked-p))
@@ -206,20 +283,21 @@ and the cdr the value, e.g. (face . 'bold).
 The function is only run on items marked in this way."
   (let (loop-out
 	(begin (or begin (point-min)))
-	(end (or end (point-max))))
+	(end (or end (point-max)))
+	next)
     (save-restriction
       (narrow-to-region begin end)
       (save-excursion
 	(goto-char (point-min))
-	(while (next-single-property-change
-		(point-at-eol) 'org-marker)
-	  (goto-char (next-single-property-change
-		      (point-at-eol) 'org-marker))
+	(while (setq next (next-single-property-change
+		(point-at-eol) 'org-marker))
+	  (goto-char next)
 	  (when (or (not marked)
 		    (superman-marked-p))
-		    ;; (eq (get-text-property (point) (car marked)) (cadr marked)))
 	    (setq loop-out
-		  (append (list (apply fun args)) loop-out))))
+		  (append (list (apply fun args)) loop-out)))
+	  (goto-char next)
+	  (end-of-line))
 	loop-out))))
 
 (defun superman-count-items (&optional begin end)
@@ -239,9 +317,6 @@ The function is only run on items marked in this way."
 	  (setq count (+ 1 count)))
 	count))))
 
-(setq superman-views-delete-empty-cats t)
-(setq superman-views-permanent-cats '("Documents"))
-
 
 (defun superman-structure-loop (fun args)
   "Loop over headings in a superman-views buffer."
@@ -252,6 +327,9 @@ The function is only run on items marked in this way."
       (org-narrow-to-subtree)
       (apply fun args)
       (widen))))
+
+;;}}}
+;;{{{ Finalizing
 
 (defun superman-finalize-cat (&optional cat)
   (let* ((cat (or cat (org-get-heading t t)))
@@ -269,7 +347,7 @@ The function is only run on items marked in this way."
 	  (end-of-line)
 	  ;; insert hot keys for section
 	  (let ((hotkeys (superman-view-show-hot-keys
-			  superman-view-project-hot-keys cat)))
+			  superman-view-hot-keys cat)))
 	    (if (> (length hotkeys) 0)
 		(insert "\n\n" hotkeys "\n\n")
 	      (insert "\n\n")))
@@ -295,7 +373,40 @@ The function is only run on items marked in this way."
       (end-of-line 2)
       (kill-region (point) (point-max))
   (goto-char (point-max)))))
-  
+
+
+(defun superman-finalize-view (&optional cat)
+  (let* ((org-startup-folded nil)
+	 (bufferq-read-only nil)
+	 (pro (superman-view-current-project))
+	 (header (if cat
+		     (apply (cdr (assoc (car cat) superman-cat-headers))
+			    (list pro))
+		   (superman-project-view-header pro))))
+    (org-mode)
+    (font-lock-mode -1)
+    ;; insert header and highlight
+    (goto-char (point-min))
+    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+    (end-of-line)
+    (when header
+      (insert header))
+    ;; finalizing cats
+    (superman-structure-loop
+     'superman-finalize-cat cat)
+    ;; facings
+    (save-excursion
+      (goto-char (point-min))
+      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	(add-text-properties
+	 (match-beginning 0) (match-end 0)
+	 '(face org-link))))
+    ;; default-dir
+    (setq default-directory
+	  (superman-project-home
+	   (superman-view-current-project)))
+    ;; minor-mode
+    (superman-view-mode-on)))  
 
 (defun superman-column-names (names defaults)
   (let ((cnames "")
@@ -346,27 +457,6 @@ The function is only run on items marked in this way."
 
 ;;}}}
 ;;{{{ Project views
-
-(defvar superman-finalize-cat-alist nil
-
-  "List of functions and variables used to finalize superman-views.
-
-Elements are of the form '(cat fun balls) where cat is the name
-of the heading in which the function fun is applied with arguments given by
-balls (a list).
-
-A ball can have one of the following alternative forms:
-
- ('todo len) : the todo-status of the item is trimmed to length len
- ('todo fun args) : function fun is applied to the todo-status of the current item with arguments args 
-
- ('hdr len) : the heading of the item is trimmed to length len
- ('hdr fun args) : function fun is applied to the heading of the current item with arguments args 
-
- (prop len) : the property prop (a string) of the current item is trimmed to length len
- (prop fun args) : function fun is applied to the property prop (a string) of the current item with arguments args
-")
-
 (defun superman-view-project (&optional project)
   "View documents of the current project."
   (interactive)
@@ -398,73 +488,10 @@ A ball can have one of the following alternative forms:
 	      (org-agenda-files (quote (,(superman-get-index pro)))))))))
     (org-agenda nil "p")))
 
+
+
 ;;}}}
-;;{{{ Finalizing project views
-
-(setq superman-finalize-cat-alist
-      '(("Documents" superman-finalize-documents superman-document-balls superman-document-columns)
-	("Data" superman-finalize-data superman-data-balls)
-	("Notes" superman-finalize-notes superman-note-balls)
-	("Mail" superman-finalize-mails superman-mail-balls)
-	("Tasks" superman-finalize-tasks superman-task-balls)
-	("Bookmarks" superman-finalize-bookmarks superman-bookmark-balls)
-	("Meetings" superman-finalize-meetings superman-meeting-balls)))
-
-(setq superman-document-columns
-      (list "Description" "GitStatus" "LastCommit" "FileName"))
-
-(defun superman-get-git-status-face (str)
-  (cond ((string-match "Committed" str ) 'font-lock-function-name-face)
-	((string-match  "Modified" str) 'font-lock-warning-face)
-	(t 'font-lock-comment-face)))
-
-(setq superman-document-balls
-      '((hdr nil (23))
-	("GitStatus" nil (10) superman-get-git-status-face)
-	("LastCommit" superman-trim-date (13) font-lock-type-face)
-	;; ("FileName" superman-trim-bracketed-filename 23)
-	("FileName" (lambda (x len) x) nil)))
-(setq superman-meeting-balls
-      '((hdr nil (23))
-	("Date" superman-trim-date nil font-lock-type-face)
-	;; ("Status" 10 nil)
-	("Participants" nil (23))))
-(setq superman-note-balls
-      '((todo nil (7))
-	("NoteDate" superman-trim-date (13) font-lock-type-face)
-	(hdr nil (49))))
-(setq superman-data-balls
-      '(("CaptureDate" superman-trim-date (13) font-lock-type-face)
-	(hdr nil (23))
-	("DataFileName" (lambda (x len) x) nil)))
-(setq superman-task-balls
-      '((todo nil (7))
-	("TaskDate" superman-trim-date (13) font-lock-type-face)
-	(hdr nil (49))))
-(setq superman-bookmark-balls
-      '(("BookmarkDate" superman-trim-date (13) font-lock-type-face)
-	(hdr superman-trim-string nil)
-	("Link" superman-trim-link (48))))
-(setq superman-mail-balls
-      '((todo nil (7))
-	("EmailDate" superman-trim-date (13) font-lock-type-face)
-	(hdr nil (23))
-	;; ("Attachment" superman-trim-link nil)
-	("Link" superman-trim-link (48))))
-
-
-(defun superman-trim-date (date &optional len)
-  (let ((len (or len 13)))
-    (if (string-match org-ts-regexp0 date)
-	;; (setq org-display-custom-times t)
-	(let ((age (abs (org-time-stamp-to-now date))))
-	  (cond ((= age 0)
-		 (setq date "today"))
-		((= age 1)
-		 (setq date "yesterday"))
-		(t (setq date (concat (int-to-string age) " days ago"))))
-	  (superman-trim-string date len))
-      (superman-trim-string date len))))
+;;{{{ Formatting items and column names
 
 (defun superman-format-item (&rest balls)
   (let* ((pom (org-get-at-bol 'org-hd-marker))
@@ -518,7 +545,6 @@ A ball can have one of the following alternative forms:
       (setq cols (cdr cols))
       (setq faces (cdr faces)))))
 
-(setq superman-cat-heads '(("Documents" "Documents:\n")))
 
 (defun superman-project-view-header (pro)
   "Construct extra heading lines for project views."
@@ -527,7 +553,7 @@ A ball can have one of the following alternative forms:
 		      (superman-view-control pro)
 		      "\n"
 		      (superman-view-show-hot-keys
-			    superman-view-project-hot-keys))))
+			    superman-view-hot-keys))))
     hdr))
 
 
@@ -537,84 +563,6 @@ A ball can have one of the following alternative forms:
 	(hotkeys (superman-view-hot-keys superman-view-documents-hot-keys)))
     (concat "\n" control (insert "\n\n" hotkeys "\n\n"))) "\n" )
 
-(setq superman-cat-headers
-      '(("Documents" . superman-documents-view-header)))
-
-(defun superman-finalize-view (&optional cat)
-  (let* ((org-startup-folded nil)
-	 (bufferq-read-only nil)
-	 (pro (superman-view-current-project))
-	 (header (if cat
-		     (apply (cdr (assoc (car cat) superman-cat-headers))
-			    (list pro))
-		   (superman-project-view-header pro))))
-    (org-mode)
-    (font-lock-mode -1)
-    ;; insert header and highlight
-    (goto-char (point-min))
-    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-    (end-of-line)
-    (when header
-      (insert header))
-    ;; finalizing cats
-    (superman-structure-loop
-     'superman-finalize-cat cat)
-    ;; facings
-    (save-excursion
-      (goto-char (point-min))
-      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-	(add-text-properties
-	 (match-beginning 0) (match-end 0)
-	 '(face org-link))))
-    ;; default-dir
-    (setq default-directory
-	  (superman-project-home
-	   (superman-view-current-project)))
-    ;; minor-mode
-    (cond ((not cat) (superman-project-view-mode-on))
-	  ((string= (car cat) "Documents")
-	   (superman-documents-view-mode-on))
-	  (t (superman-view-mode-on)))))
-
-;;}}}
-;;{{{ Document views
-
-(defun superman-view-documents (&optional project)
-  "View documents of the current project."
-  (interactive)
-  (let* ((pro (or project
-		  superman-current-project
-		  (superman-switch-to-project 'force nil t)))
-	 (org-agenda-buffer-name (concat "*Documents[" (car pro) "]*"))
-	 (org-agenda-sticky nil)
-	 (org-agenda-window-setup 'current-window)
-	 (cats (progn
-		 (superman-goto-project pro "Documents" nil)
-		 (superman-property-values "category")))
-	 (documents-header (concat "Documents: " (car pro) "\n\n"))
-	 (cats-and-one-dog (append `(,(car pro)) cats))
-	 (cmd-block
-	  (if cats 
-	      (mapcar '(lambda (cat)
-			 (list 'tags (concat "FileName={.+}" "+" "CATEGORY=\"" cat "\"")
-			       (let ((hdr (if (eq cat (car cats-and-one-dog))
-					      (concat documents-header (concat "\n** " cat ""))
-					    (concat "** " cat ""))))
-				 `((org-agenda-overriding-header ,hdr)))))
-		      cats-and-one-dog)
-	    `((tags "FileName={.+}"
-		    ((org-agenda-overriding-header (concat ,documents-header "** Documents")))))))
-	 (org-agenda-custom-commands
-	  `(("d" "view Project-DOCUMENTS"
-	     ,cmd-block
-	     ;; ((org-agenda-finalize-hook 'superman-view-finalize-documents)
-	     ((org-agenda-finalize-hook '(lambda () (superman-finalize-view '("Documents"))))
-	      (org-agenda-block-separator superman-document-category-separator)
-	      (org-agenda-view-columns-initially nil)
-	      (org-agenda-buffer-name (concat "*Documents[" ,(car pro) "]*"))
-	      (org-agenda-files (quote (,(superman-get-index pro))))
-	      )))))
-    (org-agenda nil "d")))
 
 ;;}}}
 ;;{{{ View commands (including git) 
@@ -727,7 +675,10 @@ A ball can have one of the following alternative forms:
 (defun superman-view-git-history ()
   (interactive)
   (let ((pro (superman-view-current-project)))
-    (vc-print-log-internal 'Git (list (concat (superman-get-location pro) (car pro))) nil nil 2000)))
+    (vc-print-log-internal
+     'Git
+     (list (concat (superman-get-location pro) (car pro)))
+     nil nil 2000)))
 
 (defun superman-view-index ()
   (interactive)
@@ -896,12 +847,12 @@ If dont-redo the agenda is not reversed."
     (unless dont-redo (org-agenda-redo))))
 
 ;;}}}
-;;{{{ view-mode and keybindings
+;;{{{ View-mode and hot-keys
 
 (defvar superman-view-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
    
-(define-minor-mode superman-view-mode 
+(define-minor-mode superman-view-mode
      "Toggle org projectmanager document view mode.
                    With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
                    turn it off.
@@ -956,215 +907,185 @@ If dont-redo the agenda is not reversed."
       (setq hot-keys (cdr hot-keys)))
     hot-key-string))
 
+
+(setq superman-view-hot-keys
+'("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"
+     "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O" "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z"
+     "!" "?" "*"))
+(defun superman-view-set-hot-keys ()
+  "Define hot keys for superman-view"
+  (mapcar
+   '(lambda (x)
+      (define-key superman-view-mode-map
+	x (intern (concat "superman-hot-" x))))
+   superman-view-hot-keys))
+(superman-view-set-hot-keys)
 (define-key superman-view-mode-map [return] 'superman-hot-return) 
-(define-key superman-view-mode-map "m" 'superman-toggle-mark)
-(define-key superman-view-mode-map "n" 'superman-next-entry)
-(define-key superman-view-mode-map "p" 'superman-previous-entry)
-(define-key superman-view-mode-map "r" 'org-agenda-redo)
-(define-key superman-view-mode-map "!" 'superman-goto-shell)
-(define-key superman-view-mode-map "?" 'superman-view-show-help)
-(define-key superman-view-mode-map "I" 'superman-view-git-init)
-;;}}}
-;;{{{ document view mode
 
-(defvar superman-documents-view-mode-map
-  (copy-keymap superman-view-mode-map)
-  "Keymap used for `superman-documents-view-mode' commands.")
-
-(define-minor-mode superman-documents-view-mode 
-  "Toggle superman documents view mode.
- With argument ARG turn superman-documents-view-mode on if ARG
-is positive, otherwise turn it off."
-  :lighter " *S*-docs"
-  :group 'org
-  :keymap 'superman-documents-view-mode-map)
-
-(defun superman-documents-view-mode-on ()
-  (interactive)
-  (when superman-hl-line (hl-line-mode 1))
-  (superman-documents-view-mode t))
-
-(defun superman-documents-view-set-hot-keys ()
-  (mapcar
-   '(lambda (x)
-      (define-key superman-documents-view-mode-map
-	(nth 3 x)
-	(nth 2 x)))
-   superman-view-documents-hot-keys))
-
-(setq superman-view-documents-hot-keys
-      '((list "grep" superman-view-git-grep "g")
-	(list "history" superman-view-git-history "h")
-	(list "grep" superman-view-git-grep "g")
-	(list "annotate" superman-view-git-annotate "v")
-	(list "Index" superman-view-index "i")
-	(list "diff" superman-view-git-diff "d")
-	(list "Document" superman-new-document "D")
-	(list "Add" superman-view-git-add-all "A")
-	(list "add" superman-view-git-add "a")
-	(list "Search" superman-view-git-search "S")
-	(list "update" superman-view-update "u")
-	(list "Update" superman-view-update-all "U")
-	(list "commit" superman-view-git-commit "c")
-	(list "Commit" superman-view-git-commit-all "C")
-	(list "log" superman-view-git-log "l") 
-	(list "Log" superman-view-git-log-decorationonly "L")))
-
-(superman-documents-view-set-hot-keys)
-
-
-;;}}}
-;;{{{ project view mode
-
-;; (setq superman-project-view-mode-map
-  ;; (copy-keymap superman-view-mode-map))
-(defvar superman-project-view-mode-map
-  (copy-keymap superman-view-mode-map)
-  "Keymap used for `superman-project-view-mode' commands.")
-
-(define-minor-mode superman-project-view-mode 
-  "Toggle superman project view mode.
- With argument ARG turn superman-project-view-mode on if ARG
-is positive, otherwise turn it off."
-  :lighter " *S*-pro"
-  :group 'org
-  :keymap 'superman-project-view-mode-map)
-
-(defun superman-project-view-mode-on ()
-  (interactive)
-  (when superman-hl-line (hl-line-mode 1))
-  (superman-project-view-mode t))
-
-(defvar superman-view-project-hot-keys nil "Keybindings visible in project view")
-
-(setq superman-view-project-hot-keys
-      '("r" "s" "i" "F" "N" "D" "T" "B" "M" "P" "U" "c" "C"))
-;; '("i" "f" "F" "N" "P" "u" "U" "m" "M" "c" "C" "B" "v" "V" "D"))
-
-(defun superman-view-project-set-hot-keys ()
-  (mapcar
-   '(lambda (x)
-      (define-key superman-project-view-mode-map
-	x
-	(intern (concat "superman-hot-" x))))
-   superman-view-project-hot-keys))
-
-
-(defun superman-current-heading ()
-  "Safely call `outline-back-to-heading' and return heading. If error return nil."
-  (condition-case nil
-      (save-excursion
-	(car (split-string (org-get-heading) "[ ]+")))
-    (error nil)))
+(setq superman-documents-hot-keys '(("c" superman-view-git-commit)))
 
 (defun superman-view-choose-hot-key (key)
+  "Find command bound to key in current section. If undefined use global key."
   (let* ((cat (superman-current-heading))
-	 (S-call (intern (concat "superman-project-hot-" key)))	 ;; use project key if no hot key is defined in section
-	 (hot-cat (if cat (intern (concat "superman-" cat "-hot-" key))
-		    (intern (concat "superman-project-hot-" key)))))
-    (cond ((and cat (fboundp hot-cat))
-	   (funcall hot-cat))
-	  ;; (condition-case nil
-	  ;; (funcall hot-cat)
-	  ;; (error (progn (message
-	  ;; (concat "Call to " hot-cat " resulted in an error. ")
-	  ;; nil)))))
-	  ((fboundp S-call) (funcall S-call))
-	  (t (message (concat "Hot-key "key" not defined (in this section)"))))))
-  
-(defun superman-hot-i () (interactive) (superman-view-choose-hot-key "i"))
+	 (cmd (or (and cat (nth 1 (assoc key (eval (intern (concat "superman-" (downcase cat) "-hot-keys"))))))
+		  (nth 1 (assoc key superman-global-hot-keys)))))
+    (cond
+     ((not cmd)
+      (message (concat "Hot-key "key" not bound (in this section)")))
+     ((fboundp cmd)
+      (funcall cmd))
+     (t (message (concat "Not a function: " (symbol-name cmd)))))))
+
+
+(defun superman-hot-a () (interactive) (superman-view-choose-hot-key "a"))
+(defun superman-hot-b () (interactive) (superman-view-choose-hot-key "b"))
+(defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
+(defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
+(defun superman-hot-e () (interactive) (superman-view-choose-hot-key "e"))
 (defun superman-hot-f () (interactive) (superman-view-choose-hot-key "f"))
-(defun superman-hot-F () (interactive) (superman-view-choose-hot-key "F"))
+(defun superman-hot-g () (interactive) (superman-view-choose-hot-key "g"))
+(defun superman-hot-h () (interactive) (superman-view-choose-hot-key "h"))
+(defun superman-hot-i () (interactive) (superman-view-choose-hot-key "i"))
+(defun superman-hot-j () (interactive) (superman-view-choose-hot-key "j"))
+(defun superman-hot-k () (interactive) (superman-view-choose-hot-key "k"))
+(defun superman-hot-l () (interactive) (superman-view-choose-hot-key "l"))
 (defun superman-hot-m () (interactive) (superman-view-choose-hot-key "m"))
+(defun superman-hot-n () (interactive) (superman-view-choose-hot-key "n"))
+(defun superman-hot-o () (interactive) (superman-view-choose-hot-key "o"))
+(defun superman-hot-p () (interactive) (superman-view-choose-hot-key "p"))
+(defun superman-hot-q () (interactive) (superman-view-choose-hot-key "q"))
+(defun superman-hot-r () (interactive) (superman-view-choose-hot-key "r"))
+(defun superman-hot-s () (interactive) (superman-view-choose-hot-key "s"))
+(defun superman-hot-t () (interactive) (superman-view-choose-hot-key "t"))
+(defun superman-hot-u () (interactive) (superman-view-choose-hot-key "u"))
+(defun superman-hot-v () (interactive) (superman-view-choose-hot-key "v"))
+(defun superman-hot-w () (interactive) (superman-view-choose-hot-key "w"))
+(defun superman-hot-x () (interactive) (superman-view-choose-hot-key "x"))
+(defun superman-hot-y () (interactive) (superman-view-choose-hot-key "y"))
+(defun superman-hot-z () (interactive) (superman-view-choose-hot-key "z"))
+(defun superman-hot-A () (interactive) (superman-view-choose-hot-key "A"))
+(defun superman-hot-B () (interactive) (superman-view-choose-hot-key "B"))
+(defun superman-hot-C () (interactive) (superman-view-choose-hot-key "C"))
+(defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
+(defun superman-hot-E () (interactive) (superman-view-choose-hot-key "E"))
+(defun superman-hot-F () (interactive) (superman-view-choose-hot-key "F"))
+(defun superman-hot-G () (interactive) (superman-view-choose-hot-key "G"))
+(defun superman-hot-H () (interactive) (superman-view-choose-hot-key "H"))
+(defun superman-hot-I () (interactive) (superman-view-choose-hot-key "I"))
+(defun superman-hot-J () (interactive) (superman-view-choose-hot-key "J"))
+(defun superman-hot-K () (interactive) (superman-view-choose-hot-key "K"))
+(defun superman-hot-L () (interactive) (superman-view-choose-hot-key "L"))
 (defun superman-hot-M () (interactive) (superman-view-choose-hot-key "M"))
 (defun superman-hot-N () (interactive) (superman-view-choose-hot-key "N"))
-(defun superman-hot-d () (interactive) (superman-view-choose-hot-key "d"))
-(defun superman-hot-D () (interactive) (superman-view-choose-hot-key "D"))
-(defun superman-hot-B () (interactive) (superman-view-choose-hot-key "B"))
-(defun superman-hot-T () (interactive) (superman-view-choose-hot-key "T"))
-(defun superman-hot-s () (interactive) (superman-view-choose-hot-key "s"))
-(defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
-(defun superman-hot-C () (interactive) (superman-view-choose-hot-key "C"))
-(defun superman-hot-v () (interactive) (superman-view-choose-hot-key "v"))
-(defun superman-hot-V () (interactive) (superman-view-choose-hot-key "V"))
-(defun superman-hot-U () (interactive) (superman-view-choose-hot-key "U"))
+(defun superman-hot-O () (interactive) (superman-view-choose-hot-key "O"))
 (defun superman-hot-P () (interactive) (superman-view-choose-hot-key "P"))
-(defun superman-hot-r () (interactive) (superman-view-choose-hot-key "r"))
+(defun superman-hot-Q () (interactive) (superman-view-choose-hot-key "Q"))
+(defun superman-hot-R () (interactive) (superman-view-choose-hot-key "R"))
+(defun superman-hot-S () (interactive) (superman-view-choose-hot-key "S"))
+(defun superman-hot-T () (interactive) (superman-view-choose-hot-key "T"))
+(defun superman-hot-U () (interactive) (superman-view-choose-hot-key "U"))
+(defun superman-hot-V () (interactive) (superman-view-choose-hot-key "V"))
+(defun superman-hot-W () (interactive) (superman-view-choose-hot-key "W"))
+(defun superman-hot-X () (interactive) (superman-view-choose-hot-key "X"))
+(defun superman-hot-Y () (interactive) (superman-view-choose-hot-key "Y"))
+(defun superman-hot-Z () (interactive) (superman-view-choose-hot-key "Z"))
+(defun superman-hot-! () (interactive) (superman-view-choose-hot-key "!"))
+(defun superman-hot-* () (interactive) (superman-view-choose-hot-key "*"))
 
-(fset 'superman-project-hot-i 'superman-view-index)
-(setq superman-project-hot-i "index")
-(fset 'superman-project-hot-! 'superman-goto-shell)
-(setq superman-project-hot-! "shell")
-(fset 'superman-project-hot-F 'superman-view-file-list)
-(setq superman-project-hot-F "FileList")
-(fset 'superman-project-hot-f 'org-agenda-follow-mode)
-(setq superman-project-hot-f "follow")
-(fset 'superman-project-hot-P 'superman-git-push)
-(setq superman-project-hot-P "GitPush")
-;; (fset 'superman-project-hot-U 'superman-unison)
-;; (setq superman-project-hot-U "Unison")
-(fset 'superman-project-hot-U 'superman-update-all)
-(setq superman-project-hot-U "Update")
-(fset 'superman-project-hot-r 'org-agenda-redo)
-(setq superman-project-hot-r "redo")
-(fset 'superman-project-hot-N 'superman-new-note)
-(setq superman-project-hot-N "Note")
-(fset 'superman-project-hot-d 'superman-new-data)
-(setq superman-project-hot-d "data")
-(fset 'superman-project-hot-D 'superman-new-document)
-(setq superman-project-hot-D "Document")
-(fset 'superman-project-hot-M 'superman-new-meeting)
-(setq superman-project-hot-M "Meeting")
-(fset 'superman-project-hot-T 'superman-new-task)
-(setq superman-project-hot-T "Task")
-(fset 'superman-project-hot-s 'superman-sort-section)
-(setq superman-project-hot-s "sort")
-(fset 'superman-project-hot-B 'superman-new-bookmark)
-(setq superman-project-hot-B "Bookmark")
-(fset 'superman-project-hot-V 'superman-toggle-view)
-(setq superman-project-hot-V "toggleView")
-(fset 'superman-project-hot-c '(lambda () (message "Nothing to commit in this section")))
-(fset 'superman-project-hot-C 'superman-view-git-commit-all)
-(setq superman-project-hot-C "GitCommit")
+(setq superman-global-hot-keys
+      '(("a" nil)
+	("b" nil)
+	("c" nil)
+	("d" nil)
+	("e" nil)
+	("f" org-agenda-follow-mode "follow")
+	("g" superman-view-git-grep "grep")
+	("h" nil)
+	("i" superman-view-index "index")
+	("j" nil)
+	("k" nil)
+	("l" nil)
+	("m" superman-view-toggle-mark "mark")
+	("n" superman-next-entry "next")
+	("o" nil)
+	("p" superman-previous-entry "previous")
+	("q" nil)
+	("r" org-agenda-redo "redo")
+	("s" nil)
+	("t" nil)
+	("u" nil)
+	("v" nil)
+	("w" nil)
+	("x" nil)
+	("y" nil)
+	("z" nil)
+	("A" nil)
+	("B" nil)
+	("C" nil)
+	("D" superman-new-document "document")
+	("E" nil)
+	("F" superman-view-file-list "FileList")
+	("G" nil)
+	("H" nil)
+	("I" superman-view-git-init "GitInit")
+	("J" nil)
+	("K" nil)
+	("L" nil)
+	("M" superman-new-meeting "Meeting")
+	("N" superman-view-new "Note")
+	("O" nil)
+	("P" superman-git-push "Push")
+	("Q" superman-unison "Unison")
+	("R" nil)
+	("S" superman-sort-section "sort")
+	("T" superman-new-task "Task")
+	("U" superman-view-update-all "Update")
+	("V" superman-switch-config "next-config")
+	("W" nil)
+	("X" nil)
+	("Y" nil)
+	("Z" nil)
+	("!" superman-goto-shell)
+	("?" superman-view-help)
+	("*" nil)))
 
-(fset 'superman-Documents-hot-c 'superman-view-git-commit)
-(setq superman-Documents-hot-c "CommitFile")
+(setq superman-documents-hot-keys
+      '(( "c" 'superman-view-git-commit "commit")
+	( "C" 'superman-view-git-commit-all "Commit")
+	( "d" 'superman-view-git-diff "diff")
+	( "h" 'superman-view-git-history "history")
+	( "l" 'superman-view-git-log "log")
+	( "L" 'superman-view-git-log-decorationonly)
+	;; ( "v" 'superman-view-git-annotate "annotate")
+	("M" 'superman-view-mark-all "Mark")
+	( "N" 'superman-view-new-document "New")))
 
-(fset 'superman-project-hot-U 'superman-view-update-all)
-(setq superman-project-hot-U "UpdateGit")
+(setq superman-meetings-hot-keys
+      '(("M" 'superman-view-mark-all)
+	( "N" 'superman-new-meeting)))
 
-(fset 'superman-Documents-hot-U 'superman-view-update-all)
-(setq superman-Documents-hot-U "UpdateGit")
+(setq superman-notes-hot-keys
+      '(("M" 'superman-view-mark-all)
+	( "N" 'superman-new-note)))
 
-(fset 'superman-Documents-hot-m 'superman-toggle-mark)
-(setq superman-Documents-hot-m "mark-item")
-
-(fset 'superman-Documents-hot-M 'superman-mark-all)
-(setq superman-Documents-hot-M "mark-all")
-
-(fset 'superman-Data-hot-c 'superman-view-git-commit)
-(setq superman-Data-hot-c "GitCommit")
-
-(superman-view-project-set-hot-keys)
+(setq superman-bookmarks-hot-keys
+      '(("M" 'superman-view-mark-all)
+	( "N" 'superman-new-bookmark)))
 
 
-;; (setq superman-view-project-hot-keys
-;; (list "Shell" superman-goto-shell "!")
-;; (list "Index" superman-view-index "i")
-;; (list "File-list" superman-view-file-list "F")
-;; (list "Git-push" superman-git-push "P")
-;; (list "Unison" superman-unison "U")
-;; (list "Note" superman-new-note "N")
-;; (list "Document" superman-new-document "D")
-;; (list "Meeting" superman-new-meeting "M")
-;; (list "Task" superman-new-task "T")
-;; (list "ToggleView" superman-toggle-view "V")
-;; (list "Bookmark" superman-new-bookmark "B")
-;; (list "commit" superman-view-git-commit "c")
-;; (list "Commit" superman-view-git-commit-all "C")
+(defun superman-view-new-thing ()
+  (interactive)
+  (let ((thing (completing-read
+		"Add thing to project (select): "
+		'(("Document")
+		  ("Data")
+		  ("Bookmark")
+		  ("Note")))))
+    (funcall (intern (concat "superman-new-" (downcase thing))))))
+
 
 ;;}}}
-;;{{{ sorting
+;;{{{ Sorting
 
 (defun superman-sort-section (&optional field)
   (interactive "P")
@@ -1226,7 +1147,6 @@ is positive, otherwise turn it off."
     (org-agenda-redo)))
 
 ;;}}}
-
 ;;{{{ help 
 
 (defun superman-popup-tip (msg)
@@ -1236,7 +1156,7 @@ is positive, otherwise turn it off."
 
 (defvar superman-help-fun 'superman-popup-tip 
   "Function used to display help. Possible values 'tooltip-show or 'popup-tip (depends on popup.el)") 
-(defun superman-view-show-help ()
+(defun superman-view-help ()
   (interactive)
   (let ((msg
 	(concat 
