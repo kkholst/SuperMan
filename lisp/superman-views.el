@@ -104,7 +104,9 @@ determine the face.")
 	("NoteDate" superman-trim-date (13) font-lock-type-face)
 	(hdr nil (49))))
 (setq superman-data-balls
-      '(("CaptureDate" superman-trim-date (13) font-lock-type-face)
+      '(("CaptureDate"
+	 ("trim" superman-trim-date (13))
+	 ("face" font-lock-type-face))
 	(hdr nil (23))
 	("DataFileName" (lambda (x len) x) nil)))
 (setq superman-task-balls
@@ -650,8 +652,9 @@ The function is only run on items marked in this way."
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
 	 (file (org-link-display-format (superman-get-property m "filename"))))
-    (find-file file)
-    (vc-version-diff file "master" nil)))
+    (async-shell-command (concat "cd " (file-name-directory file) "; " superman-cmd-git " difftool " (file-name-nondirectory file)))))
+	;; (find-file file)
+      ;; (vc-version-diff file "master" nil)))
 
 (defun superman-view-git-ediff ()
   (interactive)
@@ -758,15 +761,15 @@ The function is only run on items marked in this way."
 	  (t (org-open-link-from-string
 	      (superman-get-property m "filename"))))))
 
-(defun superman-view-git-log (arg)
+(defun superman-view-git-log (&optional arg)
   (interactive "p")
-  (superman-git-log-at-point arg))
+  (superman-git-log-at-point (or arg 10)))
 
-(defun superman-view-git-log-decorationonly (arg)
+(defun superman-view-git-log-decorationonly (&optional arg)
   (interactive "p")
   (superman-git-log-decorationonly-at-point arg))
 
-(defun superman-view-git-search (arg)
+(defun superman-view-git-search (&optional arg)
   (interactive "p")
   (superman-git-search-at-point arg))
 
@@ -788,12 +791,51 @@ The function is only run on items marked in this way."
      (marker-buffer (org-get-at-bol 'org-hd-marker)))
     (save-buffer)))
 
+(defun superman-filename-with-pom (&optional noerror)
+  "Return property `superman-filename-at-point' at point,
+if it exists and add text-property org-hd-marker."
+  (let* ((file-or-link
+	  (superman-property-at-point
+	   (superman-property 'filename) noerror))
+	 filename)
+    (if (not (stringp file-or-link))
+	(unless noerror
+	  (error "No proper(ty) FileName at point."))
+      (setq filename (org-link-display-format file-or-link))
+      (put-text-property 0 (length filename) 'org-hd-marker (org-get-at-bol 'org-hd-marker) filename)
+      filename)))
+
 (defun superman-view-update-all ()
-  "Update git status for all entries (that have a filename)."
+  "Update git status for project and all entries (that have a filename)."
   (interactive)
-  (superman-loop 'superman-view-git-set-status (list nil nil nil))
-  (superman-view-save-hd-buffer)
+  (let* (file-list
+	 (pro (superman-view-current-project))
+	 (dir (concat (superman-get-location pro) (car pro)))
+	 (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+	 (status-list
+	  (mapcar (lambda (x)
+		    (if (string= "" x) nil
+		      (let ((el (split-string x " ")))
+			(cons (caddr el) (cadr el)))))
+		  (split-string git-status "\n"))))
+    (delq nil status-list)
+    (when (> (length status-list) 0)
+      (setq file-list (delq nil (superman-loop
+				 'superman-filename-with-pom (list t))))
+      (while status-list
+	(let* ((file (caar status-list))
+	       (status
+		(cdar status-list))
+	       (el (find-if (lambda (f) (string-match file f)) file-list)))
+	  (when el
+	    (org-entry-put
+	     (get-text-property 0 'org-hd-marker el)
+	     "GitStatus" 
+	     (superman-status-label status))))
+	(setq status-list (cdr status-list)))))
   (org-agenda-redo))
+;; (superman-view-save-hd-buffer)
+;; (org-agenda-redo))
 
 (defun superman-view-update ()
   (interactive)
@@ -1051,7 +1093,7 @@ If dont-redo the agenda is not reversed."
 	("K" nil)
 	("L" nil)
 	("M" superman-new-meeting "Meeting")
-	("N" superman-view-new "Note")
+	("N" superman-new-thing "Note")
 	("O" nil)
 	("P" superman-git-push "Push")
 	("Q" superman-unison "Unison")
@@ -1075,10 +1117,11 @@ If dont-redo the agenda is not reversed."
 	( "d" superman-view-git-diff "diff")
 	( "h" superman-view-git-history "history")
 	( "l" superman-view-git-log "log")
+	( "u" superman-view-update "update")
 	( "L" superman-view-git-log-decorationonly)
 	;; ( "v" superman-view-git-annotate "annotate")
 	("M" superman-view-mark-all "Mark")
-	( "N" superman-view-new-document "New")
+	("N" superman-new-document "New")
 	("=" superman-view-git-version-diff)))
 
 (setq superman-data-hot-keys superman-documents-hot-keys)
@@ -1103,10 +1146,7 @@ If dont-redo the agenda is not reversed."
       '(("M" superman-view-mark-all)))
 
 
-
-
-
-(defun superman-view-new-thing ()
+(defun superman-new-thing ()
   (interactive)
   (let ((thing (completing-read
 		"Add thing to project (select): "
@@ -1126,13 +1166,13 @@ If dont-redo the agenda is not reversed."
 	 ;; (col (if field (if (numberp field) field nil)))
 	 (cc (current-column))
 	 (col 1)
-	 cols
+	 (cols (get-text-property (point-at-bol) 'columns))
 	 next
 	 beg end sec-end)
     (save-excursion
       (when (superman-current-heading)
+	(setq cols (get-text-property (point-at-bol) 'columns))
 	(org-back-to-heading)
-	(setq cols (get-text-property (point) 'columns))
 	(while (> cc (car cols))
 	  (setq col (+ col 1))
 	  (setq cols (cdr cols)))

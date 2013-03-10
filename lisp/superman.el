@@ -37,10 +37,15 @@
 		   ("config" . nil)
 		   ("state" . "ACTIVE"))))
 
-;; (defun superman-super-config ()
-  ;; (superman-save-config
+(setq superman-balls
+      '((todo ("trim" nil (9)) ("face" superman-get-todo-face))
+	(hdr ("trim" nil (27)) ("face" font-lock-function-name-face))
+	("lastvisit" ("trim" superman-trim-date nil)
+	 ("face" font-lock-type-face))
+	("others"
+	 ("trim" superman-trim-string (30))
+	 ("face" font-lock-keyword-face))))
 
-;; (defun superman ()
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
     ;; (("location" . ,superman-default-directory)
@@ -78,14 +83,7 @@
 
 (defun superman-finalize-superman ()
   (save-excursion
-    (let* ((superman-balls
-	    '((todo nil (9) superman-get-todo-face nil (27))
-	      (hdr nil (19))
-	      ("LastVisit" superman-trim-date nil)
-	      ("Others" superman-trim-string (30))
-	      ;; ("Location" superman-trim-filename 23)
-	      ))
-	   (start (progn (goto-char (point-min))
+    (let* ((start (progn (goto-char (point-min))
 			 (next-single-property-change
 			  (point-at-eol) 'org-marker)))
 	   (buffer-read-only nil))
@@ -145,63 +143,86 @@
 ;;}}}
 ;;{{{ superman 
 
-(setq org-agenda-show-inherited-tags (list))
+(defun superman-make-header ()
+  "Insert header into superman project view buffer"
+  (goto-char (point-min))
+  (insert "SuperMan(ager)")
+  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+  (insert "\n\nKeys: \n")
+  (forward-line -1)
+  (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
+  (end-of-line)
+  (insert "N: new project RET: select project\n")
+  (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
+  (end-of-line))
+
+
+
+(defun superman-categorize-projects (&optional cats balls)
+  "Parse the file `superman-home' and return a categorized project-alist."
+  (interactive)
+  (save-excursion
+    (setq superman-project-alist nil)
+    (set-buffer (find-file-noselect superman-home))
+    (unless (superman-manager-mode 1))
+    (save-buffer)
+    (goto-char (point-min))
+    (while (superman-forward-project)
+      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
+	     (category (superman-get-property nil (superman-property 'category) 'inherit))
+	     (others (superman-get-property nil (superman-property 'others) nil))
+	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
+	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
+		       (nth 4 (org-heading-components))))
+	     (marker (org-agenda-new-marker (match-beginning 0)))
+	     (hdr  (org-get-heading t t))
+	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
+	     (config (superman-get-property nil (superman-property 'config) 'inherit))
+	     (todo (substring-no-properties (or (org-get-todo-state) "")))
+	     (index (or (superman-get-property nil (superman-property 'index) nil)
+			(let ((default-org-home
+				(concat (file-name-as-directory loc)
+					name
+					superman-org-location)))
+			  ;; (make-directory default-org-home t)
+			  (concat (file-name-as-directory default-org-home) name ".org")))))
+	(set-text-properties 0 (length hdr) nil hdr)
+	;; (add-text-properties
+	;; 0 (length hdr)
+	;; (list 'org-marker marker 'org-hd-marker marker) hdr)
+	(unless (file-name-absolute-p index)
+	  (setq index
+		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+	(add-to-list 'superman-project-alist
+		     (list name
+			   (list (cons "location"  loc)
+				 (cons "index" index)
+				 (cons "category" category)
+				 (cons "others" others)
+				 (cons "hdr" hdr)
+				 (cons "marker" marker)				 
+				 (cons "lastvisit" lastvisit)
+				 (cons "config" config)
+				 (cons "state" todo)
+				 (cons "publish-directory" publish-dir))))))
+    superman-project-alist))
 
 (defun superman ()
-  "Manage projects."
   (interactive)
-  (let* ((org-agenda-window-setup 'current-window)
-	 (org-agenda-buffer-name (concat "*S*"))
-	 (org-agenda-sticky nil)
-	 (org-agenda-custom-commands
-	  `(("S" "Superman"
-	     ;; ((tags "NickName={.+}"
-	     ((search "NickName"
-		      ((org-agenda-files (quote (,superman-home)))
-		       (org-agenda-property-list '("NickName" "LastVisit" "Location" "Others"))
-		       (org-agenda-overriding-header
-			(concat "SuperMan(ager)"))
-		       (org-agenda-window-setup 'current-window)
-		       (org-agenda-view-columns-initially nil)
-		       (org-agenda-buffer-name "*S*"))))
-	     ((org-agenda-finalize-hook 'superman-finalize-superman)
-	      ;; (org-agenda-cmp-user-defined (lambda (a b) (if  ))
-	      (org-agenda-sorting-strategy '(user-defined-up))
-	      (org-agenda-buffer-name "*S*"))))))
-    (push ?S unread-command-events)
-    (call-interactively 'org-agenda)))
-
-(defun superman-cats ()
-  (interactive)
-  (let* ((cats-buffer "*S[cats]*")
+  (let* ((cats-buffer "*S*")
 	 (cats (superman-parse-project-categories))
 	 (cat-alist (mapcar (lambda (x) (list x)) cats))
 	 (howmany-cats (length cats))
 	 (cat-number-one (car cats))
-	 (projects superman-project-alist)
-	 (superman-balls
-	  '((todo nil (9) superman-get-todo-face nil (27))
-	    (hdr nil (27))
-	    ("lastvisit" superman-trim-date nil)
-	    ("others" superman-trim-string (30))
-	    ;; ("Location" superman-trim-filename 23)
-	    )))
+	 (projects superman-project-alist))
     (switch-to-buffer cats-buffer)
     (setq buffer-read-only nil)
     (erase-buffer)
     (org-mode)
     (font-lock-mode -1)
-    (goto-char (point-min))
-    (insert "SuperMan(ager)")
-    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-    (insert "\n\nKeys: \n")
-    (forward-line -1)
-    (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
-    (end-of-line)
-    (insert "N: new project RET: select project\n")
-    (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
-    (end-of-line)
-    ;; sort projects
+    (superman-make-header)
+    ;; parse projects relative to superman-balls
+    ;; in categories
     (while projects
       (let* ((pro (car projects))
 	     (cat (cdr (assoc "category" (cadr pro))))
@@ -211,103 +232,143 @@
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
-    ;; loop categories
+    ;; loop over categories
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
 	     (tail (cdr cat)))
+	;; sort projects by lastvisit date
 	;; see http://emacswiki.org/emacs/DestructiveOperations
-	(setq tail (sort tail (lambda (p q) (org-time<= (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
-					    (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
+	(setq tail
+	      (sort tail
+		    (lambda (p q)
+		      (org-time<=
+		       (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
+		       (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
 	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(insert "\n\n")
 	;; loop projects in category
-	(while tail
-	  ;; the following is basically a copy of
-	  ;; superman-format-item and could be merged at
-	  ;; some point
-	  (let* ((balls superman-balls)
-		 (item "")
-		 ;; FIXME: cols and faces could be collected
-		 ;; once for the first item and then be inherited
-		 (cols (list 0))
-		 (pro (car tail))
-		 (marker (cdr (assoc "marker" (cadr pro))))
-		 faces
-		 beg)
-	    ;; loop columns
-	    (while balls
-	      (let* ((b (car balls))
-		     type
-		     (face-or-fun (nth 3 b))
-		     (val (cond ((stringp (car b)) ;; assume b is a property
-				 (setq type "prop")
-				 (or (cdr (assoc (car b) (cadr pro)))
-				     ""))
-				;; (or (assoc b (superman-get-property (point) (car b) 'inherit) "--"))
-				((eq (car b) 'todo)
-				 (setq type "todo")
-				 (setq face-or-fun 'superman-get-todo-face)
-				 (superman-get-state pro))
-				((eq (car b) 'hdr)
-				 (setq type "hdr")
-				 (setq face-or-fun 'font-lock-keyword-face)
-				 ;; (car pro)
-				 (cdr (assoc "hdr" (cadr pro))))))
-		     (fun (or (nth 1 b) 'superman-trim-string))
-		     (args (if (nth 2 b) (nth 2 b) '(23)))
-		     (it (concat "  " (apply fun val args)))
-		     (f (cond ((facep face-or-fun)
-			       face-or-fun)
-			      ((functionp face-or-fun)
-			       (funcall face-or-fun
-					(replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" "" it)))
-			      (t nil))))
-		(setq cols (append cols (list (length it))))
-		(setq faces (append faces (list f)))
-		(setq item (concat item it)))
-	      (setq balls (cdr balls)))
-	    (insert item)
-	    ;; FIXME: add text-properties here
-	    (put-text-property (point-at-bol) (point-at-eol) 'org-marker marker)
-	    (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker marker)
-	    (beginning-of-line)
-	    (setq beg (point))
-	    (while cols
-	      (let* ((f (car faces)))
-		(setq beg (+ beg (car cols)))
-		(setq end (if (cadr cols) (+ beg (cadr cols)) (point-at-eol)))
-		(if f (put-text-property beg end 'face f)))
-	      (setq cols (cdr cols))
-	      (setq faces (cdr faces)))
-	    (end-of-line)
-	    (insert "\n")
-	    (setq tail (cdr tail))))
+	(superman-format-loop tail superman-balls)
 	;; column names
 	(org-back-to-heading)
 	(end-of-line)
 	(when (next-single-property-change (point-at-eol) 'org-marker)
 	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
 	  (forward-line -1)
-	  (let ((cols
-		 (apply
-		  'superman-column-names
-		  (list (list "Status" "Title" "LastVisit" "Others" "Location")
-			superman-balls))))
-	    (progn
-	      (insert (car cols))
-	      (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)
-	      (org-back-to-heading)
-	      (put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols)))))
+	  (let ((cols (superman-format-thing
+		       '("columns"
+			 (("others" . "Others")
+			  ("hdr" . "Title")
+			  ("state" . "State")
+			  ("marker" . nil)
+			  ("lastvisit" . "LastVisit")))
+		       superman-balls)))
+	    (insert cols)
+	    (set-text-properties (point-at-bol) (point-at-eol) 'face nil)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)))
+	(org-back-to-heading)
 	(goto-char (point-max))
 	(setq cat-alist (cdr cat-alist)))))
-    (goto-char (point-min))
-    (superman-on)
-    (superman-view-mode-on)
-    (setq buffer-read-only t))
-  ;; (superman-format-project)
-	 
+  (goto-char (point-min))
+  (superman-on)
+  (superman-view-mode-on)
+  (setq buffer-read-only t))
+;; (superman-format-project)
+
+(defun superman-play-ball (thing ball)
+  "Play BALL at THING (property or alist) and return
+ formatted string with faces."
+  (let* ((raw-string
+	  (cond ((stringp (car ball)) ;; properties
+		 (cond ((markerp thing)
+			(superman-get-property thing (car ball) t))
+		       ((and (listp thing)
+			     (cdr (assoc (car ball) (cadr thing)))))
+		       (t "--")))
+		((eq (car ball) 'todo) ;; special: todo state
+		 (cond ((markerp thing)
+			(org-get-todo-state))
+		       ((and (listp thing)
+			     (cdr (assoc "state" (cadr thing)))))
+		       (t "--")))
+		((eq (car ball) 'hdr) ;; special: header
+		 (cond ((markerp thing)
+			(org-get-heading t t))
+		       ((and (listp thing)
+			     (cdr (assoc "hdr" (cadr thing)))))
+		       (t "--")))))
+	 (trim-info (assoc "trim" ball))
+	 (trim-function (or (nth 1 trim-info)
+			    'superman-trim-string))
+	 (trim-args (or (nth 2 trim-info) '(23)))
+	 (trimmed-string
+	  (concat "  " ;; column sep
+		  (apply trim-function
+			 (if (eq (length raw-string) 0)
+			     "--"
+			 raw-string)
+			 trim-args)))
+	 (face-or-fun (or (cadr (assoc "face" ball))
+			  (get-text-property 0 'face raw-string)))
+	 (face (cond
+		((facep face-or-fun)
+		 face-or-fun)
+		((functionp face-or-fun)
+		 (funcall
+		  face-or-fun
+		  (replace-regexp-in-string
+		   "^[ \t\n]+\\|[ \t\n]+$" ""
+		   raw-string)))
+		(t nil))))
+    ;; remove all existing text-properties
+    (set-text-properties 0 (length trimmed-string) nil trimmed-string)
+    (when (facep face)
+      (put-text-property 0 (length trimmed-string) 'face face trimmed-string))
+    trimmed-string))
+
+(defun superman-format-thing (thing balls)
+  "Format THING according to balls. THING is either
+a marker which points to a header in a buffer 
+or an association list. A ball has the for
+
+'(key (\"face\" face-or-fun) (\"trim\" fun args))
+
+Value is the formatted string with text-properties (special balls)."
+  (let ((item "")
+	ilen
+	(column-widths (list 0))
+	(marker (cond ((markerp thing) thing)
+		      ((cdr (assoc "marker" (cadr thing))))))
+	text-props
+	(beg 0))
+    ;; loop columns
+    (while balls
+      (let* ((b (car balls))
+	     (bstring (superman-play-ball thing b)))
+	(setq column-widths (append column-widths (list (length bstring))))
+	(setq item (concat item bstring)))
+      (setq balls (cdr balls)))
+    (setq ilen (length item))
+    ;; superman-marker
+    (when marker
+      (put-text-property 0 ilen 'org-hd-marker marker item)
+      (put-text-property 0 ilen 'org-marker marker item))
+    ;; text property: columns
+    (put-text-property 0 ilen 'columns column-widths item)
+    item))
+
+
+(defun superman-format-loop (list balls)
+  "Loop over list and insert all items formatted according to balls."
+  (while list
+    (let* ((item (superman-format-thing
+		  (car list)
+		  balls)))
+      (insert item)
+      (end-of-line)
+      (insert "\n")
+      (setq list (cdr list)))))
 
 (defun superman-bloke-view ()
   "Manage projects."

@@ -168,7 +168,12 @@ buffer is in org-agenda-mode."
 	 label)
     (if (not (file-exists-p file))
 	(list "N" "Not exists" "")
-      (setq git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --ignored --porcelain " file-rel)))
+      (setq git-status
+	    (shell-command-to-string
+	     (concat "cd " dir ";"
+		     superman-cmd-git
+		     " status --ignored --porcelain "
+		     file-rel)))
       (if (and check (not (superman-git-p dir)))
 	  (error (concat "Directory " dir " is not git controlled. You may want to start\ngit control of the project via M-x `superman-git-init-project'."))
 	(if (string= git-status "")
@@ -183,21 +188,23 @@ buffer is in org-agenda-mode."
 	    (setq git-last-commit "")
 	  (setq git-last-commit
 		(superman-git-get-commit "1" file-rel dir)))
-	(cond ((string= git-status "?")
-	       (setq label "Untracked"))
-	      ((string= git-status "E")
-	       (setq label "NA"))
-	      ((string= git-status "M")
-	       (setq label "Staged"))
-	      ((string= git-status "A")
-	       (setq label "New file"))
-	      ((string= git-status " ")
-	       (setq label "Modified"))
-	      ((string= git-status "C")
-	       (setq label "Committed"))
-	      (t (setq label "Unknown")))
+	(setq label (superman-status-label git-status))
 	(list git-status label git-last-commit)))))
 
+(defun superman-status-label (status)
+  (cond ((string= status "?")
+	 "Untracked")
+	((string= status "E")
+	 "NA")
+	((string= status "M")
+	 "Modified")
+	((string= status "A")
+	 "New file")
+	((string= status " ")
+	 "Modified")
+	((string= status "C")
+	 "Committed")
+	(t "Unknown")))
 ;;}}}
 ;;{{{ set and update status
 
@@ -221,7 +228,6 @@ buffer is in org-agenda-mode."
       (unless (string= last-commit "")
 	(org-entry-put pom "LastCommit" last-commit)))
     statlist))
-
 
 (defun superman-update-git-status ()
   (interactive)
@@ -387,6 +393,61 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	    pstring) "    " (superman-trim-string hdr 70)))
 
 
+(defun superman-git-log-view (file dir git-switches decorationonly)
+  (let* ((file (superman-relative-name file dir))
+	 (dir dir)
+	 (gitlog (shell-command-to-string
+		  (concat
+		   "cd " dir "; " superman-cmd-git git-switches " -- " file)))
+	 (logbuf (file-name-nondirectory file))
+	 (logbuf (concat (make-temp-file logbuf) ".org"))
+	 (org-agenda-window-setup 'current-window)
+	 (org-agenda-sticky nil)
+	 (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
+	 item val)
+    ;; (if (get-buffer log-view-buf)
+    ;; (switch-to-buffer log-view-buf)
+    (if (string= gitlog "")
+	(error (concat "No search results in file history or file " file " not (not yet) git controlled."))
+      (pop-to-buffer logbuf)
+      (erase-buffer)
+      (insert (concat "* Git Log ("
+		      file
+		      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
+		      file
+		      "\n:GitPath: "
+		      dir
+		      "\n:END:\n"))
+      (loop for x in (split-string (substring gitlog 0 -1) "\n")
+	    do 
+	    (setq val (delete "" (split-string x ":#:")))
+	    (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:"
+			       (superman-property 'hash) ": " (car val) "\n:"
+			       (when (nth 4 val) (concat (superman-property 'decoration) ": " (nth 4 val) "\n:"))
+			       (superman-property 'date) ": " (nth 2 val) "\n:"
+			       (superman-property 'author) ": " (nth 3 val) 
+			       "\n:END:\n"))
+	    (if (or (not decorationonly) (nth 4 val)) (insert item)))
+      ;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
+      ;;	(bury-buffer)
+      (write-file logbuf nil)
+      (kill-buffer)
+      (goto-char (point-min))
+      (let* ((org-agenda-finalize-hook 'superman-finalize-git-log)
+	     ;; (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
+	     (org-agenda-custom-commands
+	      `(("h" "view file history"
+		 ((tags "Hash={.+}"
+			((org-agenda-files (quote (,logbuf)))
+			 (org-agenda-sticky nil)
+			 (org-agenda-overriding-header (concat "Git-log of " ,file "\t?: help\n\n"))
+			 (org-agenda-property-list '("Hash" "Decoration" "Date" "Author"))
+			 (org-agenda-view-columns-initially nil)
+			 (org-agenda-buffer-name  ,org-agenda-buffer-name)
+			 (org-agenda-finalize-hook 'superman-finalize-git-log)  
+			 )))))))
+	(org-agenda nil "h")))))
+
 (defun superman-git-setup-log-buffer (file dir git-switches decorationonly)
   (let* ((file (superman-relative-name file dir))
 	 (dir dir)
@@ -484,7 +545,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
     (superman-git-setup-log-buffer file gitpath gitcmd decorationonly)))
 
 
-(defun superman-git-log-at-point (arg)
+(defun superman-git-log-at-point (&optional arg)
   (interactive "p")
   (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
 	 (file (superman-filename-at-point)))
