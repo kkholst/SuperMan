@@ -359,7 +359,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
                         
                         Enabling superman-view mode electrifies the column view for documents
                         for git and other actions like commit, history search and pretty log-view."
-  :lighter " git-log"
+  :lighter " S-log"
   :group 'org
   :keymap 'superman-git-log-mode-map)
 
@@ -371,7 +371,6 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
   (interactive)
   (hl-line-mode 1)
   (superman-git-log-mode t))
-
 
 (defun superman-git-log-format (hdr level category tags-list prop-list)
   (concat " " 
@@ -392,61 +391,6 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	      (setq cprops (cdr cprops)))
 	    pstring) "    " (superman-trim-string hdr 70)))
 
-
-(defun superman-git-log-view (file dir git-switches decorationonly)
-  (let* ((file (superman-relative-name file dir))
-	 (dir dir)
-	 (gitlog (shell-command-to-string
-		  (concat
-		   "cd " dir "; " superman-cmd-git git-switches " -- " file)))
-	 (logbuf (file-name-nondirectory file))
-	 (logbuf (concat (make-temp-file logbuf) ".org"))
-	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-sticky nil)
-	 (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
-	 item val)
-    ;; (if (get-buffer log-view-buf)
-    ;; (switch-to-buffer log-view-buf)
-    (if (string= gitlog "")
-	(error (concat "No search results in file history or file " file " not (not yet) git controlled."))
-      (pop-to-buffer logbuf)
-      (erase-buffer)
-      (insert (concat "* Git Log ("
-		      file
-		      ")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
-		      file
-		      "\n:GitPath: "
-		      dir
-		      "\n:END:\n"))
-      (loop for x in (split-string (substring gitlog 0 -1) "\n")
-	    do 
-	    (setq val (delete "" (split-string x ":#:")))
-	    (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:"
-			       (superman-property 'hash) ": " (car val) "\n:"
-			       (when (nth 4 val) (concat (superman-property 'decoration) ": " (nth 4 val) "\n:"))
-			       (superman-property 'date) ": " (nth 2 val) "\n:"
-			       (superman-property 'author) ": " (nth 3 val) 
-			       "\n:END:\n"))
-	    (if (or (not decorationonly) (nth 4 val)) (insert item)))
-      ;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
-      ;;	(bury-buffer)
-      (write-file logbuf nil)
-      (kill-buffer)
-      (goto-char (point-min))
-      (let* ((org-agenda-finalize-hook 'superman-finalize-git-log)
-	     ;; (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
-	     (org-agenda-custom-commands
-	      `(("h" "view file history"
-		 ((tags "Hash={.+}"
-			((org-agenda-files (quote (,logbuf)))
-			 (org-agenda-sticky nil)
-			 (org-agenda-overriding-header (concat "Git-log of " ,file "\t?: help\n\n"))
-			 (org-agenda-property-list '("Hash" "Decoration" "Date" "Author"))
-			 (org-agenda-view-columns-initially nil)
-			 (org-agenda-buffer-name  ,org-agenda-buffer-name)
-			 (org-agenda-finalize-hook 'superman-finalize-git-log)  
-			 )))))))
-	(org-agenda nil "h")))))
 
 (defun superman-git-setup-log-buffer (file dir git-switches decorationonly)
   (let* ((file (superman-relative-name file dir))
@@ -478,12 +422,13 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 			   (cons "Comment" (nth 1 log))
 			   (cons "Hash" (nth 0 log))
 			   (cons "marker" (nth 0 log))
-			   (cons "Decoration" (nth 4 log))
+			   (cons "Tag" (nth 4 log))
 			   (cons "Date" (nth 2 log))
 			   (cons "Author"  (nth 3 log))))
 		    superman-log-balls)))
 	(insert item "\n"))
       (setq logstrings (cdr logstrings))))
+  (superman-git-log-mode-on)
   (setq buffer-read-only t))
 
 (setq superman-log-balls
@@ -494,39 +439,12 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	("Hash"
 	 ("trim" superman-trim-string (8))
 	 ("face" font-lock-comment-face))
+	("Tag"
+	 ("trim" superman-trim-string (12))
+	 ("face" font-lock-comment-face))
 	("Comment"
 	 ("trim" superman-trim-string (50))
 	 ("face" font-lock-keyword-face))))
-
-(defun superman-finalize-git-log ()
-  (save-excursion
-    (let* ((log-balls '((hdr nil 40)
-			("Date" superman-trim-date nil)
-			("Author" nil 29)
-			("Decoration" nil 19)
-			("Hash" nil 30)))
-	   (start (progn (goto-char (point-min))
-			 (next-single-property-change
-			  (point-at-eol) 'org-marker)))
-	   (buffer-read-only nil))
-      ;; (put-text-property 0 (length header) 'face 'org-agenda-structure header)
-      (when start
-	(goto-char start)
-	(superman-loop 'superman-format-item log-balls)
-	(goto-char start)
-	(if (next-single-property-change
-	     (point-at-eol) 'org-marker)
-	    (progn
-	      (insert "\n")
-	      (insert (apply
-		       'superman-column-names
-		       (list (list "Title" "Date" "Author" "Decoration" "Hash")
-			     log-balls)))
-	      (insert "\n")
-	      (beginning-of-line 0)
-	      (put-text-property (point-at-bol) (point-at-eol) 'face font-lock-comment-face)
-	      ))))
-    (superman-git-log-mode-on)))
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)
@@ -538,7 +456,6 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
     (superman-git-setup-log-buffer file gitpath gitcmd decorationonly)))
-
 
 (defun superman-git-log-at-point (&optional arg)
   (interactive "p")

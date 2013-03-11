@@ -952,21 +952,10 @@ if it exists and add text-property org-hd-marker."
 	(setq status-list (cdr status-list)))))
   (superman-redo))
 
+
 (defun superman-view-update ()
   (interactive)
   (superman-view-git-set-status 'save 'redo nil))
-
-(defun superman-view-git-add (&optional dont-redo)
-  "Add but not commit the file given by the filename property
-of the item at point.
-
-If dont-redo the agenda is not reversed."
-  (interactive)
-  (let* ((filename (superman-filename-at-point))
-	 (file (file-name-nondirectory filename))
-	 (dir (if filename (expand-file-name (file-name-directory filename)))))
-    (superman-git-add file dir nil nil)
-    (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
@@ -980,18 +969,23 @@ If dont-redo the agenda is not reversed."
     (superman-git-add file dir 'commit nil)
   (superman-view-git-set-status 'save (not dont-redo) nil)))
 
-(defun superman-view-git-add-all (&optional dont-redo)
-  (interactive)
-  (superman-loop 'superman-view-git-add (list 'dont) nil nil 'marked)
-  (unless dont-redo (superman-redo)))
+(defun superman-view-marked-files (&optional beg end)
+  (delq nil (superman-loop
+   '(lambda ()
+      (or (and (superman-marked-p)
+	       (superman-filename-at-point 'no-error)))) nil beg end)))
+
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
   (let* ((pro (superman-view-current-project))
 	 (dir (concat (superman-get-location pro) (car pro))))
     ;; (files (superman-loop 'superman-filename-at-point (list nil))))
-    (superman-view-git-add-all 'dont)
-    (superman-git-commit dir (concat "Git commit message for selected files in " dir ": "))
+    (superman-git-add
+     (superman-view-marked-files)
+     dir
+     'commit
+     (concat "Git commit message for selected files in " dir ": "))
     (superman-view-update-all)
     (unless dont-redo (superman-redo))))
 
