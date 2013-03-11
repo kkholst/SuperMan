@@ -90,7 +90,7 @@ Else return FILE as it is."
       (superman-git-init-directory loc)
       (if (string-match loc index)
 	  (superman-git-add
-	   index loc
+	   (list index) loc
 	   'commit (concat "Initial commit of project " (car pro)))))))
 
 (defun superman-git-init-directory (dir)
@@ -247,7 +247,7 @@ buffer is in org-agenda-mode."
 	 (cmd (concat (concat "cd " dir ";" superman-cmd-git " commit -m \"" message "\""))))
     (shell-command-to-string cmd)))
 
-(defun superman-git-add (file dir &optional commit message)
+(defun superman-git-add (file-list dir &optional commit message)
   "Add file FILE to git repository at DIR. If DIR is nil,
 prompt for project and use the associated git repository.
 If FILE is nil then read file name below DIR.
@@ -262,11 +262,14 @@ or if the file is not inside the location."
   (let* ((dir (or dir
 		  (let ((pro (superman-select-project)))
 		    (concat (superman-get-location pro) (car pro)))))
-	 (file (or file (read-file-name "Git add file: " dir nil t)))
-	 (file (superman-relative-name file dir))
-	 (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file))
-	 (message (if commit (or message (read-string (concat "Commit message for " (file-name-nondirectory file) ": "))))))
-    (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file)))
+	 (file-list (or file-list
+			(list (read-file-name "Git add file: " dir nil t))))
+	 (file-list-string
+	  (apply 'concat
+		 (mapcar `(lambda (f) (concat (superman-relative-name f ,dir) " ")) file-list)))
+	 (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file-list-string))
+	 (message (if commit (or message (read-string (concat "Commit message for " file-list-string ": "))))))
+    (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file-list-string)))
     (shell-command-to-string cmd)))
 
 (defun superman-git-add-at-point (&optional commit message check)
@@ -274,7 +277,7 @@ or if the file is not inside the location."
   (interactive)
   (let* ((file (superman-property-at-point (superman-property 'filename) nil))
 	 (pro (assoc (superman-property-at-point (superman-property 'project)) superman-project-alist)))
-    (superman-git-add (org-link-display-format file) pro commit message)
+    (superman-git-add (list (org-link-display-format file)) pro commit message)
     (superman-git-set-status-at-point check)))
 
 ;;}}}
@@ -287,38 +290,6 @@ or if the file is not inside the location."
 	 (cmd (concat "cd " loc ";" superman-cmd-git " push")))
     (superman-goto-shell)
     (insert cmd)))
-    ;; (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " push"))
-    
-  
-;; (defun superman-git-push-directory (dir silent)
-  ;; "Git push directory DIR."
-  ;; (let* ((status (shell-command-to-string  (concat "cd " dir ";" superman-cmd-git " status")))
-	 ;; (necessary (string-match "Your branch is ahead .*\n" status))
-	 ;; (doit (or silent (y-or-n-p (concat "Your branch is ahead ... push git at " dir "? ")))))
-    ;; (if doit
-	;; (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " push")))))
-
-(defun superman-git-update-project (project before)
-  "Check if project needs to be put under git control and update.
-If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or push."
-  (let* ((git-control (downcase (superman-get-git project))))
-    (unless (or (string= git-control "") (string-match "no\\|never\\|nil" git-control))
-      (let ((silent-p (string= git-control "silent"))
-	    (dir (superman-get-git-location project)))
-	(when (file-exists-p dir)
-	  (if before
-	      (progn
-		;; activating project
-		(unless (or (superman-git-p dir) (string-match "no" git-control) (string= "" git-control))
-		  (when (or silent-p
-			    (y-or-n-p (concat "Initialize git control at " dir "?")))
-		    (superman-git-init-directory dir)))
-		(when (and (string-match "pull" git-control)
-			   (or silent-p (y-or-n-p (concat "Run this command: \"git pull\" at " dir "? "))))
-		  (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " pull"))))
-	    ;; deactivating project
-	    (when (and (superman-git-p dir)
-		       (string-match "yes\\|silent" git-control)))))))))
 
 ;;}}}
 ;;{{{ log-view

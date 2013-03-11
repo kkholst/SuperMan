@@ -546,6 +546,8 @@ The function is only run on items marked in this way."
 	 (superman-view-current-project)))
   ;; minor-mode
   (superman-view-mode-on)
+  ;; check modified
+  (superman-view-git-update-status nil nil 'dont)
   (setq buffer-read-only t))
 
 ;;}}}
@@ -902,11 +904,12 @@ Value is the formatted string with text-properties (special balls)."
 
 (defun superman-view-save-hd-buffer ()
   (save-excursion
+    (get-text-property 
     (goto-char (point-min))
     (org-agenda-next-item 1)
     (set-buffer
      (marker-buffer (org-get-at-bol 'org-hd-marker)))
-    (save-buffer)))
+    (save-buffer))))
 
 (defun superman-filename-with-pom (&optional noerror)
   "Return property `superman-filename-at-point' at point,
@@ -922,40 +925,39 @@ if it exists and add text-property org-hd-marker."
       (put-text-property 0 (length filename) 'org-hd-marker (org-get-at-bol 'org-hd-marker) filename)
       filename)))
 
-(defun superman-view-update-all ()
+
+(defun superman-view-git-update-status (&optional beg end dont-redo)
   "Update git status for project and all entries (that have a filename)."
   (interactive)
-  (let* (file-list
+  (let* ((file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
+	 (dir (get-text-property (point-min) 'dir))
 	 (pro (superman-view-current-project))
 	 (dir (concat (superman-get-location pro) (car pro)))
 	 (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
 	 (status-list
-	  (mapcar (lambda (x)
-		    (if (string= "" x) nil
-		      (let ((el (split-string x " ")))
-			(cons (caddr el) (cadr el)))))
-		  (split-string git-status "\n"))))
-    (delq nil status-list)
-    (when (> (length status-list) 0)
-      (setq file-list (delq nil (superman-loop
-				 'superman-filename-with-pom (list t))))
-      (while status-list
-	(let* ((file (caar status-list))
-	       (status
-		(cdar status-list))
-	       (el (find-if (lambda (f) (string-match file f)) file-list)))
-	  (when el
-	    (org-entry-put
-	     (get-text-property 0 'org-hd-marker el)
-	     "GitStatus" 
-	     (superman-status-label status))))
-	(setq status-list (cdr status-list)))))
-  (superman-redo))
+	  (delq nil
+		(mapcar (lambda (x)
+			  (if (string= "" x) nil
+			    (let ((el (split-string x " ")))
+			      (cons (caddr el) (cadr el)))))
+			(split-string git-status "\n")))))
+    (while file-list
+      (let* ((file (car file-list))
+	     (status
+	      (superman-status-label
+	       (or (cdr (assoc (file-relative-name file dir)
+			       status-list)) "C")))
+	     (pom (get-text-property 0 'org-hd-marker file))
+	     (current-status
+	      (superman-get-property pom "GitStatus")))
+	(unless (string= status current-status)
+	  (when (or
+		 (string= status "modified")
+		 (string= current-status "modified"))
+	    (org-entry-put pom "GitStatus" status)))
+	  (setq file-list (cdr file-list)))))
+  (unless dont-redo (superman-redo)))
 
-
-(defun superman-view-update ()
-  (interactive)
-  (superman-view-git-set-status 'save 'redo nil))
 
 (defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
@@ -980,13 +982,11 @@ If dont-redo the agenda is not reversed."
   (interactive)
   (let* ((pro (superman-view-current-project))
 	 (dir (concat (superman-get-location pro) (car pro))))
-    ;; (files (superman-loop 'superman-filename-at-point (list nil))))
     (superman-git-add
      (superman-view-marked-files)
      dir
-     'commit
-     (concat "Git commit message for selected files in " dir ": "))
-    (superman-view-update-all)
+     'commit nil)
+    (superman-view-git-update-status)
     (unless dont-redo (superman-redo))))
 
 ;;}}}
@@ -1193,7 +1193,7 @@ If dont-redo the agenda is not reversed."
 	("R" superman-redo)
 	("S" superman-sort-section "sort")
 	("T" superman-new-task "Task")
-	("U" superman-view-update-all "Update")
+	("U" superman-view-git-update-status "Update")
 	("V" superman-switch-config "next-config")
 	("W" nil)
 	("X" nil)
