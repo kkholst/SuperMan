@@ -226,10 +226,11 @@ and sets the variable superman-view-current-project."
 (defun superman-view-control (project)
   "Insert the git repository if project is git controlled
 and the keybinding to initialize git control otherwise."
-  (let ((pro (or project (superman-view-current-project)))
-	(control (if (superman-git-p (concat (superman-get-location pro) (car pro)))
-		     (concat "Control: Git repository at "(concat (superman-get-location pro) (car pro)))
-		 "Control: not set. <> press `I' to initialize git")))
+  (let* ((pro (or project (superman-view-current-project)))
+	 (loc (concat (superman-get-location pro) (car pro)))
+	 (control (if (superman-git-p loc)
+		      (concat "Control: Git repository at " (superman-git-toplevel loc))
+			      "Control: not set. <> press `I' to initialize git")))
     (put-text-property 0 (length "Control: ") 'face 'org-level-2 control)
     control))
 
@@ -477,6 +478,8 @@ The function is only run on items marked in this way."
     (insert  (concat "Project: " (car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
     ;; FIXME: there should be a better way to make a marker that points to (point-min) in index-buffer
+    (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
+    (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
     (put-text-property (point-at-bol) (point-at-eol)
 		       'index-marker
 		       (save-excursion
@@ -932,35 +935,42 @@ if it exists and add text-property org-hd-marker."
 (defun superman-view-git-update-status (&optional beg end dont-redo)
   "Update git status for project and all entries (that have a filename)."
   (interactive)
-  (let* ((file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
-	 (dir (get-text-property (point-min) 'dir))
-	 (pro (superman-view-current-project))
-	 (dir (concat (superman-get-location pro) (car pro)))
-	 (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
-	 (status-list
-	  (delq nil
-		(mapcar (lambda (x)
-			  (if (string= "" x) nil
-			    (let ((el (split-string x " ")))
-			      (cons (caddr el) (cadr el)))))
-			(split-string git-status "\n")))))
-    (while file-list
-      (let* ((file (car file-list))
-	     (status
-	      (superman-status-label
-	       (or (cdr (assoc (file-relative-name file dir)
-			       status-list)) "C")))
-	     (pom (get-text-property 0 'org-hd-marker file))
-	     (current-status
-	      (superman-get-property pom "GitStatus")))
-	(unless (string= status current-status)
-	  (when (or
-		 (string= (downcase status) "modified")
-		 (string= (downcase current-status) "modified"))
-	    (org-entry-put pom "GitStatus" status)))
-	  (setq file-list (cdr file-list)))))
-  (unless dont-redo (superman-redo)))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (if (not dir) (message "Project is not git-controlled.")
+      (let* ((file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
+	     (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+	     (status-list
+	      (delq nil
+		    (mapcar (lambda (x)
+			      (if (string= "" x) nil
+				(let ((el (split-string x " ")))
+				  (cons (caddr el) (cadr el)))))
+			    (split-string git-status "\n")))))
+	(while file-list
+	  (let* ((file (car file-list))
+		 (status
+		  (superman-status-label
+		   (or (cdr (assoc (file-relative-name file dir)
+				   status-list)) "C")))
+		 (pom (get-text-property 0 'org-hd-marker file))
+		 (current-status
+		  (superman-get-property pom "GitStatus")))
+	    (unless (string= status current-status)
+	      (when (or
+		     (string= (downcase status) "modified")
+		     (string= (downcase current-status) "modified"))
+		(org-entry-put pom "GitStatus" status)))
+	    (setq file-list (cdr file-list)))))
+      (unless dont-redo (superman-redo)))))
 
+
+(defun superman-view-git-push (&optional project)
+  (interactive)
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 cmd)
+    (when dir
+      (superman-goto-shell)
+      (insert  (concat "cd " dir ";" superman-cmd-git " push")))))
 
 (defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
@@ -1191,7 +1201,7 @@ If dont-redo the agenda is not reversed."
 	("M" superman-new-meeting "Meeting")
 	("N" superman-new-thing "Note")
 	("O" nil)
-	("P" superman-git-push "Push")
+	("P" superman-view-git-push "Push")
 	("Q" superman-unison "Unison")
 	("R" superman-redo)
 	("S" superman-sort-section "sort")
@@ -1213,7 +1223,7 @@ If dont-redo the agenda is not reversed."
 	( "d" superman-view-git-diff "diff")
 	( "h" superman-view-git-history "history")
 	( "l" superman-view-git-log "log")
-	( "u" superman-view-update "update")
+	( "u" superman-view-git-update-status "update")
 	( "L" superman-view-git-log-decorationonly)
 	;; ( "v" superman-view-git-annotate "annotate")
 	("M" superman-view-mark-all "Mark")
