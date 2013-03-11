@@ -124,22 +124,6 @@
     (superman-on)
     (superman-view-mode-on)))
 
-
-
-(defun superman-count-projects-in-bloke (beg end)
-  (save-excursion
-    (let ((n 0))
-      (goto-char beg)
-      (while (and (< (point) end) (next-single-property-change (point-at-eol) 'org-marker))
-	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
-	(end-of-line)
-	(setq n (+ 1 n)))
-      n)))
-
-(defun superman-count-projects ()
-  (superman-structure-loop
-   'superman-count-projects-in-bloke nil))
-
 ;;}}}
 ;;{{{ superman 
 
@@ -155,7 +139,6 @@
   (insert "N: new project RET: select project\n")
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
   (end-of-line))
-
 
 
 (defun superman-categorize-projects (&optional cats balls)
@@ -174,7 +157,7 @@
 	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
 	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
 		       (nth 4 (org-heading-components))))
-	     (marker (org-agenda-new-marker (match-beginning 0)))
+	     (marker (copy-marker (point)))
 	     (hdr  (org-get-heading t t))
 	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
 	     (config (superman-get-property nil (superman-property 'config) 'inherit))
@@ -199,11 +182,11 @@
 				 (cons "index" index)
 				 (cons "category" category)
 				 (cons "others" others)
-				 (cons "hdr" hdr)
+				 (cons 'hdr hdr)
 				 (cons "marker" marker)				 
 				 (cons "lastvisit" lastvisit)
 				 (cons "config" config)
-				 (cons "state" todo)
+				 (cons 'todo todo)
 				 (cons "publish-directory" publish-dir))))))
     superman-project-alist))
 
@@ -259,8 +242,8 @@
 	  (let ((cols (superman-format-thing
 		       '("columns"
 			 (("others" . "Others")
-			  ("hdr" . "Title")
-			  ("state" . "State")
+			  (hdr . "Title")
+			  (todo . "State")
 			  ("marker" . nil)
 			  ("lastvisit" . "LastVisit")))
 		       superman-balls)))
@@ -276,88 +259,6 @@
   (setq buffer-read-only t))
 ;; (superman-format-project)
 
-(defun superman-play-ball (thing ball)
-  "Play BALL at THING (property or alist) and return
- formatted string with faces."
-  (let* ((raw-string
-	  (cond ((stringp (car ball)) ;; properties
-		 (cond ((markerp thing)
-			(superman-get-property thing (car ball) t))
-		       ((and (listp thing)
-			     (cdr (assoc (car ball) (cadr thing)))))
-		       (t "--")))
-		((eq (car ball) 'todo) ;; special: todo state
-		 (cond ((markerp thing)
-			(org-get-todo-state))
-		       ((and (listp thing)
-			     (cdr (assoc "state" (cadr thing)))))
-		       (t "--")))
-		((eq (car ball) 'hdr) ;; special: header
-		 (cond ((markerp thing)
-			(org-get-heading t t))
-		       ((and (listp thing)
-			     (cdr (assoc "hdr" (cadr thing)))))
-		       (t "--")))))
-	 (trim-info (assoc "trim" ball))
-	 (trim-function (or (nth 1 trim-info)
-			    'superman-trim-string))
-	 (trim-args (or (nth 2 trim-info) '(23)))
-	 (trimmed-string
-	  (concat "  " ;; column sep
-		  (apply trim-function
-			 (if (eq (length raw-string) 0)
-			     "--"
-			 raw-string)
-			 trim-args)))
-	 (face-or-fun (or (cadr (assoc "face" ball))
-			  (get-text-property 0 'face raw-string)))
-	 (face (cond
-		((facep face-or-fun)
-		 face-or-fun)
-		((functionp face-or-fun)
-		 (funcall
-		  face-or-fun
-		  (replace-regexp-in-string
-		   "^[ \t\n]+\\|[ \t\n]+$" ""
-		   raw-string)))
-		(t nil))))
-    ;; remove all existing text-properties
-    (set-text-properties 0 (length trimmed-string) nil trimmed-string)
-    (when (facep face)
-      (put-text-property 0 (length trimmed-string) 'face face trimmed-string))
-    trimmed-string))
-
-(defun superman-format-thing (thing balls)
-  "Format THING according to balls. THING is either
-a marker which points to a header in a buffer 
-or an association list. A ball has the for
-
-'(key (\"face\" face-or-fun) (\"trim\" fun args))
-
-Value is the formatted string with text-properties (special balls)."
-  (let ((item "")
-	ilen
-	(column-widths (list 0))
-	(marker (cond ((markerp thing) thing)
-		      ((cdr (assoc "marker" (cadr thing))))))
-	text-props
-	(beg 0))
-    ;; loop columns
-    (while balls
-      (let* ((b (car balls))
-	     (bstring (superman-play-ball thing b)))
-	(setq column-widths (append column-widths (list (length bstring))))
-	(setq item (concat item bstring)))
-      (setq balls (cdr balls)))
-    (setq ilen (length item))
-    ;; superman-marker
-    (when marker
-      (put-text-property 0 ilen 'org-hd-marker marker item)
-      (put-text-property 0 ilen 'org-marker marker item))
-    ;; text property: columns
-    (put-text-property 0 ilen 'columns column-widths item)
-    item))
-
 
 (defun superman-format-loop (list balls)
   "Loop over list and insert all items formatted according to balls."
@@ -370,77 +271,6 @@ Value is the formatted string with text-properties (special balls)."
       (insert "\n")
       (setq list (cdr list)))))
 
-(defun superman-bloke-view ()
-  "Manage projects."
-  (interactive)
-  (let* ((blokes (mapcar 'car
-			 (save-window-excursion
-			   (find-file superman-home)
-			   org-todo-kwd-alist)))
-	 (bloke-number-one (car blokes))
-	 (org-agenda-buffer-name (concat "*S*"))
-	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-sticky nil)
-	 (header-start 
-	  (concat "?: help, n: new project, RET: choose project"
-		  "\n\nProjects: " "\n"))
-	 (shared-header "")
-	 (cmd-block
-	  (mapcar '(lambda (bloke)
-		     (list 'todo bloke
-			   (let ((hdr (if (eq bloke bloke-number-one)
-					  (concat header-start "\n* " bloke "" shared-header)
-					(concat "** " bloke ""))))
-			     `((org-agenda-overriding-header ,hdr)))))
-		  blokes))
-	 (org-agenda-custom-commands
-	  `(("S" "Superman"
-	     ,cmd-block
-	     ;; commands for all blokes
-	     ((org-agenda-finalize-hook 'superman-finalize-superman)
-	      (org-agenda-block-separator superman-document-category-separator)
-	      (org-agenda-view-columns-initially nil)
-	      (org-agenda-buffer-name "*Superman*")
-	      (org-agenda-files (quote (,superman-home))))))))
-    (push ?S unread-command-events)
-    (call-interactively 'org-agenda)))
-
-(defun superman-bloke-view ()
-  "Manage projects."
-  (interactive)
-  (let* ((blokes (mapcar 'car
-			 (save-window-excursion
-			   (find-file superman-home)
-			   org-todo-kwd-alist)))
-	 (bloke-number-one (car blokes))
-	 (org-agenda-finalize-hook 'superman-finalize-superman)
-	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-buffer-name (concat "*S*"))
-	 (org-agenda-sticky nil)
-	 (header-start 
-	  (concat "?: help, n: new project, RET: choose project"
-		  "\n\nProjects: " "\n"))
-	 (shared-header "")
-	 (cmd-block
-	  (mapcar '(lambda (bloke)
-		     (list 'todo bloke
-			   (let ((hdr (if (eq bloke bloke-number-one)
-					  (concat header-start "\n* " bloke "" shared-header)
-					(concat "** " bloke ""))))
-			     `((org-agenda-overriding-header ,hdr)))))
-		  blokes))
-	 (org-agenda-custom-commands
-	  `(("S" "Superman"
-	     ,cmd-block
-	     ;; commands for all blokes
-	     ((org-agenda-finalize-hook 'superman-finalize-superman)
-	      (org-agenda-block-separator superman-document-category-separator)
-	      (org-agenda-view-columns-initially nil)
-	      (org-agenda-buffer-name (concat "*Superman*"))
-	      (org-agenda-files (quote (,superman-home))))
-	     (org-agenda-buffer-name "*Superman*")))))
-    (push ?S unread-command-events)
-    (call-interactively 'org-agenda)))
 
 ;;}}}
 ;;{{{ cycle view 

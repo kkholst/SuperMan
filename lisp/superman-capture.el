@@ -45,6 +45,7 @@ Leaves point at the end of the section."
 	    (make-directory  (file-name-directory index))))
       (error (concat "Project " pro " does not have an index.")))
     (widen)
+    (visible-mode 1)
     (goto-char (point-min))
     (cond ((re-search-forward
 	    (format org-complex-heading-regexp-format (regexp-quote head))

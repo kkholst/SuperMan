@@ -349,11 +349,11 @@ the `superman-home'.")
 				 (cons "index" index)
 				 (cons "category" category)
 				 (cons "others" others)
-				 (cons "hdr" hdr)
+				 (cons 'hdr hdr)
 				 (cons "marker" marker)				 
 				 (cons "lastvisit" lastvisit)
 				 (cons "config" config)
-				 (cons "state" todo)
+				 (cons 'todo todo)
 				 (cons "publish-directory" publish-dir))))))
     superman-project-alist))
   
@@ -798,7 +798,7 @@ If NOSELECT is set return the project."
   (cdr (assoc "lastvisit" (cadr project))))
 
 (defun superman-get-state (project)
-  (cdr (assoc "state" (cadr project))))
+  (cdr (assoc 'todo (cadr project))))
 ;;}}}
 
 (provide 'superman-manager)

@@ -454,54 +454,49 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	 (gitlog (shell-command-to-string
 		  (concat
 		   "cd " dir "; " superman-cmd-git git-switches " -- " file)))
-	 (logbuf (file-name-nondirectory file))
-	 (logbuf (concat (make-temp-file logbuf) ".org"))
-	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-sticky nil)
-	 (org-agenda-buffer-name  (concat "*Log[" (file-name-nondirectory file) "]*"))
-	 item val)
-    ;; (if (get-buffer log-view-buf)
-	;; (switch-to-buffer log-view-buf)
-      (if (string= gitlog "")
-	  (error (concat "No search results in file history or file " file " not (not yet) git controlled."))
-	(pop-to-buffer logbuf)
-	(erase-buffer)
-	(insert (concat "* Git Log ("
-			file
-			")\n:PROPERTIES:\n:COLUMNS: %40ITEM(Comment) %Date %15Author %15Decoration %8Hash \n:FileName: "
-			file
-			"\n:GitPath: "
-			dir
-			"\n:END:\n"))
-	(loop for x in (split-string (substring gitlog 0 -1) "\n")
-	      do 
-	      (setq val (delete "" (split-string x ":#:")))
-	      (setq item (concat "*** " (nth 1 val) "\n:PROPERTIES:\n:"
-				 (superman-property 'hash) ": " (car val) "\n:"
-				 (when (nth 4 val) (concat (superman-property 'decoration) ": " (nth 4 val) "\n:"))
-				 (superman-property 'date) ": " (nth 2 val) "\n:"
-				 (superman-property 'author) ": " (nth 3 val) 
-				 "\n:END:\n"))
-	      (if (or (not decorationonly) (nth 4 val)) (insert item)))
-	;; FIXME: rather change org-tags-view-plus to accept buffers instead of files
-	;;	(bury-buffer)
-	(write-file logbuf nil)
-	(kill-buffer)
-	(goto-char (point-min))
-	(let* ((org-agenda-finalize-hook 'superman-finalize-git-log)
-	       ;; (view-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
-	       (org-agenda-custom-commands
-		`(("h" "view file history"
-		   ((tags "Hash={.+}"
-			  ((org-agenda-files (quote (,logbuf)))
-			   (org-agenda-sticky nil)
-			   (org-agenda-overriding-header (concat "Git-log of " ,file "\t?: help\n\n"))
-			   (org-agenda-property-list '("Hash" "Decoration" "Date" "Author"))
-			   (org-agenda-view-columns-initially nil)
-			   (org-agenda-buffer-name  ,org-agenda-buffer-name)
-			   (org-agenda-finalize-hook 'superman-finalize-git-log)  
-			   )))))))
-	  (org-agenda nil "h")))))
+	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
+	 log-strings)
+    (when (string= gitlog "")
+      (error (concat "No search results in file history or file " file " not (not yet) git controlled.")))
+    (switch-to-buffer log-buf)
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (font-lock-mode -1)
+    (insert "* Git Log of " file)
+    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+    (put-text-property (point-at-bol) (point-at-eol) 'filename file)
+    (put-text-property (point-at-bol) (point-at-eol) 'dir dir)
+    (insert "\n\n")
+    ;; column names
+    (insert (superman-column-names superman-log-balls) "\n")
+    (setq logstrings (split-string (substring gitlog 0 -1) "\n"))
+    (while logstrings
+      (let* ((log (split-string (car logstrings) ":#:"))
+	     (item (superman-format-thing
+		    (list (nth 0 log)
+			  (list 
+			   (cons "Comment" (nth 1 log))
+			   (cons "Hash" (nth 0 log))
+			   (cons "marker" (nth 0 log))
+			   (cons "Decoration" (nth 4 val))
+			   (cons "Date" (nth 2 log))
+			   (cons "Author"  (nth 3 log))))
+		    superman-log-balls)))
+	(insert item "\n"))
+      (setq logstrings (cdr logstrings))))
+  (setq buffer-read-only t))
+
+(setq superman-log-balls
+      '(("Date" ("trim" superman-trim-date (12))
+	 ("face" font-lock-string-face))
+	("Author" ("trim" superman-trim-string (13))
+	 ("face" font-lock-function-name-face))
+	("Hash"
+	 ("trim" superman-trim-string 8)
+	 ("face" font-lock-comment-face))
+	("Comment"
+	 ("trim" superman-trim-string (50))
+	 ("face" font-lock-keyword-face))))
 
 (defun superman-finalize-git-log ()
   (save-excursion
@@ -599,9 +594,9 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 
 (defun superman-git-revision (pom &optional diff)
   "Shows version of the document at point "
-  (let* ((file (superman-get-property pom (superman-property 'filename) t))
-	 (hash (superman-get-property pom (superman-property 'hash) nil))
-	 (path (superman-get-property pom (superman-property 'gitpath) t))
+  (let* ((file (get-text-property (point-min) 'filename))
+         (path (get-text-property (point-min) 'dir))
+	 (hash (get-text-property (point-at-bol) 'org-hd-marker))
 	 (fileabs (concat path file))
 	 (filehash (concat hash "_" file))
 	 (str (shell-command-to-string 
