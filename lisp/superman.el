@@ -230,6 +230,7 @@
 		       (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
 	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(insert "\n\n")
 	;; loop projects in category
 	(superman-format-loop tail superman-balls)

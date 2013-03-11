@@ -478,7 +478,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 			   (cons "Comment" (nth 1 log))
 			   (cons "Hash" (nth 0 log))
 			   (cons "marker" (nth 0 log))
-			   (cons "Decoration" (nth 4 val))
+			   (cons "Decoration" (nth 4 log))
 			   (cons "Date" (nth 2 log))
 			   (cons "Author"  (nth 3 log))))
 		    superman-log-balls)))
@@ -492,7 +492,7 @@ If BEFORE is set then either initialize or pull. Otherwise, add, commit and/or p
 	("Author" ("trim" superman-trim-string (13))
 	 ("face" font-lock-function-name-face))
 	("Hash"
-	 ("trim" superman-trim-string 8)
+	 ("trim" superman-trim-string (8))
 	 ("face" font-lock-comment-face))
 	("Comment"
 	 ("trim" superman-trim-string (50))

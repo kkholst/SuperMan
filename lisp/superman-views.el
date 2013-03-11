@@ -1288,7 +1288,7 @@ If dont-redo the agenda is not reversed."
 		   `(lambda () (forward-char ,col-start))
 		   `(lambda () (forward-char ,col-width)))
 	(widen)
-	(forward-char col-start))))
+	(forward-char (+ 2 col-start)))))
       
 
 (defun superman-sort-by-status (a b)
