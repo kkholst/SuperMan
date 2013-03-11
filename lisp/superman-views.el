@@ -968,7 +968,7 @@ If dont-redo the agenda is not reversed."
   (let* ((filename (superman-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename)))))
-    (superman-git-add file dir 'commit nil)
+    (superman-git-add (list file) dir 'commit nil)
   (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-marked-files (&optional beg end)
