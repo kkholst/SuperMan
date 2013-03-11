@@ -81,48 +81,6 @@
 ;; (if (member kwd org-done-keywords-for-agenda) 'org-done
 ;; 'org-todo))
 
-(defun superman-finalize-superman ()
-  (save-excursion
-    (let* ((start (progn (goto-char (point-min))
-			 (next-single-property-change
-			  (point-at-eol) 'org-marker)))
-	   (buffer-read-only nil))
-      (when start 
-	(goto-char start)
-	(superman-loop 'superman-format-item superman-balls)
-	;; Title, columns and highlight
-	(goto-char (point-min))
-	;; keys
-	(end-of-line)
-	(insert "\n\nKeys: ")
-	(put-text-property (point) (length "Keys: ") 'face 'org-level-2)
-	(end-of-line)
-	(insert "N: new project RET: select project\n")
-	(insert "\n** Projects:\n")
-	(put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
-	(end-of-line)
-	(if (next-single-property-change
-	     (point-at-eol) 'org-marker)
-	    (let ((cols
-		   (apply
-		    'superman-column-names
-		    (list (list "Status" "Title" "LastVisit" "Others" "Location")
-			  superman-balls))))
-		(insert "\n")
-		(insert (car cols))
-		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)
-		(org-back-to-heading)
-		(put-text-property (point-at-bol) (point-at-eol) 'columns (cadr cols))))
-	      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1))
-      ;; facings
-      (save-excursion
-	(goto-char (point-min))
-	(while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-	  (add-text-properties
-	   (match-beginning 0) (match-end 0)
-	   '(face org-link)))))
-    (superman-on)
-    (superman-view-mode-on)))
 
 ;;}}}
 ;;{{{ superman 

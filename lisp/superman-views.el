@@ -465,8 +465,7 @@ The function is only run on items marked in this way."
 	 ;; (org-agenda-window-setup 'current-window)
 	 (project-header (concat "Project: " (car pro)))
 	 (index (superman-get-index pro))
-	 (ibuf (or (get-file-buffer index)
-		   (find-file index)))
+	 (ibuf (or (get-file-buffer index) (find-file index)))
 	 (cats superman-cats)
 	 (org-startup-folded nil))
     (switch-to-buffer vbuf)
@@ -474,9 +473,17 @@ The function is only run on items marked in this way."
     (erase-buffer)
     (org-mode)
     (font-lock-mode -1)
-    ;; insert header and highlight
+    ;; insert header, set text-properties and highlight
     (insert  (concat "Project: " (car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
+    ;; FIXME: there should be a better way to make a marker that points to (point-min) in index-buffer
+    (put-text-property (point-at-bol) (point-at-eol)
+		       'index-marker
+		       (save-excursion
+			 (set-buffer ibuf)
+			 (save-restriction
+			   (widen)
+			   (copy-marker (point-min)))))
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (insert (superman-project-view-header pro))
     ;; loop cats
@@ -899,17 +906,13 @@ Value is the formatted string with text-properties (special balls)."
     (when
 	file
       (superman-git-set-status pom file check)
-      (when save (superman-view-save-hd-buffer))
+      (when save (superman-view-save-index-buffer))
       (when redo (superman-redo)))))
 
-(defun superman-view-save-hd-buffer ()
+(defun superman-view-save-index-buffer ()
   (save-excursion
-    (get-text-property 
-    (goto-char (point-min))
-    (org-agenda-next-item 1)
-    (set-buffer
-     (marker-buffer (org-get-at-bol 'org-hd-marker)))
-    (save-buffer))))
+    (set-buffer (marker-buffer (get-text-property (point-min) 'index-marker)))
+    (save-buffer)))
 
 (defun superman-filename-with-pom (&optional noerror)
   "Return property `superman-filename-at-point' at point,
