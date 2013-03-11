@@ -952,8 +952,8 @@ if it exists and add text-property org-hd-marker."
 	      (superman-get-property pom "GitStatus")))
 	(unless (string= status current-status)
 	  (when (or
-		 (string= status "modified")
-		 (string= current-status "modified"))
+		 (string= (downcase status) "modified")
+		 (string= (downcase current-status) "modified"))
 	    (org-entry-put pom "GitStatus" status)))
 	  (setq file-list (cdr file-list)))))
   (unless dont-redo (superman-redo)))
