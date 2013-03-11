@@ -646,12 +646,10 @@ Examples:
       (save-buffer))))
 
 (defun superman-save-project (&optional project)
-    (interactive)
-    (when (functionp superman-save-buffers)
-      (funcall superman-save-buffers))
-    (let* ((pro (or project superman-current-project)))
-       (when superman-use-git 
-      (superman-git-update-project pro nil))))
+  (interactive)
+  (when (functionp superman-save-buffers)
+    (funcall superman-save-buffers))
+  (let* ((pro (or project superman-current-project)))))
 
 ;;}}}
 ;;{{{ switching projects (see also superman-config)
