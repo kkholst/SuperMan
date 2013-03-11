@@ -265,8 +265,8 @@ the `superman-home'.")
 
 (defun superman-return ()
   (interactive)
-  (let* ((nickname (or (org-get-at-bol 'nickname)
-		       (superman-project-at-point)))
+  (let* ((nickname (superman-get-property
+		    (org-get-at-bol 'org-hd-marker) "NickName"))
 	 (pro (assoc nickname superman-project-alist)))
     (superman-switch-to-project nil pro nil)))
 
