@@ -81,7 +81,6 @@
 ;; (if (member kwd org-done-keywords-for-agenda) 'org-done
 ;; 'org-todo))
 
-
 ;;}}}
 ;;{{{ superman 
 
@@ -190,6 +189,7 @@
 	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
+	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
 	(insert "\n\n")
 	;; loop projects in category
 	(superman-format-loop tail superman-balls)
@@ -230,7 +230,6 @@
       (end-of-line)
       (insert "\n")
       (setq list (cdr list)))))
-
 
 ;;}}}
 ;;{{{ cycle view 

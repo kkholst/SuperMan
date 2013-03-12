@@ -270,7 +270,6 @@ and the keybinding to initialize git control otherwise."
     (when cat-pos
       (if subp subcat-pos cat-pos))))
 
-
 ;;}}}
 ;;{{{ Marking elements
 
@@ -352,6 +351,7 @@ The function is only run on items marked in this way."
 
 ;;}}}
 ;;{{{ Finalizing
+
 (defun superman-finalize-cat (&optional cat)
   (let* ((cat (or cat (org-get-heading t t)))
 	 (gear (cdr (assoc cat superman-finalize-cat-alist)))
@@ -493,6 +493,7 @@ The function is only run on items marked in this way."
 	(setq cat-head (point))
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat cat)
+	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
 	;; insert hot keys
 	(end-of-line)
 	(let ((hotkeys (superman-view-show-hot-keys cat)))
@@ -514,11 +515,13 @@ The function is only run on items marked in this way."
 		(put-text-property 0 (length line) 'subcat subhdr line)
 		(put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 		(put-text-property 0 (length line) 'face 'org-level-3 line)
+		(put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 		(with-current-buffer vbuf
 		  (insert
 		   line
-		   ;; "\n" (superman-column-names balls)
-		   "\n"))
+		   ;;"\n" (superman-column-names balls)
+		   "\n"
+		   ))
 		(end-of-line))
 	    (setq count (+ count 1))
 	    (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
@@ -1323,7 +1326,7 @@ If dont-redo the agenda is not reversed."
     (if (string= A B) nil 
       (if (string-lessp A B)
 	  1 -1))))
-    
+
 ;;}}}
 ;;{{{ help 
 
