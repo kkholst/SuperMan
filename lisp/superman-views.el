@@ -34,8 +34,7 @@ highlight the current line in superman views.")
 (defvar superman-view-marks nil "Marks for items in agenda.")
 (make-variable-buffer-local 'superman-view-marks)
 
-(defvar superman-view-current-project nil)
-(make-variable-buffer-local 'superman-view-current-project)
+
 
 (defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
 
@@ -212,24 +211,20 @@ or by adding whitespace characters."
 (defun superman-view-current-project ()
   "Identifies the project associated with the current view buffer
 and sets the variable superman-view-current-project."
-  (or superman-view-current-project
-      (save-excursion
-	(goto-char (point-min))
-	(if (re-search-forward "^\\(Project\\|Documents\\):[ \t]*\\(.*\\)[ \t]*$" nil t)
-	    (let ((pro (assoc (match-string-no-properties 2)
-			      superman-project-alist)))
-	      (if pro
-		  (setq superman-view-current-project pro)
-		(error (concat "Cannot find project " pro "in superman-project-alist."))))
-	      (error "Malformed header of project view buffer: cannot identify project")))))
+  (let* ((nick (get-text-property (point-min) 'nickname))
+	(pro (when nick (assoc nick superman-project-alist))))
+    (if pro
+	(setq superman-view-current-project pro)
+      (error "Malformed header of project view buffer: cannot identify project"))))
 
 (defun superman-view-control (project)
   "Insert the git repository if project is git controlled
 and the keybinding to initialize git control otherwise."
-  (let* ((pro (or project (superman-view-current-project)))
-	 (loc (concat (superman-get-location pro) (car pro)))
+  (let* ((loc (get-text-property (point-min) 'git-dir))
 	 (control (if (superman-git-p loc)
-		      (concat "Control: Git repository at " (superman-git-toplevel loc))
+		      (concat "Control: Git repository at "
+			      ;;FIXME: would like to have current git status
+			      (superman-git-toplevel loc))
 			      "Control: not set. <> press `I' to initialize git")))
     (put-text-property 0 (length "Control: ") 'face 'org-level-2 control)
     control))
@@ -288,7 +283,7 @@ If DONT-MOVE is non-nil stay at item."
       (unless on (org-agenda-bulk-unmark))
     (org-agenda-bulk-mark)))
 
-(defun superman-mark-all (&optional arg)
+(defun superman-view-mark-all (&optional arg)
   (interactive "P")
   arg
   (save-excursion
@@ -417,38 +412,38 @@ The function is only run on items marked in this way."
     cols))
 
 
-(defun superman-finalize-view (&optional cat)
-  (let* ((org-startup-folded nil)
-	 (bufferq-read-only nil)
-	 (pro (superman-view-current-project))
-	 (header (if cat
-		     (apply (cdr (assoc (car cat) superman-cat-headers))
-			    (list pro))
-		   (superman-project-view-header pro))))
-    (org-mode)
-    (font-lock-mode -1)
-    ;; insert header and highlight
-    (goto-char (point-min))
-    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-    (end-of-line)
-    (when header
-      (insert header))
-    ;; finalizing cats
-    (superman-structure-loop
-     'superman-finalize-cat cat)
-    ;; facings
-    (save-excursion
-      (goto-char (point-min))
-      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-	(add-text-properties
-	 (match-beginning 0) (match-end 0)
-	 '(face org-link))))
-    ;; default-dir
-    (setq default-directory
-	  (superman-project-home
-	   (superman-view-current-project)))
-    ;; minor-mode
-    (superman-view-mode-on)))  
+;; (defun superman-finalize-view (&optional cat)
+  ;; (let* ((org-startup-folded nil)
+	 ;; (bufferq-read-only nil)
+	 ;; (pro (superman-view-current-project))
+	 ;; (header (if cat
+		     ;; (apply (cdr (assoc (car cat) superman-cat-headers))
+			    ;; (list pro))
+		   ;; (superman-project-view-header pro))))
+    ;; (org-mode)
+    ;; (font-lock-mode -1)
+    ;; ;; insert header and highlight
+    ;; (goto-char (point-min))
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+    ;; (end-of-line)
+    ;; (when header
+      ;; (insert header))
+    ;; ;; finalizing cats
+    ;; (superman-structure-loop
+     ;; 'superman-finalize-cat cat)
+    ;; ;; facings
+    ;; (save-excursion
+      ;; (goto-char (point-min))
+      ;; (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	;; (add-text-properties
+	 ;; (match-beginning 0) (match-end 0)
+	 ;; '(face org-link))))
+    ;; ;; default-dir
+    ;; (setq default-directory
+	  ;; (superman-project-home
+	   ;; (superman-view-current-project)))
+    ;; ;; minor-mode
+    ;; (superman-view-mode-on)))  
 
 ;;}}}
 ;;{{{ Project views
@@ -477,16 +472,10 @@ The function is only run on items marked in this way."
     ;; insert header, set text-properties and highlight
     (insert  (concat "Project: " (car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
-    ;; FIXME: there should be a better way to make a marker that points to (point-min) in index-buffer
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
     (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
-    (put-text-property (point-at-bol) (point-at-eol)
-		       'index-marker
-		       (save-excursion
-			 (set-buffer ibuf)
-			 (save-restriction
-			   (widen)
-			   (copy-marker (point-min)))))
+    (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
+    (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (insert (superman-project-view-header pro))
     ;; loop cats
@@ -523,6 +512,7 @@ The function is only run on items marked in this way."
 	      (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
 		(setq line (concat "*** " subhdr))
 		(put-text-property 0 (length line) 'subcat subhdr line)
+		(put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 		(put-text-property 0 (length line) 'face 'org-level-3 line)
 		(with-current-buffer vbuf
 		  (insert
@@ -660,14 +650,37 @@ Value is the formatted string with text-properties (special balls)."
     (concat "\n" control (insert "\n\n" hotkeys "\n\n"))) "\n" )
 
 ;;}}}
+;;{{{ Moving items around
+(defun superman-one-up (&optional arg)
+  (interactive "P")
+  (let ((marker (org-get-at-bol 'org-hd-marker)))
+    (when marker
+      (save-excursion
+	(set-buffer (marker-buffer marker))
+	(goto-char marker)
+	(widen)
+	(if arg
+	    (org-move-subtree-up)
+	  (org-move-subtree-down))))
+    (superman-redo)))
+
+(defun superman-one-down ()
+  (interactive)
+  (superman-one-up 1))
+
+;;}}}
 ;;{{{ View commands (including redo and git) 
 
 (defun superman-redo ()
   (interactive)
-  (let (cmd)
+  (let ((curline (progn
+		   (beginning-of-line)
+		   (count-lines 1 (point))))
+	cmd)
     (goto-char (point-min))
     (setq cmd (get-text-property (point) 'redo-cmd))
-    (eval cmd)))
+    (eval cmd)
+    (goto-line (+ 1 curline))))
 
 (defun superman-view-redo-line ()
   (interactive)
@@ -801,29 +814,31 @@ Value is the formatted string with text-properties (special balls)."
     (vc-annotate (org-link-display-format file) "HEAD")
   ))
 
-
 (defun superman-view-git-grep (&optional arg)
   (interactive)
-  (let ((pro (superman-view-current-project))
-	(st (read-string "Grep: ")))
-    (if arg
-	(vc-git-grep st)
-	(vc-git-grep st "*" (concat (superman-get-location pro) (car pro))))))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (if arg
+	(vc-git-grep (read-string "Grep: "))
+	(vc-git-grep (read-string "Grep: ") "*" dir)))))
 
 (defun superman-view-git-history ()
   (interactive)
-  (let ((pro (superman-view-current-project)))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
     (vc-print-log-internal
      'Git
-     (list (concat (superman-get-location pro) (car pro)))
-     nil nil 2000)))
+     (list dir)
+     nil nil 2000))))
 
 (defun superman-view-index ()
   (interactive)
   (let* ((pom (org-get-at-bol 'org-hd-marker))
-	 (index (superman-get-index (superman-view-current-project)))
-	 (ibuf (if pom (marker-buffer pom)
-		 (get-file-buffer index)))
+	 (ibuf (or (and pom (marker-buffer pom))
+		   (get-file-buffer
+		    (get-text-property (point-min) 'index))
+		   (find-file
+		    (get-text-property (point-min) 'index))))
 	 (iwin (when ibuf (get-buffer-window ibuf nil))))
     (if (and ibuf iwin)
 	(select-window (get-buffer-window ibuf nil))
@@ -843,9 +858,10 @@ Value is the formatted string with text-properties (special balls)."
 
 (defun superman-view-git-init ()
   (interactive)
-  (let ((pro (superman-view-current-project)))
-    (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
-    (superman-redo)))
+  (or (get-text-property (point-min) 'git-dir)
+    (let ((pro (superman-view-current-project)))
+      (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
+      (superman-redo))))
 
 ;; (defun superman-view-set (&optional dont-redo)
   ;; "Set a property for document at point."
@@ -867,12 +883,8 @@ Value is the formatted string with text-properties (special balls)."
 (defun superman-hot-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (b (org-get-heading t t)))
-    ;; (save-excursion
-    ;; (goto-char (previous-single-property-change (point-at-eol) 'org-agenda-structural-header))
-    ;; (beginning-of-line)
-    ;; (looking-at "\\[\\([a-zA-Z]+\\)\\]")
-    ;; (match-string-no-properties 1))))
+	 (b (org-get-heading t t))
+	 f)
     (cond ((string-match "Mail" b)
 	   (save-excursion
 	     (beginning-of-line)
@@ -887,8 +899,9 @@ Value is the formatted string with text-properties (special balls)."
 	  (superman-mode
 	   (superman-return))
 	  ;; (message "Follow-link"))
-	  (t (org-open-link-from-string
-	      (superman-get-property m "filename"))))))
+	  ((setq f (superman-get-property m "filename"))
+	   (org-open-link-from-string f))
+	  (t (message "Nothing to do here")))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
@@ -914,8 +927,10 @@ Value is the formatted string with text-properties (special balls)."
 
 (defun superman-view-save-index-buffer ()
   (save-excursion
-    (set-buffer (marker-buffer (get-text-property (point-min) 'index-marker)))
-    (save-buffer)))
+    (let ((ibuf (get-file-buffer
+		 (get-text-property (point-min) 'index))))
+      (when ibuf (set-buffer ibuf)
+	    (save-buffer)))))
 
 (defun superman-filename-with-pom (&optional noerror)
   "Return property `superman-filename-at-point' at point,
@@ -993,14 +1008,14 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
-  (let* ((pro (superman-view-current-project))
-	 (dir (concat (superman-get-location pro) (car pro))))
-    (superman-git-add
-     (superman-view-marked-files)
-     dir
-     'commit nil)
-    (superman-view-git-update-status)
-    (unless dont-redo (superman-redo))))
+  (let* ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-add
+       (superman-view-marked-files)
+       dir
+       'commit nil)
+      (superman-view-git-update-status)
+      (unless dont-redo (superman-redo)))))
 
 ;;}}}
 ;;{{{ View-mode and hot-keys
@@ -1075,8 +1090,12 @@ If dont-redo the agenda is not reversed."
       (define-key superman-view-mode-map
 	x (intern (concat "superman-hot-" x))))
    superman-view-hot-keys))
+
 (superman-view-set-hot-keys)
-(define-key superman-view-mode-map [return] 'superman-hot-return) 
+
+(define-key superman-view-mode-map [return] 'superman-hot-return)
+(define-key superman-view-mode-map [(shift up)] 'superman-one-down)
+(define-key superman-view-mode-map [(shift down)] 'superman-one-up) 
 
 (setq superman-documents-hot-keys '(("c" superman-view-git-commit)))
 
