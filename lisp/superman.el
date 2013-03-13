@@ -95,7 +95,7 @@
   (forward-line -1)
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
   (end-of-line)
-  (insert "N: new project RET: select project\n")
+  (insert "N: new project RET: select project")
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
   (end-of-line))
 
@@ -175,7 +175,6 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     ;; loop over categories    
-    (kill-line)
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
@@ -258,7 +257,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("P" "Projects-TODO neither B or C"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
@@ -293,7 +292,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("B" "Projects-TODO class B"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
@@ -309,7 +308,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("C" "Projects-TODO class C"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"C\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
