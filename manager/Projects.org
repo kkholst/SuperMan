@@ -1,7 +1,7 @@
 * Work
 * Privat
 * Krypton
-**** ACTIVE Kal-El
+**** TODO ACTIVE Kal-El
 :PROPERTIES:
 :NickName: Kal-El
 :Location: ~/emacs-genome/genes/SuperMan/projects/

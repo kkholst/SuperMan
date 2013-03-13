@@ -463,12 +463,14 @@ The function is only run on items marked in this way."
 	 (index (superman-get-index pro))
 	 (ibuf (or (get-file-buffer index) (find-file index)))
 	 (cats superman-cats)
+	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
     (switch-to-buffer vbuf)
     (setq buffer-read-only nil)
     (erase-buffer)
     (org-mode)
     (font-lock-mode -1)
+    (font-lock-default-function nil)
     ;; insert header, set text-properties and highlight
     (insert  (concat "Project: " (car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
@@ -578,6 +580,7 @@ a formatted string with faces."
 	    ;; thing is alist
 	    (or (cdr (assoc (car ball) (cadr thing))) "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))
+	 (u (get-text-property 0 'face raw-string))
 	 (trim-info (assoc "trim" ball))
 	 (trim-function (or (nth 1 trim-info)
 			    'superman-trim-string))
@@ -597,8 +600,9 @@ a formatted string with faces."
 		    (replace-regexp-in-string
 		     "^[ \t\n]+\\|[ \t\n]+$" ""
 		     raw-string))))
-      (when (facep face)
-	(put-text-property 0 (length trimmed-string) 'face face trimmed-string)))
+      (when (or (facep face) (listp face))
+	(setq trimmed-string (org-add-props trimmed-string nil 'face face))))
+	;; (put-text-property 0 (length trimmed-string) 'face face trimmed-string)))
     trimmed-string))
 
 (defun superman-format-thing (thing balls &optional no-face)
