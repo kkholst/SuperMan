@@ -38,7 +38,8 @@
 		   ("state" . "ACTIVE"))))
 
 (setq superman-balls
-      '((todo ("trim" nil (9)) ("face" superman-get-todo-face))
+      '((todo ("trim" nil (9)))
+;;("face" superman-get-todo-face))
 	(hdr ("trim" nil (27)) ("face" font-lock-function-name-face))
 	("lastvisit" ("trim" superman-trim-date nil)
 	 ("face" font-lock-type-face))
@@ -173,7 +174,8 @@
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
-    ;; loop over categories
+    ;; loop over categories    
+    (kill-line)
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
@@ -207,7 +209,7 @@
 			  ("marker" . nil)
 			  ("lastvisit" . "LastVisit")))
 		       superman-balls)))
-	    (insert cols)
+	    (insert cols)	    
 	    (set-text-properties (point-at-bol) (point-at-eol) 'face nil)
 	    (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)))
 	(org-back-to-heading)
