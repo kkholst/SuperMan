@@ -328,7 +328,7 @@ the `superman-home'.")
 	     (hdr (org-get-heading t t))
 	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
 	     (config (superman-get-property nil (superman-property 'config) 'inherit))
-	     (todo (substring (or (org-get-todo-state) "")))
+	     (todo (or (org-get-todo-state) ""))
 	     (index (or (superman-get-property nil (superman-property 'index) nil)
 			(let ((default-org-home
 				(concat (file-name-as-directory loc)
