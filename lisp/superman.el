@@ -96,10 +96,9 @@
   (forward-line -1)
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
   (end-of-line)
-  (insert "N: new project RET: select project\n")
+  (insert "N: new project RET: select project")
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
-  (end-of-line)
-  (insert "\n"))
+  (end-of-line))
 
 
 (defun superman-categorize-projects (&optional cats balls)
@@ -165,6 +164,7 @@
     (org-mode)
     (font-lock-mode -1)
     (superman-make-header)
+    (goto-char (point-max))
     ;; parse projects by category using superman-balls
     (while projects
       (let* ((pro (car projects))
@@ -188,7 +188,7 @@
 		      (org-time<=
 		       (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
 		       (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
-	(insert "** " cat-name " [" (int-to-string (length tail)) "]")
+	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
@@ -256,7 +256,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("P" "Projects-TODO neither B or C"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
@@ -291,7 +291,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("B" "Projects-TODO class B"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
@@ -307,7 +307,7 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("C" "Projects-TODO class C"
-	    ,(mapcar '(lambda (cat)
+	    ,(mapcar #'(lambda (cat)
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY=\"C\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))

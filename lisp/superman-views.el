@@ -480,6 +480,7 @@ The function is only run on items marked in this way."
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (insert (superman-project-view-header pro))
+    (insert "\n")
     ;; loop cats
     (while cats
       (let* ((cat (caar cats))
