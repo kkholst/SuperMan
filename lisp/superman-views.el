@@ -490,7 +490,7 @@ The function is only run on items marked in this way."
 	     (count 0)
 	     line)
 	(set-buffer vbuf)
-	(insert "\n** " cat)
+	(insert "\n\n** " cat)
 	(beginning-of-line)
 	(setq cat-head (point))
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
@@ -554,6 +554,18 @@ The function is only run on items marked in this way."
   ;; check modified
   (superman-view-git-update-status nil nil 'dont)
   (setq buffer-read-only t))
+
+
+(setq org-todo-keyword-faces
+      (quote (("TODO" :foreground "red" :weight bold)
+	      ("URGENT" :foreground "goldenrod1" :weight bold)
+	      ("IN PROGRESS" :foreground "blue" :weight bold)
+	      ("ACTIVE" :foreground "red" :weight bold)
+	      ("WAITING" :foreground "purple" :weight bold)
+	      ("PERMANENT" :foreground "SkyBlue3" :weight bold)
+	      ("DONE" :foreground "forest green" :weight bold)
+	      ("CANCELED" :foreground "slate grey" :weight bold))))
+
 
 ;;}}}
 ;;{{{ Formatting items and column names

@@ -175,7 +175,7 @@
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
-    ;; loop over categories    
+    ;; loop over categories
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
@@ -192,7 +192,6 @@
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
-	(insert "\n\n")
 	;; loop projects in category
 	(superman-format-loop tail superman-balls)
 	;; column names
