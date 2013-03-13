@@ -38,8 +38,7 @@
 		   ("state" . "ACTIVE"))))
 
 (setq superman-balls
-      '((todo ("trim" nil (9)))
-;;("face" superman-get-todo-face))
+      '((todo ("trim" nil (9)) ("face" superman-get-todo-face))
 	(hdr ("trim" nil (27)) ("face" font-lock-function-name-face))
 	("lastvisit" ("trim" superman-trim-date nil)
 	 ("face" font-lock-type-face))
@@ -79,6 +78,8 @@
        'todo 'org-todo (cdr (assoc kwd org-todo-keyword-faces)))
       (and (member kwd org-done-keywords) 'org-done)
       'org-todo))
+
+;; (:foreground "blue" :weight bold :underline t)
 ;; (if (member kwd org-done-keywords-for-agenda) 'org-done
 ;; 'org-todo))
 
@@ -97,7 +98,8 @@
   (end-of-line)
   (insert "N: new project RET: select project\n")
   (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
-  (end-of-line))
+  (end-of-line)
+  (insert "\n"))
 
 
 (defun superman-categorize-projects (&optional cats balls)
@@ -163,8 +165,7 @@
     (org-mode)
     (font-lock-mode -1)
     (superman-make-header)
-    ;; parse projects relative to superman-balls
-    ;; in categories
+    ;; parse projects by category using superman-balls
     (while projects
       (let* ((pro (car projects))
 	     (cat (cdr (assoc "category" (cadr pro))))
@@ -175,7 +176,6 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     ;; loop over categories    
-    (kill-line)
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
@@ -188,7 +188,7 @@
 		      (org-time<=
 		       (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
 		       (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
-	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
+	(insert "** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
@@ -219,7 +219,6 @@
   (superman-on)
   (superman-view-mode-on)
   (setq buffer-read-only t))
-;; (superman-format-project)
 
 
 (defun superman-format-loop (list balls)
