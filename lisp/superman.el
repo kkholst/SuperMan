@@ -193,6 +193,7 @@
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
 	;; loop projects in category
+	(insert "\n")
 	(superman-format-loop tail superman-balls)
 	;; column names
 	(org-back-to-heading)
@@ -200,6 +201,8 @@
 	(when (next-single-property-change (point-at-eol) 'org-marker)
 	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
 	  (forward-line -1)
+	  (end-of-line)
+	  (insert "\n")
 	  (let ((cols (superman-format-thing
 		       '("columns"
 			 (("others" . "Others")
@@ -208,7 +211,7 @@
 			  ("marker" . nil)
 			  ("lastvisit" . "LastVisit")))
 		       superman-balls)))
-	    (insert cols)	    
+	    (insert cols)
 	    (set-text-properties (point-at-bol) (point-at-eol) 'face nil)
 	    (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)))
 	(org-back-to-heading)

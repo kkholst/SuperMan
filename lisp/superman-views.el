@@ -480,7 +480,7 @@ The function is only run on items marked in this way."
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (insert (superman-project-view-header pro))
-    (insert "\n")
+    (goto-char (point-max))
     ;; loop cats
     (while cats
       (let* ((cat (caar cats))
@@ -491,7 +491,7 @@ The function is only run on items marked in this way."
 	     (count 0)
 	     line)
 	(set-buffer vbuf)
-	(insert "\n\n** " cat)
+	(insert "\n** " cat)
 	(beginning-of-line)
 	(setq cat-head (point))
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
@@ -501,8 +501,8 @@ The function is only run on items marked in this way."
 	(end-of-line)
 	(let ((hotkeys (superman-view-show-hot-keys cat)))
 	  (if (> (length hotkeys) 0)
-	      (insert "\n" hotkeys "\n\n")
-	    (insert "\n\n")))
+	      (insert "\n" hotkeys "\n")
+	    (insert "\n")))
 	;; insert column names 
 	(insert (superman-column-names balls))
 	(insert "\n")	
