@@ -192,7 +192,7 @@
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
-	;; loop projects in category
+	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
 	;; column names

@@ -87,7 +87,7 @@ determine the face.")
 (setq superman-document-columns
       (list "Description" "GitStatus" "LastCommit" "FileName"))
 (setq superman-document-balls
-      '((hdr ("trim" nil (23)) ("face" font-lock-function-name-face))
+      '((hdr ("trim" nil (23)) ("face" font-lock-function-name-face) ("name" "Description"))
 	("GitStatus" ("trim" nil (10)) ("face" superman-get-git-status-face))
 	("LastCommit" ("trim" superman-trim-date (13)) ("face" font-lock-string-face))
 	("FileName" ("trim" (lambda (x len) x) nil))))
@@ -404,9 +404,10 @@ The function is only run on items marked in this way."
 	  (list "columns"
 		(mapcar '(lambda (b)
 			   (cons (car b)
+				 (or (cadr (assoc "name" (cdr b)))
 				 (cond ((stringp (car b)) (car b))
 				       ((eq (car b) 'hdr) "Title")
-				       ((eq (car b) 'todo) "Status"))))
+				       ((eq (car b) 'todo) "Status")))))
 			balls)) balls 'no-face)))
     (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
     cols))
@@ -481,6 +482,7 @@ The function is only run on items marked in this way."
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (insert (superman-project-view-header pro))
     (goto-char (point-max))
+    (insert "\n")
     ;; loop cats
     (while cats
       (let* ((cat (caar cats))
@@ -490,53 +492,55 @@ The function is only run on items marked in this way."
 	     cat-head
 	     (count 0)
 	     line)
+	;; back to vbuf
 	(set-buffer vbuf)
-	(insert "\n** " cat)
-	(beginning-of-line)
 	(setq cat-head (point))
-	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
-	(put-text-property (point-at-bol) (point-at-eol) 'cat cat)
-	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
-	;; insert hot keys
-	(end-of-line)
-	(let ((hotkeys (superman-view-show-hot-keys cat)))
-	  (if (> (length hotkeys) 0)
-	      (insert "\n" hotkeys "\n")
-	    (insert "\n")))
-	;; insert column names 
-	(insert (superman-column-names balls))
-	(insert "\n")	
 	;; move to ibuf
-	(superman-goto-project pro cat t)
-	;; format elements (if any)
-	;; region is narrowed to section
-	(goto-char (point-min))
-	(while (outline-next-heading)
-	  (if (eq (org-current-level) 2)
-	      (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
-		(setq line (concat "*** " subhdr))
-		(put-text-property 0 (length line) 'subcat subhdr line)
-		(put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
-		(put-text-property 0 (length line) 'face 'org-level-3 line)
-		(put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-		(with-current-buffer vbuf
-		  (insert
-		   line
-		   ;;"\n" (superman-column-names balls)
-		   "\n"
-		   ))
-		(end-of-line))
-	    (setq count (+ count 1))
-	    (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-	    (with-current-buffer vbuf (insert line "\n"))))
+	(when (superman-goto-project pro cat nil)
+	  ;; format elements (if any)
+	  ;; region is narrowed to section
+	  (goto-char (point-min))
+	  (while (outline-next-heading)
+	    (if (eq (org-current-level) 2)
+		(let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
+		  (setq line (concat "*** " subhdr))
+		  (put-text-property 0 (length line) 'subcat subhdr line)
+		  (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
+		  (put-text-property 0 (length line) 'face 'org-level-3 line)
+		  (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
+		  (with-current-buffer vbuf
+		    (insert
+		     line
+		     ;;"\n" (superman-column-names balls)
+		     "\n"
+		     ))
+		  (end-of-line))
+	      (setq count (+ count 1))
+	      (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+	      (with-current-buffer vbuf (insert line "\n"))))
+	  (widen)
+	  (set-buffer vbuf)
+	  (goto-char cat-head)
+	  (insert "\n** " cat "\n")
+	  (forward-line -1)
+	  (beginning-of-line)
+	  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	  (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
+	  (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
+	  (if (or (member cat superman-views-permanent-cats) (> count 0))
+	      (progn (end-of-line)
+		     (insert " [" (int-to-string count) "]")
+		     ;; insert hot-keys or blank line
+		     (end-of-line)
+		     (let ((hotkeys (superman-view-show-hot-keys cat)))
+		       (if (> (length hotkeys) 0)
+			   (insert "\n" hotkeys "\n")
+			 (insert "\n")))
+		     ;; insert column names 
+		     (insert (superman-column-names balls)))
+	    (delete-region (point) (point-max)))
+	  (goto-char (point-max)))
 	(widen)
-	(set-buffer vbuf)
-	(goto-char cat-head)
-	(if (or (member cat superman-views-permanent-cats) (> count 0))
-	    (progn (end-of-line)
-		   (insert " [" (int-to-string count) "]"))
-	  (delete-region (point) (point-max)))
-	(goto-char (point-max))
 	(setq cats (cdr cats))))
     (switch-to-buffer vbuf))
   (goto-char (point-min))
@@ -1374,7 +1378,6 @@ If dont-redo the agenda is not reversed."
 	 "------------------")))
     ;;	"[q]:    \t\t Quit view mode\n"
     (funcall superman-help-fun msg)))
-
 ;;}}}
 
 (provide 'superman-views)

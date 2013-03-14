@@ -37,7 +37,8 @@ Leaves point at the end of the section."
   (let* ((pro (or project (superman-select-project)))
 	 (index (superman-get-index pro))
 	 hiddenp
-	 (head (or heading (read-string "Goto heading: "))))
+	 (head (or heading (read-string "Goto heading: ")))
+	 value)
     (if index
       	(progn
 	  (find-file index)
@@ -47,17 +48,21 @@ Leaves point at the end of the section."
     (widen)
     (visible-mode 1)
     (goto-char (point-min))
-    (cond ((re-search-forward
-	    (format org-complex-heading-regexp-format (regexp-quote head))
-	    nil t))
-	  (create
-	   (goto-char (point-max))
-	   (insert "\n* " head "\n")
-	   ;; (org-set-property "Project" pro)
-	   (forward-line -1))
-	  (t (message (concat "Heading " head " not found in index file of " (car pro)))))
+    (setq value (cond ((re-search-forward
+			(format org-complex-heading-regexp-format (regexp-quote head))
+			nil t)
+		       'found)
+		      (create
+		       (goto-char (point-max))
+		       (insert "\n* " head "\n")
+		       ;; (org-set-property "Project" pro)
+		       (forward-line -1)
+		       'create)
+		      (t (message (concat "Heading " head " not found in index file of " (car pro)))
+			 nil)))
     (org-narrow-to-subtree)
-    (goto-char (point-max))))
+    (goto-char (point-max))
+    value))
 
 
 (defun superman-goto-project-notes ()
