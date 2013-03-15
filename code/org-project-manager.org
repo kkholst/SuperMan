@@ -1644,80 +1644,80 @@ See http://www.emacswiki.org/emacs/frame-cmds.el
 
 ** Find specific places in a project
 #+BEGIN_SRC emacs-lisp :export code
-(defun org-pro-goto-project (&optional project heading create prop-alist)
-  (interactive)
-  (let ((pro 
-	 (or project
-	     (car (org-pro-select-project)))))
-    (when (and (not (string-equal pro "")) pro)
-      (let* ((entry (assoc pro org-pro-project-alist))
-	     (index (org-pro-get-index entry))
-	     (hiddenp visible-mode)
-	     (head (or heading (read-string "Goto heading: "))))
-	(if index
-	    (find-file index)
-	  (error (concat "Project " pro " does not have an index.")))
-	(org-columns-quit)
-	(if hiddenp (visible-mode t))
-	(goto-char (point-min))
-	(cond ((re-search-forward
-		(format org-complex-heading-regexp-format (regexp-quote head))
-		nil t))
-	      (create
-	       (insert "* " head "\n")
-	       (forward-line -1))
-	      (t (error (concat "Heading " head " not found in index file of " pro))))
-	(if prop-alist (mapcar (lambda (p)
-				 (unless (org-entry-get nil (car p))
-				   (org-set-property (car p) (car (cdr p))))) prop-alist))
-	(re-search-forward ":END:" nil t)
-	(forward-line)
-	(unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1)))
-	(if hiddenp (visible-mode nil))
-        (org-show-subtree)))))
-
-(defun org-pro-goto-project-workflow ()
-  (interactive)
-  (or (org-pro-goto-project nil "WorkFlow" 'create)))
-
-(defun org-pro-goto-project-notes ()
-  (interactive)
-  (or (org-pro-goto-project nil "Notes" 'create)))
-
-(defun org-pro-goto-project-documents (&optional narrow)
-  (interactive)
-  (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
-      (if narrow (org-pro-view-mode t))))
-
-(defun org-pro-insert-list-files (&optional postfix)
-  (interactive)
-  (let ((files (org-pro-list-files "." 
-				   (or postfix (concat (read-string "Postfix: ") "$")) nil)))
-    (insert "\n")
-    (loop for x in files
-	  do 
-	  (insert (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:filename: [[" (file-relative-name x) "]]\n:END:\n")))
-    ))
-
-(defun org-pro-goto-project-taskpool (&optional arg)
-  (interactive)
-  (if arg (org-store-link nil))
-  (let* ((buf (current-buffer))
-	 (pro (car (org-pro-select-project)))
-	 ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
-	 (entry (assoc pro org-pro-project-alist))
-	 (index (org-pro-get-index entry)))
-    (if index
-	(find-file index)
-      (error (concat "Project " pro " does not have an index.")))
-    (goto-char (point-min))
-    (or (re-search-forward "^[*]+ TaskPool" nil t)
-	(progn
-	  (goto-char (point-max))
-	  (insert "\n\n* TaskPool [0/0]\n")
-	  (point))) 
-    (org-end-of-line)
-    ))
+  (defun org-pro-goto-project (&optional project heading create prop-alist)
+    (interactive)
+    (let ((pro 
+           (or project
+               (car (org-pro-select-project)))))
+      (when (and (not (string-equal pro "")) pro)
+        (let* ((entry (assoc pro org-pro-project-alist))
+               (index (org-pro-get-index entry))
+               # (hiddenp visible-mode)
+               (head (or heading (read-string "Goto heading: "))))
+          (if index
+              (find-file index)
+            (error (concat "Project " pro " does not have an index.")))
+          (org-columns-quit)
+          (if hiddenp (visible-mode t))
+          (goto-char (point-min))
+          (cond ((re-search-forward
+                  (format org-complex-heading-regexp-format (regexp-quote head))
+                  nil t))
+                (create
+                 (insert "* " head "\n")
+                 (forward-line -1))
+                (t (error (concat "Heading " head " not found in index file of " pro))))
+          (if prop-alist (mapcar (lambda (p)
+                                   (unless (org-entry-get nil (car p))
+                                     (org-set-property (car p) (car (cdr p))))) prop-alist))
+          (re-search-forward ":END:" nil t)
+          (forward-line)
+          (unless (looking-at "^[ \t]*$") (progn (insert "\n") (forward-line -1)))
+          (if hiddenp (visible-mode nil))
+          (org-show-subtree)))))
+  
+  (defun org-pro-goto-project-workflow ()
+    (interactive)
+    (or (org-pro-goto-project nil "WorkFlow" 'create)))
+  
+  (defun org-pro-goto-project-notes ()
+    (interactive)
+    (or (org-pro-goto-project nil "Notes" 'create)))
+  
+  (defun org-pro-goto-project-documents (&optional narrow)
+    (interactive)
+    (or (org-pro-goto-project nil "Documents" 'create '(("COLUMNS" "%20ITEM(Title) %GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)")))
+        (if narrow (org-pro-view-mode t))))
+  
+  (defun org-pro-insert-list-files (&optional postfix)
+    (interactive)
+    (let ((files (org-pro-list-files "." 
+                                     (or postfix (concat (read-string "Postfix: ") "$")) nil)))
+      (insert "\n")
+      (loop for x in files
+            do 
+            (insert (concat "*** " (file-relative-name x) "\n:PROPERTIES:\n:filename: [[" (file-relative-name x) "]]\n:END:\n")))
+      ))
+  
+  (defun org-pro-goto-project-taskpool (&optional arg)
+    (interactive)
+    (if arg (org-store-link nil))
+    (let* ((buf (current-buffer))
+           (pro (car (org-pro-select-project)))
+           ;;             (pro (ido-completing-read "Select project: " org-pro-project-alist))
+           (entry (assoc pro org-pro-project-alist))
+           (index (org-pro-get-index entry)))
+      (if index
+          (find-file index)
+        (error (concat "Project " pro " does not have an index.")))
+      (goto-char (point-min))
+      (or (re-search-forward "^[*]+ TaskPool" nil t)
+          (progn
+            (goto-char (point-max))
+            (insert "\n\n* TaskPool [0/0]\n")
+            (point))) 
+      (org-end-of-line)
+      ))
 #+END_SRC     
 
 #+RESULTS[482ae7669a1f13b3ccded477ffd9bbe11452cc15]:

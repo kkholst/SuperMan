@@ -36,7 +36,6 @@ Leaves point at the end of the section."
   (interactive)
   (let* ((pro (or project (superman-select-project)))
 	 (index (superman-get-index pro))
-	 hiddenp
 	 (head (or heading (read-string "Goto heading: ")))
 	 value)
     (if index
@@ -46,7 +45,6 @@ Leaves point at the end of the section."
 	    (make-directory  (file-name-directory index))))
       (error (concat "Project " pro " does not have an index.")))
     (widen)
-    (visible-mode 1)
     (goto-char (point-min))
     (setq value (cond ((re-search-forward
 			(format org-complex-heading-regexp-format (regexp-quote head))
