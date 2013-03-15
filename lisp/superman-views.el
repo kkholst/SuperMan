@@ -897,6 +897,7 @@ Value is the formatted string with text-properties (special balls)."
       (other-window 1)
       (if ibuf (switch-to-buffer ibuf)
 	(find-file index)))
+    (widen)
     (when pom (goto-char pom))))
 
 (defun superman-view-file-list ()
@@ -946,6 +947,10 @@ Value is the formatted string with text-properties (special balls)."
 	     (beginning-of-line)
 	     (if (re-search-forward org-bracket-link-regexp nil t)
 		 (org-open-at-point))))
+	  ((string-match "Notes" b)
+	   (save-excursion
+	     (superman-view-index)
+	     (org-narrow-to-subtree)))
 	  (superman-mode
 	   (superman-return))
 	  ;; (message "Follow-link"))
