@@ -897,7 +897,7 @@ Value is the formatted string with text-properties (special balls)."
       (other-window 1)
       (if ibuf (switch-to-buffer ibuf)
 	(find-file index)))
-    (widen)
+    (show-all)
     (when pom (goto-char pom))))
 
 (defun superman-view-file-list ()

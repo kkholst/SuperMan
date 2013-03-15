@@ -44,7 +44,7 @@ Leaves point at the end of the section."
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory  (file-name-directory index))))
       (error (concat "Project " pro " does not have an index.")))
-    (widen)
+    (show-all)
     (goto-char (point-min))
     (setq value (cond ((re-search-forward
 			(format org-complex-heading-regexp-format (regexp-quote head))
@@ -192,7 +192,7 @@ Leaves point at the end of the section."
 	 (org-capture-before-finalize-hook
 	  'superman-google-export-appointment))
     (org-capture nil "m")))
-	 
+
 ;;}}}
 ;;{{{ capture synchronization commands
 (setq superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
