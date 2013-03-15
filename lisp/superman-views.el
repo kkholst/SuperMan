@@ -709,7 +709,7 @@ Value is the formatted string with text-properties (special balls)."
 		(goto-char (next-single-property-change (point) 'current-item))
 		(org-move-subtree-up)
 		(goto-char (next-single-property-change (point) 'next-item))
-		(org-promote)))))	      
+		(org-promote))))	      
       (superman-redo)
       (forward-line (if down 1 -1)))))
 
