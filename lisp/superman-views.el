@@ -122,7 +122,7 @@ determine the face.")
       '((todo ("trim" nil (7)))
 	("EmailDate" superman-trim-date (13) font-lock-string-face)
 	(hdr ("trim" nil (23)) ("face" font-lock-function-name-face))
-	("Link" ("trim "superman-trim-link (48)))))
+	("Link" ("trim" superman-trim-bracketed-filename (48)))))
 
 ;;}}}
 ;;{{{ faces
@@ -163,22 +163,23 @@ or by adding whitespace characters."
 
 (defun superman-trim-bracketed-filename (file &rest args)
   ;;  Links to files
-  (string-match org-bracket-link-regexp file)
-  (let ((filename (org-match-string-no-properties 1 file))
-	(len (car args))
+  (if (string-match org-bracket-link-regexp file)
+      (let ((filename (org-match-string-no-properties 1 file))
+	    (len (car args))
+	    trimmed-file-name)
+	(if (match-end 3)
+	    (setq trimmed-file-name
+		  (replace-match
+		   (superman-trim-string
+		    (org-match-string-no-properties 3 file) len)
+		   t t file 3))
+	  (setq trimmed-file-name
+		(org-make-link-string
+		 filename
+		 (superman-trim-string
+		  (file-name-nondirectory filename) len))))
 	trimmed-file-name)
-    (if (match-end 3)
-	(setq trimmed-file-name
-	      (replace-match
-	       (superman-trim-string
-		(org-match-string-no-properties 3 file) len)
-	       t t file 3))
-      (setq trimmed-file-name
-	    (org-make-link-string
-	     filename
-	     (superman-trim-string
-	      (file-name-nondirectory filename) len))))
-    trimmed-file-name))
+    (superman-trim-string file (car args))))
 
 (defun superman-trim-filename (filename &rest args)
   ;;  raw filenames
@@ -598,7 +599,7 @@ a formatted string with faces."
 	    (or (cdr (assoc (car ball) (cadr thing))) "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))
 	 (u (get-text-property 0 'face raw-string))
-	 (trim-info (assoc "trim" ball))
+	 (trim-info (assoc "trim" (cdr ball)))
 	 (trim-function (or (nth 1 trim-info)
 			    'superman-trim-string))
 	 (trim-args (or (nth 2 trim-info) '(23)))
@@ -675,7 +676,8 @@ Value is the formatted string with text-properties (special balls)."
 
 ;;}}}
 ;;{{{ Moving items around
-(defun superman-one-up (&optional arg)
+
+(defun superman-one-up (&optional down)
   (interactive "P")
   (let ((marker (org-get-at-bol 'org-hd-marker)))
     (when marker
@@ -683,14 +685,38 @@ Value is the formatted string with text-properties (special balls)."
 	(set-buffer (marker-buffer marker))
 	(goto-char marker)
 	(widen)
-	(if arg
-	    (org-move-subtree-up)
-	  (org-move-subtree-down))))
-    (superman-redo)))
+	(or (condition-case nil
+		(if down
+		    (org-move-subtree-down)
+		  (org-move-subtree-up))
+	      (error nil))
+	      (if down
+		  (progn
+		    (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
+		    (outline-next-heading)
+		    (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+		    (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
+		    (org-demote)
+		    (goto-char (previous-single-property-change (point) 'current-item))
+		    (org-move-subtree-down)
+		    (goto-char (previous-single-property-change (point) 'next-item))
+		    (org-promote))
+		(put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
+		(outline-previous-heading)
+		(if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+		(put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
+		(org-demote)
+		(goto-char (next-single-property-change (point) 'current-item))
+		(org-move-subtree-up)
+		(goto-char (next-single-property-change (point) 'next-item))
+		(org-promote)))))	      
+      (superman-redo)
+      (forward-line (if down 1 -1)))))
 
 (defun superman-one-down ()
   (interactive)
   (superman-one-up 1))
+
 
 ;;}}}
 ;;{{{ View commands (including redo and git) 
@@ -1118,8 +1144,8 @@ If dont-redo the agenda is not reversed."
 (superman-view-set-hot-keys)
 
 (define-key superman-view-mode-map [return] 'superman-hot-return)
-(define-key superman-view-mode-map [(shift up)] 'superman-one-down)
-(define-key superman-view-mode-map [(shift down)] 'superman-one-up) 
+(define-key superman-view-mode-map [(shift up)] 'superman-one-up)
+(define-key superman-view-mode-map [(shift down)] 'superman-one-down) 
 
 (setq superman-documents-hot-keys '(("c" superman-view-git-commit)))
 

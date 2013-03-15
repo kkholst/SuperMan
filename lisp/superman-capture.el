@@ -27,7 +27,7 @@
 
 ;;{{{ capture documents, notes, etc.
 
-(defun superman-goto-project (&optional project heading create)
+(defun superman-goto-project (&optional project heading create jabber)
   "Goto project index file call `widen' and then search for HEADING
 and narrow the buffer to this subtree.
 
@@ -58,11 +58,14 @@ Leaves point at the end of the section."
 		       ;; (org-set-property "Project" pro)
 		       (forward-line -1)
 		       'create)
-		      (t (message (concat "Heading " head " not found in index file of " (car pro)))
+		      (t (when jabber
+			   (message (concat "Heading " head " not found in index file of " (car pro)))
+			   )
 			 nil)))
-    (org-narrow-to-subtree)
-    (goto-char (point-max))
-    value))
+    (when value 
+      (org-narrow-to-subtree)
+      (goto-char (point-max))
+    value)))
 
 
 (defun superman-goto-project-notes ()
