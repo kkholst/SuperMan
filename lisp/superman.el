@@ -92,13 +92,13 @@
   (insert "SuperMan(ager)")
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
+  (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
   (insert "\n\nKeys: \n")
   (forward-line -1)
-  (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
+  ;; (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
   (end-of-line)
   (insert "N: new project RET: select project")
-  (put-text-property (point) (length "Keys: ") 'face 'org-level-2)      
-  (end-of-line))
+  (put-text-property (point-at-bol) (+ (point-at-bol) (length "Keys: ")) 'face 'org-level-2))
 
 
 (defun superman-categorize-projects (&optional cats balls)
@@ -218,8 +218,8 @@
 	(goto-char (point-max))
 	(setq cat-alist (cdr cat-alist)))))
   (goto-char (point-min))
-  (superman-on)
   (superman-view-mode-on)
+  (superman-on)
   (setq buffer-read-only t))
 
 
@@ -249,8 +249,8 @@
       (setq superman-views rest)
       (add-to-list 'superman-views current 'append)))
   (eval `(,(car superman-views)))
-  (superman-on)
-  (superman-view-mode-on))
+  (superman-view-mode-on)
+  (superman-on))
   
 (defalias 'S 'superman)
 

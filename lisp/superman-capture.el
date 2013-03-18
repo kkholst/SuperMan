@@ -25,6 +25,35 @@
 
 ;;; Code:
 
+
+;;{{{ superman capture
+(defun superman-capture (project heading plist)
+  (let* ((what (car plist))
+	 (props (cadr plist))
+	 (start (point)))
+    (superman-goto-project project heading 'create nil)
+    (insert "\n### Captured by SuperMan: " what
+	    "\n# Press C-c C-c to save the note"
+	    "\n# or C-c C-q to quit without saving"
+	    "\n### "
+	    "\n*** ")
+    ;; (put-text-property start (point) 'capture-start '(read-only t))
+    (insert "\n:PROPERTIES:")
+    ;; (put-text-property start (point-at-bol) (point-at-eol) '(read-only t))
+    (while props
+      (let ((key (caar props))
+	    (default (cadr props)))
+	(insert "\n:" key ":")
+	(add-text-properties (point-at-bol) (point-at-eol) '(read-only t))
+	(when default (insert default))
+	(setq props (cdr props))))
+    (insert "\n:END:")
+    (put-text-property start (point-at-bol) (point-at-eol) '(read-only t))
+    (insert "\n")))
+
+;;(superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
+
+;;}}}
 ;;{{{ capture documents, notes, etc.
 
 (defun superman-goto-project (&optional project heading create jabber)
@@ -44,6 +73,7 @@ Leaves point at the end of the section."
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory  (file-name-directory index))))
       (error (concat "Project " pro " does not have an index.")))
+    (widen)
     (show-all)
     (goto-char (point-min))
     (setq value (cond ((re-search-forward
@@ -88,7 +118,7 @@ Leaves point at the end of the section."
 
 (defun superman-goto-project-mailbox ()
   (interactive)
-  (or (superman-goto-project nil "Mailbox" 'create)))
+  (or (superman-goto-project nil "Mail" 'create)))
 
 (defun superman-goto-project-config ()
   (interactive)
@@ -275,7 +305,7 @@ Leaves point at the end of the section."
          (org (superman-get-index entry))
 	 (region (buffer-substring (region-beginning) (region-end)))
          (mailbox (file-name-as-directory
-                   (concat (file-name-as-directory loc) pro "/" "Mailbox"))))
+                   (concat (file-name-as-directory loc) pro "/" "Mail"))))
     (gnus-summary-select-article-buffer)
     (if region
 	(plist-put org-store-link-plist :initial
@@ -289,12 +319,12 @@ Leaves point at the end of the section."
 	    (make-directory  (file-name-directory org))))
       (error "Project " pro " does not have an org-file."))
     (goto-char (point-min))
-    (if (re-search-forward "^[*]+ Mailbox" nil t)
+    (if (re-search-forward "^[*]+ Mail" nil t)
 	(progn
 	  (end-of-line)
 	  (insert "\n"))
       ;; (goto-char (point-max))
-      (insert "\n\n* Mailbox\n"))))
+      (insert "\n\n* Mail\n"))))
 
 (defun superman-save-attachments (project dir buf)
   "Interactively save mail contents in project org file

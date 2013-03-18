@@ -97,7 +97,7 @@ determine the face.")
 	 ("face" font-lock-string-face))
 	("Participants" ("trim" nil (23)))))
 (setq superman-note-balls
-      '((todo ("trim" nil (7)))
+      '((todo ("trim" nil (7)) ("face" superman-get-todo-face))
 	("NoteDate" ("trim" superman-trim-date (13))
 	 ("face" font-lock-string-face))
 	(hdr ("trim" nil (49))
@@ -109,7 +109,7 @@ determine the face.")
 	(hdr ("trim" nil (23)) ("face" font-lock-function-name-face))
 	("DataFileName" ("trim" (lambda (x len) x) nil))))
 (setq superman-task-balls
-      '((todo ("trim" nil (7)))
+      '((todo ("trim" nil (7)) ("face" superman-get-todo-face))
 	("TaskDate"
 	 ("trim" superman-trim-date (13))
 	 ("face" font-lock-string-face))
@@ -119,7 +119,7 @@ determine the face.")
 	(hdr ("trim" superman-trim-string nil) ("face" font-lock-function-name-face))
 	("Link" ("trim" superman-trim-link (48)))))
 (setq superman-mail-balls
-      '((todo ("trim" nil (7)))
+      '((todo ("trim" nil (7)) ("face" superman-get-todo-face))
 	("EmailDate" superman-trim-date (13) font-lock-string-face)
 	(hdr ("trim" nil (23)) ("face" font-lock-function-name-face))
 	("Link" ("trim" superman-trim-bracketed-filename (48)))))
@@ -709,7 +709,7 @@ Value is the formatted string with text-properties (special balls)."
 		(goto-char (next-single-property-change (point) 'current-item))
 		(org-move-subtree-up)
 		(goto-char (next-single-property-change (point) 'next-item))
-		(org-promote))))	      
+		(org-promote))))
       (superman-redo)
       (forward-line (if down 1 -1)))))
 
@@ -736,17 +736,18 @@ Value is the formatted string with text-properties (special balls)."
   (interactive)
   (let* ((buffer-read-only nil)
 	 (marker (org-get-at-bol 'org-hd-marker))
-	 (balls (org-get-at-bol 'balls))
-	 (new-line (superman-format-thing marker balls)))
-    (beginning-of-line)
-    (if	(looking-at ".*")
-	(replace-match new-line))
-    (beginning-of-line)
-      (while (or (org-activate-bracket-links (point-at-eol)) (org-activate-plain-links (point-at-eol)))
-	(add-text-properties
-	 (match-beginning 0) (match-end 0)
-	 '(face org-link)))
-      (beginning-of-line)))
+	 (balls (org-get-at-bol 'balls)))
+    (when (and marker (not (org-get-at-bol 'subcat)) (not (org-get-at-bol 'subcat)))
+      (beginning-of-line)
+      (let ((newline (superman-format-thing marker balls)))
+	(if (looking-at ".*")
+	    (replace-match newline))
+	(beginning-of-line)
+	(while (or (org-activate-bracket-links (point-at-eol)) (org-activate-plain-links (point-at-eol)))
+	  (add-text-properties
+	   (match-beginning 0) (match-end 0)
+	   '(face org-link)))
+	(beginning-of-line)))))
 
 
 (defun superman-view-toggle-todo ()
@@ -1028,7 +1029,8 @@ if it exists and add text-property org-hd-marker."
 	    (unless (string= status current-status)
 	      (when (or
 		     (string= (downcase status) "modified")
-		     (string= (downcase current-status) "modified"))
+		     (and (stringp current-status)
+			  (string= (downcase current-status) "modified")))
 		(org-entry-put pom "GitStatus" status)))
 	    (setq file-list (cdr file-list)))))
       (unless dont-redo (superman-redo)))))
@@ -1156,7 +1158,10 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-choose-hot-key (key)
   "Find command bound to key in current section. If undefined use global key."
-  (let* ((cat (superman-current-cat))
+  (let* ((cat (if (string= (get-text-property (point-min) 'nickname)
+			   "Kal-El")
+		  "kal-el"
+		(superman-current-cat)))
 	 (alist (if cat
 		    (condition-case nil
 			(eval (intern (concat "superman-" (downcase cat) "-hot-keys")))
@@ -1305,6 +1310,10 @@ If dont-redo the agenda is not reversed."
 	("=" superman-view-git-version-diff)))
 
 (setq superman-data-hot-keys superman-documents-hot-keys)
+
+
+(setq superman-kal-el-hot-keys
+      '(("N" superman-new-project)))
 
 (setq superman-meetings-hot-keys
       '(("M" superman-view-mark-all)
