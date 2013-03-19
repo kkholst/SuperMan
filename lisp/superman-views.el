@@ -292,6 +292,17 @@ If DONT-MOVE is non-nil stay at item."
       (superman-loop 'superman-toggle-mark
 		     (list (if arg nil 'on))))))
 
+(defun superman-view-invert-marks (&optional arg)
+  (interactive "P")
+  arg
+  (save-excursion
+    (save-restriction
+      (org-narrow-to-subtree)
+      (superman-loop 'superman-toggle-mark
+		     (list arg)))))
+
+
+
 (defun superman-marked-p ()
   (org-agenda-bulk-marked-p))
 
@@ -403,7 +414,7 @@ The function is only run on items marked in this way."
   (let ((cols
 	 (superman-format-thing
 	  (list "columns"
-		(mapcar '(lambda (b)
+		(mapcar #'(lambda (b)
 			   (cons (car b)
 				 (or (cadr (assoc "name" (cdr b)))
 				 (cond ((stringp (car b)) (car b))
@@ -717,7 +728,6 @@ Value is the formatted string with text-properties (special balls)."
   (interactive)
   (superman-one-up 1))
 
-
 ;;}}}
 ;;{{{ View commands (including redo and git) 
 
@@ -860,9 +870,14 @@ Value is the formatted string with text-properties (special balls)."
 (defun superman-view-git-annotate (&optional arg)
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (bufn)
     (file (org-link-display-format (superman-get-property m "filename"))))
-    (find-file file)
+    (save-window-excursion
+      (find-file file)
     (vc-annotate (org-link-display-format file) "HEAD")
+    (setq bufn (buffer-name))
+    )
+    (switch-to-buffer bufn)
   ))
 
 (defun superman-view-git-grep (&optional arg)
@@ -875,12 +890,22 @@ Value is the formatted string with text-properties (special balls)."
 
 (defun superman-view-git-history ()
   (interactive)
-  (let ((dir (get-text-property (point-min) 'git-dir)))
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	(bufn (concat "*history: " dir "*"))
+	)
     (when dir
-    (vc-print-log-internal
-     'Git
-     (list dir)
-     nil nil 2000))))
+    ;; (vc-print-log-internal
+    ;;  'Git
+    ;;  (list dir)
+      ;;  nil nil 2000)      
+      (message dir)
+      (save-window-excursion
+	(superman-view-index)
+	(vc-git-print-log dir bufn t)
+	)
+      (switch-to-buffer bufn)
+      (vc-git-log-view-mode)
+)))
 
 (defun superman-view-index ()
   (interactive)
@@ -961,15 +986,15 @@ Value is the formatted string with text-properties (special balls)."
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
-  (superman-git-log-at-point (or arg 10)))
+  (superman-git-log-at-point (or arg superman-git-log-limit)))
 
 (defun superman-view-git-log-decorationonly (&optional arg)
   (interactive "p")
-  (superman-git-log-decorationonly-at-point arg))
+  (superman-git-log-decorationonly-at-point (or arg superman-git-search-limit)))
 
 (defun superman-view-git-search (&optional arg)
   (interactive "p")
-  (superman-git-search-at-point arg))
+  (superman-git-search-at-point (or arg superman-git-search-limit)))
 
 (defun superman-view-git-set-status (&optional save redo check)
   (interactive)
@@ -1143,7 +1168,7 @@ If dont-redo the agenda is not reversed."
 (defun superman-view-set-hot-keys ()
   "Define hot keys for superman-view"
   (mapcar
-   '(lambda (x)
+   #'(lambda (x)
       (define-key superman-view-mode-map
 	x (intern (concat "superman-hot-" x))))
    superman-view-hot-keys))
@@ -1246,7 +1271,7 @@ If dont-redo the agenda is not reversed."
 	("e" nil)
 	("f" org-agenda-follow-mode "follow")
 	("g" superman-view-git-grep "grep")
-	("h" nil)
+	( "h" superman-view-git-history "history")
 	("i" superman-view-index "index")
 	("j" nil)
 	("k" nil)
@@ -1300,12 +1325,14 @@ If dont-redo the agenda is not reversed."
       '(( "c" superman-view-git-commit "commit")
 	( "C" superman-view-git-commit-all "Commit")
 	( "d" superman-view-git-diff "diff")
-	( "h" superman-view-git-history "history")
+	( "a" superman-view-git-annotate "annotate")
+	( "s" superman-view-git-search "search")
 	( "l" superman-view-git-log "log")
 	( "u" superman-view-git-update-status "update")
-	( "L" superman-view-git-log-decorationonly)
+	( "L" superman-view-git-log-decorationonly "decorations-log")
 	;; ( "v" superman-view-git-annotate "annotate")
 	("M" superman-view-mark-all "Mark")
+	("I" superman-view-invert-marks "Invert")
 	("N" superman-new-document "New")
 	("=" superman-view-git-version-diff)))
 
@@ -1317,22 +1344,28 @@ If dont-redo the agenda is not reversed."
 
 (setq superman-meetings-hot-keys
       '(("M" superman-view-mark-all)
+	("I" superman-view-invert-marks "Invert")
 	( "N" superman-new-meeting)))
 
 (setq superman-notes-hot-keys
       '(("M" superman-view-mark-all "Mark all")
+	("I" superman-view-invert-marks "Invert")
 	( "N" superman-new-note "New note")))
 
 (setq superman-bookmarks-hot-keys
       '(("M" superman-view-mark-all)
+	("I" superman-view-invert-marks "Invert")
 	( "N" superman-new-bookmark "New bookmark")))
 
 (setq superman-tasks-hot-keys
       '(("M" superman-view-mark-all)
+	("I" superman-view-invert-marks "Invert")	
 	( "N" superman-new-task "New Task")))
 
 (setq superman-mail-hot-keys
-      '(("M" superman-view-mark-all)))
+      '(("M" superman-view-mark-all)
+	("I" superman-view-invert-marks "Invert")
+	))
 
 
 (defun superman-new-thing ()
@@ -1418,6 +1451,7 @@ If dont-redo the agenda is not reversed."
 	 "------------------")))
     ;;	"[q]:    \t\t Quit view mode\n"
     (funcall superman-help-fun msg)))
+
 ;;}}}
 
 (provide 'superman-views)

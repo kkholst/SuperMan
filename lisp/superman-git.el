@@ -205,6 +205,7 @@ buffer is in org-agenda-mode."
 	((string= status "C")
 	 "Committed")
 	(t "Unknown")))
+
 ;;}}}
 ;;{{{ set and update status
 
@@ -299,8 +300,9 @@ or if the file is not inside the location."
 
 (define-key superman-git-log-mode-map [return] 'superman-git-revision-at-point)
 (define-key superman-git-log-mode-map "D" (lambda () (interactive) (superman-git-revision-at-point 1)))
-(define-key superman-git-log-mode-map "t" 'superman-git-tag-at-point)
+(define-key superman-git-log-mode-map "t" 'superman-git-tag)
 (define-key superman-git-log-mode-map "?" 'superman-git-show-help)
+(define-key superman-git-log-mode-map "q" 'kill-this-buffer)
 (define-key superman-git-log-mode-map "r" (lambda () (interactive) (org-agenda-redo) (superman-git-log-mode-on)))
 (define-key superman-git-log-mode-map "!" 'superman-start-shell)
 (define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
@@ -334,8 +336,8 @@ or if the file is not inside the location."
   :group 'org
   :keymap 'superman-git-log-mode-map)
 
-(defvar superman-git-log-limit 25)
-(defvar superman-git-search-limit 500)
+(defvar superman-git-log-limit 50)
+(defvar superman-git-search-limit 250)
 
 
 (defun superman-git-log-mode-on ()
@@ -363,12 +365,12 @@ or if the file is not inside the location."
 	    pstring) "    " (superman-trim-string hdr 70)))
 
 
-(defun superman-git-setup-log-buffer (file dir git-switches decorationonly)
+(defun superman-git-setup-log-buffer (file dir git-switches decorationonly arglist)
   (let* ((file (superman-relative-name file dir))
 	 (dir dir)
-	 (gitlog (shell-command-to-string
-		  (concat
-		   "cd " dir "; " superman-cmd-git git-switches " -- " file)))
+	 (cmd (concat
+		   "cd " dir "; " superman-cmd-git git-switches " -- " file))
+	 (gitlog (shell-command-to-string cmd))
 	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	 log-strings)
     (when (string= gitlog "")
@@ -381,26 +383,32 @@ or if the file is not inside the location."
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (put-text-property (point-at-bol) (point-at-eol) 'filename file)
     (put-text-property (point-at-bol) (point-at-eol) 'dir dir)
+    ;;    (put-text-property (point-at-bol) (point-at-eol) 'command cmd)
+    (put-text-property (point-at-bol) (point-at-eol) 'arglist arglist)
     (insert "\n\n")
     ;; column names
     (insert (superman-column-names superman-log-balls) "\n")
     (setq logstrings (split-string (substring gitlog 0 -1) "\n"))
     (while logstrings
       (let* ((log (split-string (car logstrings) ":#:"))
+	     (deco (nth 4 log))
 	     (item (superman-format-thing
 		    (list (nth 0 log)
 			  (list 
 			   (cons "Comment" (nth 1 log))
 			   (cons "Hash" (nth 0 log))
 			   (cons "marker" (nth 0 log))
-			   (cons "Tag" (nth 4 log))
+			   (cons "Tag" deco)
 			   (cons "Date" (nth 2 log))
 			   (cons "Author"  (nth 3 log))))
 		    superman-log-balls)))
-	(insert item "\n"))
+	(if (or (not decorationonly) (not (string= deco "")))
+	    (progn
+	      (put-text-property 0 (length item) 'decoration (nth 4 log) item)
+	      (insert item "\n")))
       (setq logstrings (cdr logstrings))))
   (superman-git-log-mode-on)
-  (setq buffer-read-only t))
+  (setq buffer-read-only t)))
 
 (setq superman-log-balls
       '(("Date" ("trim" superman-trim-date (12))
@@ -426,7 +434,7 @@ or if the file is not inside the location."
 	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
-    (superman-git-setup-log-buffer file gitpath gitcmd decorationonly)))
+    (superman-git-setup-log-buffer file gitpath gitcmd decorationonly (list limit search-string decorationonly) )))
 
 (defun superman-git-log-at-point (&optional arg)
   (interactive "p")
@@ -453,27 +461,26 @@ or if the file is not inside the location."
 	 (hash (superman-get-property pom (superman-property 'hash) nil)))
     (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
 
-(defun superman-git-tag-at-point ()
-  "Shows git tag "
-  (interactive)
-  (superman-git-tag (org-get-at-bol 'org-hd-marker)))
-
-(defun superman-git-tag (pom)
+(defun superman-git-tag ()
   "Set git tag"
   (interactive)
-  (let* ((hash (superman-get-property pom (superman-property 'hash) nil))
-	 (oldtag (superman-get-property pom (superman-property 'decoration) nil))
-	 (path (superman-get-property pom (superman-property 'gitpath) t))
-	 (tag (read-string "Tag (empty to clear): ")))
+  (let* (
+         (oldtag (get-text-property (point-at-bol) 'decoration))
+         (path (get-text-property (point-min) 'dir))
+	 (hash (get-text-property (point-at-bol) 'org-hd-marker))
+	 (file (get-text-property (point-min) 'filename))
+	 (arglist (get-text-property (point-min) 'arglist)) ;; limit search decorationonly
+	 (tag (read-string "Tag (empty to clear): "))
+	 (linenum (line-number-at-pos)))
     (if (string-equal tag "")
 	(progn 
-	  (setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
-	  (shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -d " oldtag)))
-      (shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -a " tag " " hash " -m \"\"")))) 
-;;  (save-excursion
-;;    (goto-char (point-min))
-;;    (superman-view-git-log))
-)
+	  (if oldtag
+	      (progn
+		(setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
+		(shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -d " oldtag)))))
+      (shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -a " tag " " hash " -m \"\"")))
+  (superman-git-log file path (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
+  (goto-line linenum)))
 
 (defun superman-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
