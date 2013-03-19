@@ -408,6 +408,9 @@ or if the file is not inside the location."
 	      (insert item "\n")))
       (setq logstrings (cdr logstrings))))
   (superman-git-log-mode-on)
+  (goto-char (point-min))
+  (toggle-truncate-lines 1)
+  (superman-next-entry)
   (setq buffer-read-only t)))
 
 (setq superman-log-balls
