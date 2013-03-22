@@ -116,8 +116,8 @@ determine the face.")
 	(hdr ("trim" nil (49)) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("trim" superman-trim-date (13)) ("face" font-lock-string-face))
-	(hdr ("trim" superman-trim-string nil) ("face" font-lock-function-name-face))
-	("Link" ("trim" superman-trim-link (48)))))
+	(hdr ("trim" superman-trim-string nil) ("face" font-lock-function-name-face) ("name" "Description"))
+	("Link" ("trim" superman-trim-link (48)) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("trim" nil (7)) ("face" superman-get-todo-face))
 	("EmailDate" superman-trim-date (13) font-lock-string-face)
@@ -157,9 +157,11 @@ or by adding whitespace characters."
 		       (superman-trim-string "link" len))))
 	tlink)
     ;; plainlinks
-    (if (string-match org-link-re-with-space link)
-	(concat "[[" link "]["
-		(superman-trim-string link len) "]]"))))
+    (let* ((len (car args)))
+      (if (string-match org-link-re-with-space link)
+	  (concat "[[" link "]["
+		  (superman-trim-string link len) "]]")
+	link))))
 
 (defun superman-trim-bracketed-filename (file &rest args)
   ;;  Links to files
