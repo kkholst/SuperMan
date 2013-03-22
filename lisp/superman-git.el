@@ -52,13 +52,20 @@
 
 (defun superman-git-p (dir)
   "Test if directory DIR is under git control."
-  (string-match "^true" (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " rev-parse --is-inside-work-tree "))))
+  (string-match
+   "^true"
+   (shell-command-to-string
+    (concat "cd " dir ";"
+	    superman-cmd-git " rev-parse --is-inside-work-tree "))))
 
 (defun superman-git-toplevel (file)
   "Find the toplevel directory DIR is under git control."
   (let ((dir (if (file-directory-p file) file (file-name-directory file))))
     (if (superman-git-p dir)
-	(replace-regexp-in-string "\n" "" (shell-command-to-string (concat "cd " dir "; git rev-parse --show-toplevel "))))))
+	(replace-regexp-in-string
+	 "\n" ""
+	 (shell-command-to-string
+	  (concat "cd " dir "; git rev-parse --show-toplevel "))))))
 
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
