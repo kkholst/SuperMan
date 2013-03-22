@@ -223,11 +223,11 @@ and sets the variable superman-view-current-project."
 and the keybinding to initialize git control otherwise."
   (let* ((loc (get-text-property (point-min) 'git-dir))
 	 (control (if (superman-git-p loc)
-		      (concat "Control: Git repository at "
+		      (concat "Version control: Git repository at "
 			      ;;FIXME: would like to have current git status
 			      (superman-git-toplevel loc))
-			      "Control: not set. <> press `I' to initialize git")))
-    (put-text-property 0 (length "Control: ") 'face 'org-level-2 control)
+		    "Version control: not set. <> press `I' to initialize git")))
+    (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
 
 (defun superman-view-others (project)
@@ -767,7 +767,6 @@ Value is the formatted string with text-properties (special balls)."
       (save-excursion
 	(org-with-point-at marker
 	  (org-todo)))
-      (sit-for 0)
       (superman-view-redo-line))))
 
 (defun superman-next-entry ()
@@ -782,66 +781,46 @@ Value is the formatted string with text-properties (special balls)."
     (when pos
 	(progn (goto-char pos) (beginning-of-line)))))
 
-
-(defun superman-new-document (&optional file-list)
+(defun superman-view-delete-entry (&optional dont-prompt dont-redo)
   (interactive)
-  (let* ((pro (superman-view-current-project))
-	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	 (fl (or file-list `(,(read-file-name (concat "Add document: ") (file-name-as-directory dir))))))
-    ;; FIXME need to write superman-get-documents and filter duplicates
-    (save-window-excursion
-      (superman-goto-project pro "Documents" 'create)
-      (while fl
-	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-		"\n:PROPERTIES:\n:"
-		(superman-property 'filename) ": [["(car fl)"]]\n:"
-		(superman-property 'gitstatus) ": Unknown\n:"
-		(superman-property 'capturedate) ": ")
-	(org-insert-time-stamp (current-time) t)
-	(insert "\n:END:\n")
-	(setq fl (cdr fl)))
-      (save-buffer)))
-  (superman-redo))
-;; (switch-to-buffer (other-buffer)))
+  (let* ((marker (org-get-at-bol 'org-hd-marker))
+	 (scene (current-window-configuration))
+	 (file (superman-filename-at-point t)))
+    (unless dont-prompt
+      (superman-view-index)
+      (org-narrow-to-subtree)
+      (yes-or-no-p "Delete this entry?"))
+    (set-window-configuration scene)
+    (when file
+      (when (yes-or-no-p
+	     (concat "Delete file "
+		     (file-name-nondirectory file)))
+	(if (string-match
+	     (superman-get-property marker "GitStatus")
+	     "Committed\\|Modified")
+	    (shell-command (concat
+			    "cd "
+			    (file-name-directory file)
+			    ";"
+			    superman-cmd-git " rm -f "
+			    (file-name-nondirectory file)))
+	  (when (file-exists-p file)
+	    (delete-file file)))))
+    (when marker
+      (save-excursion
+	(org-with-point-at marker (org-cut-subtree)))))
+  (unless dont-redo (superman-redo)))
 
-(defun superman-new-task ()
+(defun superman-view-delete-all (&optional dont-prompt)
   (interactive)
-  (superman-capture-task (superman-view-current-project)))
-
-(defun superman-new-meeting ()
-  (interactive)
-  (superman-capture-meeting (superman-view-current-project)))
-
-(defun superman-new-data (&optional file-list)
-  (interactive)
-  (let* ((pro (superman-view-current-project))
-	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	 (fl (or file-list `(,(read-file-name (concat "Add data: ") (file-name-as-directory dir))))))
-    ;; FIXME need to write superman-get-documents and filter duplicates
-    (save-window-excursion
-      (superman-goto-project pro "Data" 'create)
-      (while fl
-	(insert "\n*** " (file-name-nondirectory (file-name-sans-extension (car fl)))
-		"\n:PROPERTIES:\n:"
-		"DataFileName" ": [["(car fl)"]]\n:"
-		(superman-property 'gitstatus) ": Unknown\n:"
-		(superman-property 'capturedate) ": ")
-	(org-insert-time-stamp (current-time) t)
-	(insert "\n:END:\n")
-	(setq fl (cdr fl)))
-      (save-buffer)))
-  (superman-redo))
-
-(defun superman-new-note ()
-  (interactive)
-  (superman-capture-note (superman-view-current-project))
-  (superman-view-project))
-
-
-(defun superman-new-bookmark ()
-  (interactive)
-  (superman-capture-bookmark (superman-view-current-project))
-  (superman-view-project))
+  (let ((beg (previous-single-property-change (point) 'cat))
+	(buffer-read-only nil)
+	(end (next-single-property-change (point) 'cat)))
+    (narrow-to-region beg end)
+    (when (yes-or-no-p "Delete all the marked entries in this section? ")
+      (superman-loop 'superman-view-delete-entry '(t t) beg end 'marked)
+      (widen)
+      (superman-redo))))
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -924,7 +903,9 @@ Value is the formatted string with text-properties (special balls)."
       (if ibuf (switch-to-buffer ibuf)
 	(find-file index)))
     (show-all)
-    (when pom (goto-char pom))))
+    (when pom (goto-char pom))
+    ;;(org-narrow-to-subtree)
+    ))
 
 (defun superman-view-file-list ()
   (interactive)
@@ -1087,7 +1068,6 @@ If dont-redo the agenda is not reversed."
       (or (and (superman-marked-p)
 	       (superman-filename-at-point 'no-error)))) nil beg end)))
 
-
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
   (let* ((dir (get-text-property (point-min) 'git-dir)))
@@ -1101,7 +1081,6 @@ If dont-redo the agenda is not reversed."
 
 ;;}}}
 ;;{{{ View-mode and hot-keys
-
 (defvar superman-view-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
    
@@ -1205,7 +1184,6 @@ If dont-redo the agenda is not reversed."
       (funcall cmd))
      (t (message (concat "Not a function: " (symbol-name cmd)))))))
 
-
 (defun superman-hot-a () (interactive) (superman-view-choose-hot-key "a"))
 (defun superman-hot-b () (interactive) (superman-view-choose-hot-key "b"))
 (defun superman-hot-c () (interactive) (superman-view-choose-hot-key "c"))
@@ -1269,10 +1247,10 @@ If dont-redo the agenda is not reversed."
 	("c" nil)
 	("d" nil)
 	("e" nil)
-	("f" org-agenda-follow-mode "follow")
-	("g" superman-view-git-grep "grep")
-	( "h" superman-view-git-history "history")
-	("i" superman-view-index "index")
+	("f" nil)
+	("g" superman-view-git-grep)
+	( "h" superman-view-git-history)
+	("i" superman-view-index "goto index")
 	("j" nil)
 	("k" nil)
 	("l" nil)
@@ -1281,19 +1259,19 @@ If dont-redo the agenda is not reversed."
 	("o" nil)
 	("p" superman-previous-entry "previous")
 	("q" nil)
-	("r" superman-view-redo-line "redo")
+	("r" superman-view-redo-line "refresh")
 	("s" nil)
 	("t" superman-view-toggle-todo)
 	("u" nil)
 	("v" nil)
 	("w" nil)
-	("x" nil)
+	("x" superman-view-delete-entry)
 	("y" nil)
 	("z" nil)
 	("A" nil)
-	("B" nil)
+	("B" superman-capture-bookmark)
 	("C" nil)
-	("D" superman-new-document "document")
+	("D" superman-capture-document "Document")
 	("E" nil)
 	("F" superman-view-file-list "FileList")
 	("G" nil)
@@ -1302,18 +1280,18 @@ If dont-redo the agenda is not reversed."
 	("J" nil)
 	("K" nil)
 	("L" nil)
-	("M" superman-new-meeting "Meeting")
+	("M" superman-capture-meeting "Meeting")
 	("N" superman-new-thing "Note")
 	("O" nil)
 	("P" superman-view-git-push "Push")
 	("Q" superman-unison "Unison")
 	("R" superman-redo)
 	("S" superman-sort-section "sort")
-	("T" superman-new-task "Task")
+	("T" superman-capture-task "Task")
 	("U" superman-view-git-update-status "Update")
-	("V" superman-switch-config "next-config")
+	("V" superman-switch-config)
 	("W" nil)
-	("X" nil)
+	("X" superman-view-delete-all)
 	("Y" nil)
 	("Z" nil)
 	("!" superman-goto-shell)
@@ -1325,46 +1303,46 @@ If dont-redo the agenda is not reversed."
       '(( "c" superman-view-git-commit "commit")
 	( "C" superman-view-git-commit-all "Commit")
 	( "d" superman-view-git-diff "diff")
-	( "a" superman-view-git-annotate "annotate")
+	( "a" superman-view-git-annotate "set tag")
 	( "s" superman-view-git-search "search")
 	( "l" superman-view-git-log "log")
 	( "u" superman-view-git-update-status "update")
-	( "L" superman-view-git-log-decorationonly "decorations-log")
+	( "L" superman-view-git-log-decorationonly "log (tagged only)")
 	;; ( "v" superman-view-git-annotate "annotate")
 	("M" superman-view-mark-all "Mark")
-	("I" superman-view-invert-marks "Invert")
-	("N" superman-new-document "New")
+	("I" superman-view-invert-marks "Invert mark")
+	("N" superman-capture-document "New")
 	("=" superman-view-git-version-diff)))
 
 (setq superman-data-hot-keys superman-documents-hot-keys)
 
 
 (setq superman-kal-el-hot-keys
-      '(("N" superman-new-project)))
+      '(("N" superman-capture-project)))
 
 (setq superman-meetings-hot-keys
       '(("M" superman-view-mark-all)
-	("I" superman-view-invert-marks "Invert")
-	( "N" superman-new-meeting)))
+	("I" superman-view-invert-marks "Invert mark")
+	( "N" superman-capture-meeting)))
 
 (setq superman-notes-hot-keys
       '(("M" superman-view-mark-all "Mark all")
-	("I" superman-view-invert-marks "Invert")
-	( "N" superman-new-note "New note")))
+	("I" superman-view-invert-marks "Invert mark")
+	( "N" superman-capture-note "New note")))
 
 (setq superman-bookmarks-hot-keys
       '(("M" superman-view-mark-all)
-	("I" superman-view-invert-marks "Invert")
-	( "N" superman-new-bookmark "New bookmark")))
+	("I" superman-view-invert-marks "Invert mark")
+	( "N" superman-capture-bookmark "New bookmark")))
 
 (setq superman-tasks-hot-keys
       '(("M" superman-view-mark-all)
-	("I" superman-view-invert-marks "Invert")	
-	( "N" superman-new-task "New Task")))
+	("I" superman-view-invert-marks "Invert mark")	
+	( "N" superman-capture-task "New Task")))
 
 (setq superman-mail-hot-keys
       '(("M" superman-view-mark-all)
-	("I" superman-view-invert-marks "Invert")
+	("I" superman-view-invert-marks "Invert mark")
 	))
 
 
@@ -1376,7 +1354,7 @@ If dont-redo the agenda is not reversed."
 		  ("Data")
 		  ("Bookmark")
 		  ("Note")))))
-    (funcall (intern (concat "superman-new-" (downcase thing))))))
+    (funcall (intern (concat "superman-capture-" (downcase thing))))))
 
 ;;}}}
 ;;{{{ Sorting

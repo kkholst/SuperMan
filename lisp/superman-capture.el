@@ -26,83 +26,6 @@
 ;;; Code:
 
 ;;{{{ superman capture
-(defun superman-capture (project heading plist)
-  (let* ((what (car plist))
-	 (props (cadr plist))
-	 (scene (current-window-configuration))
-	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
-    (superman-goto-project project heading 'create nil)
-    (switch-to-buffer
-     (make-indirect-buffer (current-buffer) S-buf))
-    (insert "\n*** ")
-    (org-narrow-to-subtree)
-    (goto-char (point-min))
-    (put-text-property (point) (point-at-eol) 'capture (point))
-    (put-text-property (point) (point-at-eol) 'scene scene)
-    (insert "### ---Captured!: " what "-------"
-	    "\n# C-c C-c to save "
-	    "\n# C-c C-q to quit without saving"
-	    "\n### ---yeah #%*^#@!--------------"
-	    "\n\n")
-    (put-text-property (point-min) (point) 'face font-lock-string-face)
-    (goto-char (point-max))
-    (insert "\n:PROPERTIES:")
-    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-    (while props
-      (let* ((el (car props))
-	     (key (car el))
-	     (default (ignore-errors (cdr el))))
-      (ignore-errors (insert "\n:" key ": "))
-      ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-      (put-text-property (point-at-bol) (point) 'prop-marker (point))
-      (when default (insert default))
-      (setq props (cdr props))))
-  (insert "\n:END:")
-  ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-  (insert "\n")
-  (goto-char (next-single-property-change (point-min) 'capture))
-  (end-of-line)
-  (local-set-key "\C-c\C-c" 'superman-clean-scene)
-  (local-set-key "\C-c\C-q" 'superman-quit-scene)))
-
-(defun superman-clean-scene ()
-  (interactive)
-  (let ((start (next-single-property-change (point-min) 'capture))
-	(scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene))
-	next)
-    (goto-char start)
-    (delete-region (point-min) (point))
-    (goto-char (point-min))
-    (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
-      (goto-char next)
-      (if (looking-at "[ \t]*\n")
-	  (progn (beginning-of-line)
-		 (kill-line))
-	(end-of-line)))
-    (save-buffer)
-    (kill-buffer (current-buffer))
-    (set-window-configuration scene)
-    (when superman-view-mode (superman-redo))))
-
-(defun superman-quit-scene ()
-  (interactive)
-  (let ((scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene)))
-    (delete-region (point-min) (point))
-    (kill-buffer (current-buffer))
-    (set-window-configuration scene)))
-
-;; (superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
-
-(defun superman-capture-note (&optional project)
-  (interactive)
-  (let ((pro (or project (superman-select-project))))
-    (superman-capture pro
-		      "Notes"
-		      `("Note" (("NoteDate" . ,(format-time-string "<%Y-%m-%d %a>")))))))
-
-  
-;;}}}
-;;{{{ capture documents, notes, etc.
 
 (defun superman-goto-project (&optional project heading create jabber)
   "Goto project index file call `widen' and then search for HEADING
@@ -143,134 +66,155 @@ Leaves point at the end of the section."
       (goto-char (point-max))
     value)))
 
+(defun superman-capture (project heading plist)
+  (let* ((what (car plist))
+	 (props (cadr plist))
+	 (scene (current-window-configuration))
+	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
+    (superman-goto-project project heading 'create nil)
+    (switch-to-buffer
+     (make-indirect-buffer (current-buffer) S-buf))
+    (insert "\n*** ")
+    (org-narrow-to-subtree)
+    (goto-char (point-min))
+    (put-text-property (point) (point-at-eol) 'capture (point))
+    (put-text-property (point) (point-at-eol) 'scene scene)
+    (insert "### ---Captured!: " what "-------"
+	    "\n# C-c C-c to save "
+	    "\n# C-c C-q to quit without saving"
+	    "\n### ---yeah #%*^#@!--------------"
+	    "\n\n")
+    (put-text-property (point-min) (point) 'face font-lock-string-face)
+    (goto-char (point-max))
+    (insert "\n:PROPERTIES:")
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+    (while props
+      (let* ((el (car props))
+	     (key (car el))
+	     (default (ignore-errors (cadr el))))
+	(if (stringp key)
+	    (ignore-errors
+	      (insert "\n:" key ": ")
+	      ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+	      (put-text-property (point-at-bol) (point) 'prop-marker (point))
+	      (when default (insert default)))
+	  (cond ((eq key 'fun) (ignore-errors (funcall (cdr el))))
+		((eq key 'hdr) (ignore-errors
+				 (save-excursion
+				   (org-back-to-heading)
+				   (end-of-line)
+				   (insert default))))))
+	(setq props (cdr props))))
+    (insert "\n:END:")
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+    (insert "\n")
+    (goto-char (next-single-property-change (point-min) 'capture))
+    (end-of-line)
+    (local-set-key "\C-c\C-c" 'superman-clean-scene)
+    (local-set-key "\C-c\C-q" 'superman-quit-scene)))
 
-(defun superman-goto-project-notes ()
+(defvar superman-capture-before-clean-scene-hook nil)
+(defun superman-clean-scene ()
   (interactive)
-  (or (superman-goto-project nil "Notes" 'create)))
+  (let ((start (next-single-property-change (point-min) 'capture))
+	(scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene))
+	next)
+    (goto-char start)
+    (delete-region (point-min) (point))
+    (goto-char (point-min))
+    (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
+      (goto-char next)
+      (if (looking-at "[ \t]*\n")
+	  (progn (beginning-of-line)
+		 (kill-line))
+	(end-of-line)))
+    (save-buffer)
+    (run-hooks superman-capture-before-clean-scene-hook)
+    (kill-buffer (current-buffer))
+    (set-window-configuration scene)
+    (when superman-view-mode (superman-redo))))
 
-(defun superman-goto-project-data ()
+(defun superman-quit-scene ()
   (interactive)
-  (or (superman-goto-project nil "Data" 'create)))
+  (let ((scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene)))
+    (delete-region (point-min) (point-max))
+    (save-buffer)
+    (kill-buffer (current-buffer))
+    (set-window-configuration scene)))
 
-(defun superman-goto-project-bookmarks ()
-  (interactive)
-  (or (superman-goto-project nil "Bookmarks" 'create)))
+;; (superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
 
-(defun superman-goto-project-documents ()
-  (interactive)
-  (or (superman-goto-project nil "Documents" 'create)))
-
-(defun superman-goto-project-tasks ()
-  (interactive)
-  (or (superman-goto-project nil "Tasks" 'create)))
-
-(defun superman-goto-project-mailbox ()
-  (interactive)
-  (or (superman-goto-project nil "Mail" 'create)))
-
-(defun superman-goto-project-config ()
-  (interactive)
-  (or (superman-goto-project nil "Configuration" 'create)))
-
-(defun superman-goto-project-calendar ()
-  (interactive)
-  (or (superman-goto-project nil "Calendar" 'create)))
+;;}}}
+;;{{{ capture documents, notes, etc.
 
 ;; Choose a prefix
-(setq superman-capture-prefix "P")
-(add-to-list 'org-capture-templates
-	     `(,superman-capture-prefix "Project management") 'append)
-;; (defun superman-capture() 
-  ;; (interactive)
-  ;; (push (string-to-char superman-capture-prefix) unread-command-events)
-  ;; (call-interactively 'org-capture))
+;; (setq superman-capture-prefix "P")
+;; (add-to-list 'org-capture-templates
+	     ;; `(,superman-capture-prefix "Project management") 'append)
 
-;;(setq org-capture-templates nil)
-;; Capturing links 
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "l") "Add link" plain 
-				      (function superman-goto-project-bookmarks) "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:") 'append)
+(defun superman-capture-document (&optional project)
+  (interactive)
+  (let* ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project)))
+	(dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	(file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
+    (superman-capture
+     pro
+     "Documents"
+     `("Document" (("FileName" ,(concat "[[" file "]]"))
+		   (hdr ,(file-name-nondirectory file))
+		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
+
+(defun superman-capture-note (&optional project)
+  (interactive)
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project))))
+    (superman-capture pro
+		      "Notes"
+		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
 (defun superman-capture-bookmark (&optional project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
-	 (org-capture-templates
-	  `(("n" "Add a bookmark/link" plain
-	     (function
-	      (lambda () (interactive)
-		(superman-goto-project pro "Bookmarks" 'create)))
-	     ,(concat
-	       "\n*** %?\n:PROPERTIES:\n:Link: %a\n:BookmarkDate: %T\n\:END:")))))
-    (org-capture nil "n")))
+    (let ((pro (or project
+		   superman-view-current-project
+		   (superman-select-project))))
+    (superman-capture pro
+		      "Bookmarks"
+		      `("Bookmark" (("BookmarkDate"  ,(format-time-string "<%Y-%m-%d %a>"))
+				    ("Link" nil))))))
 
-;; Capturing tasks
 (defun superman-capture-task (&optional project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
-	 (org-capture-templates
-	  `(("t" "Add a task" plain
-	     (function
-	      (lambda () (interactive)
-		(superman-goto-project pro "Tasks" 'create)))
-	     ,(concat "\n*** TODO %? \n:PROPERTIES:\n:TaskDate: <%<%Y-%m-%d %a>>\n:END:")))))
-    (org-capture nil "t")))
-(add-to-list 'org-capture-templates
-	     `(,(concat superman-capture-prefix "t") "Add task" plain
-	       (function superman-goto-project-tasks) "\n*** TODO %? \n:PROPERTIES:\n:TaskDate: <%<%Y-%m-%d %a>>\n:END:")
-	     'append)
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
-				      (function superman-goto-project-tasks) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-;; Capturing notes
-(defun old-superman-capture-note (&optional project)
-  (interactive)
-  (let* ((pro (or project (superman-select-project)))
-	 (org-capture-templates
-	  `(("n" "Add a note" plain
-	     (function
-	      (lambda () (interactive)
-		(superman-goto-project pro "Notes" 'create)))
-	     ,(concat "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:")))))
-    (org-capture nil "n")))
-  
-(add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "n") "Add note" plain
-				      (function superman-goto-project-notes) "\n*** %? \n:PROPERTIES:\n:NoteDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
-;; Capturing documents
-(add-to-list 'org-capture-templates
-	     `(,(concat superman-capture-prefix "d") "Add document" plain
-	       (function superman-goto-project-documents) "\n*** %? \n:PROPERTIES:\n:filename: [[%(read-file-name \"Document file: \")]]\n:CaptureDate: %T\n:END:") 'append)
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project))))
+    (superman-capture
+     pro
+     "Tasks"
+     `("Task" (("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
+	       (fun 'org-todo))))))
 
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
 
-(add-to-list 'org-capture-templates
- 	     `(,(concat superman-capture-prefix "m") "Arrange a meeting" plain
- 	       (function superman-goto-project-calendar)
- 	       ,(concat "\n*** %? \n:PROPERTIES:\n:MeetingDate: %^T"
-			"\n:Participants:"
-			"\n:Location:"
-			"\n:CaptureDate: %U"
-			"\n:END:"
-			"\n**** Agenda\n"
-			"\n**** TODO Minutes\n")))
-
 (defun superman-capture-meeting (&optional project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
-	 (org-capture-templates
-	  `(("m" "Arrange a meeting" plain
-	     (function
-	      (lambda () (interactive)
-		(superman-goto-project pro "Calendar" 'create)))
-	     ,(concat "\n*** %? \n:PROPERTIES:\n:MeetingDate: %^T"
-		      "\n:Participants:"
-		      "\n:Location:"
-		      "\n:CaptureDate: %U"
-		      "\n:END:"
-		      "\n**** Agenda\n"
-		      "\n**** TODO Minutes\n"))))
-	 ;; FIXME the hook does not seem to get activated
-	 (org-capture-before-finalize-hook
-	  'superman-google-export-appointment))
-    (org-capture nil "m")))
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project)))
+	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date))))
+    (superman-capture
+     pro
+     "Calendar"
+     `("Meeting" (("MeetingDate" ,date)
+		  ("Participants" nil)
+		  ("Location" nil)
+		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
+		  ('fun 'org-todo)))))
+  (setq superman-capture-before-clean-scene-hook
+	'superman-google-export-appointment))
 
 ;;}}}
 ;;{{{ capture synchronization commands

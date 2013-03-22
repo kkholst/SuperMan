@@ -373,7 +373,7 @@ Enabling superman mode electrifies the superman buffer for project management."
     (when pom (goto-char pom))))
 		 
 (define-key superman-mode-map [return] 'superman-return) ;; Return is not used anyway in column mode
-(define-key superman-mode-map "N" 'superman-new-project)
+;; (define-key superman-mode-map "N" 'superman-new-project)
 ;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
 ;; (define-key superman-mode-map " " 'superman-switch-to-project)
 ;; (define-key superman-mode-map "S" 'superman-set-property)
