@@ -25,34 +25,82 @@
 
 ;;; Code:
 
-
 ;;{{{ superman capture
 (defun superman-capture (project heading plist)
   (let* ((what (car plist))
 	 (props (cadr plist))
-	 (start (point)))
+	 (scene (current-window-configuration))
+	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
     (superman-goto-project project heading 'create nil)
-    (insert "\n### Captured by SuperMan: " what
-	    "\n# Press C-c C-c to save the note"
-	    "\n# or C-c C-q to quit without saving"
-	    "\n### "
-	    "\n*** ")
-    ;; (put-text-property start (point) 'capture-start '(read-only t))
+    (switch-to-buffer
+     (make-indirect-buffer (current-buffer) S-buf))
+    (insert "\n*** ")
+    (org-narrow-to-subtree)
+    (goto-char (point-min))
+    (put-text-property (point) (point-at-eol) 'capture (point))
+    (put-text-property (point) (point-at-eol) 'scene scene)
+    (insert "### ---Captured!: " what "-------"
+	    "\n# C-c C-c to save "
+	    "\n# C-c C-q to quit without saving"
+	    "\n### ---yeah #%*^#@!--------------"
+	    "\n\n")
+    (put-text-property (point-min) (point) 'face font-lock-string-face)
+    (goto-char (point-max))
     (insert "\n:PROPERTIES:")
-    ;; (put-text-property start (point-at-bol) (point-at-eol) '(read-only t))
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (while props
-      (let ((key (caar props))
-	    (default (cadr props)))
-	(insert "\n:" key ":")
-	(add-text-properties (point-at-bol) (point-at-eol) '(read-only t))
-	(when default (insert default))
-	(setq props (cdr props))))
-    (insert "\n:END:")
-    (put-text-property start (point-at-bol) (point-at-eol) '(read-only t))
-    (insert "\n")))
+      (let* ((el (car props))
+	     (key (car el))
+	     (default (ignore-errors (cdr el))))
+      (ignore-errors (insert "\n:" key ": "))
+      ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+      (put-text-property (point-at-bol) (point) 'prop-marker (point))
+      (when default (insert default))
+      (setq props (cdr props))))
+  (insert "\n:END:")
+  ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+  (insert "\n")
+  (goto-char (next-single-property-change (point-min) 'capture))
+  (end-of-line)
+  (local-set-key "\C-c\C-c" 'superman-clean-scene)
+  (local-set-key "\C-c\C-q" 'superman-quit-scene)))
 
-;;(superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
+(defun superman-clean-scene ()
+  (interactive)
+  (let ((start (next-single-property-change (point-min) 'capture))
+	(scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene))
+	next)
+    (goto-char start)
+    (delete-region (point-min) (point))
+    (goto-char (point-min))
+    (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
+      (goto-char next)
+      (if (looking-at "[ \t]*\n")
+	  (progn (beginning-of-line)
+		 (kill-line))
+	(end-of-line)))
+    (save-buffer)
+    (kill-buffer (current-buffer))
+    (set-window-configuration scene)
+    (when superman-view-mode (superman-redo))))
 
+(defun superman-quit-scene ()
+  (interactive)
+  (let ((scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene)))
+    (delete-region (point-min) (point))
+    (kill-buffer (current-buffer))
+    (set-window-configuration scene)))
+
+;; (superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
+
+(defun superman-capture-note (&optional project)
+  (interactive)
+  (let ((pro (or project (superman-select-project))))
+    (superman-capture pro
+		      "Notes"
+		      `("Note" (("NoteDate" . ,(format-time-string "<%Y-%m-%d %a>")))))))
+
+  
 ;;}}}
 ;;{{{ capture documents, notes, etc.
 
@@ -130,11 +178,12 @@ Leaves point at the end of the section."
 
 ;; Choose a prefix
 (setq superman-capture-prefix "P")
-(add-to-list 'org-capture-templates `(,superman-capture-prefix "Project management") 'append)
-(defun superman-capture() 
-  (interactive)
-  (push (string-to-char superman-capture-prefix) unread-command-events)
-  (call-interactively 'org-capture))
+(add-to-list 'org-capture-templates
+	     `(,superman-capture-prefix "Project management") 'append)
+;; (defun superman-capture() 
+  ;; (interactive)
+  ;; (push (string-to-char superman-capture-prefix) unread-command-events)
+  ;; (call-interactively 'org-capture))
 
 ;;(setq org-capture-templates nil)
 ;; Capturing links 
@@ -171,7 +220,7 @@ Leaves point at the end of the section."
 (add-to-list 'org-capture-templates `(,(concat superman-capture-prefix "c") "Add checklist item" plain
 				      (function superman-goto-project-tasks) "\n- [ ] %? \n:PROPERTIES:\n:CaptureDate: <%<%Y-%m-%d %a>>\n:END:") 'append)
 ;; Capturing notes
-(defun superman-capture-note (&optional project)
+(defun old-superman-capture-note (&optional project)
   (interactive)
   (let* ((pro (or project (superman-select-project)))
 	 (org-capture-templates
@@ -305,7 +354,7 @@ Leaves point at the end of the section."
          (org (superman-get-index entry))
 	 (region (buffer-substring (region-beginning) (region-end)))
          (mailbox (file-name-as-directory
-                   (concat (file-name-as-directory loc) pro "/" "Mail"))))
+                   (concat (file-name-as-directory loc) pro "/" "Mailbox"))))
     (gnus-summary-select-article-buffer)
     (if region
 	(plist-put org-store-link-plist :initial
