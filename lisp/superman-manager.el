@@ -314,48 +314,51 @@ the `superman-home'.")
   (save-excursion
     (setq superman-project-alist nil)
     (set-buffer (find-file-noselect superman-home))
+    (show-all)
+    (widen)
     (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
     (while (superman-forward-project)
-      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
-	     (category (superman-get-property nil (superman-property 'category) 'inherit))
-	     (others (superman-get-property nil (superman-property 'others) nil))
-	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
-	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
-		       (nth 4 (org-heading-components))))
-	     (marker (org-agenda-new-marker (match-beginning 0)))
-	     (hdr (org-get-heading t t))
-	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
-	     (config (superman-get-property nil (superman-property 'config) 'inherit))
-	     (todo (or (org-get-todo-state) ""))
-	     (index (or (superman-get-property nil (superman-property 'index) nil)
-			(let ((default-org-home
-				(concat (file-name-as-directory loc)
-					name
-					superman-org-location)))
-			  ;; (make-directory default-org-home t)
-			  (concat (file-name-as-directory default-org-home) name ".org")))))
-	(set-text-properties 0 (length hdr) nil hdr)
-	;; (add-text-properties
-	 ;; 0 (length hdr)
-	 ;; (list 'org-marker marker 'org-hd-marker marker) hdr)
-	(unless (file-name-absolute-p index)
-	  (setq index
-		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-	(add-to-list 'superman-project-alist
-		     (list name
-			   (list (cons "location"  loc)
-				 (cons "index" index)
-				 (cons "category" category)
-				 (cons "others" others)
-				 (cons 'hdr hdr)
-				 (cons "marker" marker)				 
-				 (cons "lastvisit" lastvisit)
-				 (cons "config" config)
-				 (cons 'todo todo)
-				 (cons "publish-directory" publish-dir))))))
-    superman-project-alist))
+      (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
+	(let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
+	       (category (superman-get-property nil (superman-property 'category) 'inherit))
+	       (others (superman-get-property nil (superman-property 'others) nil))
+	       (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
+	       (name (or (superman-get-property nil (superman-property 'nickname) nil)
+			 (nth 4 (org-heading-components))))
+	       (marker (org-agenda-new-marker (match-beginning 0)))
+	       (hdr (org-get-heading t t))
+	       (lastvisit (superman-get-property nil "LastVisit" 'inherit))
+	       (config (superman-get-property nil (superman-property 'config) 'inherit))
+	       (todo (or (org-get-todo-state) ""))
+	       (index (or (superman-get-property nil (superman-property 'index) nil)
+			  (let ((default-org-home
+				  (concat (file-name-as-directory loc)
+					  name
+					  superman-org-location)))
+			    ;; (make-directory default-org-home t)
+			    (concat (file-name-as-directory default-org-home) name ".org")))))
+	  (set-text-properties 0 (length hdr) nil hdr)
+	  ;; (add-text-properties
+	  ;; 0 (length hdr)
+	  ;; (list 'org-marker marker 'org-hd-marker marker) hdr)
+	  (unless (file-name-absolute-p index)
+	    (setq index
+		  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+	  (add-to-list 'superman-project-alist
+		       (list name
+			     (list (cons "location"  loc)
+				   (cons "index" index)
+				   (cons "category" category)
+				   (cons "others" others)
+				   (cons 'hdr hdr)
+				   (cons "marker" marker)				 
+				   (cons "lastvisit" lastvisit)
+				   (cons "config" config)
+				   (cons 'todo todo)
+				   (cons "publish-directory" publish-dir))))))
+      superman-project-alist)))
   
   
   
@@ -767,7 +770,6 @@ If NOSELECT is set return the project."
 (defun superman-get-index (project)
 "Extract the index file of PROJECT."
   (cdr (assoc "index" (cadr project))))
-
 
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
