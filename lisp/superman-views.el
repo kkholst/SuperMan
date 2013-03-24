@@ -199,17 +199,20 @@ or by adding whitespace characters."
 	(t 'font-lock-comment-face)))
 
 (defun superman-trim-date (date &optional len)
-  (let ((len (or len 13)))
+  (let ((len (or len 13))
+	date-string)
     (if (string-match org-ts-regexp0 date)
-	;; (setq org-display-custom-times t)
 	(let ((age (abs (org-time-stamp-to-now date))))
 	  (cond ((= age 0)
 		 (setq date "today"))
 		((= age 1)
 		 (setq date "yesterday"))
 		(t (setq date (concat (int-to-string age) " days ago"))))
-	  (superman-trim-string date len))
-      (superman-trim-string date len))))
+	  (setq date-string (superman-trim-string date len))
+	  (put-text-property 0 (length date-string) 'sort-key age date-string))
+      (setq date-string (superman-trim-string date len))
+      (put-text-property 0 (length date-string) 'sort-key 0 date-string))
+      date-string))
 
 (defun superman-view-current-project ()
   "Identifies the project associated with the current view buffer
@@ -621,9 +624,11 @@ a formatted string with faces."
 		  (apply trim-function raw-string trim-args)))
 	 (face
 	  (or (cadr (assoc "face" ball))
-	      (get-text-property 0 'face raw-string))))
+	      (get-text-property 0 'face raw-string)))
+	 (sort-key (get-text-property 2 'sort-key trimmed-string)))
     ;; remove all existing text-properties
     (set-text-properties 0 (length trimmed-string) nil trimmed-string)
+    (when sort-key (put-text-property 0 (length trimmed-string) 'sort-key sort-key trimmed-string))
     (unless no-face
       (when (and (not (facep face)) (functionp face)) ;; apply function to get face
 	(setq face (funcall
@@ -688,8 +693,21 @@ Value is the formatted string with text-properties (special balls)."
     (concat "\n" control (insert "\n\n" hotkeys "\n\n"))) "\n" )
 
 ;;}}}
-;;{{{ Moving items around
+;;{{{ Moving (items) around
 
+(defun superman-next-cat ()
+  (interactive)
+  (goto-char (or (next-single-property-change (point-at-eol)
+					      'cat)
+		 (point-max))))
+
+(defun superman-previous-cat ()
+  (interactive)
+  (goto-char (or (previous-single-property-change
+		  (point-at-bol) 'cat)
+		 (point-min)))
+	     (beginning-of-line))
+  
 (defun superman-one-up (&optional down)
   (interactive "P")
   (let ((marker (org-get-at-bol 'org-hd-marker)))
@@ -739,8 +757,7 @@ Value is the formatted string with text-properties (special balls)."
 		   (beginning-of-line)
 		   (count-lines 1 (point))))
 	cmd)
-    (goto-char (point-min))
-    (setq cmd (get-text-property (point) 'redo-cmd))
+    (setq cmd (get-text-property (point-min) 'redo-cmd))
     (eval cmd)
     (goto-line (+ 1 curline))))
 
@@ -1158,7 +1175,9 @@ If dont-redo the agenda is not reversed."
 
 (define-key superman-view-mode-map [return] 'superman-hot-return)
 (define-key superman-view-mode-map [(shift up)] 'superman-one-up)
-(define-key superman-view-mode-map [(shift down)] 'superman-one-down) 
+(define-key superman-view-mode-map [(shift down)] 'superman-one-down)
+(define-key superman-view-mode-map [(up)] 'superman-previous-cat)
+(define-key superman-view-mode-map [(down)] 'superman-next-cat) 
 
 (setq superman-documents-hot-keys '(("c" superman-view-git-commit)))
 
@@ -1365,33 +1384,53 @@ If dont-redo the agenda is not reversed."
   (interactive "P")
   (let* ((buffer-read-only nil)
 	 (cc (current-column))
+	 (pp (point-at-bol))
 	 (col-start 0)
 	 col-width
 	 (cols (cdr (get-text-property (point-at-bol) 'columns)))
 	 (pos (superman-current-subcat-pos))
+	 key
 	 next
 	 beg
 	 end)
     (when (and pos cols)
-	(while (> cc (+ col-start (car cols)))
-	  (setq col-start (+ col-start (car cols)))
-	  (setq cols (cdr cols)))
-	(setq col-width (- (car cols) 1))
-	(goto-char pos)
-	(goto-char (next-single-property-change (point-at-eol) 'org-marker))
-	(setq beg (point))
-	;; move to end of section
-	(or (outline-next-heading)
-	    (goto-char (point-max)))
-	(goto-char (previous-single-property-change (point-at-eol) 'org-marker))
-	(setq end (point))
-	(narrow-to-region beg end)
-	(goto-char (point-min))
+      (while (> cc (+ col-start (car cols)))
+	(setq col-start (+ col-start (car cols)))
+	(setq cols (cdr cols)))
+      (setq col-width (- (car cols) 1))
+      (goto-char pos)
+      (goto-char (next-single-property-change (point-at-eol) 'org-marker))
+      (setq beg (point))
+      ;; move to end of section
+      (or (outline-next-heading)
+	  (goto-char (point-max)))
+      (goto-char (previous-single-property-change (point-at-eol) 'org-marker))
+      (setq end (point))
+      (narrow-to-region beg end)
+      (goto-char (point-min))
+      ;; sort by sort-key if any
+      (if (setq key (get-text-property (+ (point) col-start) 'sort-key))
+	  (let* ((sort-string (int-to-string key))
+		 (slen (length sort-string))
+		 pos)
+	    (insert sort-string)
+	    (put-text-property (point-at-bol) (point) 'delete slen)
+	    (while (re-search-forward "^" nil t)
+	      (setq key (get-text-property (+ (point) col-start) 'sort-key))
+	      ;; (goto-char (+ (point) col-start))
+	      (if key (insert (int-to-string key))))
+	    (sort-numeric-fields 0 (point-min) (point-max))
+	    (goto-char (point-min))
+	    (while (re-search-forward "^" nil t)
+	      (delete-region (point)
+			     (+ (point) (skip-chars-forward "[0-9]")))
+	      (end-of-line)))
 	(sort-subr reverse 'forward-line 'end-of-line
 		   `(lambda () (forward-char ,col-start))
-		   `(lambda () (forward-char ,col-width)))
-	(widen)
-	(forward-char (+ 2 col-start)))))
+		   `(lambda () (forward-char ,col-width))))
+      (widen)
+      (goto-char pp)
+      (forward-char (+ 2 col-start)))))
       
 
 (defun superman-sort-by-status (a b)
