@@ -183,12 +183,12 @@
 	     (tail (cdr cat)))
 	;; sort projects by lastvisit date
 	;; see http://emacswiki.org/emacs/DestructiveOperations
-	(setq tail
-	      (sort tail
-		    (lambda (p q)
-		      (org-time<=
-		       (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
-		       (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
+	;; (setq tail
+	      ;; (sort tail
+		    ;; (lambda (p q)
+		      ;; (org-time<=
+		       ;; (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
+		       ;; (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
 	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
@@ -196,6 +196,10 @@
 	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
+	;; sort by date
+	(org-back-to-heading)
+	(goto-char (+ 2 (next-single-property-change (point) 'sort-key)))
+	(superman-sort-section)
 	;; column names
 	(org-back-to-heading)
 	(end-of-line)
