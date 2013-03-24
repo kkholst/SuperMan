@@ -27,12 +27,17 @@
 
 ;;{{{ superman capture
 
-(defun superman-goto-project (&optional project heading create jabber)
+(defun superman-goto-project (&optional project heading create end-of jabber)
   "Goto project index file call `widen' and then search for HEADING
 and narrow the buffer to this subtree.
 
 If HEADING is not found and CREATE is non-nil create the HEADING.
-Leaves point at the end of the section."
+
+If END-OF is non-nil leaves point at end of the section,
+otherwise at the beginning.
+
+If JABBER is non-nil message about non-existing headings.
+"
   (interactive)
   (let* ((pro (or project (superman-select-project)))
 	 (index (superman-get-index pro))
@@ -47,35 +52,47 @@ Leaves point at the end of the section."
     (widen)
     (show-all)
     (goto-char (point-min))
-    (setq value (cond ((re-search-forward
-			(format org-complex-heading-regexp-format (regexp-quote head))
-			nil t)
-		       'found)
-		      (create
-		       (goto-char (point-max))
-		       (insert "\n* " head "\n")
-		       ;; (org-set-property "Project" pro)
-		       (forward-line -1)
-		       'create)
-		      (t (when jabber
-			   (message (concat "Heading " head " not found in index file of " (car pro)))
-			   )
-			 nil)))
+    (setq value
+	  (cond ((re-search-forward (format org-complex-heading-regexp-format (regexp-quote head)) nil t)
+		 'found)
+		(create
+		 (goto-char (point-max))
+		 (insert "\n* " head "\n")
+		 ;; (org-set-property "Project" pro)
+		 (forward-line -1)
+		 'create)
+		(t (when jabber (message (concat "Heading " head " not found in index file of " (car pro))))
+		   nil)))
     (when value 
       (org-narrow-to-subtree)
-      (goto-char (point-max))
-    value)))
+      (if end-of (goto-char (point-max))
+	;; leave point at the beginning of first entry in this section
+	(end-of-line)
+	(if (re-search-forward (format "^\\*\\{%d\\} " (+ (org-current-level) 1))
+	    (point-max) t)
+	(beginning-of-line)
+	(goto-char (point-max)))))
+  (show-all)
+  value))
 
-(defun superman-capture (project heading plist)
+(defun superman-capture (project heading plist &optional level)
   (let* ((what (car plist))
+	 (level (or level 3))
 	 (props (cadr plist))
 	 (scene (current-window-configuration))
+	 (body "")
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
     (superman-goto-project project heading 'create nil)
     (switch-to-buffer
      (make-indirect-buffer (current-buffer) S-buf))
-    (insert "\n*** ")
+    (delete-other-windows)
+    (insert "\n"
+	    (make-string level (string-to-char "*"))
+	    " NIX \n")
+    (forward-line -1)
     (org-narrow-to-subtree)
+    (skip-chars-forward "[* ]")
+    (kill-line)
     (goto-char (point-min))
     (put-text-property (point) (point-at-eol) 'capture (point))
     (put-text-property (point) (point-at-eol) 'scene scene)
@@ -85,27 +102,32 @@ Leaves point at the end of the section."
 	    "\n### ---yeah #%*^#@!--------------"
 	    "\n\n")
     (put-text-property (point-min) (point) 'face font-lock-string-face)
+    (org-mode)
+    (show-all)
     (goto-char (point-max))
     (insert "\n:PROPERTIES:")
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (while props
       (let* ((el (car props))
 	     (key (car el))
-	     (default (ignore-errors (cadr el))))
-	(if (stringp key)
-	    (ignore-errors
-	      (insert "\n:" key ": ")
-	      ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-	      (put-text-property (point-at-bol) (point) 'prop-marker (point))
-	      (when default (insert default)))
-	  (cond ((eq key 'fun) (ignore-errors (funcall (cdr el))))
-		((eq key 'hdr) (ignore-errors
-				 (save-excursion
-				   (org-back-to-heading)
-				   (end-of-line)
-				   (insert default))))))
+	     (val (ignore-errors (cadr el))))
+	(cond ((stringp key)
+	       (ignore-errors
+		 (insert "\n:" key ": ")
+		 ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+		 (put-text-property (- (point) 1) (point) 'prop-marker (point))
+		 (put-text-property (- (point) 1) (point) 'required "required-field")
+		 (when val (insert (superman-make-value val)))))
+	      ((eq key 'fun) (ignore-errors (funcall (cdr el))))
+	      ((eq key 'hdr) (ignore-errors
+			       (save-excursion
+				 (org-back-to-heading)
+				 (end-of-line)
+				 (insert (superman-make-value val)))))
+	      ((eq key 'body) (setq body (concat body (superman-make-value val)))))
 	(setq props (cdr props))))
-    (insert "\n:END:")
+    (insert "\n:END:\n")
+    (insert body)
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (insert "\n")
     (goto-char (next-single-property-change (point-min) 'capture))
@@ -113,11 +135,22 @@ Leaves point at the end of the section."
     (local-set-key "\C-c\C-c" 'superman-clean-scene)
     (local-set-key "\C-c\C-q" 'superman-quit-scene)))
 
+(defun superman-make-value (val)
+  (cond ((stringp val) val)
+	((functionp val) (funcall val))
+	((listp val)
+	 (let ((thing (car val)))
+	   (cond ((stringp thing)
+		  (add-text-properties 0 (length thing) (cdr val) thing))
+		 ((functionp thing)
+		  (funcall thing (cdr val))))))))
+
 (defvar superman-capture-before-clean-scene-hook nil)
 (defun superman-clean-scene ()
   (interactive)
   (let ((start (next-single-property-change (point-min) 'capture))
 	(scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene))
+	req
 	next)
     (goto-char start)
     (delete-region (point-min) (point))
@@ -125,8 +158,13 @@ Leaves point at the end of the section."
     (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
       (goto-char next)
       (if (looking-at "[ \t]*\n")
-	  (progn (beginning-of-line)
-		 (kill-line))
+	  (if (setq req (get-text-property (point) 'required))
+	      (progn
+		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-warning-face)
+		(error (concat (or req "This is a required field"))))
+	    (beginning-of-line)
+	    (kill-line)
+	    (forward-line -1))
 	(end-of-line)))
     (save-buffer)
     (run-hooks superman-capture-before-clean-scene-hook)
@@ -166,6 +204,34 @@ Leaves point at the end of the section."
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
 
+(defun superman-capture-project (&optional nickname)
+  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+This function modifies the 'superman' and creates and visits the index file of the new project.
+To undo all this you can try to call 'superman-delete-project'. "
+  (interactive)
+  (superman-refresh)
+  (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
+	 category)
+    ;; check if nickname exists 
+    (while (assoc nickname superman-project-alist)
+      (setq nickname
+	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
+    (setq category (or category
+		       (completing-read "Category: "
+					(mapcar (lambda (x) (list x)) (superman-parse-project-categories)) nil nil)))
+    (superman-capture
+     `("*S*" (("index" . ,superman-home)))
+     category
+     `("Project" (("Nickname" ,nickname)
+		  ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
+		  ("Others" "")
+		  ;; ("Location" ("" (required t)))
+		  ("Location" "")
+		  (hdr ,(concat "ACTIVE " nickname))
+		  ("Index" "")
+		  ("Category" ,category)))
+     superman-project-level)))
+    
 (defun superman-capture-note (&optional project)
   (interactive)
   (let ((pro (or project
@@ -220,23 +286,21 @@ Leaves point at the end of the section."
 ;;{{{ capture synchronization commands
 (setq superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
       ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
-(defun superman-capture-unison (&optional config project)
+
+(defun superman-capture-unison (&optional project)
   (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
-	 (org-capture-mode-hook 'org-narrow-to-subtree)
-	 (org-capture-templates
-	  `(("u" "unison" plain
-	     (file+headline (superman-get-index pro) "Configuration")
-	     ,(concat "*** unison%?\n:PROPERTIES:"
-		      "\n:UNISON:"
-		      "unison-gtk"
-		      "\n:ROOT-1:"
-		      "%(read-directory-name \"Unison root directory 1: \") "
-		      "\n:ROOT-2:"
-		      "%(read-directory-name \"Unison root directory 2: \") "
-		      "\n:SWITCHES:default"
-		      "\n:END:\n") :unnarrowed t))))
-    (org-capture nil "u")))
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project)))
+	(root-1 (read-directory-name "Unison root directory 1: "))
+	(root-2 (read-directory-name "Unison root directory 2: ")))
+    (superman-capture
+     pro
+     "Configuration"
+     `("Unison" (("UNISON" unison-gtk)
+		 ("ROOT-1" root-1)
+		 ("ROOT-2" root-2)
+		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
 (defun superman-unison (&optional project)
   (interactive)
@@ -272,52 +336,51 @@ Leaves point at the end of the section."
 	      (superman-capture-unison pro)))))))
 
 ;;}}}
-;;{{{ capture mails
+;;{{{ capturing mails
 
-(defun superman-capture-mail ()
-  (interactive)
-  (let ((org-capture-templates
-    '(("E"  "Store email (and attachments) in project"
-       plain (function superman-gnus-project-mailbox)
-       "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))
-    ))
-    (push ?E unread-command-events)
-    (call-interactively 'org-capture)))
+;; (defun superman-capture-mail ()
+  ;; (interactive)
+  ;; (let ((org-capture-templates
+    ;; '(("E"  "Store email (and attachments) in project"
+       ;; plain (function superman-gnus-goto-project-mailbox)
+       ;; "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))
+    ;; ))
+    ;; (push ?E unread-command-events)
+    ;; (call-interactively 'org-capture)))
 
-(defun superman-gnus-project-mailbox (&optional arg)
+(defun superman-capture-mail (&optional project)
+  ;; (defun superman-gnus-goto-project-mailbox (project &optional arg)
   (interactive)
-  (unless (or  (eq major-mode 'gnus-article-mode)
-               (eq major-mode 'gnus-summary-mode))
-    (error "Can only capture mails from gnus-article-buffers"))
-  (if arg (org-store-link))
+  (unless (or (eq major-mode 'gnus-article-mode)
+	      (eq major-mode 'gnus-summary-mode))
+    (error "Can only capture mails from either gnus-article or gnus-summary buffers"))
+  ;; activate the connection with summary
+  (when (eq major-mode 'gnus-article-mode)
+      (gnus-article-show-summary))
+  (gnus-summary-select-article-buffer)
   (let* ((buf (current-buffer))
-         ;; (pro (completing-read "Select project: " superman-project-alist))
-         (entry (superman-select-project))
-         (pro (car entry))
-         (loc (superman-get-location entry))
-         (org (superman-get-index entry))
+	 (link (org-store-link 1))
+	 (entry (or project
+		   superman-view-current-project
+		   (superman-select-project)))
+	 (pro (car entry))
+	 (loc (superman-get-location entry))
+	 (index (superman-get-index entry))
 	 (region (buffer-substring (region-beginning) (region-end)))
-         (mailbox (file-name-as-directory
-                   (concat (file-name-as-directory loc) pro "/" "Mailbox"))))
-    (gnus-summary-select-article-buffer)
-    (if region
-	(plist-put org-store-link-plist :initial
-		   (concat (plist-get org-store-link-plist :initial)
-			   (concat "----\n" region "\n----\n"))))
-    (superman-save-attachments pro mailbox buf)
-    (if org
-	(progn
-	  (find-file org)
-	  (unless (file-exists-p (file-name-directory org))
-	    (make-directory  (file-name-directory org))))
-      (error "Project " pro " does not have an org-file."))
-    (goto-char (point-min))
-    (if (re-search-forward "^[*]+ Mail" nil t)
-	(progn
-	  (end-of-line)
-	  (insert "\n"))
-      ;; (goto-char (point-max))
-      (insert "\n\n* Mail\n"))))
+	 (mailbox (file-name-as-directory (concat (file-name-as-directory loc) pro "/" "Mailbox")))
+	 (from (message-fetch-field "from"))
+	 (subject (message-fetch-field "subject"))
+	 (date (message-fetch-field "date"))
+	 (attachments (superman-save-attachments pro mailbox (current-buffer) date)))
+    (superman-capture
+     entry
+     "Mail"
+     `("Mail" (("CaptureDate"  ,(format-time-string "<%Y-%m-%d %a>"))
+	       (body ,(concat "----\n" region "\n----\n"))
+	       (body ,attachments)
+	       ("EmailDate" ,date)
+	       (hdr ,(concat "Mail from " from " " subject ))
+	       ("Link" ,link))))))
 
 (defun superman-save-attachments (project dir buf)
   "Interactively save mail contents in project org file
@@ -357,14 +420,12 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
                 (mm-save-part-to-file data file))
               (setq mime-line (concat "\n**** Attac: " (file-name-nondirectory file)
 				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
-				      "\n:EmailDate:%:date" ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
+				      "\n:EmailDate:" date 
+				      ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
 				      "\n:Link:" "[[file:" file "][" (file-name-nondirectory file) "]]"
                                       "\n:END:\n"
                                       mime-line)))))))
-    ;; information about the saved attachments is
-    ;; saved such that capture can put it via %i
-    (plist-put org-store-link-plist :initial
-               (concat (plist-get org-store-link-plist :initial) mime-line))))
+    mime-line))
 ;;}}}
 (provide 'superman-capture)
 ;;; superman-capture.el ends here
