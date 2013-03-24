@@ -90,6 +90,7 @@
   "Insert header into superman project view buffer"
   (goto-char (point-min))
   (insert "SuperMan(ager)")
+  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
