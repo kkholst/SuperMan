@@ -270,7 +270,7 @@ To undo all this you can try to call 'superman-delete-project'. "
   (let ((pro (or project
 		 superman-view-current-project
 		 (superman-select-project)))
-	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date))))
+	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
     (superman-capture
      pro
      "Calendar"
