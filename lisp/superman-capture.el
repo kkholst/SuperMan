@@ -68,7 +68,7 @@ If JABBER is non-nil message about non-existing headings.
       (if end-of (goto-char (point-max))
 	;; leave point at the first entry or at the end of this section
 	(end-of-line)
-	(if (re-search-forward  "^\\** " (point-max) t)
+	(if (outline-next-heading)
 	    (beginning-of-line)
 	(goto-char (point-max)))))
   (show-all)
@@ -152,7 +152,7 @@ turn it off."
 
 
 (define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
-(define-key superman-view-mode-map  "\C-c\C-q" 'superman-quit-scene)
+(define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
 
 (defun superman-make-value (val)
   (cond ((stringp val) val)

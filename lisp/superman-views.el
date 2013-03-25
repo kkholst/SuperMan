@@ -1056,7 +1056,8 @@ if it exists and add text-property org-hd-marker."
 		     (string= (downcase status) "modified")
 		     (and (stringp current-status)
 			  (string= (downcase current-status) "modified")))
-		(org-entry-put pom "GitStatus" status)))
+		(superman-git-set-status pom file nil)))
+		;; (org-entry-put pom "GitStatus" status)))
 	    (setq file-list (cdr file-list)))))
       (unless dont-redo (superman-redo)))))
 

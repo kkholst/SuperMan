@@ -30,13 +30,11 @@
 (defvar superman-use-git t "Whether to use git to backup projects. Set to nil to completely disable git.")
 (setq superman-git-ignore "*")
 (defvar superman-git-ignore "*" "What files to include or not include. See M-x manual-entry RET gitignore.
-                                                        
-                                                     By default we set this to '*' which means that all files are ignored.
-                                                        
-                                                     You think this sounds like a stupid idea? Hehe, we can still add files via
-                                                     the -f (force) command line switch. And we get not bothered by
-                                                     having to filter all the unpredictable names one can give to files
-                                                     that never should get git controlled.")
+ By default we set this to '*' which means that all files are ignored.
+ You think this sounds like a stupid idea? Hehe, we can still add files via
+ the -f (force) command line switch. And we get not bothered by
+ having to filter all the unpredictable names one can give to files
+ that never should get git controlled.")
 
 ;;}}}
 ;;{{{ property set functions
