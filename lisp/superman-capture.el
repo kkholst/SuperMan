@@ -150,8 +150,6 @@ turn it off."
   (when superman-hl-line (hl-line-mode 1))
   (superman-capture-mode t))
 
-    (local-set-key "\C-c\C-c" 'superman-clean-scene)
-    (local-set-key "\C-c\C-q" 'superman-quit-scene)))
 
 (define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
 (define-key superman-view-mode-map  "\C-c\C-q" 'superman-quit-scene)
