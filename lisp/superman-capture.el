@@ -66,11 +66,10 @@ If JABBER is non-nil message about non-existing headings.
     (when value 
       (org-narrow-to-subtree)
       (if end-of (goto-char (point-max))
-	;; leave point at the beginning of first entry in this section
+	;; leave point at the first entry or at the end of this section
 	(end-of-line)
-	(if (re-search-forward (format "^\\*\\{%d\\} " (+ (org-current-level) 1))
-	    (point-max) t)
-	(beginning-of-line)
+	(if (re-search-forward  "^\\** " (point-max) t)
+	    (beginning-of-line)
 	(goto-char (point-max)))))
   (show-all)
   value))
@@ -132,8 +131,30 @@ If JABBER is non-nil message about non-existing headings.
     (insert "\n")
     (goto-char (next-single-property-change (point-min) 'capture))
     (end-of-line)
+    (superman-capture-mode)))
+
+
+(defvar superman-capture-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-view-mode' commands.")
+
+(define-minor-mode superman-capture-mode
+"Toggle superman capture mode.
+With argument ARG turn superman-doccapture-mode on if ARG is positive, otherwise
+turn it off."
+     :lighter " *S*-Capture"
+     :group 'org
+     :keymap 'superman-capture-mode-map)
+
+(defun superman-capture-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-capture-mode t))
+
     (local-set-key "\C-c\C-c" 'superman-clean-scene)
     (local-set-key "\C-c\C-q" 'superman-quit-scene)))
+
+(define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
+(define-key superman-view-mode-map  "\C-c\C-q" 'superman-quit-scene)
 
 (defun superman-make-value (val)
   (cond ((stringp val) val)
@@ -382,7 +403,7 @@ To undo all this you can try to call 'superman-delete-project'. "
 	       (hdr ,(concat "Mail from " from " " subject ))
 	       ("Link" ,link))))))
 
-(defun superman-save-attachments (project dir buf)
+(defun superman-save-attachments (project dir buf date)
   "Interactively save mail contents in project org file
 and MIME parts in sub-directory 'mailAttachments' of the project."
   (interactive)

@@ -1104,13 +1104,13 @@ If dont-redo the agenda is not reversed."
   "Keymap used for `superman-view-mode' commands.")
    
 (define-minor-mode superman-view-mode
-     "Toggle org projectmanager document view mode.
-                   With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
-                   turn it off.
+     "Toggle superman project view mode.
+With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
+turn it off.
                    
-                   Enabling superman-view mode electrifies the column view for documents
-                   for git and other actions like commit, history search and pretty log-view."
-     :lighter " S-V"
+Enabling superman-view mode electrifies the column view for documents
+for git and other actions like commit, history search and pretty log-view."
+     :lighter " *S*-View"
      :group 'org
      :keymap 'superman-view-mode-map)
 
