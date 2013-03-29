@@ -108,7 +108,7 @@ Returns the corresponding buffer."
   (let* (config)
     (save-window-excursion
       (save-restriction
-	(superman-goto-project project "Configuration" 'create)
+	(superman-goto-project project "Configuration" 'create nil nil nil)
 	(goto-char (point-min))
 	(while (re-search-forward "^[ \t]*windows:[ \t]*" (point-max) t)
 	  (if config

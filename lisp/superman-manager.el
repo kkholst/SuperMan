@@ -263,12 +263,17 @@ the `superman-home'.")
     (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
 	(error (concat "Cannot locate project " (car project))))))
 
+(defun superman-project-at-point (&optional pom)
+  (let* ((pom (or pom (org-get-at-bol 'org-hd-marker)))
+	 (nickname (superman-get-property pom "NickName"))
+	 (pro (assoc nickname superman-project-alist)))
+    pro))
+
 (defun superman-return ()
   (interactive)
-  (let* ((nickname (superman-get-property
-		    (org-get-at-bol 'org-hd-marker) "NickName"))
-	 (pro (assoc nickname superman-project-alist)))
-    (superman-switch-to-project nil pro nil)))
+  (let ((pro (superman-project-at-point)))
+    (if pro
+	(superman-switch-to-project nil pro nil))))
 
 (defun superman-forward-project ()
   (interactive)
@@ -369,23 +374,57 @@ the `superman-home'.")
   (unless (superman-manager-mode 1))
   (save-restriction
     (widen)
+    (show-all)
     (save-excursion
       (reverse
        (superman-property-values "category")))))
 
 (defun superman-property-values (key)
-  "Return a list of all values of property KEY in the current buffer. This
-is a copy of `org-property-values' with one difference. The matches are
-returned without text-properties."
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (let ((re (org-re-property key))
-	    values)
-	(while (re-search-forward re nil t)
-	  (add-to-list 'values (org-trim (match-string-no-properties 1))))
-	(delete "" values)))))
+  "Return a list of all values of property KEY in the current buffer or region. This
+function is very similar to `org-property-values' with two differences:
+1) values are returned without text-properties.
+2) The function does not call widen and hence search can be restricted to region."
+  (let (values)
+    (save-excursion
+      (save-restriction
+	;; (widen)
+	(goto-char (point-min))
+	(let ((re (org-re-property key)))
+	  (while (re-search-forward re nil t)
+	    (add-to-list 'values (org-trim (match-string-no-properties 1))))
+	  (setq values (delete "" values)))))
+    values))
+
+
+(defun superman-property-keys (&optional include-specials include-defaults)
+  "Get all property keys in the current buffer or region.
+This is basically a copy of `org-buffer-property-keys'.
+
+With INCLUDE-SPECIALS, also list the special properties that reflect things
+like tags and TODO state.
+
+With INCLUDE-DEFAULTS, also include properties that has special meaning
+internally: ARCHIVE, CATEGORY, SUMMARY, DESCRIPTION, LOCATION, and LOGGING
+and others."
+  (let (rtn range cfmt s p)
+    (save-excursion
+      (save-restriction
+	;; (widen)
+	(goto-char (point-min))
+	(while (re-search-forward org-property-start-re nil t)
+	  (setq range (org-get-property-block))
+	  (goto-char (car range))
+	  (while (re-search-forward
+		  (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
+		  (cdr range) t)
+	    (add-to-list 'rtn (org-match-string-no-properties 1)))
+	  (outline-next-heading))))
+    (when include-specials
+      (setq rtn (append org-special-properties rtn)))
+    (when include-defaults
+      (mapc (lambda (x) (add-to-list 'rtn x)) org-default-properties)
+      (add-to-list 'rtn org-effort-property))
+    (sort rtn (lambda (a b) (string< (upcase a) (upcase b))))))
 
 
 (defun superman-refresh ()
@@ -499,27 +538,30 @@ To undo all this you can try to call 'superman-delete-project'. "
       (org-set-property (superman-property 'index) (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
       (save-buffer))))
 
-
 (defun superman-delete-project (&optional project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
+  (let* ((marker (org-get-at-bol 'org-hd-marker))
+	 (scene (current-window-configuration))
+	 (project (or project (superman-project-at-point)))
 	 (dir (concat (superman-get-location pro) (car pro)))
 	 (index (superman-get-index pro)))
-    (pop-to-buffer "*supermanject-files*")
-    (erase-buffer)
-    (insert index "\n" dir "\n")
-    (when (yes-or-no-p (concat "Really remove project " (car pro) "? "))
-      (when (file-exists-p dir) (move-file-to-trash dir))
-      (when (file-exists-p index) (move-file-to-trash index))
-      (find-file superman-home)
-      (unless (superman-manager-mode 1))
-      (goto-char (point-min))
-      (re-search-forward (concat ":" (superman-property 'nickname) ":[ \t]?.*" (car pro)) nil t)
-      ;; (org-show-subtree)
-      ;; (org-mark-element)
-      (message "If you delete this entry and then save the buffer, the project will disappear from the project-alist"))))
-;; (when (yes-or-no-p (concat "Is this project entry to be deleted " (car pro) "?"))
-;; (kill-region (region-beginning) (region-end))))))  
+    (when (and (file-exists-p dir)
+	       (yes-or-no-p (concat "Remove project directory tree? " dir)))
+      (move-file-to-trash dir))
+    (when (and (file-exists-p index)
+	       (yes-or-no-p (concat "Remove index file? " index)))
+      (move-file-to-trash index))
+    (superman-view-index)
+    (org-narrow-to-subtree)
+    (when (yes-or-no-p "Delete project? ")
+      (org-cut-subtree))
+    (widen)
+    (superman-parse-projects)
+    (when superman-mode
+      (superman-redo))
+    (set-window-configuration scene)))
+      
+      
 
 ;;}}}
 ;;{{{ setting project properties

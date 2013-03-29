@@ -27,7 +27,7 @@
 
 ;;{{{ superman capture
 
-(defun superman-goto-project (&optional project heading create end-of jabber)
+(defun superman-goto-project (&optional project heading create end-of leave-narrowed jabber)
   "Goto project index file call `widen' and then search for HEADING
 and narrow the buffer to this subtree.
 
@@ -71,7 +71,9 @@ If JABBER is non-nil message about non-existing headings.
 	(if (outline-next-heading)
 	    (beginning-of-line)
 	(goto-char (point-max)))))
-  (show-all)
+    (unless leave-narrowed
+      (widen)
+      (show-all))
   value))
 
 (defun superman-capture (project heading plist &optional level)
@@ -81,7 +83,7 @@ If JABBER is non-nil message about non-existing headings.
 	 (scene (current-window-configuration))
 	 (body "")
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
-    (superman-goto-project project heading 'create nil)
+    (superman-goto-project project heading 'create nil nil nil)
     (switch-to-buffer
      (make-indirect-buffer (current-buffer) S-buf))
     (delete-other-windows)
@@ -329,7 +331,7 @@ To undo all this you can try to call 'superman-delete-project'. "
 		     superman-current-project
 		     (superman-switch-to-project 'force nil t)))
 	    cmd)
-	(superman-goto-project pro "Configuration")
+	(superman-goto-project pro "Configuration" 'create nil nil nil)
 	(org-narrow-to-subtree)
 	(goto-char (point-min))
 	(if (re-search-forward ":UNISON:" nil t)

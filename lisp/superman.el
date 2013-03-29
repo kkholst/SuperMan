@@ -377,12 +377,13 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(find-file home)))
     (when pom (goto-char pom))))
 		 
-(define-key superman-mode-map [return] 'superman-return) ;; Return is not used anyway in column mode
+(define-key superman-mode-map [return] 'superman-return) 
 ;; (define-key superman-mode-map "N" 'superman-new-project)
 ;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
 ;; (define-key superman-mode-map " " 'superman-switch-to-project)
 ;; (define-key superman-mode-map "S" 'superman-set-property)
 (define-key superman-mode-map "i" 'superman-visit-project)
+(define-key superman-mode-map "x" 'superman-delete-project)
 (define-key superman-mode-map "V" 'superman-change-view)
 (define-key superman-mode-map "?" 'superman-show-help)
 
