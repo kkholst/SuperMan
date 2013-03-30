@@ -111,13 +111,15 @@ If JABBER is non-nil message about non-existing headings.
     (while props
       (let* ((el (car props))
 	     (key (car el))
-	     (val (ignore-errors (cadr el))))
+	     (val (ignore-errors (nth 1 el)))
+	     (req (nth 2 el)))
 	(cond ((stringp key)
 	       (ignore-errors
 		 (insert "\n:" key ": ")
 		 ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
 		 (put-text-property (- (point) 1) (point) 'prop-marker (point))
-		 (put-text-property (- (point) 1) (point) 'required "required-field")
+		 (if req 
+		     (put-text-property (- (point) 1) (point) 'required "required-field"))
 		 (when val (insert (superman-make-value val)))))
 	      ((eq key 'fun) (ignore-errors (funcall (cdr el))))
 	      ((eq key 'hdr) (ignore-errors

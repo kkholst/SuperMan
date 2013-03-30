@@ -329,7 +329,9 @@
 ;;}}}
 ;;{{{ superman-mode-map
 
-(defvar superman-mode-map (make-sparse-keymap)
+(require 'superman-views)
+
+(defvar superman-mode-map (copy-keymap superman-view-mode-map)
   "Keymap used for `superman-mode' commands.")
    
 (define-minor-mode superman-mode 
@@ -385,6 +387,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (define-key superman-mode-map "i" 'superman-visit-project)
 (define-key superman-mode-map "x" 'superman-delete-project)
 (define-key superman-mode-map "V" 'superman-change-view)
+(define-key superman-mode-map "N" 'superman-new-project)
 (define-key superman-mode-map "?" 'superman-show-help)
 
 (defun superman-show-help ()
