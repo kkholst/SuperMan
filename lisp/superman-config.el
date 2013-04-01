@@ -290,7 +290,7 @@ find the next window configuration."
 
 ;;}}}
 ;;{{{ superman-shell
-(defun superman-goto-shell ()
+(defun superman-view-goto-shell ()
   "Switches to *shell* buffer and. "
   (interactive)
   (let ((sbuf (get-buffer "*shell*"))
