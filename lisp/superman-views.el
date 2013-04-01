@@ -230,14 +230,15 @@ or by adding whitespace characters."
       (put-text-property 0 (length date-string) 'sort-key 0 date-string))
       date-string))
 
-(defun superman-view-current-project ()
+(defun superman-view-current-project (&optional no-error)
   "Identifies the project associated with the current view buffer
 and sets the variable superman-view-current-project."
   (let* ((nick (get-text-property (point-min) 'nickname))
 	(pro (when nick (assoc nick superman-project-alist))))
     (if pro
 	(setq superman-view-current-project pro)
-      (error "Malformed header of project view buffer: cannot identify project"))))
+      (unless no-error
+	(error "Malformed header of project view buffer: cannot identify project")))))
 
 (defun superman-view-control (project)
   "Insert the git repository if project is git controlled
@@ -264,7 +265,9 @@ and the keybinding to initialize git control otherwise."
 
 
 (defun superman-current-cat ()
-  (get-text-property (superman-cat-point) 'cat))
+  (let ((cat-point (superman-cat-point)))
+    (when cat-point
+      (get-text-property cat-point 'cat))))
 
 (defun superman-current-subcat ()
   (let* ((cat-pos (superman-cat-point))
@@ -666,10 +669,7 @@ If MARKED is non-nil run only on marked items."
 		     (insert " [" (int-to-string count) "]")
 		     ;; insert hot-keys or blank line
 		     (end-of-line)
-		     ;; (let ((hotkeys (superman-view-show-hot-keys cat)))
-		       ;; (if (> (length hotkeys) 0)
-			   ;; (insert "\n" hotkeys "\n")
-			 ;; (insert "\n")))
+		     (insert "\n")
 		     ;; insert column names 
 		     (insert (superman-column-names balls)))
 	    (delete-region (point) (point-max)))
@@ -899,10 +899,29 @@ beginning of the list."
   (interactive)
   (superman-one-right 1))
 
-(defun superman-new-ball ()
+(defun superman-delete-ball ()
+  "Delete current column. The column will still pop-up when the
+view is refreshed, but can be totally removed
+by calling `superman-save-balls' subsequently."
   (interactive)
   (let* ((dim (superman-ball-dimensions))
 	 (balls (get-text-property (point-at-bol) 'balls))
+	 (buffer-read-only nil)
+	 (new-balls (delete-if (lambda (x) t) balls :start (nth 2 dim) :count 1))
+	 (beg (previous-single-property-change (point-at-bol) 'cat))
+	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
+    (save-excursion
+      (superman-loop 'superman-change-balls (list new-balls) beg end nil)
+      (goto-char (previous-single-property-change (point) 'names))
+      (beginning-of-line)
+      (kill-line)
+      (insert (superman-column-names new-balls) "\n"))))
+
+(defun superman-new-ball ()
+  "Add a new column to show a property of all items in the
+current section."
+  (interactive)
+  (let* ((balls (get-text-property (point-at-bol) 'balls))
 	 (buffer-read-only nil)
 	 (props (superman-view-property-keys))
 	 (prop (completing-read "Property to show in new column (press tab see existing): "
@@ -913,11 +932,11 @@ beginning of the list."
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
-    (superman-loop 'superman-change-balls (list new-balls) beg end nil)
-    (goto-char (previous-single-property-change (point) 'names))
-    (beginning-of-line)
-    (kill-line)
-    (insert (superman-column-names new-balls) "\n"))))  
+      (superman-loop 'superman-change-balls (list new-balls) beg end nil)
+      (goto-char (previous-single-property-change (point) 'names))
+      (beginning-of-line)
+      (kill-line)
+      (insert (superman-column-names new-balls) "\n"))))
   
   
 (defun superman-one-up (&optional down)
@@ -1354,7 +1373,7 @@ if it exists and add text-property org-hd-marker."
   (let* ((dir (get-text-property (point-min) 'git-dir))
 	 cmd)
     (when dir
-      (superman-goto-shell)
+      (superman-view-goto-shell)
       (insert  (concat "cd " dir ";" superman-cmd-git " push")))))
 
 (defun superman-view-git-commit (&optional dont-redo)
@@ -1418,9 +1437,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "a" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Bn" 'superman-new-ball)
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
-(define-key superman-view-mode-map "c" 'superman-view-git-commit)
-(define-key superman-view-mode-map "C" 'superman-view-git-commit-all)
-(define-key superman-view-mode-map "d" 'superman-view-git-diff)
+(define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
+(define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
+(define-key superman-view-mode-map "Gd" 'superman-view-git-diff)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
 (define-key superman-view-mode-map "Gg" 'superman-view-git-grep)
 (define-key superman-view-mode-map "GP" 'superman-view-git-push)
@@ -1428,19 +1447,19 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "h" 'superman-view-git-history)
 (define-key superman-view-mode-map "i" 'superman-view-index)
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
-(define-key superman-view-mode-map "l" 'superman-view-git-log)
-(define-key superman-view-mode-map "L" 'superman-view-git-log-decorationonly)
+(define-key superman-view-mode-map "Gl" 'superman-view-git-log)
+(define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
 (define-key superman-view-mode-map "n" 'superman-next-entry)
-(define-key superman-view-mode-map "N" 'superman-view-new-item)
+(define-key superman-view-mode-map "N" 'superman-new-item)
 (define-key superman-view-mode-map "p" 'superman-previous-entry)
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
-(define-key superman-view-mode-map "I" 'superman-view-git-init)
-(define-key superman-view-mode-map "N" 'superman-new-thing)
+(define-key superman-view-mode-map "GI" 'superman-view-git-init)
+(define-key superman-view-mode-map "N" 'superman-new-item)
 ;; (define-key superman-view-mode-map "P" 'superman-view-git-push)
 (define-key superman-view-mode-map "Q" 'superman-unison)
 (define-key superman-view-mode-map "R" 'superman-redo)
@@ -1450,32 +1469,52 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "U" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "V" 'superman-switch-config)
 (define-key superman-view-mode-map "X" 'superman-view-delete-all)
-(define-key superman-view-mode-map "!" 'superman-goto-shell)
+(define-key superman-view-mode-map "!" 'superman-view-goto-shell)
 (define-key superman-view-mode-map "?" 'superman-view-help)
-(define-key superman-view-mode-map "=" 'superman-view-git-version-diff)
+(define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
 
-(defun superman-view-new-item ()
+
+
+(defvar superman-capture-alist nil
+  "List to find capture function. Elements have the form
+ (\"heading\" function) e.g.  (\"Documents\" superman-capture-document).")
+
+(setq superman-capture-alist
+      '(("Documents" superman-capture-document)
+	("Notes" superman-capture-note)
+	("Tasks" superman-capture-task)
+	("Meetings" superman-capture-meeting)
+	("Bookmarks" superman-capture-bookmark)))
+
+(defun superman-new-item ()
+  "Add a new document, note, task or other item to a project."
   (interactive)
-  (let ((cat-point (superman-cat-point)))
-    (when cat-point
-      (when superman-view-mode
-	(let ((props (superman-view-property-keys))
-	      (balls (get-text-property cat-point 'balls)))
-	  (superman-capture
-	   (superman-view-current-project)
-	   (superman-current-cat)
-	   `("Item"
-	     ,(mapcar '(lambda (p) (list p nil)) props))))))))
-     
-(defun superman-new-thing ()
-  (interactive)
-  (let ((thing (completing-read
-		"Add thing to project (select): "
-		'(("Document")
-		  ("Bookmark")
-		  ("Note")
-		  ("Taks")))))
-    (funcall (intern (concat "superman-capture-" (downcase thing))))))
+  (let* ((cat (superman-current-cat))
+	(pro (when cat (superman-view-current-project)))
+	fun)
+    (cond ((and cat
+		(setq fun (assoc cat superman-capture-alist)))
+	   (funcall (cadr fun) pro))
+	  (superman-view-mode
+	   (let ((cat-point (superman-cat-point)))
+	     (when cat-point
+	       (when superman-view-mode
+		 (let ((props (superman-view-property-keys))
+		       (balls (get-text-property cat-point 'balls)))
+		   (superman-capture
+		    pro
+		    cat
+		    `("Item"
+		      ,(mapcar '(lambda (p) (list p nil)) props))))))))
+	  (t
+	   (setq pro (superman-select-project)
+		 cat  (completing-read
+		       (concat
+			"Add item to " (car pro) " (select): ")
+		       superman-capture-alist))
+	   (funcall 
+	    (cadr (assoc cat superman-capture-alist))
+	    pro)))))
 
 ;;}}}
 ;;{{{ easy menu
@@ -1483,8 +1522,16 @@ for git and other actions like commit, history search and pretty log-view."
 (easy-menu-define superman-menu superman-view-mode-map "*S*"
   '("Superman"
     ["New item" superman-view-new-item t]
+    ["Delete item" superman-view-delete-entry t]
+    ["Delete marked" superman-view-delete-all t]
+    ["Terminal" superman-goto-shell t]
+    ["Visit index buffer" superman-view-index t]
     ("Git"
-     ["Git push" superman-git-push t])))
+     ["Git commit" superman-view-git-commit t]
+     ["Git commit all" superman-view-git-commit-all t]
+     ["Git log" superman-view-git-log t]
+     ["Git push" superman-git-push t]
+     ["Git init" superman-view-git-init t])))
 
 ;;}}}
 ;;{{{ help 
