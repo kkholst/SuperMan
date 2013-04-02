@@ -149,7 +149,9 @@ or by adding whitespace characters."
   (let* ((slen (length str))
 	 (len (car args))
 	 (numlen (cond ((integerp len) len)
-		       ((stringp len) (string-to-int len))
+		       ((stringp len)
+			(setq len (string-to-int len))
+			(if (< len 1) 13 len))
 		       (t 13)))
 	 (diff (- numlen slen)))
     (if (> diff 0)
@@ -215,8 +217,9 @@ or by adding whitespace characters."
 	(t 'font-lock-comment-face)))
 
 (defun superman-trim-date (date &optional len)
-  (let ((len (or len 13))
+  (let ((len (if (stringp len) (length len) len))
 	date-string)
+    (if (< len 1) (setq len 13))
     (if (string-match org-ts-regexp0 date)
 	(let ((age (abs (org-time-stamp-to-now date))))
 	  (cond ((= age 0)
@@ -405,33 +408,36 @@ If MARKED is non-nil run only on marked items."
          (prop (car plist))
 	 (args (mapcar '(lambda (x)
 			  (let ((els (split-string x ":")))
-			    `(,(car els)
-			      ,(intern (nth 1 els))
-			      ,(ignore-errors (split-string (nth 2 els) ",")))))
+			    (cond ((string= (car els) "trim")
+				   `(,(car els)
+				     ,(intern (nth 1 els))
+				     ,(ignore-errors (split-string (nth 2 els) ","))))
+				  ((string= (car els) "face")
+				   `(,(car els)
+				     ,(intern (nth 1 els))))
+				  ((string= (car els) "name")
+				   `(,(car els)
+				     ,(nth 1 els))))))
 		       (cdr plist))))
     (when (string-match "^todo\\|hdr$" prop)
       (setq prop (intern prop)))
     (append (list prop) args)))
 
 (defun superman-save-balls ()
+  "Save the columns (balls) in current category for future sessions."
   (interactive)
   (if (not superman-view-mode)
       (message "Can only save balls in superman-view-mode.")
-    (let ((cat-head (superman-cat-point))
-	  (cat-tail (or (next-single-property-change (point) 'cat) (point-max)))
-	  cat-point
-	  balls
-	  entry-point)
-      (if (not cat-head)
-	  (message "Point is before first category.")
-	(save-excursion
-	  (goto-char cat-head)
-	  (setq cat-point (get-text-property cat-head 'org-hd-marker))
-	  (setq entry-point (next-single-property-change (point-at-eol) 'org-marker))
-	  (if (> entry-point cat-tail)
-	      (message "This category is empty")
-	    (setq balls (get-text-property entry-point 'balls))
-	    (org-entry-put cat-point "Balls" balls)))))))
+    (let ((cat-point (superman-cat-point))
+	  balls)
+      (if (not cat-point)
+	  (message "Point is not inside a category.")
+	(org-entry-put
+	 (get-text-property cat-point 'org-hd-marker)
+	 "Balls"
+	 (superman-balls-to-string
+	  (get-text-property cat-point 'balls)))
+	(superman-view-save-index-buffer)))))
 
 (defun superman-thing-to-string (thing)
   (cond ((stringp thing) thing)
@@ -473,6 +479,7 @@ If MARKED is non-nil run only on marked items."
 			 (superman-thing-to-string (nth 1 name)))))))
       (setq balls (cdr balls)))
     b-string))
+
 
 (defun superman-ball-dimensions ()
   "Return column start, width and nth at (point)."
@@ -790,7 +797,8 @@ Value is the formatted string with text-properties (special balls)."
       (put-text-property 0 ilen 'org-hd-marker marker item)
       (put-text-property 0 ilen 'org-marker marker item))
     ;; add balls for redo
-    (put-text-property 0 ilen 'balls balls item)
+    ;; not done (balls are saved in category instead)
+    ;; (put-text-property 0 ilen 'balls balls item)
     ;; text property: columns
     (put-text-property 0 ilen 'columns column-widths item)
     item))
@@ -872,15 +880,45 @@ beginning of the list."
 	     
 
 (defun superman-change-balls (new-balls)
-  (let ((buffer-read-only nil))
-    (put-text-property (point-at-bol) (point-at-eol) 'balls new-balls)
-    (superman-view-redo-line)))
+  "Exchange balls (column definitions) in this section."
+  (let ((buffer-read-only nil)
+	(cat-point (superman-cat-point)))
+  (if cat-point
+      (save-excursion
+	(goto-char cat-point)
+	(put-text-property (point-at-bol) (point-at-eol) 'balls new-balls))
+    (message "Point is not inside a section"))))
 
+(defun superman-columns-start ()
+  (let* ((cols (get-text-property (point-at-bol) 'columns))
+	 (n (length cols))
+	 (cumcols (list 0))
+	 (i 1))
+    (while (< i n)
+      (setq cumcols (nconc cumcols (list (+ (nth i cols) (nth (- i 1) cumcols)))))
+      (setq i (+ i 1)))
+    cumcols))
+
+(defun superman-next-ball (&optional arg)
+  "Move to ARGth next column."
+  (interactive)
+  (let ((dim (superman-ball-dimensions)))
+    (if (> arg 0)
+	(beginning-of-line)
+      (forward-char (+ 3 (nth 0 dim) (nth 1 dim)))))
+
+(defun superman-previous-ball ()
+  "Move to previous column."
+  (interactive)
+  (let ((dim (superman-ball-dimensions)))
+    (beginning-of-line)
+    (superman-next-ball (max 0 (- (nth 2 dim) 1))
+    
 (defun superman-one-right (&optional left)
   "Move column to the right."
   (interactive "P")
   (let* ((dim (superman-ball-dimensions))
-	 (balls (get-text-property (point-at-bol) 'balls))
+	 (balls (get-text-property (superman-cat-point) 'balls))
 	 (buffer-read-only nil)
 	 (new-balls (superman-swap-balls balls
 					 (if left (- (nth 2 dim) 1)
@@ -888,11 +926,12 @@ beginning of the list."
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
-    (superman-loop 'superman-change-balls (list new-balls) beg end nil)
-    (goto-char (previous-single-property-change (point) 'names))
-    (beginning-of-line)
-    (kill-line)
-    (insert (superman-column-names new-balls) "\n"))))
+      (superman-change-balls new-balls)
+      (superman-refresh-cat)
+      (goto-char (previous-single-property-change (point) 'names))
+      (beginning-of-line)
+      (kill-line)
+      (insert (superman-column-names new-balls) "\n"))))
     
 (defun superman-one-left ()
   "Move column to the left."
@@ -905,13 +944,14 @@ view is refreshed, but can be totally removed
 by calling `superman-save-balls' subsequently."
   (interactive)
   (let* ((dim (superman-ball-dimensions))
-	 (balls (get-text-property (point-at-bol) 'balls))
+	 (balls (get-text-property (superman-cat-point) 'balls))
 	 (buffer-read-only nil)
 	 (new-balls (remove-if (lambda (x) t) balls :start (nth 2 dim) :count 1))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
-      (superman-loop 'superman-change-balls (list new-balls) beg end nil)
+      (superman-change-balls new-balls)
+      (superman-refresh-cat)
       (goto-char (previous-single-property-change (point) 'names))
       (beginning-of-line)
       (kill-line)
@@ -921,7 +961,7 @@ by calling `superman-save-balls' subsequently."
   "Add a new column to show a property of all items in the
 current section."
   (interactive)
-  (let* ((balls (copy-sequence (get-text-property (point-at-bol) 'balls)))
+  (let* ((balls (copy-sequence (get-text-property (superman-cat-point) 'balls)))
 	 (buffer-read-only nil)
 	 (props (superman-view-property-keys))
 	 (prop (completing-read "Property to show in new column (press tab see existing): "
@@ -932,7 +972,8 @@ current section."
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
-      (superman-loop 'superman-change-balls (list new-balls) beg end nil)
+      (superman-change-balls new-balls)
+      (superman-refresh-cat)
       (goto-char (previous-single-property-change (point) 'names))
       (beginning-of-line)
       (kill-line)
@@ -1074,6 +1115,7 @@ current section."
 ;;{{{ View commands (including redo and git) 
 
 (defun superman-redo ()
+  "Refresh project view."
   (interactive)
   (let ((curline (progn
 		   (beginning-of-line)
@@ -1083,11 +1125,20 @@ current section."
     (eval cmd)
     (goto-line (+ 1 curline))))
 
+(defun superman-refresh-cat ()
+  "Refresh view of all lines in current category inclusive column names."
+  (interactive)
+  (let ((start (superman-cat-point))
+	(end (or (next-single-property-change (point) 'cat) (point-max))))
+    (if (not start)
+	(message "Point is not in category.")
+      (superman-loop 'superman-view-redo-line nil start end nil))))
+
 (defun superman-view-redo-line ()
   (interactive)
   (let* ((buffer-read-only nil)
 	 (marker (org-get-at-bol 'org-hd-marker))
-	 (balls (org-get-at-bol 'balls)))
+	 (balls (get-text-property (superman-cat-point) 'balls)))
     (when (and marker (not (org-get-at-bol 'subcat)) (not (org-get-at-bol 'subcat)))
       (beginning-of-line)
       (let ((newline (superman-format-thing marker balls)))
@@ -1467,7 +1518,6 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Bn" 'superman-new-ball)
 (define-key superman-view-mode-map "Bx" 'superman-delete-ball)
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
-(define-key superman-view-mode-map "Bs" 'superman-delete-ball)
 
 ;; Git control
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
@@ -1480,7 +1530,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gl" 'superman-view-git-log)
 (define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
 (define-key superman-view-mode-map "GP" 'superman-git-push)
-(define-key superman-view-mode-map "Gu" 'superman-view-git-update)
+(define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "Gs" 'superman-view-git-search)
 (define-key superman-view-mode-map "GU" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
