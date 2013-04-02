@@ -499,7 +499,7 @@ To undo all this you can try to call 'superman-delete-project'. "
 		       (superman-property 'category) ": " category 
 		       "\n:" (superman-property 'index) 
 		       ":\n:" (superman-property 'initialvisit) ": " 
-		       (format-time-string (cdr org-time-stamp-custom-formats))
+		       (format-time-string "<%Y-%m-%d %a %H:%M>")
 		       ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
 		       " \n:" (superman-property 'others) ": \n:END:\n"))))
 	  (org-capture-bookmark nil))

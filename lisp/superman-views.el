@@ -873,8 +873,8 @@ beginning of the list."
 
 (defun superman-change-balls (new-balls)
   (let ((buffer-read-only nil))
-  (put-text-property (point-at-bol) (point-at-eol) 'balls new-balls)
-  (superman-view-redo-line)))
+    (put-text-property (point-at-bol) (point-at-eol) 'balls new-balls)
+    (superman-view-redo-line)))
 
 (defun superman-one-right (&optional left)
   "Move column to the right."
@@ -907,7 +907,7 @@ by calling `superman-save-balls' subsequently."
   (let* ((dim (superman-ball-dimensions))
 	 (balls (get-text-property (point-at-bol) 'balls))
 	 (buffer-read-only nil)
-	 (new-balls (delete-if (lambda (x) t) balls :start (nth 2 dim) :count 1))
+	 (new-balls (remove-if (lambda (x) t) balls :start (nth 2 dim) :count 1))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
@@ -1330,7 +1330,8 @@ if it exists and add text-property org-hd-marker."
 	(unless noerror
 	  (error "No proper(ty) FileName at point."))
       (setq filename (org-link-display-format file-or-link))
-      (put-text-property 0 (length filename) 'org-hd-marker (org-get-at-bol 'org-hd-marker) filename)
+      (put-text-property 0 (length filename) 'org-hd-marker
+			 (org-get-at-bol 'org-hd-marker) filename)
       filename)))
 
 
@@ -1433,22 +1434,11 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map [(shift up)] 'superman-one-up)
 (define-key superman-view-mode-map [(shift down)] 'superman-one-down)
 (define-key superman-view-mode-map [(up)] 'superman-previous-cat)
-(define-key superman-view-mode-map [(down)] 'superman-next-cat) 
-(define-key superman-view-mode-map "a" 'superman-view-git-annotate)
-(define-key superman-view-mode-map "Bn" 'superman-new-ball)
-(define-key superman-view-mode-map "Bs" 'superman-save-balls)
-(define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
-(define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
-(define-key superman-view-mode-map "Gd" 'superman-view-git-diff)
-(define-key superman-view-mode-map "e" 'superman-view-edit-item)
-(define-key superman-view-mode-map "Gg" 'superman-view-git-grep)
-(define-key superman-view-mode-map "GP" 'superman-view-git-push)
-(define-key superman-view-mode-map "Gu" 'superman-view-git-update)
-(define-key superman-view-mode-map "h" 'superman-view-git-history)
+(define-key superman-view-mode-map [(down)] 'superman-next-cat)
 (define-key superman-view-mode-map "i" 'superman-view-index)
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
-(define-key superman-view-mode-map "Gl" 'superman-view-git-log)
-(define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
+(define-key superman-view-mode-map "e" 'superman-view-edit-item)
+(define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
 (define-key superman-view-mode-map "n" 'superman-next-entry)
@@ -1457,21 +1447,36 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
-(define-key superman-view-mode-map "F" 'superman-view-file-list)
-(define-key superman-view-mode-map "GI" 'superman-view-git-init)
+(define-key superman-view-mode-map "X" 'superman-view-delete-all)
 (define-key superman-view-mode-map "N" 'superman-new-item)
-;; (define-key superman-view-mode-map "P" 'superman-view-git-push)
 (define-key superman-view-mode-map "Q" 'superman-unison)
 (define-key superman-view-mode-map "R" 'superman-redo)
-(define-key superman-view-mode-map "s" 'superman-view-git-search)
 (define-key superman-view-mode-map "S" 'superman-sort-section)
-(define-key superman-view-mode-map "u" 'superman-view-git-update-status)
-(define-key superman-view-mode-map "U" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "V" 'superman-switch-config)
-(define-key superman-view-mode-map "X" 'superman-view-delete-all)
 (define-key superman-view-mode-map "!" 'superman-view-goto-shell)
 (define-key superman-view-mode-map "?" 'superman-view-help)
+
+(define-key superman-view-mode-map "Bn" 'superman-new-ball)
+(define-key superman-view-mode-map "Bx" 'superman-delete-ball)
+(define-key superman-view-mode-map "Bs" 'superman-save-balls)
+(define-key superman-view-mode-map "Bs" 'superman-delete-ball)
+
+;; Git control
+(define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
+(define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
+(define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
+(define-key superman-view-mode-map "Gd" 'superman-view-git-diff)
+(define-key superman-view-mode-map "Gg" 'superman-view-git-grep)
+(define-key superman-view-mode-map "Gh" 'superman-view-git-history)
+(define-key superman-view-mode-map "GI" 'superman-view-git-init)
+(define-key superman-view-mode-map "Gl" 'superman-view-git-log)
+(define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
+(define-key superman-view-mode-map "GP" 'superman-view-git-push)
+(define-key superman-view-mode-map "Gu" 'superman-view-git-update)
+(define-key superman-view-mode-map "Gs" 'superman-view-git-search)
+(define-key superman-view-mode-map "GU" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
+
 
 
 
@@ -1521,48 +1526,38 @@ for git and other actions like commit, history search and pretty log-view."
 (require 'easymenu)
 (easy-menu-define superman-menu superman-view-mode-map "*S*"
   '("Superman"
-    ["New item" superman-view-new-item t]
+    ["Refresh view" superman-redo t]
+    ["New project" superman-new-project t]
+    ["New item" superman-new-item t]
+    ["Edit item" superman-view-edit-item t]
+    ["Toggle todo" superman-view-toggle-todo t]
+    ["Mark item" superman-toggle-mark t]
+    ["Mark all" superman-view-mark-all t]
+    ["Invert mark" superman-view-invert-marks t]
     ["Delete item" superman-view-delete-entry t]
     ["Delete marked" superman-view-delete-all t]
-    ["Terminal" superman-goto-shell t]
+    ["Move item up" superman-one-up t]
+    ["Move item down" superman-one-down t]
     ["Visit index buffer" superman-view-index t]
+    ["File list" superman-view-file-list t]
     ("Git"
+     ["Git update" superman-view-git-update-status t]
      ["Git commit" superman-view-git-commit t]
      ["Git commit all" superman-view-git-commit-all t]
+     ["Git annotate" superman-view-git-annotate t]
      ["Git log" superman-view-git-log t]
+     ["Git log (tagged versions)" superman-view-git-log-decorationonly t]
+     ["Git search" superman-view-git-search t]
      ["Git push" superman-git-push t]
-     ["Git init" superman-view-git-init t])))
-
-;;}}}
-;;{{{ help 
-
-(defun superman-popup-tip (msg)
-  (save-excursion
-    (goto-char (point-min))
-    (popup-tip msg)))
-
-(defvar superman-help-fun 'superman-popup-tip 
-  "Function used to display help. Possible values 'tooltip-show or 'popup-tip (depends on popup.el)") 
-(defun superman-view-help ()
-  (interactive)
-  (let ((msg
-	(concat 
-	 "------------------\n"
-	 "[return]:\t\t Open file at point\n"
-	 "[l]:     \t\t Show git log ([L] tags only. Prefix-arg: limit)\n"
-	 "[u]:    \t\t Update git status ([U] updates all files)\n"
-	 "[a]:    \t\t Add to git repository ([A] add all files. Prefix-arg: limit)\n"
-	 "[c]:    \t\t Commit  ([C] commit all files)\n"
-	 "[I]:    \t\t Init git repository\n"
-	 "[n]:    \t\t New file (add exisiting or new file to document list)\n"
-	 "[S]:    \t\t Search for revision introducing change (Prefix-arg: limit)\n"
-	 "[v]:    \t\t View annotated file\n"
-	 "[g]:    \t\t Grep in git controlled files (Prefix-arg: fine-tune)\n"
-	 "[d]:    \t\t Show difference between revisions ([D] ediff)\n"
-	 "[!]:     \t\t Shell\n"
-	 "------------------")))
-    ;;	"[q]:    \t\t Quit view mode\n"
-    (funcall superman-help-fun msg)))
+     ["Git init" superman-view-git-init t])
+    ("Columns (balls)"
+     ["New column" superman-new-ball t]
+     ["Delete column" superman-delete-ball t]
+     ["Move column left" superman-one-left t]
+     ["Move column right" superman-one-right t])
+    ["Terminal" superman-goto-shell t]
+    ["Unison" superman-unison t]
+    ))
 
 ;;}}}
 

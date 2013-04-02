@@ -82,6 +82,7 @@ If JABBER is non-nil message about non-existing headings.
 	 (props (cadr plist))
 	 (scene (current-window-configuration))
 	 (body "")
+	 (title (concat "### Captured " what " for project " (car project)))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
     (superman-goto-project project heading 'create nil nil nil)
     (switch-to-buffer
@@ -97,10 +98,12 @@ If JABBER is non-nil message about non-existing headings.
     (goto-char (point-min))
     (put-text-property (point) (point-at-eol) 'capture (point))
     (put-text-property (point) (point-at-eol) 'scene scene)
-    (insert "### ---Captured!: " what "-------"
+    (insert title
+	    "\n#"
+	    (make-string (length title) (string-to-char "-"))
 	    "\n# C-c C-c to save "
 	    "\n# C-c C-q to quit without saving"
-	    "\n### ---yeah #%*^#@!--------------"
+	    "\n# ---yeah #%*^#@!--------------"
 	    "\n\n")
     (put-text-property (point-min) (point) 'face font-lock-string-face)
     (org-mode)
