@@ -1433,17 +1433,19 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map [(shift right)] 'superman-one-right)
 (define-key superman-view-mode-map [(shift up)] 'superman-one-up)
 (define-key superman-view-mode-map [(shift down)] 'superman-one-down)
-(define-key superman-view-mode-map [(up)] 'superman-previous-cat)
-(define-key superman-view-mode-map [(down)] 'superman-next-cat)
+(define-key superman-view-mode-map [(right)] 'superman-next-cat)
+(define-key superman-view-mode-map [(left)] 'superman-previous-cat)
+(define-key superman-view-mode-map [(up)] 'superman-previous-entry)
+(define-key superman-view-mode-map [(down)] 'superman-next-entry)
 (define-key superman-view-mode-map "i" 'superman-view-index)
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
-(define-key superman-view-mode-map "n" 'superman-next-entry)
+;;(define-key superman-view-mode-map "n" 'superman-next-entry)
 (define-key superman-view-mode-map "N" 'superman-new-item)
-(define-key superman-view-mode-map "p" 'superman-previous-entry)
+;;(define-key superman-view-mode-map "p" 'superman-previous-entry)
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
@@ -1555,7 +1557,7 @@ for git and other actions like commit, history search and pretty log-view."
      ["Delete column" superman-delete-ball t]
      ["Move column left" superman-one-left t]
      ["Move column right" superman-one-right t])
-    ["Terminal" superman-goto-shell t]
+    ["Terminal" superman-view-goto-shell t]
     ["Unison" superman-unison t]
     ))
 
