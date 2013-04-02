@@ -921,7 +921,7 @@ by calling `superman-save-balls' subsequently."
   "Add a new column to show a property of all items in the
 current section."
   (interactive)
-  (let* ((balls (get-text-property (point-at-bol) 'balls))
+  (let* ((balls (copy-sequence (get-text-property (point-at-bol) 'balls)))
 	 (buffer-read-only nil)
 	 (props (superman-view-property-keys))
 	 (prop (completing-read "Property to show in new column (press tab see existing): "
@@ -1374,7 +1374,7 @@ if it exists and add text-property org-hd-marker."
   (let* ((dir (get-text-property (point-min) 'git-dir))
 	 cmd)
     (when dir
-      (superman-view-goto-shell)
+      (superman-goto-shell)
       (insert  (concat "cd " dir ";" superman-cmd-git " push")))))
 
 (defun superman-view-git-commit (&optional dont-redo)
@@ -1453,7 +1453,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "R" 'superman-redo)
 (define-key superman-view-mode-map "S" 'superman-sort-section)
 (define-key superman-view-mode-map "V" 'superman-switch-config)
-(define-key superman-view-mode-map "!" 'superman-view-goto-shell)
+(define-key superman-view-mode-map "!" 'superman-goto-shell)
 (define-key superman-view-mode-map "?" 'superman-view-help)
 
 (define-key superman-view-mode-map "Bn" 'superman-new-ball)

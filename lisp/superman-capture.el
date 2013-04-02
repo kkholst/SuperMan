@@ -81,6 +81,7 @@ If JABBER is non-nil message about non-existing headings.
 	 (level (or level 3))
 	 (props (cadr plist))
 	 (scene (current-window-configuration))
+	 head-point
 	 (body "")
 	 (title (concat "### Captured " what " for project " (car project)))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
@@ -96,19 +97,19 @@ If JABBER is non-nil message about non-existing headings.
     (skip-chars-forward "[* ]")
     (kill-line)
     (goto-char (point-min))
-    (put-text-property (point) (point-at-eol) 'capture (point))
-    (put-text-property (point) (point-at-eol) 'scene scene)
-    (insert title
-	    "\n#"
+    (insert title)
+    (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
+    (insert "\n#"
 	    (make-string (length title) (string-to-char "-"))
 	    "\n# C-c C-c to save "
 	    "\n# C-c C-q to quit without saving"
-	    "\n# ---yeah #%*^#@!--------------"
-	    "\n\n")
+	    "\n# ---yeah #%*^#@!--------------")
+    (insert "\n\n")
     (put-text-property (point-min) (point) 'face font-lock-string-face)
     (org-mode)
     (show-all)
-    (goto-char (point-max))
+    (end-of-line)
+    (setq head-point (point))
     (insert "\n:PROPERTIES:")
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (while props
@@ -136,8 +137,7 @@ If JABBER is non-nil message about non-existing headings.
     (insert body)
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (insert "\n")
-    (goto-char (next-single-property-change (point-min) 'capture))
-    (end-of-line)
+    (goto-char head-point)
     (superman-capture-mode)))
 
 
@@ -174,12 +174,9 @@ turn it off."
 (defvar superman-capture-before-clean-scene-hook nil)
 (defun superman-clean-scene ()
   (interactive)
-  (let ((start (next-single-property-change (point-min) 'capture))
-	(scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene))
+  (let ((scene (get-text-property (point-min) 'scene))
 	req
 	next)
-    (goto-char start)
-    (delete-region (point-min) (point))
     (goto-char (point-min))
     (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
       (goto-char next)
@@ -194,13 +191,16 @@ turn it off."
 	(end-of-line)))
     (save-buffer)
     (run-hooks superman-capture-before-clean-scene-hook)
+    (goto-char (point-min))
+    (outline-next-heading)
+    (delete-region (point-min) (point))
     (kill-buffer (current-buffer))
     (set-window-configuration scene)
     (when superman-view-mode (superman-redo))))
 
 (defun superman-quit-scene ()
   (interactive)
-  (let ((scene (get-text-property (next-single-property-change (point-min) 'scene) 'scene)))
+  (let ((scene (get-text-property (point-min) 'scene)))
     (delete-region (point-min) (point-max))
     (save-buffer)
     (kill-buffer (current-buffer))
