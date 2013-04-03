@@ -56,7 +56,7 @@
 
 
 (defvar superman-google-cmd
-  "PYTHONUSERBASE=~/local/; google"
+  "google"
   "Full path to google command line utility")
 
 (defvar superman-google-calendars

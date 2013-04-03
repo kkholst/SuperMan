@@ -889,9 +889,9 @@ beginning of the list."
 	(put-text-property (point-at-bol) (point-at-eol) 'balls new-balls))
     (message "Point is not inside a section"))))
 
-(defun superman-columns-start ()
+(defun superman-compute-columns-start ()
   (let* ((cols (get-text-property (point-at-bol) 'columns))
-	 (n (length cols))
+	 (n (- (length cols) 1))
 	 (cumcols (list 0))
 	 (i 1))
     (while (< i n)
@@ -901,18 +901,19 @@ beginning of the list."
 
 (defun superman-next-ball (&optional arg)
   "Move to ARGth next column."
-  (interactive)
-  (let ((dim (superman-ball-dimensions)))
-    (if (> arg 0)
-	(beginning-of-line)
-      (forward-char (+ 3 (nth 0 dim) (nth 1 dim)))))
+  (interactive "p")
+  (let* ((current (nth 2 (superman-ball-dimensions)))
+	 (colstart (superman-compute-columns-start))
+	 (j (max 0 (min (- (length colstart) 1)
+			(+ current arg)))))
+    (beginning-of-line)
+    (forward-char (+ 2 ;; offset for whole line
+		     (nth j colstart)))))
 
 (defun superman-previous-ball ()
   "Move to previous column."
   (interactive)
-  (let ((dim (superman-ball-dimensions)))
-    (beginning-of-line)
-    (superman-next-ball (max 0 (- (nth 2 dim) 1))
+  (superman-next-ball -1))
     
 (defun superman-one-right (&optional left)
   "Move column to the right."
@@ -927,11 +928,7 @@ beginning of the list."
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat)
-      (goto-char (previous-single-property-change (point) 'names))
-      (beginning-of-line)
-      (kill-line)
-      (insert (superman-column-names new-balls) "\n"))))
+      (superman-refresh-cat))))
     
 (defun superman-one-left ()
   "Move column to the left."
@@ -951,11 +948,7 @@ by calling `superman-save-balls' subsequently."
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat)
-      (goto-char (previous-single-property-change (point) 'names))
-      (beginning-of-line)
-      (kill-line)
-      (insert (superman-column-names new-balls) "\n"))))
+      (superman-refresh-cat))))
 
 (defun superman-new-ball ()
   "Add a new column to show a property of all items in the
@@ -973,11 +966,7 @@ current section."
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat)
-      (goto-char (previous-single-property-change (point) 'names))
-      (beginning-of-line)
-      (kill-line)
-      (insert (superman-column-names new-balls) "\n"))))
+      (superman-refresh-cat))))
   
   
 (defun superman-one-up (&optional down)
@@ -1132,7 +1121,11 @@ current section."
 	(end (or (next-single-property-change (point) 'cat) (point-max))))
     (if (not start)
 	(message "Point is not in category.")
-      (superman-loop 'superman-view-redo-line nil start end nil))))
+      (superman-loop 'superman-view-redo-line nil start end nil)
+      (goto-char (next-single-property-change start 'names))
+      (beginning-of-line)
+      (kill-line)
+      (insert (superman-column-names new-balls) "\n"))))
 
 (defun superman-view-redo-line ()
   (interactive)
@@ -1553,8 +1546,8 @@ for git and other actions like commit, history search and pretty log-view."
   "Add a new document, note, task or other item to a project."
   (interactive)
   (let* ((cat (superman-current-cat))
-	(pro (when cat (superman-view-current-project)))
-	fun)
+	 (pro (when cat (superman-view-current-project)))
+	 fun)
     (cond ((and cat
 		(setq fun (assoc cat superman-capture-alist)))
 	   (funcall (cadr fun) pro))
@@ -1614,7 +1607,7 @@ for git and other actions like commit, history search and pretty log-view."
      ["Delete column" superman-delete-ball t]
      ["Move column left" superman-one-left t]
      ["Move column right" superman-one-right t])
-    ["Terminal" superman-view-goto-shell t]
+    ["Terminal" superman-goto-shell t]
     ["Unison" superman-unison t]
     ))
 
