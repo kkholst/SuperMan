@@ -374,6 +374,7 @@ If MARKED is non-nil run only on marked items."
 ;;}}}
 ;;{{{ Columns and balls
 
+
 (defun superman-column-names (balls)
   (let ((cols
 	 (superman-format-thing

@@ -38,13 +38,10 @@
 		   ("state" . "ACTIVE"))))
 
 (setq superman-balls
-      '((todo ("trim" nil (9)) ("face" superman-get-todo-face))
-	(hdr ("trim" nil (27)) ("face" font-lock-function-name-face))
-	("lastvisit" ("trim" superman-trim-date nil)
-	 ("face" font-lock-type-face))
-	("others"
-	 ("trim" superman-trim-string (30))
-	 ("face" font-lock-keyword-face))))
+      '((todo ("width" 9) ("face" superman-get-todo-face))
+	(hdr ("width" 27) ("face" font-lock-function-name-face))
+	("lastvisit" ("fun" superman-trim-date) ("face" font-lock-type-face) ("sort-key" t))
+	("others" ("width" (30) ("face" font-lock-keyword-face)))))
 
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
@@ -186,11 +183,11 @@
 	;; sort projects by lastvisit date
 	;; see http://emacswiki.org/emacs/DestructiveOperations
 	;; (setq tail
-	      ;; (sort tail
-		    ;; (lambda (p q)
-		      ;; (org-time<=
-		       ;; (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
-		       ;; (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
+	;; (sort tail
+	;; (lambda (p q)
+	;; (org-time<=
+	;; (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
+	;; (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
 	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
@@ -198,31 +195,21 @@
 	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
-	;; sort by date
-	(org-back-to-heading)
-	(goto-char (+ 2 (next-single-property-change (point) 'sort-key)))
-	(superman-sort-section)
 	;; column names
 	(org-back-to-heading)
 	(end-of-line)
-	(when (next-single-property-change (point-at-eol) 'org-marker)
-	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
-	  (forward-line -1)
-	  (end-of-line)
-	  (insert "\n")
-	  (let ((cols (superman-format-thing
-		       '("columns"
-			 (("others" . "Others")
-			  (hdr . "Title")
-			  (todo . "State")
-			  ("marker" . nil)
-			  ("lastvisit" . "LastVisit")))
-		       superman-balls)))
-	    (insert cols)
-	    (set-text-properties (point-at-bol) (point-at-eol) 'face nil)
-	    (put-text-property  (point-at-bol) (point-at-eol) 'names (length cols))
-	    (put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-comment-face)))
-	(org-back-to-heading)
+	(let ((first-item (next-single-property-change (point-at-eol) 'org-marker)))
+	  (when first-item
+	    (goto-char first-item)
+	    (forward-line -1)
+	    (end-of-line)
+	    (insert "\n")
+	    (insert (superman-column-names superman-balls))
+	    ;; sorting
+	    (goto-char (next-single-property-change (point) 'org-marker))
+	    (when (next-single-property-change (point-at-bol) 'sort-key)
+	      (goto-char (+ 2 (next-single-property-change (point-at-bol) 'sort-key)))
+	      (superman-sort-section))))
 	(goto-char (point-max))
 	(setq cat-alist (cdr cat-alist)))))
   (goto-char (point-min))
