@@ -85,7 +85,12 @@ If JABBER is non-nil message about non-existing headings.
 	 (body "")
 	 (title (concat "### Captured " what " for project " (car project)))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
-    (superman-goto-project project heading 'create nil nil nil)
+    (if heading
+	(superman-goto-project project heading 'create nil nil nil)
+      (find-file (superman-get-index project))
+      (widen)
+      (show-all)
+      (goto-char (point-max)))
     (switch-to-buffer
      (make-indirect-buffer (current-buffer) S-buf))
     (delete-other-windows)
@@ -362,7 +367,7 @@ To undo all this you can try to call 'superman-delete-project'. "
 	      (superman-capture-unison pro)))))))
 
 ;;}}}
-;;{{{ capturing mails
+;;{{{ capture mails
 
 ;; (defun superman-capture-mail ()
   ;; (interactive)
@@ -452,6 +457,21 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
                                       "\n:END:\n"
                                       mime-line)))))))
     mime-line))
+;;}}}
+;;{{{ capture cats
+(defun superman-capture-cat (&optional project)
+  (interactive)
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project))))
+    (superman-capture
+     pro
+     nil
+     `("Section" (("Ball1" "todo :face superman-get-todo-face")
+		  ("Ball2" "hdr :name Title :width 13 :face font-lock-function-name-face")
+		  ("Ball3" "")))
+     1)))
+
 ;;}}}
 (provide 'superman-capture)
 ;;; superman-capture.el ends here

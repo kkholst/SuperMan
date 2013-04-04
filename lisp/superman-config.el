@@ -46,7 +46,6 @@ Returns the corresponding buffer."
 		    (assoc
 		     (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
 		     superman-config-action-alist))))
-      (message thing)
       (cond ((functionp action) (funcall action project))
 	    ((and thing (string= (substring thing 0 1) "!"))
 	     (superman-start-shell (substring thing 1 (length thing))))
