@@ -864,7 +864,7 @@ Value is the formatted string with text-properties (special balls)."
 (defun superman-previous-cat ()
   "Move point to start of category"
   (interactive)
-  (goto-char (or (superman-cat-point) (point-min))))
+  (goto-char (or (superman-cat-point (max 1 (- (point-at-bol) 1))) (point-min))))
 
 (defun superman-swap-balls (list pos)
   "Exchange list element at pos with that at pos + 1.
@@ -976,10 +976,11 @@ current section."
 	 (new-ball `(,prop ("width" ,len)))
 	 (new-balls (add-to-list 'balls new-ball))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
-	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
+	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max)))
+	 (tag "New yet unsaved column"))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat))))
+      (superman-refresh-cat tag))))
   
   
 (defun superman-one-up (&optional down)
@@ -1152,8 +1153,9 @@ current section."
     (eval cmd)
     (goto-line (+ 1 curline))))
 
-(defun superman-refresh-cat ()
-  "Refresh view of all lines in current category inclusive column names."
+(defun superman-refresh-cat (&optional tag)
+  "Refresh view of all lines in current category inclusive column names.
+If TAG is non-nil tag this category."
   (interactive)
   (let ((start (superman-cat-point))
 	(end (or (next-single-property-change (point) 'cat) (point-max))))
@@ -1163,7 +1165,10 @@ current section."
       (goto-char (next-single-property-change start 'names))
       (beginning-of-line)
       (kill-line)
-      (insert (superman-column-names new-balls) "\n"))))
+      (insert (superman-column-names new-balls) "\n")
+      (when tag
+	(put-text-property 0 (length tag) 'face 'font-lock-warning-face tag)
+	(org-set-tags-to tag)))))
 
 (defun superman-view-redo-line ()
   (interactive)
@@ -1195,12 +1200,12 @@ current section."
 (defun superman-next-entry ()
   (interactive)
   (goto-char
-   (or (next-single-property-change (point-at-eol) 'org-marker)
+   (or (next-single-property-change (point-at-eol) 'org-hd-marker)
        (point))))
 
 (defun superman-previous-entry ()
   (interactive)
-  (let ((pos (previous-single-property-change (point-at-bol) 'org-marker)))
+  (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
     (when pos
 	(progn (goto-char pos) (beginning-of-line)))))
 
