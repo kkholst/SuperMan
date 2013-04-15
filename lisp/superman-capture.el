@@ -86,7 +86,11 @@ If JABBER is non-nil message about non-existing headings.
 	 (title (concat "### Captured " what " for project " (car project)))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
     (if heading
-	(superman-goto-project project heading 'create nil nil nil)
+	(cond ((stringp heading)
+	       (superman-goto-project project heading 'create nil nil nil))
+	      ((markerp heading)
+	       (progn (switch-to-buffer (marker-buffer heading))
+		      (goto-char heading))))
       (find-file (superman-get-index project))
       (widen)
       (show-all)
@@ -224,13 +228,17 @@ turn it off."
 (defun superman-capture-document (&optional project)
   (interactive)
   (let* ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
-	(dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	(file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
+		  superman-view-current-project
+		  (superman-select-project)))
+	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (heading (if (and marker (superman-current-cat))
+		      marker
+		    "Documents"))
+	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	 (file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
     (superman-capture
      pro
-     "Documents"
+     heading
      `("Document" (("FileName" ,(concat "[[" file "]]"))
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
