@@ -711,7 +711,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
   ;; minor-mode
   (superman-view-mode-on)
   ;; check modified
-  (superman-view-git-update-status nil nil 'dont)
+  (superman-view-git-update-status nil nil nil 'dont)
   (setq buffer-read-only t))
 
 
@@ -976,14 +976,15 @@ current section."
 	 (new-ball `(,prop ("width" ,len)))
 	 (new-balls (add-to-list 'balls new-ball))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
-	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max)))
-	 (tag "New yet unsaved column"))
+	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat tag))))
+      (superman-save-balls)
+      (superman-refresh-cat))))
   
   
 (defun superman-one-up (&optional down)
+  "Move item in project view up or down."
   (interactive "P")
   (let ((marker (org-get-at-bol 'org-hd-marker))
 	(catp (org-get-at-bol 'cat)))
@@ -1018,7 +1019,11 @@ current section."
 		(goto-char (next-single-property-change (point) 'next-item))
 		(org-promote))))
       (superman-redo)
-      (forward-line (if down 1 -1)))))
+      (if catp
+	  (goto-char (if down
+			 (next-single-property-change (point-at-eol) 'cat)
+		       (previous-single-property-change (point-at-bol) 'cat)))
+      (forward-line (if down 1 -1))))))
 
 (defun superman-one-down ()
   (interactive)
@@ -1063,6 +1068,7 @@ current section."
     (when cat-point
       (save-excursion
 	(org-with-point-at (get-text-property cat-point 'org-hd-marker)
+	  (save-restriction
 	  (widen)
 	  (show-all)
 	  (org-narrow-to-subtree)
@@ -1070,7 +1076,8 @@ current section."
 	  ;; heading
 	  (outline-next-heading)
 	  (narrow-to-region (point) (point-max))
-	  (superman-property-keys))))))
+	  (superman-property-keys)
+	  ))))))
 
 (defun superman-view-edit-item ()
   "Put item at point into capture mode"
@@ -1153,9 +1160,8 @@ current section."
     (eval cmd)
     (goto-line (+ 1 curline))))
 
-(defun superman-refresh-cat (&optional tag)
-  "Refresh view of all lines in current category inclusive column names.
-If TAG is non-nil tag this category."
+(defun superman-refresh-cat ()
+  "Refresh view of all lines in current category inclusive column names."
   (interactive)
   (let ((start (superman-cat-point))
 	(end (or (next-single-property-change (point) 'cat) (point-max))))
@@ -1165,10 +1171,7 @@ If TAG is non-nil tag this category."
       (goto-char (next-single-property-change start 'names))
       (beginning-of-line)
       (kill-line)
-      (insert (superman-column-names new-balls) "\n")
-      (when tag
-	(put-text-property 0 (length tag) 'face 'font-lock-warning-face tag)
-	(org-set-tags-to tag)))))
+      (insert (superman-column-names new-balls) "\n"))))
 
 (defun superman-view-redo-line ()
   (interactive)
@@ -1422,11 +1425,31 @@ if it exists and add text-property org-hd-marker."
       filename)))
 
 
-(defun superman-view-git-update-status (&optional beg end dont-redo)
-  "Update git status for project and all entries (that have a filename)."
+(defun superman-view-git-update-status-forced (&optional beg end dont-redo)
+  (interactive)
+  (superman-view-git-update-status beg end t dont-redo))
+
+  
+(defun superman-view-set-status-at-point ()
+  (let ((pom (get-text-property (point-at-bol) 'org-hd-marker))
+	(file (superman-filename-at-point t)))
+    (if (and pom file)
+	;; (ignore-errors
+	  (superman-git-set-status pom file nil))))
+
+				     
+(defun superman-view-git-update-status (&optional beg end force dont-redo)
+  "Update git status for all registered entries within BEG and END.
+If FORCE is non-nil run uncondionally through all entries that have a filename.
+This comes at the cost of one separate call to git status for each file.
+
+If FORCE is nil run only through those files that have changed status
+according to git."
   (interactive)
   (let ((dir (get-text-property (point-min) 'git-dir)))
     (if (not dir) (message "Project is not git-controlled.")
+      (if force
+	  (superman-loop 'superman-view-set-status-at-point nil beg end nil)
       (let* ((file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
 	     (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
 	     (status-list
@@ -1451,8 +1474,8 @@ if it exists and add text-property org-hd-marker."
 		     (and (stringp current-status)
 			  (string= (downcase current-status) "modified")))
 		(superman-git-set-status pom file nil)))
-		;; (org-entry-put pom "GitStatus" status)))
-	    (setq file-list (cdr file-list)))))
+	    ;; (org-entry-put pom "GitStatus" status)))
+	    (setq file-list (cdr file-list))))))
       (unless dont-redo (superman-redo)))))
 
 
@@ -1490,7 +1513,7 @@ If dont-redo the agenda is not reversed."
        (superman-view-marked-files)
        dir
        'commit nil)
-      (superman-view-git-update-status)
+      (superman-view-git-update-status nil nil nil)
       (unless dont-redo (superman-redo)))))
 
 ;;}}}
@@ -1566,9 +1589,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gl" 'superman-view-git-log)
 (define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
 (define-key superman-view-mode-map "GP" 'superman-git-push)
-(define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "Gs" 'superman-view-git-search)
-(define-key superman-view-mode-map "GU" 'superman-view-git-update-status)
+(define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
+(define-key superman-view-mode-map "GU" 'superman-view-git-update-status-forced)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
 
 
@@ -1586,34 +1609,38 @@ for git and other actions like commit, history search and pretty log-view."
 	("Bookmarks" superman-capture-bookmark)))
 
 (defun superman-new-item ()
-  "Add a new document, note, task or other item to a project."
+  "Add a new document, note, task or other item to a project. If called
+from superman project view, assoc a capture function from `superman-capture-alist'.
+If non exists create a new item based on balls and properties in current section. If point is
+not in a section prompt for section first.
+"
   (interactive)
-  (let* ((cat (superman-current-cat))
-	 (pro (when cat (superman-view-current-project)))
-	 fun)
-    (cond ((and cat
-		(setq fun (assoc cat superman-capture-alist)))
-	   (funcall (cadr fun) pro))
-	  (superman-view-mode
-	   (let ((cat-point (superman-cat-point)))
-	     (when cat-point
-	       (when superman-view-mode
-		 (let ((props (superman-view-property-keys))
-		       (balls (get-text-property cat-point 'balls)))
-		   (superman-capture
-		    pro
-		    cat
-		    `("Item"
-		      ,(mapcar '(lambda (p) (list p nil)) props))))))))
-	  (t
-	   (setq pro (superman-select-project)
-		 cat  (completing-read
-		       (concat
-			"Add item to " (car pro) " (select): ")
-		       superman-capture-alist))
-	   (funcall 
-	    (cadr (assoc cat superman-capture-alist))
-	    pro)))))
+  (let* ((pro (or (superman-view-current-project t)
+		  (superman-select-project)))
+	 (cat (or (superman-current-cat)
+		   (completing-read
+			(concat "Choose category for new item in project " (car  pro) ": ")
+			(append
+			 superman-capture-alist
+			 (superman-parse-cats
+			 (get-file-buffer
+			  (superman-get-index pro)) 1)))))
+	 (fun (assoc cat superman-capture-alist)))
+    (unless superman-view-mode
+      (superman-view-project pro)
+      (goto-char (point-min))
+      (re-search-forward cat nil t))
+    (if fun
+	(funcall (cadr fun) pro)
+      (let* ((cat-point (superman-cat-point))
+	     (props (superman-view-property-keys))
+	     (balls (get-text-property cat-point 'balls)))
+	(superman-capture
+	 pro
+	 cat
+	 `("Item"
+	   ,(mapcar '(lambda (p) (list p nil)) props)))))))
+	  
 
 ;;}}}
 ;;{{{ easy menu
