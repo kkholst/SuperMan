@@ -49,23 +49,30 @@ Returns the corresponding buffer."
       (cond ((functionp action) (funcall action project))
 	    ((and thing (string= (substring thing 0 1) "!"))
 	     (superman-start-shell (substring thing 1 (length thing))))
+	    ((and thing (string-match org-bracket-link-regexp thing))
+	     (find-file (org-match-string-no-properties 1 thing)))
 	    ((and thing (file-name-directory thing))
-	     (find-file (expand-file-name
-			 thing (concat (superman-get-location project) (car project)))))
+	     (find-file
+	      (expand-file-name
+	       thing
+	       (concat (superman-get-location project) (car project)))))
 	    (t (switch-to-buffer thing))))
     (current-buffer)))
 ;;}}}
 ;;{{{ saving window configs
 
-(defun superman-save-config (&optional config project)
+(defun superman-capture-config (&optional project)
   (interactive)
-  (let* ((conf (or config (superman-current-config)))
-	(pro (or project superman-current-project (superman-select-project)))
-	(org-capture-mode-hook 'org-narrow-to-subtree)
-	(org-capture-templates `(("s" "save" plain
-				  (file+headline (superman-get-index pro) "Configuration")
-				  ,(concat "windows:" conf "%?") :unnarrowed t))))
-    (org-capture nil "s")))
+  (let ((pro (or project
+		 superman-view-current-project
+		 superman-current-project
+		 (superman-select-project))))
+    (superman-capture
+          pro
+	  "Configuration"
+     `("Config" (("Config" ,(superman-current-config)))))))
+     
+(fset 'superman-save-config 'superman-capture-config)
 
 (defun superman-current-config ()
   (let* ((windata (winner-win-data))
@@ -76,10 +83,13 @@ Returns the corresponding buffer."
 	     (pos (car (car windata)))
 	     (row (nth 1 pos))
 	     (bname (buffer-name buf))
+	     (bfile (buffer-file-name buf))
 	     (thing
 	      (cond 
-	       ((buffer-file-name buf)
-		(replace-regexp-in-string (getenv "HOME") "~"  (buffer-file-name buf)))
+	       (bfile
+		(concat "[["
+			(replace-regexp-in-string (getenv "HOME") "~"  bfile)
+			"]" "[" (file-name-nondirectory bfile) "]]"))
 	       ((string-match "\\*Documents\\[.*\\]\\*" bname) "DOCUMENTS")
 	       ((string-match "\\*Project\\[.*\\]\\*" bname) "PROJECT")
 	       (t bname))))
@@ -100,28 +110,27 @@ Returns the corresponding buffer."
   ;; return a list with horizontal splits 
   ;; where each element can have vertical splits
   (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
-	 (hlist (mapcar '(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
+	 (hlist (mapcar #'(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
     hlist))
 
 (defun superman-read-config (project)
-  (let* (config)
+  (let* ((config
+	  (if superman-sticky-config superman-sticky-config nil)))
     (save-window-excursion
       (save-restriction
-	(superman-goto-project project "Configuration" 'create nil nil nil)
+	(superman-goto-project project "Configuration" 'create nil 'narrow nil)
 	(goto-char (point-min))
-	(while (re-search-forward "^[ \t]*windows:[ \t]*" (point-max) t)
+	(while (outline-next-heading)
 	  (if config
-	      (setq config (concat config " : "
-				   (replace-regexp-in-string
-				    "[ \t]*$" ""
-				    (buffer-substring-no-properties (point) (point-at-eol)))))
-	    (setq config
-		  (replace-regexp-in-string
-		   "[ \t]*$" ""
-		   (buffer-substring-no-properties (point) (point-at-eol)))))))
-      (when (not config) (setq config superman-default-config))
+	      (setq
+	       config
+	       (concat config " : "
+		       (superman-get-property (point) "Config")))
+	    (setq config (superman-get-property (point) "Config"))))
+	(when (not config) (setq config superman-default-config)))
       config)))
 ;;}}}
+
 ;;{{{ smashing window configs
 (defun superman-smash-windows (window-config project)
   "Smash windows according to the WINDOW-CONFIG and

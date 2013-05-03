@@ -316,6 +316,7 @@ To undo all this you can try to call 'superman-delete-project'. "
      `("Meeting" (("MeetingDate" ,date)
 		  ("Participants" nil)
 		  ("Location" nil)
+		  ("GoogleCalendar" ,superman-google-default-calendar)
 		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ('fun 'org-todo)))))
   (setq superman-capture-before-clean-scene-hook
@@ -336,9 +337,9 @@ To undo all this you can try to call 'superman-delete-project'. "
     (superman-capture
      pro
      "Configuration"
-     `("Unison" (("UNISON" unison-gtk)
-		 ("ROOT-1" root-1)
-		 ("ROOT-2" root-2)
+     `("Unison" (("UNISON" "unison-gtk")
+		 ("ROOT-1" ,root-1)
+		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
 (defun superman-unison (&optional project)

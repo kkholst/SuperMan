@@ -243,7 +243,7 @@ and the keybinding to initialize git control otherwise."
 		      (concat "Version control: Git repository at "
 			      ;;FIXME: would like to have current git status
 			      (superman-git-toplevel loc))
-		    "Version control: not set. <> press `I' to initialize git")))
+		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
 
@@ -428,7 +428,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
          (prop (car plist))
 	 (args
 	  (mapcar
-	   '(lambda (x)
+	   #'(lambda (x)
 	      (let* ((pos (string-match "[ \t]" x))
 		     (key (downcase (substring x 0 pos)))
 		     (value (substring x (+ pos 1) (length x))))
@@ -578,8 +578,13 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (widen)
       (show-all)
       (goto-char (point-min))
-      (or (looking-at org-complex-heading-regexp)
-	  (outline-next-heading))
+      ;; move to first heading
+      ;; with the correct level
+      (while (and (not (and
+			(looking-at org-complex-heading-regexp)
+			(org-current-level)
+			(= (org-current-level) level)))
+		  (outline-next-heading)))
       (when (= (org-current-level) level)
 	(looking-at org-complex-heading-regexp)
 	(let ((cats `((,(match-string-no-properties 4)
@@ -608,7 +613,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 ;; (org-agenda-window-setup 'current-window)
 	 (project-header (concat "Project: " (car pro)))
 	 (index (superman-get-index pro))
-	 (ibuf (or (get-file-buffer index) (find-file index)))
+	 (ibuf (or (get-file-buffer index)
+		   (find-file index)))
 	 ;; (cats superman-cats)
 	 (cats (superman-parse-cats ibuf 1))
 	 (font-lock-global-modes nil)
@@ -645,74 +651,89 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	(setq cat-head (point))
 	;; move to ibuf
 	(when (superman-goto-project pro cat nil nil 'leave-narrowed nil)
-	  ;; format elements (if any)
-	  ;; region is narrowed to section
-	  (goto-char (point-min))
-	  (setq cat-point (point-marker))
-	  (while (outline-next-heading)
-	    (if (eq (org-current-level) 2)
-		(let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
-		  (setq line (concat "*** " subhdr))
-		  (put-text-property 0 (length line) 'subcat subhdr line)
-		  (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
-		  (put-text-property 0 (length line) 'face 'org-level-3 line)
-		  (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-		  (with-current-buffer vbuf
-		    (insert
-		     line
-		     ;;"\n" (superman-column-names balls)
-		     "\n"
-		     ))
-		  (end-of-line))
-	      (setq count (+ count 1))
-	      (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-	      (with-current-buffer vbuf (insert line "\n"))))
-	  ;; (widen)
-	  ;; (show-all)
-	  (set-buffer vbuf)
-	  (goto-char cat-head)
-	  (insert "\n** " cat "\n")
-	  (forward-line -1)
-	  (beginning-of-line)
-	  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
-	  (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
-	  (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
-	  (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker cat-point)
-	  (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
-	  (if (or (not (member cat superman-capture-alist))
-		  (member cat superman-views-permanent-cats) (> count 0))
-	      (progn (end-of-line)
-		     (insert " [" (int-to-string count) "]")
-		     ;; insert hot-keys or blank line
-		     (end-of-line)
-		     (insert "\n")
-		     ;; insert column names 
-		     (insert (superman-column-names balls)))
-	    (delete-region (point) (point-max)))
-	  (goto-char (point-max)))
-	(widen)
-	(setq cats (cdr cats))))
-    ;; leave index buffer widened
-    (set-buffer ibuf)
-    (widen)
-    (show-all)
-    (switch-to-buffer vbuf))
-  (goto-char (point-min))
-  ;; facings
-  (save-excursion
-    (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-      (add-text-properties
-       (match-beginning 0) (match-end 0)
-       '(face org-link))))
-  ;; default-dir
-  (setq default-directory
-	(superman-project-home
-	 (superman-view-current-project)))
-  ;; minor-mode
-  (superman-view-mode-on)
-  ;; check modified
-  (superman-view-git-update-status nil nil nil 'dont)
-  (setq buffer-read-only t))
+	  (let* ((sec-head (save-excursion
+			     (outline-previous-heading)
+			     (point)))
+		 ;; (folded (superman-get-property sec-head  "startFolded"))
+		(free (superman-get-property sec-head "freeText")))
+	    (goto-char (point-min))
+	    (setq cat-point (point-marker))
+	    (if free
+		(save-restriction
+		  (org-narrow-to-subtree)
+		   (let ((text (buffer-substring
+				(progn (org-end-of-meta-data-and-drawers)
+				       (point))
+				(point-max))))
+		     (with-current-buffer vbuf (insert text))))
+	      ;; loop over section cat
+	      ;; format elements (if any and if wanted)
+	      ;; region is narrowed to section
+	      (while (outline-next-heading)
+		(if (eq (org-current-level) 2)
+		    (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
+		      (setq line (concat "*** " subhdr))
+		      (put-text-property 0 (length line) 'subcat subhdr line)
+		      (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
+		      (put-text-property 0 (length line) 'face 'org-level-3 line)
+		      (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
+		      (with-current-buffer vbuf
+			(insert
+			 line
+			 ;;"\n" (superman-column-names balls)
+			 "\n"
+			 ))
+		      (end-of-line))
+		  (setq count (+ count 1))
+		  (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+		  (with-current-buffer vbuf (insert line "\n")))))
+	    ;; (widen)
+	    ;; (show-all)
+	    (set-buffer vbuf)
+	    (goto-char cat-head)
+	    (insert "\n** " cat "\n")
+	    (forward-line -1)
+	    (beginning-of-line)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	    (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
+	    (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
+	    (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker cat-point)
+	    (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
+	    (if (or (not (member cat superman-capture-alist))
+		    (member cat superman-views-permanent-cats) (> count 0))
+		(progn (end-of-line)
+		       (insert " [" (int-to-string count) "]")
+		       ;; insert hot-keys or blank line
+		       (end-of-line)
+		       (insert "\n")
+		       ;; insert column names 
+		       (insert (superman-column-names balls)))
+	      (delete-region (point) (point-max)))
+	    (goto-char (point-max))
+	  (widen)
+	  ;; (when folded (hide-subtree))
+	  (setq cats (cdr cats))))))
+      ;; leave index buffer widened
+      (set-buffer ibuf)
+      (widen)
+      (show-all)
+      (switch-to-buffer vbuf))
+    (goto-char (point-min))
+    ;; facings
+    (save-excursion
+      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	(add-text-properties
+	 (match-beginning 0) (match-end 0)
+	 '(face org-link))))
+    ;; default-dir
+    (setq default-directory
+	  (superman-project-home
+	   (superman-view-current-project)))
+    ;; minor-mode
+    (superman-view-mode-on)
+    ;; check modified
+    (superman-view-git-update-status nil nil nil 'dont)
+    (setq buffer-read-only t))
 
 
 (setq org-todo-keyword-faces
@@ -986,8 +1007,9 @@ current section."
 (defun superman-one-up (&optional down)
   "Move item in project view up or down."
   (interactive "P")
-  (let ((marker (org-get-at-bol 'org-hd-marker))
-	(catp (org-get-at-bol 'cat)))
+  (let* ((marker (org-get-at-bol 'org-hd-marker))
+	 (catp (org-get-at-bol 'cat))
+	 (curcat (when catp (superman-current-cat))))
     (when (or catp marker)
       (save-excursion
 	(set-buffer (marker-buffer marker))
@@ -998,32 +1020,36 @@ current section."
 		    (org-move-subtree-down)
 		  (org-move-subtree-up))
 	      (error nil))
-	      (if down
-		  (progn
-		    (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
-		    (outline-next-heading)
-		    (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
-		    (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
-		    (org-demote)
-		    (goto-char (previous-single-property-change (point) 'current-item))
-		    (org-move-subtree-down)
-		    (goto-char (previous-single-property-change (point) 'next-item))
-		    (org-promote))
-		(put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
-		(outline-previous-heading)
-		(if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
-		(put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
-		(org-demote)
-		(goto-char (next-single-property-change (point) 'current-item))
-		(org-move-subtree-up)
-		(goto-char (next-single-property-change (point) 'next-item))
-		(org-promote))))
+	    (if down
+		(progn
+		  (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
+		  (outline-next-heading)
+		  (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+		  (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
+		  (org-demote)
+		  (goto-char (previous-single-property-change (point) 'current-item))
+		  (org-move-subtree-down)
+		  (goto-char (previous-single-property-change (point) 'next-item))
+		  (org-promote))
+	      (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
+	      (outline-previous-heading)
+	      (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+	      (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
+	      (org-demote)
+	      (goto-char (next-single-property-change (point) 'current-item))
+	      (org-move-subtree-up)
+	      (goto-char (next-single-property-change (point) 'next-item))
+	      (org-promote))))
       (superman-redo)
       (if catp
-	  (goto-char (if down
-			 (next-single-property-change (point-at-eol) 'cat)
-		       (previous-single-property-change (point-at-bol) 'cat)))
-      (forward-line (if down 1 -1))))))
+	  (progn 
+	    (goto-char (point-min))
+	    (re-search-forward curcat nil t)
+	    (beginning-of-line))
+	  ;; (goto-char (if down
+	  ;; (next-single-property-change (point-at-eol) 'cat)
+	  ;; (previous-single-property-change (point-at-bol) 'cat)))
+	  (forward-line (if down 1 -1))))))
 
 (defun superman-one-down ()
   (interactive)
@@ -1334,6 +1360,7 @@ current section."
       (if ibuf (switch-to-buffer ibuf)
 	(find-file index)))
     (show-all)
+    (widen)
     (when pom (goto-char pom))
     ;;(org-narrow-to-subtree)
     ))
@@ -1501,9 +1528,9 @@ If dont-redo the agenda is not reversed."
 
 (defun superman-view-marked-files (&optional beg end)
   (delq nil (superman-loop
-   '(lambda ()
-      (or (and (superman-marked-p)
-	       (superman-filename-at-point 'no-error)))) nil beg end)))
+	     #'(lambda ()
+		 (or (and (superman-marked-p)
+			  (superman-filename-at-point 'no-error)))) nil beg end)))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
@@ -1639,7 +1666,7 @@ not in a section prompt for section first.
 	 pro
 	 cat
 	 `("Item"
-	   ,(mapcar '(lambda (p) (list p nil)) props)))))))
+	   ,(mapcar #'(lambda (p) (list p nil)) props)))))))
 	  
 
 ;;}}}

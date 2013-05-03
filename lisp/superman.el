@@ -261,7 +261,11 @@
 				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook '(lambda () (superman-clean-up) (superman-on))))))))
+	     (org-agenda-finalize-hook
+	      '(lambda ()
+		 (superman-clean-up)
+		 (superman-on)
+		 (org-agenda-mode))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 ;; (when (get-buffer "*S-todo*")
