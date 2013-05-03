@@ -121,12 +121,13 @@ Returns the corresponding buffer."
 	(superman-goto-project project "Configuration" 'create nil 'narrow nil)
 	(goto-char (point-min))
 	(while (outline-next-heading)
-	  (if config
-	      (setq
-	       config
-	       (concat config " : "
-		       (superman-get-property (point) "Config")))
-	    (setq config (superman-get-property (point) "Config"))))
+	  (let ((this-config (superman-get-property (point) "Config")))
+	  (when this-config
+	    (if config
+		(setq
+		 config
+		 (concat config " : " this-config))
+	    (setq config this-config)))))
 	(when (not config) (setq config superman-default-config)))
       config)))
 ;;}}}

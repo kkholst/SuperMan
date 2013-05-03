@@ -300,7 +300,8 @@ the `superman-home'.")
 
 (defun superman-get-property  (pom property &optional inherit literal-nil)
   "Read property and remove leading and trailing whitespace."
-  (let ((prop
+  (let* ((case-fold-search t)
+	 (prop
 	 (if (not (markerp pom))
 	     (org-entry-get pom property inherit literal-nil)
 	   (if (marker-buffer pom)
