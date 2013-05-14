@@ -1,3 +1,11 @@
+* COMMENT Beamer parameters
+** Frames
+The variable org-beamer-frame-level defines which headline level is
+translated into a beamer frame environement. It is however overwritten
+by the "H" value in the options line. Thus, to make level three
+headlines frames put #+OPTIONS: H:3 (and don't forget "\C-c\C-c").
+For more details see [[file:~/emacs-genome/genes/org-mode/lisp/ox-beamer.el::%3B%3B%20`org-beamer-frame-level'%20(or%20"H"%20value%20in%20the%20OPTIONS%20line).][file:~/emacs-genome/genes/org-mode/lisp/ox-beamer.el::;; `org-beamer-frame-level' (or "H" value in the OPTIONS line).]]
+  
 * Section 1
 ** subSection 1 
 *** Slide 1
@@ -12,6 +20,17 @@ M-j to export to latex and start latexmk
 C-u M-j to debug
 #+END_SRC
 
+*** Slide 3 
+
+#+BEGIN_SRC R :results graphics  :file "~/emacs-genome/genes/SuperMan/projects/Kal-El/test-graph.pdf" :exports results :session R :cache yes 
+plot(1,1)
+#+END_SRC
+
+#+ATTR_LATEX: :width .7\textwidth
+#+RESULTS[<2013-04-10 09:53:57> 37b6ae0f45b49503920c92cda5c9b9c8a5cb32fc]:
+[[file:~/emacs-genome/genes/SuperMan/projects/Kal-El/test-graph.pdf]]
+
+* COMMENT LaTeX header
 #+TITLE: Power presentation
 #+Author: Superman
 #+DATE: \today
@@ -79,5 +98,5 @@ C-u M-j to debug
 #+EXPORT_EXCLUDE_TAGS: noexport
 #+LaTeX_HEADER: \itemsep2pt
 #+COLUMNS: %40ITEM %10BEAMER_env(Env) %9BEAMER_envargs(Env Args) %4BEAMER_col(Col) %10BEAMER_extra(Extra)
-#+PROPERTY: session *R* 
+#+PROPERTY: session R
 #+PROPERTY: cache yes
