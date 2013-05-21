@@ -73,6 +73,10 @@ Else return FILE as it is."
       (file-relative-name (expand-file-name file) (expand-file-name dir))
     file))
 
+(defun superman-git-branch ()
+  (interactive)
+  (message "FixMe"))
+
 (defun superman-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
   (with-temp-buffer
