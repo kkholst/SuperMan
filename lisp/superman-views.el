@@ -607,7 +607,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		  (assoc project superman-project-alist)
 		(or project
 		    superman-current-project
-		    (superman-switch-to-project 'force nil t))))
+		    (superman-switch-to-project nil t))))
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 ;; (org-agenda-window-setup 'current-window)
@@ -1173,6 +1173,33 @@ current section."
     (superman-capture-mode))
 
 ;;}}}
+;;{{{ Switch between projects
+
+(defvar superman-project-history nil
+  "List of projects that were previously selected
+ in the current emacs session.")
+
+(defun superman-next-project (&optional backwards)
+  "Switch to next project in `superman-project-history'"
+  (interactive "P")
+  (let* ((phist
+	  (member (car superman-current-project)
+		  (if backwards
+		      (reverse superman-project-history)
+		    superman-project-history)))
+	 (next (cadr phist)))
+    (when next
+    (superman-switch-to-project
+     (assoc
+      next
+      superman-project-alist)))))
+
+(defun superman-previous-project ()
+  "Switch to previous project in `superman-project-history'."
+  (interactive)
+  (superman-next-project t))
+
+;;}}}
 ;;{{{ View commands (including redo and git) 
 
 (defun superman-redo ()
@@ -1659,9 +1686,10 @@ not in a section prompt for section first.
       (re-search-forward cat nil t))
     (if fun
 	(funcall (cadr fun) pro)
-      (let* ((cat-point (superman-cat-point))
-	     (props (superman-view-property-keys))
-	     (balls (get-text-property cat-point 'balls)))
+      (let* (
+	     ;; (cat-point (superman-cat-point))
+	     (props (superman-view-property-keys)))
+	     ;; (balls (if cat-point (get-text-property cat-point 'balls))))
 	(superman-capture
 	 pro
 	 cat

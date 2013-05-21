@@ -273,7 +273,7 @@ the `superman-home'.")
   (interactive)
   (let ((pro (superman-project-at-point)))
     (if pro
-	(superman-switch-to-project nil pro nil))))
+	(superman-switch-to-project pro nil))))
 
 (defun superman-forward-project ()
   (interactive)
@@ -634,7 +634,7 @@ Examples:
 	 (palist (if (or category state)
 		     (delq nil (mapcar testfun superman-project-alist))
 		   superman-project-alist)))
-    (delete-dups (delq nil (mapcar '(lambda (x)
+    (delete-dups (delq nil (mapcar #'(lambda (x)
 				      (let ((f (superman-get-index x)))
 					(when (and (or not-exist-ok (file-exists-p f))
 						   (or (not extension)
@@ -707,20 +707,18 @@ Examples:
       (superman-switch-to-project)
     (superman-switch-config)))
 
-(defun superman-switch-to-project (&optional force project noselect)
+(defun superman-switch-to-project (&optional project noselect)
   "Select project via `superman-select-project', activate it
  via `superman-activate-project',  find the associated index file.
 
-Unless NOSELECT is set the next window config of project.
+Unless NOSELECT is nil, set the next window config of project.
 If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
-	 (change-maybe (or force
-			   superman-switch-always
-			   (not superman-current-project)))
-	 (pro (or project (if change-maybe (superman-select-project) curpro)))
+	 (pro (or project (superman-select-project)))
 	 (stay (eq pro curpro)))
     (unless stay
+      (add-to-list 'superman-project-history  (car pro))
       (superman-save-project curpro)
       (superman-activate-project pro))
     (if noselect

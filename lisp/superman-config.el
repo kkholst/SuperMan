@@ -171,7 +171,7 @@ find the next window configuration."
   (interactive)
   (let* ((pro (or project
 		  superman-current-project
-		  (superman-switch-to-project 'force nil t)))
+		  (superman-switch-to-project nil t)))
 	 (position (when (integerp position) position)) 
 	 (config-list (superman-distangle-config-list
 		       (superman-read-config pro)))
@@ -350,7 +350,7 @@ find the next window configuration."
   (interactive)
   (let* ((pro (or project
 		  superman-current-project
-		  (superman-switch-to-project 'force nil t)))
+		  (superman-switch-to-project nil t)))
 	 (rsync-list (superman-distangle-config
 		      (superman-read-rsync pro)))
 	 (rsync-cmd (when rsync-list

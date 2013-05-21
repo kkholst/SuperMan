@@ -40,8 +40,8 @@
 (setq superman-balls
       '((todo ("width" 9) ("face" superman-get-todo-face))
 	(hdr ("width" 27) ("face" font-lock-function-name-face))
-	("lastvisit" ("fun" superman-trim-date) ("face" font-lock-type-face) ("sort-key" t))
-	("others" ("width" (30) ("face" font-lock-keyword-face)))))
+	("lastvisit" ("fun" superman-trim-date) ("width" 17) ("face" font-lock-type-face) ("sort-key" t))
+	("others" ("width" (44) ("face" font-lock-keyword-face)))))
 
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
@@ -68,7 +68,7 @@
 	      (superman-property-at-point
 	       (superman-property 'nickname) nil)
 	      superman-project-alist)))
-    (superman-switch-to-project 'force pro)))
+    (superman-switch-to-project pro)))
 
 (defun superman-get-todo-face (kwd)
   (or (org-face-from-face-or-color

@@ -348,7 +348,7 @@ To undo all this you can try to call 'superman-delete-project'. "
     (save-restriction
       (let ((pro (or project
 		     superman-current-project
-		     (superman-switch-to-project 'force nil t)))
+		     (superman-switch-to-project nil t)))
 	    cmd)
 	(superman-goto-project pro "Configuration" 'create nil nil nil)
 	(org-narrow-to-subtree)
