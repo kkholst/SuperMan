@@ -64,8 +64,17 @@ that never should get git controlled.")
 	(replace-regexp-in-string
 	 "\n" ""
 	 (shell-command-to-string
-	  (concat "cd " dir "; git rev-parse --show-toplevel "))))))
+	  (concat "cd " dir "; " superman-cmd-git " rev-parse --show-toplevel "))))))
 
+(defun superman-git-branches (dir)
+  (let* ((branch-list
+	 (delete "" (split-string
+		     (shell-command-to-string
+		      (concat "cd " dir "; " superman-cmd-git " branch")) "\n")))
+	 (master (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list)))
+	 (others (delete master branch-list)))
+    (cons master others)))
+    
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
 Else return FILE as it is."

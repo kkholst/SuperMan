@@ -247,6 +247,19 @@ and the keybinding to initialize git control otherwise."
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
 
+(defun superman-view-branch (project)
+  "Insert the git branch(es) if project is git controlled"
+  (when (superman-git-p loc)
+    (let* ((loc (get-text-property (point-min) 'git-dir))
+	   (branches (superman-git-branches loc))
+	   (master (car branches))
+	   (others (mapconcat '(lambda (x)x) (cdr branches) ""))
+	   (branch-string (concat control "\nBranch: [" master "] " others)))
+      (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
+	branch-string)))
+
+
+
 (defun superman-view-others (project)
   "Insert the names and emails of the others (if any)." 
   (let ((pro (or project (superman-view-current-project)))
@@ -845,6 +858,7 @@ Value is the formatted string with text-properties (special balls)."
   (let ((hdr  (concat "\n\n"
 		      (superman-view-others pro)
 		      (superman-view-control pro)
+		      (superman-view-branch pro)
 		      ;; "\n"
 		      ;; (superman-view-show-hot-keys)
 		      )))
