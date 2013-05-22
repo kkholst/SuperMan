@@ -254,9 +254,12 @@ and the keybinding to initialize git control otherwise."
 	   (branches (superman-git-branches loc))
 	   (master (car branches))
 	   (others (mapconcat '(lambda (x)x) (cdr branches) ""))
-	   (branch-string (concat control "\nBranch: [" master "] " others)))
+	   (branch-string (concat "\nBranch: [" master "] " others)))
       (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
-	branch-string)))
+      (put-text-property (+ 3 (length "Branch:"))
+			 (+ (length "Branch:") 3 (length master))
+			 'face 'font-lock-warning-face branch-string)
+      branch-string)))
 
 
 
