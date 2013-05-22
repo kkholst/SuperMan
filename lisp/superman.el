@@ -56,7 +56,7 @@
   (let* ((prop-list '(((superman-property 'location) . nil) ((superman-property 'index) . nil) ((superman-property 'category) . nil) ((superman-property 'others) . nil) ((superman-property 'publishdirectory) . nil)))
 	 (prop (completing-read "Set property: " prop-list))
 	 (pom (org-get-at-bol 'org-hd-marker))
-	 (curval (org-entry-get pom prop))
+	 (curval (ouperrg-entry-get pom prop))
 	  ;; (if  (completing-read (concat "Value for " prop ": ")
 	 (val (read-string (concat "Value for " prop ": ") curval)))
     (org-entry-put pom prop val))

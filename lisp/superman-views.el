@@ -515,6 +515,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (pp (point-at-bol))
 	 (col-start 0)
 	 col-width
+	 (sort-fold-case t) 
 	 (cols (cdr (get-text-property (point-at-bol) 'columns)))
 	 (pos (superman-current-subcat-pos))
 	 key
@@ -525,6 +526,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (while (> cc (+ col-start (car cols)))
 	(setq col-start (+ col-start (car cols)))
 	(setq cols (cdr cols)))
+      ;; the first two characters of each column are blank
+      ;; thus, we shift by 2
+      (setq col-start (+ 2 col-start))
       (setq col-width (- (car cols) 1))
       (goto-char pos)
       (goto-char (next-single-property-change (point-at-eol) 'org-marker))
@@ -1009,6 +1013,7 @@ current section."
   (interactive "P")
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (catp (org-get-at-bol 'cat))
+	 (org-support-shift-select t)
 	 (curcat (when catp (superman-current-cat))))
     (when (or catp marker)
       (save-excursion
@@ -1265,7 +1270,7 @@ current section."
     (when pos
 	(progn (goto-char pos) (beginning-of-line)))))
 
-(defun superman-view-delete-entry (&optional dont-prompt dont-redo)
+(defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
   (interactive)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
@@ -1276,9 +1281,10 @@ current section."
       (yes-or-no-p "Delete this entry?"))
     (set-window-configuration scene)
     (when file
-      (when (yes-or-no-p
-	     (concat "Delete file "
-		     (file-name-nondirectory file)))
+      (when (and do-delete-file
+		 (yes-or-no-p
+		  (concat "Delete file "
+			  (file-name-nondirectory file))))
 	(if (string-match
 	     (superman-get-property marker "GitStatus")
 	     "Committed\\|Modified")
@@ -1299,7 +1305,8 @@ current section."
   (interactive)
   (let ((beg (previous-single-property-change (point) 'cat))
 	(buffer-read-only nil)
-	(end (next-single-property-change (point) 'cat)))
+	(end (or (next-single-property-change (point) 'cat)
+		 (point-max))))
     (narrow-to-region beg end)
     (when (yes-or-no-p "Delete all the marked entries in this section? ")
       (superman-loop 'superman-view-delete-entry '(t t) beg end 'marked)
@@ -1523,6 +1530,7 @@ according to git."
 		 (current-status
 		  (superman-get-property pom "GitStatus")))
 	    (unless (string= status current-status)
+	      (org-entry-put pom (superman-property 'gitstatus) status)
 	      (when (or
 		     (string= (downcase status) "modified")
 		     (and (stringp current-status)
@@ -1695,7 +1703,7 @@ not in a section prompt for section first.
 	 cat
 	 `("Item"
 	   ,(mapcar #'(lambda (p) (list p nil)) props)))))))
-	  
+
 
 ;;}}}
 ;;{{{ easy menu

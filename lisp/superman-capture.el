@@ -225,6 +225,55 @@ turn it off."
 ;; (add-to-list 'org-capture-templates
 	     ;; `(,superman-capture-prefix "Project management") 'append)
 
+(defun superman-capture-file-list (&optional project file-list level)
+  "Capture a FILE-LIST of files in PROJECT. Add them all to the project
+index file as LEVEL headings. Then show the updated project view buffer."
+  (interactive)
+  (let* ((pro (or project
+		  superman-view-current-project
+		  (superman-select-project)))
+	 (gitp (superman-git-toplevel (concat
+				       (superman-get-location pro)
+				       (car pro))))
+	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (heading (if (and marker (superman-current-cat))
+		      marker
+		    "Documents"))
+	 (pro-file-list-buffer (concat "*File-list-" (car pro) "*"))
+	 (level (or level 3))
+	 (file-list (or file-list
+			(and (buffer-live-p pro-file-list-buffer)
+			     (progn (switch-to-buffer pro-file-list-buffer)
+				    file-list-current-file-list))
+			(superman-file-list pro))))
+    ;; goto index file
+    (if heading
+	(cond ((stringp heading)
+	       (superman-goto-project pro heading 'create nil nil nil))
+	      ((markerp heading)
+	       (progn (switch-to-buffer (marker-buffer heading))
+		      (goto-char heading))))
+      (find-file (superman-get-index pro))
+      (widen)
+      (show-all)
+      (goto-char (point-max)))
+    (while file-list
+      (let* ((el (car file-list))
+	     (fname (file-list-make-file-name el)))
+	(message (concat "adding " fname))
+	(insert (make-string level (string-to-char "*"))
+		" "
+		(car el)
+		"\n:PROPERTIES:"
+		"\n:FileName: [[" fname "]]"
+		"\n:GitStatus: Unknown"
+		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
+		"\n:END:\n\n"))
+      (setq file-list (cdr file-list)))
+    (superman-view-project pro)))
+
+	      
+
 (defun superman-capture-document (&optional project)
   (interactive)
   (let* ((pro (or project
