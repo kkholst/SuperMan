@@ -259,7 +259,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
       (goto-char (point-max)))
     (while file-list
       (let* ((el (car file-list))
-	     (fname (file-list-make-file-name el)))
+	     (fname (file-list-make-file-name~ el)))
 	(message (concat "adding " fname))
 	(insert (make-string level (string-to-char "*"))
 		" "
@@ -270,7 +270,8 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 		"\n:END:\n\n"))
       (setq file-list (cdr file-list)))
-    (superman-view-project pro)))
+    (superman-view-project pro)
+    (superman-redo)))
 
 	      
 
