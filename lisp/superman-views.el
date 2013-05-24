@@ -253,7 +253,7 @@ and the keybinding to initialize git control otherwise."
     (let* ((loc (get-text-property (point-min) 'git-dir))
 	   (branches (superman-git-branches loc))
 	   (master (car branches))
-	   (others (mapconcat '(lambda (x)x) (cdr branches) ""))
+	   (others (mapconcat '(lambda (x)x) (cdr branches) " "))
 	   (branch-string (concat "\nBranch: [" master "] " others)))
       (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
       (put-text-property (+ 3 (length "Branch:"))
@@ -1671,6 +1671,8 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gs" 'superman-view-git-search)
 (define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "GU" 'superman-view-git-update-status-forced)
+(define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
+(define-key superman-view-mode-map "GBn" 'superman-git-new-branch)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
 
 
@@ -1751,6 +1753,8 @@ not in a section prompt for section first.
      ["Git log (tagged versions)" superman-view-git-log-decorationonly t]
      ["Git search" superman-view-git-search t]
      ["Git push" superman-git-push t]
+     ["Git checkout branch" superman-git-checkout-branch t]
+     ["Git new branch" superman-git-new-branch t]
      ["Git init" superman-view-git-init t])
     ("Columns (balls)"
      ["New column" superman-new-ball t]

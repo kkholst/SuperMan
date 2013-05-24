@@ -68,13 +68,46 @@ that never should get git controlled.")
 
 (defun superman-git-branches (dir)
   (let* ((branch-list
-	 (delete "" (split-string
-		     (shell-command-to-string
-		      (concat "cd " dir "; " superman-cmd-git " branch")) "\n")))
+	  (mapcar #'(lambda (x)
+		     (replace-regexp-in-string
+		      "^[ \t\n]+\\|[ \t\n]+$" "" x nil t))
+	  (delete "" (split-string
+		      (shell-command-to-string
+		       (concat "cd " dir "; " superman-cmd-git " branch")) "\n"))))
 	 (master (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list)))
 	 (others (delete master branch-list)))
     (cons master others)))
-    
+
+(defun superman-git-new-branch (&optional dir)
+  "Create a new branch in git directory DIR. If DIR is nil
+use the location of the current project, if no project is current prompt for project."
+  (interactive)
+  (let ((dir (or dir
+		 (superman-project-home
+		  (or superman-current-project (superman-select-project))))))
+    (message
+     (shell-command-to-string
+      (concat "cd " dir "; " superman-cmd-git " branch " (read-string "Name of new branch: ") "\n")))
+    (when superman-view-mode (superman-redo))))
+
+(defun superman-git-checkout-branch (&optional dir branch)
+  "Checkout branch in git directory DIR. If DIR is nil
+use the location of the current project, if no project is current prompt for project."
+  (interactive)
+  (let* ((dir (or dir
+		  (superman-project-home
+		   (or superman-current-project (superman-select-project)))))
+	 (branch (or branch
+		     (let ((branches (superman-git-branches dir)))
+		       (completing-read "Choose branch to checkout: "
+					(mapcar* 'cons branches (make-list (length branches) `()))
+					nil t)))))
+    (message
+     (shell-command-to-string
+      (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")))
+    (when superman-view-mode (superman-redo))))
+
+   
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
 Else return FILE as it is."
@@ -83,9 +116,6 @@ Else return FILE as it is."
     file))
 
 
-(defun superman-git-branch ()
-  (interactive)
-  (message "FixMe"))
 
 (defun superman-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
