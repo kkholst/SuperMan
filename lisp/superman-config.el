@@ -118,19 +118,19 @@ Returns the corresponding buffer."
 	  (if superman-sticky-config superman-sticky-config nil)))
     (save-window-excursion
       (save-restriction
-	(superman-goto-project project "Configuration" 'create nil 'narrow nil)
-	(goto-char (point-min))
-	(while (outline-next-heading)
-	  (let ((this-config (superman-get-property (point) "Config")))
-	  (when this-config
-	    (if config
-		(setq
-		 config
-		 (concat config " : " this-config))
-	    (setq config this-config)))))
-	(when (not config) (setq config superman-default-config)))
-      config)))
-;;}}}
+	(when (superman-goto-project project "Configuration" nil nil 'narrow nil)
+	  (goto-char (point-min))
+	  (while (outline-next-heading)
+	    (let ((this-config (superman-get-property (point) "Config")))
+	      (when this-config
+		(if config
+		    (setq
+		     config
+		     (concat config " : " this-config))
+		  (setq config this-config)))))
+	  (when (not config) (setq config superman-default-config)))
+	config))))
+  ;;}}}
 
 ;;{{{ smashing window configs
 (defun superman-smash-windows (window-config project)
@@ -323,7 +323,7 @@ find the next window configuration."
 (defun superman-read-rsync (project)
   (let* (rsync)
     (save-window-excursion
-      (superman-goto-project project "Configuration" 'create)
+      (superman-goto-project project "Configuration" nil)
       (goto-char (point-min))
       (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
 	(if rsync

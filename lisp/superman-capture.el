@@ -231,6 +231,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
   (interactive)
   (let* ((pro (or project
 		  superman-view-current-project
+		  superman-current-project
 		  (superman-select-project)))
 	 (gitp (superman-git-toplevel (concat
 				       (superman-get-location pro)
@@ -241,11 +242,13 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		    "Documents"))
 	 (pro-file-list-buffer (concat "*File-list-" (car pro) "*"))
 	 (level (or level 3))
-	 (file-list (or file-list
-			(and (buffer-live-p pro-file-list-buffer)
-			     (progn (switch-to-buffer pro-file-list-buffer)
-				    file-list-current-file-list))
-			(superman-file-list pro))))
+	 (file-list (cond (file-list)
+			  ((eq major-mode 'file-list-completion-mode)
+			   file-list-current-file-list)
+			  ((and (buffer-live-p pro-file-list-buffer)
+				(progn (switch-to-buffer pro-file-list-buffer)
+				       file-list-current-file-list))
+			   (superman-file-list pro)))))
     ;; goto index file
     (if heading
 	(cond ((stringp heading)

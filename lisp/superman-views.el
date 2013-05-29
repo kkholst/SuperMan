@@ -242,7 +242,7 @@ and the keybinding to initialize git control otherwise."
 	 (control (if (superman-git-p loc)
 		      (concat "Version control: Git repository at "
 			      ;;FIXME: would like to have current git status
-			      (superman-git-toplevel loc))
+			       "[[" (superman-git-toplevel loc) "]]")
 		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
