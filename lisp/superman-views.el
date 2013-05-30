@@ -253,7 +253,7 @@ and the keybinding to initialize git control otherwise."
     (let* ((loc (get-text-property (point-min) 'git-dir))
 	   (branches (superman-git-branches loc))
 	   (master (car branches))
-	   (others (mapconcat '(lambda (x)x) (cdr branches) " "))
+	   (others (mapconcat #'(lambda (x)x) (cdr branches) " "))
 	   (branch-string (concat "\nBranch: [" master "] " others)))
       (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
       (put-text-property (+ 3 (length "Branch:"))
@@ -1277,15 +1277,29 @@ current section."
 
 (defun superman-next-entry ()
   (interactive)
-  (goto-char
-   (or (next-single-property-change (point-at-eol) 'org-hd-marker)
-       (point))))
+  ;; check if current section is folded
+  (let ((beg (point-at-bol))
+	(end (or (next-single-property-change (point-at-eol) 'cat)
+		 (point-max))))
+    (if (overlays-in beg end)
+	(goto-char end)
+      (goto-char
+       (or (next-single-property-change (point-at-eol) 'org-hd-marker)
+	   (point))))))
 
 (defun superman-previous-entry ()
   (interactive)
-  (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
-    (when pos
-	(progn (goto-char pos) (beginning-of-line)))))
+  ;; check if current section is folded
+  (let ((end (point-at-eol))
+	(beg (or (previous-single-property-change (point-at-bol) 'cat)
+		 (point-min))))
+    (if (overlays-in beg end)
+	(progn 
+	  (goto-char beg)
+	  (beginning-of-line))
+      (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
+	(when pos
+	  (progn (goto-char pos) (beginning-of-line)))))))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
   (interactive)
