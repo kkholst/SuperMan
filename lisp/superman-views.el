@@ -1279,10 +1279,13 @@ current section."
   (interactive)
   ;; check if current section is folded
   (let ((beg (point-at-bol))
-	(end (or (next-single-property-change (point-at-eol) 'cat)
+	(end (or (next-single-property-change (point-at-eol) 'subcat)
+		 (next-single-property-change (point-at-eol) 'cat)
 		 (point-max))))
     (if (overlays-in beg end)
-	(goto-char end)
+	(if (get-text-property (point-at-bol) 'cat)
+	    (goto-char (next-single-property-change (point-at-eol) 'cat))
+	  (goto-char end))
       (goto-char
        (or (next-single-property-change (point-at-eol) 'org-hd-marker)
 	   (point))))))
@@ -1291,15 +1294,19 @@ current section."
   (interactive)
   ;; check if current section is folded
   (let ((end (point-at-eol))
-	(beg (or (previous-single-property-change (point-at-bol) 'cat)
+	(beg (or (previous-single-property-change (point-at-bol) 'subcat)
+		 (previous-single-property-change (point-at-bol) 'cat)
 		 (point-min))))
     (if (overlays-in beg end)
 	(progn 
-	  (goto-char beg)
+	  (if (get-text-property (point-at-bol) 'cat)
+	      (goto-char (previous-single-property-change (point-at-bol) 'cat))
+	    (goto-char beg))
 	  (beginning-of-line))
       (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
 	(when pos
-	  (progn (goto-char pos) (beginning-of-line)))))))
+	  (progn (goto-char pos) (beginning-of-line))))))
+  (beginning-of-line))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
   (interactive)
