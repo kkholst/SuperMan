@@ -94,7 +94,8 @@ Column showing the todo-state
 	("Mail" superman-mail-balls)
 	("Tasks" superman-task-balls)
 	("Bookmarks" superman-bookmark-balls)
-	("Meetings" superman-meeting-balls)))
+	("Meetings" superman-meeting-balls)
+	("GitFiles" superman-document-balls)))
 
 ;; (list "Description" "GitStatus" "LastCommit" "FileName"))
 (defun superman-dont-trim (x len) x)
@@ -1300,7 +1301,8 @@ current section."
     (if (overlays-in beg end)
 	(progn 
 	  (if (get-text-property (point-at-bol) 'cat)
-	      (goto-char (previous-single-property-change (point-at-bol) 'cat))
+	      (goto-char (previous-single-property-change (point-at-bol) 'subcat))
+	      ;;(forward-line)
 	    (goto-char beg))
 	  (beginning-of-line))
       (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
@@ -1679,6 +1681,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
 ;; Git control
+(define-key superman-view-mode-map "GA" 'superman-capture-git-section)
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
 (define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
@@ -1766,6 +1769,7 @@ not in a section prompt for section first.
     ["Visit index buffer" superman-view-index t]
     ["File list" superman-view-file-list t]
     ("Git"
+     ["Git file-list" superman-capture-git-section t]
      ["Git update" superman-view-git-update-status t]
      ["Git commit" superman-view-git-commit t]
      ["Git commit all" superman-view-git-commit-all t]

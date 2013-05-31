@@ -460,7 +460,7 @@ and others."
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
 	  (find-file index)
-	  (insert "Index of project " (car pro) " (this line can be deleted.)\n")
+	  (insert "***** Index of project " (car pro) " (this line can be deleted.)\n")
 	  (save-buffer))
 	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
