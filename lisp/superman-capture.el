@@ -553,9 +553,20 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (headingfound (superman-goto-project pro "GitFiles"))
 	 (level (or level 3))
-	 (prevdir nil)
-	 (file-list (delete "" (split-string (shell-command-to-string (concat "cd " gitdir ";" superman-cmd-git " ls-files")) "\n"))))
+	 (file-list (delete "" (split-string (shell-command-to-string (concat "cd " gitdir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+	 (file-hash (make-hash-table :test 'equal)))
     ;; goto index file
+    (while file-list
+      (let* ((el (car file-list))
+	     (elsplit (split-string el "/"))
+	     (filename (car (last elsplit)))
+	     (direl (reverse (cdr (reverse elsplit))))
+	     (dir (if (> (length elsplit) 1)
+		      (mapconcat 'identity direl "/" )
+		    "/")))
+      (puthash dir (push filename (gethash dir file-hash)) file-hash)
+      (setq file-list (cdr file-list)))
+      )
 
     (if headingfound
 	(progn
@@ -568,30 +579,19 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
     (widen)
     (show-all)
     (goto-char (point-max))  
-    (while file-list
-      (let* ((el (car file-list))
-	     (elsplit (split-string el "/"))
-	     (filename (car (last elsplit)))
-	     (direl (reverse (cdr (reverse elsplit))))
-	     (dir (if (> (length elsplit) 1)
-		      (mapconcat 'identity direl "/" )
-		    "/"))
-	     )
-	(if (not (string= dir prevdir))
-	    (progn 
-	      (setq prevdir dir)
-	      (insert (concat "** " dir "\n\n"))))
-	;;	     (fname (file-list-make-file-name~ el)))
-	(message (concat "adding " el))
-	(insert (make-string level (string-to-char "*"))
-		" "
-		filename
-		"\n:PROPERTIES:"
-		"\n:FileName: [[" (expand-file-name el gitdir) "]]"
-		"\n:GitStatus: Unknown"
-		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
-		"\n:END:\n\n"))
-      (setq file-list (cdr file-list)))
+    (maphash (lambda (keys vv) 	       
+	       (insert (concat "** " keys "\n\n"))
+	       ;;(message (concat "adding " el))
+	       (while vv
+		 (insert (make-string level (string-to-char "*"))
+			 " "
+			 (car vv)
+			 "\n:PROPERTIES:"
+			 "\n:FileName: [[" (expand-file-name (concat keys "/" (car vv)) gitdir) "]]"
+			 "\n:GitStatus: Unknown"
+			 ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
+			 "\n:END:\n\n")
+		 (setq vv (cdr vv)))) file-hash)
     (superman-view-project pro)
     (superman-redo)))
 
