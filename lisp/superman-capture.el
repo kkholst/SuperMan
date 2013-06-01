@@ -268,7 +268,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		" "
 		(car el)
 		"\n:PROPERTIES:"
-		"\n:FileName: [[" fname "]]"
+		"\n:FileName: [["  (abbreviate-file-name fname) "]]"
 		"\n:GitStatus: Unknown"
 		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 		"\n:END:\n\n"))
@@ -292,7 +292,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
     (superman-capture
      pro
      heading
-     `("Document" (("FileName" ,(concat "[[" file "]]"))
+     `("Document" (("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
 
@@ -550,7 +550,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 				       (car pro))))
 	 (gitdir (or git-dir
 		     (read-directory-name (concat "Directory : "))))
-	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (gittop (superman-git-toplevel gitdir))
 	 (headingfound (superman-goto-project pro "GitFiles"))
 	 (level (or level 3))
 	 (file-list (delete "" (split-string (shell-command-to-string (concat "cd " gitdir ";" superman-cmd-git " ls-files --full-name")) "\n")))
@@ -587,7 +587,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 			 " "
 			 (car vv)
 			 "\n:PROPERTIES:"
-			 "\n:FileName: [[" (expand-file-name (concat keys "/" (car vv)) gitdir) "]]"
+			 "\n:FileName: [[" (abbreviate-file-name (expand-file-name (concat keys "/" (car vv)) gittop)) "]]"
 			 "\n:GitStatus: Unknown"
 			 ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 			 "\n:END:\n\n")
