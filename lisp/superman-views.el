@@ -243,7 +243,7 @@ and the keybinding to initialize git control otherwise."
 	 (control (if (superman-git-p loc)
 		      (concat "Version control: Git repository at "
 			      ;;FIXME: would like to have current git status
-			       "[[" (superman-git-toplevel loc) "]]")
+			       "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
 		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
@@ -1276,6 +1276,7 @@ current section."
 	  (org-todo)))
       (superman-view-redo-line))))
 
+
 (defun superman-next-entry ()
   (interactive)
   ;; check if current section is folded
@@ -1291,24 +1292,35 @@ current section."
        (or (next-single-property-change (point-at-eol) 'org-hd-marker)
 	   (point))))))
 
+(defun superman-next-entry ()
+  (interactive)
+  ;; check if current section is folded
+  (let* ((beg (point-at-bol))
+	(nextsubcat (or (next-single-property-change (point-at-eol) 'subcat) (point-max)))
+	(nextcat (or (next-single-property-change (point-at-eol) 'cat) (point-max)))
+	(closecat (min nextcat nextsubcat)))
+    (if (overlays-in beg closecat)
+	;; (if (get-text-property (point-at-bol) 'cat)
+	;;     (goto-char nextcat)
+	(goto-char closecat)
+    (goto-char
+       (or (next-single-property-change (point-at-eol) 'org-hd-marker)
+	   (point))))))
+
 (defun superman-previous-entry ()
   (interactive)
   ;; check if current section is folded
-  (let ((end (point-at-eol))
-	(beg (or (previous-single-property-change (point-at-bol) 'subcat)
-		 (previous-single-property-change (point-at-bol) 'cat)
-		 (point-min))))
-    (if (overlays-in beg end)
-	(progn 
-	  (if (get-text-property (point-at-bol) 'cat)
-	      (goto-char (previous-single-property-change (point-at-bol) 'subcat))
-	      ;;(forward-line)
-	    (goto-char beg))
-	  (beginning-of-line))
-      (let ((pos (previous-single-property-change (point-at-bol) 'org-hd-marker)))
-	(when pos
-	  (progn (goto-char pos) (beginning-of-line))))))
-  (beginning-of-line))
+  (let* ((end (point-at-eol))
+	(prevsubcat (or (previous-single-property-change (point-at-bol) 'subcat) (point-min)))
+	(prevcat (or (previous-single-property-change (point-at-bol) 'cat) (point-min)))
+	(closecat (max prevcat prevsubcat)))	
+    (if (overlays-in closecat end)
+	(goto-char closecat)
+      (goto-char
+       (or (previous-single-property-change (point-at-bol) 'org-hd-marker)
+	    (point-min))))
+    (beginning-of-line)
+    ))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
   (interactive)
@@ -1400,8 +1412,12 @@ current section."
 
 (defun superman-view-git-history ()
   (interactive)
-  (let* ((dir (get-text-property (point-min) 'git-dir))
-	(bufn (concat "*history: " dir "*"))
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (dir 
+	  (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
+	  (get-text-property (point-min) 'git-dir)))
+	 (curdir default-directory)
+	 (bufn (concat "*history: " dir "*"))
 	)
     (when dir
     ;; (vc-print-log-internal
@@ -1410,9 +1426,11 @@ current section."
       ;;  nil nil 2000)      
       ;; (message dir)
       (save-window-excursion
-	(superman-view-index)
+	;;(superman-view-index)
+	(setq default-directory dir)
 	(vc-git-print-log dir bufn t)
 	)
+      (setq default-directory curdir)
       (switch-to-buffer bufn)
       (vc-git-log-view-mode)
 )))
@@ -1445,6 +1463,19 @@ current section."
     (split-window-vertically)
       (other-window 1)
     (superman-file-list pro)))
+
+(defun superman-view-dired ()
+  (interactive)
+  (let* (
+	 (m (org-get-at-bol 'org-hd-marker))
+	 (dir 
+	  (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
+	      (get-text-property (point-min) 'git-dir)
+	      (default-directory)))
+	 )
+    ;; (split-window-vertically)
+    ;;   (other-window 1)
+    (find-file dir)))
 
 (defun superman-view-git-init ()
   (interactive)
@@ -1660,6 +1691,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "i" 'superman-view-index)
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
+(define-key superman-view-mode-map "f" 'superman-view-dired)
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
@@ -1767,6 +1799,7 @@ not in a section prompt for section first.
     ["Move item up" superman-one-up t]
     ["Move item down" superman-one-down t]
     ["Visit index buffer" superman-view-index t]
+    ["Dired" superman-view-dired t]
     ["File list" superman-view-file-list t]
     ("Git"
      ["Git file-list" superman-capture-git-section t]
