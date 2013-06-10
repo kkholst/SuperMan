@@ -1278,20 +1278,6 @@ current section."
       (superman-view-redo-line))))
 
 
-(defun superman-next-entry ()
-  (interactive)
-  ;; check if current section is folded
-  (let ((beg (point-at-bol))
-	(end (or (next-single-property-change (point-at-eol) 'subcat)
-		 (next-single-property-change (point-at-eol) 'cat)
-		 (point-max))))
-    (if (overlays-in beg end)
-	(if (get-text-property (point-at-bol) 'cat)
-	    (goto-char (next-single-property-change (point-at-eol) 'cat))
-	  (goto-char end))
-      (goto-char
-       (or (next-single-property-change (point-at-eol) 'org-hd-marker)
-	   (point))))))
 
 (defun superman-next-entry ()
   (interactive)
