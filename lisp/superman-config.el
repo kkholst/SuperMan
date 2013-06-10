@@ -173,9 +173,11 @@ find the next window configuration."
 		  superman-current-project
 		  (superman-switch-to-project nil t)))
 	 (position (when (integerp position) position)) 
-	 (config-list (superman-distangle-config-list
-		       (superman-read-config pro)))
-	 window-config)
+	 (proconfig (superman-read-config pro))
+	 (config-list (if proconfig (progn (superman-distangle-config-list
+		       proconfig)) '("PROJECT")))
+	 window-config)    
+    
     (if position
 	(setq superman-config-cycle-pos position)
       (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0

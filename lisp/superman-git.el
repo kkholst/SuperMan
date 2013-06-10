@@ -355,6 +355,8 @@ or if the file is not inside the location."
 (define-key superman-git-log-mode-map "q" 'kill-this-buffer)
 (define-key superman-git-log-mode-map "r" (lambda () (interactive) (org-agenda-redo) (superman-git-log-mode-on)))
 (define-key superman-git-log-mode-map "!" 'superman-start-shell)
+(define-key superman-git-log-mode-map [(down)] 'next-line)
+(define-key superman-git-log-mode-map [(up)] 'previous-line)
 (define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
 
 (defun superman-git-show-help ()
@@ -464,19 +466,13 @@ or if the file is not inside the location."
   (setq buffer-read-only t)))
 
 (setq superman-log-balls
-      '(("Date" ("trim" superman-trim-date (12))
-	 ("face" font-lock-string-face))
-	("Author" ("trim" superman-trim-string (13))
-	 ("face" font-lock-function-name-face))
-	("Hash"
-	 ("trim" superman-trim-string (8))
-	 ("face" font-lock-comment-face))
-	("Tag"
-	 ("trim" superman-trim-string (12))
-	 ("face" font-lock-comment-face))
-	("Comment"
-	 ("trim" superman-trim-string (50))
-	 ("face" font-lock-keyword-face))))
+      '(("Date" ("width" 10) ("face" font-lock-string-face))
+	("Hash" ("width" 10) ("face" font-lock-comment-face))
+	("Author" ("width" 20) ("face" font-lock-function-name-face))
+	("Tag" ("width" 10) ("face" font-lock-comment-face))
+	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))
+))
+
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)

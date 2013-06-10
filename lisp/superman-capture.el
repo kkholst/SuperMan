@@ -272,7 +272,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		" "
 		(car el)
 		"\n:PROPERTIES:"
-		"\n:FileName: [[" fname "]]"
+		"\n:FileName: [["  (abbreviate-file-name fname) "]]"
 		"\n:GitStatus: Unknown"
 		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 		"\n:END:\n\n"))
@@ -296,7 +296,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
     (superman-capture
      pro
      heading
-     `("Document" (("FileName" ,(concat "[[" file "]]"))
+     `("Document" (("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
 
@@ -570,5 +570,68 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
      1)))
 
 ;;}}}
+
+;;{{{ capture VC documents
+
+(defun superman-capture-git-section (&optional project git-dir level)
+  "Capture files under version control. Delete and recreate section 'GitFiles' "
+  (interactive)
+  (let* ((pro (or project
+		  superman-view-current-project
+		  superman-current-project
+		  (superman-select-project)))
+	 (gitp (superman-git-toplevel (concat
+				       (superman-get-location pro)
+				       (car pro))))
+	 (gitdir (or git-dir
+		     (read-directory-name (concat "Directory : "))))
+	 (gittop (superman-git-toplevel gitdir))
+	 (headingfound (superman-goto-project pro "GitFiles"))
+	 (level (or level 3))
+	 (file-list (delete "" (split-string (shell-command-to-string (concat "cd " gitdir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+	 (file-hash (make-hash-table :test 'equal)))
+    ;; goto index file
+    (while file-list
+      (let* ((el (car file-list))
+	     (elsplit (split-string el "/"))
+	     (filename (car (last elsplit)))
+	     (direl (reverse (cdr (reverse elsplit))))
+	     (dir (if (> (length elsplit) 1)
+		      (mapconcat 'identity direl "/" )
+		    "/")))
+      (puthash dir (push filename (gethash dir file-hash)) file-hash)
+      (setq file-list (cdr file-list)))
+      )
+
+    (if headingfound
+	(progn
+	  (forward-line -1)
+	  (org-cut-subtree)
+	  (delete-blank-lines))
+      ) (superman-goto-project pro "GitFiles" 'create nil nil nil)
+
+    (find-file (superman-get-index pro))
+    (widen)
+    (show-all)
+    (goto-char (point-max))  
+    (maphash (lambda (keys vv) 	       
+	       (insert (concat "** " keys "\n\n"))
+	       ;;(message (concat "adding " el))
+	       (while vv
+		 (insert (make-string level (string-to-char "*"))
+			 " "
+			 (car vv)
+			 "\n:PROPERTIES:"
+			 "\n:FileName: [[" (abbreviate-file-name (expand-file-name (concat keys "/" (car vv)) gittop)) "]]"
+			 "\n:GitStatus: Unknown"
+			 ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
+			 "\n:END:\n\n")
+		 (setq vv (cdr vv)))) file-hash)
+    (superman-view-project pro)
+    (superman-redo)))
+
+
+;;}}}
+
 (provide 'superman-capture)
 ;;; superman-capture.el ends here
