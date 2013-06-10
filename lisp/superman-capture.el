@@ -76,6 +76,9 @@ If JABBER is non-nil message about non-existing headings.
       (show-all))
   value))
 
+(defvar superman-setup-scene-hook nil "Hook run by superman-capture
+just before the capture buffer is given to the user.")
+
 (defun superman-capture (project heading plist &optional level)
   (let* ((what (car plist))
 	 (level (or level 3))
@@ -147,8 +150,8 @@ If JABBER is non-nil message about non-existing headings.
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (insert "\n")
     (goto-char head-point)
-    (superman-capture-mode)))
-
+    (superman-capture-mode)
+    (run-hooks 'superman-setup-scene-hook)))
 
 (defvar superman-capture-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
@@ -181,6 +184,7 @@ turn it off."
 		  (funcall thing (cdr val))))))))
 
 (defvar superman-capture-before-clean-scene-hook nil)
+
 (defun superman-clean-scene ()
   (interactive)
   (let ((scene (get-text-property (point-min) 'scene))
@@ -199,7 +203,7 @@ turn it off."
 	    (forward-line -1))
 	(end-of-line)))
     (save-buffer)
-    (run-hooks superman-capture-before-clean-scene-hook)
+    (run-hooks 'superman-capture-before-clean-scene-hook)
     (goto-char (point-min))
     (outline-next-heading)
     (delete-region (point-min) (point))
@@ -296,14 +300,32 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
 
-(defun superman-capture-project (&optional nickname)
-  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
+(defun superman-capture-project (&optional nickname category)
+  "Create a new project. If CATEGORY is nil prompt for project category with completion in existing categories.
+If NICKNAME is nil prompt for nickname.
+
 This function modifies the 'superman' and creates and visits the index file of the new project.
-To undo all this you can try to call 'superman-delete-project'. "
+To undo all this call 'superman-delete-project'. "
   (interactive)
   (superman-refresh)
   (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
-	 category)
+	 (category (or category
+		       (completing-read
+			"Category: "
+			(mapcar (lambda (x)
+				  (list x))
+				(superman-parse-project-categories))
+			nil nil)))
+	 (superman-setup-scene-hook
+	  '(lambda () 
+	     (define-key
+	       superman-capture-mode-map
+	       [(tab)]
+	       'superman-complete-project-property)))
+	 (superman-capture-before-clean-scene-hook
+	  `(lambda () (save-buffer)
+	     (superman-create-project ,nickname 'ask))))
+    ;; category)
     ;; check if nickname exists 
     (while (assoc nickname superman-project-alist)
       (setq nickname
@@ -323,6 +345,17 @@ To undo all this you can try to call 'superman-delete-project'. "
 		  ("Index" "")
 		  ("Category" ,category)))
      superman-project-level)))
+
+
+
+
+(defun superman-complete-project-property ()
+  (interactive)
+  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+    (cond ((string= (downcase curprop) (downcase (superman-property 'index)))
+	   (insert (read-file-name (concat "Set " curprop ": "))))
+	  ((string= (downcase curprop) (downcase (superman-property 'location)))
+	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
     
 (defun superman-capture-note (&optional project)
   (interactive)
@@ -362,6 +395,8 @@ To undo all this you can try to call 'superman-delete-project'. "
   (let ((pro (or project
 		 superman-view-current-project
 		 (superman-select-project)))
+	(superman-capture-before-clean-scene-hook
+	 (list 'superman-google-export-appointment))
 	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
     (superman-capture
      pro
@@ -371,9 +406,9 @@ To undo all this you can try to call 'superman-delete-project'. "
 		  ("Location" nil)
 		  ("GoogleCalendar" ,superman-google-default-calendar)
 		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
-		  ('fun 'org-todo)))))
-  (setq superman-capture-before-clean-scene-hook
-	'superman-google-export-appointment))
+		  ('fun 'org-todo))))))
+;; (setq superman-capture-before-clean-scene-hook
+;; 'superman-google-export-appointment))
 
 ;;}}}
 ;;{{{ capture synchronization commands
