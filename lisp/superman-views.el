@@ -1277,6 +1277,8 @@ current section."
 	  (org-todo)))
       (superman-view-redo-line))))
 
+
+
 (defun superman-next-entry ()
   (interactive)
   ;; check if current section is folded

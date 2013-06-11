@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; A super project to manage all the other projects
+;; SuperMan is a project which manages all your other projects
 ;; Q: Does the super project contain itself?
 ;; A: Nice question. To find some answers please read logicomix. Get it here: www.logicomix.com
 

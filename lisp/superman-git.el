@@ -68,13 +68,46 @@ that never should get git controlled.")
 
 (defun superman-git-branches (dir)
   (let* ((branch-list
-	 (delete "" (split-string
-		     (shell-command-to-string
-		      (concat "cd " dir "; " superman-cmd-git " branch")) "\n")))
+	  (mapcar #'(lambda (x)
+		     (replace-regexp-in-string
+		      "^[ \t\n]+\\|[ \t\n]+$" "" x nil t))
+	  (delete "" (split-string
+		      (shell-command-to-string
+		       (concat "cd " dir "; " superman-cmd-git " branch")) "\n"))))
 	 (master (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list)))
 	 (others (delete master branch-list)))
     (cons master others)))
-    
+
+(defun superman-git-new-branch (&optional dir)
+  "Create a new branch in git directory DIR. If DIR is nil
+use the location of the current project, if no project is current prompt for project."
+  (interactive)
+  (let ((dir (or dir
+		 (superman-project-home
+		  (or superman-current-project (superman-select-project))))))
+    (message
+     (shell-command-to-string
+      (concat "cd " dir "; " superman-cmd-git " branch " (read-string "Name of new branch: ") "\n")))
+    (when superman-view-mode (superman-redo))))
+
+(defun superman-git-checkout-branch (&optional dir branch)
+  "Checkout branch in git directory DIR. If DIR is nil
+use the location of the current project, if no project is current prompt for project."
+  (interactive)
+  (let* ((dir (or dir
+		  (superman-project-home
+		   (or superman-current-project (superman-select-project)))))
+	 (branch (or branch
+		     (let ((branches (superman-git-branches dir)))
+		       (completing-read "Choose branch to checkout: "
+					(mapcar* 'cons branches (make-list (length branches) `()))
+					nil t)))))
+    (message
+     (shell-command-to-string
+      (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")))
+    (when superman-view-mode (superman-redo))))
+
+   
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
 Else return FILE as it is."
@@ -83,11 +116,6 @@ Else return FILE as it is."
     file))
 
 
-(defun superman-git-branch ()
-  (interactive)
-  (message "fixme"))
-
-  
 
 (defun superman-read-git-date (git-date-string &optional no-time)
   "Transform git date to org-format"
@@ -327,6 +355,8 @@ or if the file is not inside the location."
 (define-key superman-git-log-mode-map "q" 'kill-this-buffer)
 (define-key superman-git-log-mode-map "r" (lambda () (interactive) (org-agenda-redo) (superman-git-log-mode-on)))
 (define-key superman-git-log-mode-map "!" 'superman-start-shell)
+(define-key superman-git-log-mode-map [(down)] 'next-line)
+(define-key superman-git-log-mode-map [(up)] 'previous-line)
 (define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
 
 (defun superman-git-show-help ()
@@ -436,19 +466,13 @@ or if the file is not inside the location."
   (setq buffer-read-only t)))
 
 (setq superman-log-balls
-      '(("Date" ("trim" superman-trim-date (12))
-	 ("face" font-lock-string-face))
-	("Author" ("trim" superman-trim-string (13))
-	 ("face" font-lock-function-name-face))
-	("Hash"
-	 ("trim" superman-trim-string (8))
-	 ("face" font-lock-comment-face))
-	("Tag"
-	 ("trim" superman-trim-string (12))
-	 ("face" font-lock-comment-face))
-	("Comment"
-	 ("trim" superman-trim-string (50))
-	 ("face" font-lock-keyword-face))))
+      '(("Date" ("width" 10) ("face" font-lock-string-face))
+	("Hash" ("width" 10) ("face" font-lock-comment-face))
+	("Author" ("width" 20) ("face" font-lock-function-name-face))
+	("Tag" ("width" 10) ("face" font-lock-comment-face))
+	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))
+))
+
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)

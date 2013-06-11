@@ -448,6 +448,11 @@ and others."
 ;; (add-to-list 'org-structure-template-alist
 ;; '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
 
+
+(fset 'superman-new-project 'superman-capture-project)
+
+
+
 (defun superman-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
                                     'superman-project-subdirectories' is set."
@@ -460,7 +465,7 @@ and others."
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
 	  (find-file index)
-	  (insert "Index of project " (car pro) " (this line can be deleted.)\n")
+	  (insert "***** Index of project " (car pro) " (this line can be deleted.)\n")
 	  (save-buffer))
 	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
@@ -471,53 +476,6 @@ and others."
 	(unless (superman-manager-mode 1))
 	(goto-char (point-min))
 	(re-search-forward (concat (make-string superman-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
-
-
-(defun superman-new-project (&optional nickname category)
-  "Create a new project. Prompt for CATEGORY and NICKNAME if necessary.
-This function modifies the 'superman' and creates and visits the index file of the new project.
-To undo all this you can try to call 'superman-delete-project'. "
-  (interactive)
-  (superman-refresh)
-  (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
-	 category)
-    ;; check if nickname exists 
-    (while (assoc nickname superman-project-alist)
-      (setq nickname
-	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (setq category (or category
-		       (completing-read "Category: "
-					(mapcar (lambda (x) (list x)) (superman-parse-project-categories)) nil nil)))
-    ;; a local capture command places the new project
-    (let ((org-capture-templates
-	   `(("p" "Project" plain
-	      (file+headline superman-home ,category)
-	      ,(concat (make-string superman-project-level (string-to-char "*"))
-		       " ACTIVE " nickname "%?\n:PROPERTIES:\n:" 
-		       (superman-property 'nickname) ": "
-		       nickname
-		       "\n:" (superman-property 'location) ": \n:"
-		       (superman-property 'category) ": " category 
-		       "\n:" (superman-property 'index) 
-		       ":\n:" (superman-property 'initialvisit) ": " 
-		       (format-time-string "<%Y-%m-%d %a %H:%M>")
-		       ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
-		       " \n:" (superman-property 'others) ": \n:END:\n"))))
-	  (org-capture-bookmark nil))
-      (add-hook 'org-capture-mode-hook '(lambda () (define-key org-capture-mode-map [(tab)] 'superman-complete-property)) nil 'local)
-      (add-hook 'org-capture-after-finalize-hook `(lambda () (save-buffer) (superman-create-project ,nickname 'ask)) nil 'local)
-      ;;(add-hook 'org-capture-mode-hook 'superman-show-properties nil 'local)
-      (org-capture nil "p")
-      (message "Press Control-c Control-c when done editing."))))
-
-
-(defun superman-complete-property ()
-  (interactive)
-  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-    (cond ((string= (downcase curprop) (downcase (superman-property 'index)))
-	   (insert (read-file-name (concat "Set " curprop ": "))))
-	  ((string= (downcase curprop) (downcase (superman-property 'location)))
-	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
 
 (defun superman-move-project (&optional project)
   (interactive)
@@ -543,7 +501,7 @@ To undo all this you can try to call 'superman-delete-project'. "
   (interactive)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
-	 (project (or project (superman-project-at-point)))
+	 (pro (or project (superman-project-at-point)))
 	 (dir (concat (superman-get-location pro) (car pro)))
 	 (index (superman-get-index pro)))
     (when (and (file-exists-p dir)
@@ -554,7 +512,7 @@ To undo all this you can try to call 'superman-delete-project'. "
       (move-file-to-trash index))
     (superman-view-index)
     (org-narrow-to-subtree)
-    (when (yes-or-no-p "Delete project? ")
+    (when (yes-or-no-p "Delete this project from SuperMan control? ")
       (org-cut-subtree))
     (widen)
     (superman-parse-projects)

@@ -118,19 +118,19 @@ Returns the corresponding buffer."
 	  (if superman-sticky-config superman-sticky-config nil)))
     (save-window-excursion
       (save-restriction
-	(superman-goto-project project "Configuration" 'create nil 'narrow nil)
-	(goto-char (point-min))
-	(while (outline-next-heading)
-	  (let ((this-config (superman-get-property (point) "Config")))
-	  (when this-config
-	    (if config
-		(setq
-		 config
-		 (concat config " : " this-config))
-	    (setq config this-config)))))
-	(when (not config) (setq config superman-default-config)))
-      config)))
-;;}}}
+	(when (superman-goto-project project "Configuration" nil nil 'narrow nil)
+	  (goto-char (point-min))
+	  (while (outline-next-heading)
+	    (let ((this-config (superman-get-property (point) "Config")))
+	      (when this-config
+		(if config
+		    (setq
+		     config
+		     (concat config " : " this-config))
+		  (setq config this-config)))))
+	  (when (not config) (setq config superman-default-config)))
+	config))))
+  ;;}}}
 
 ;;{{{ smashing window configs
 (defun superman-smash-windows (window-config project)
@@ -173,9 +173,11 @@ find the next window configuration."
 		  superman-current-project
 		  (superman-switch-to-project nil t)))
 	 (position (when (integerp position) position)) 
-	 (config-list (superman-distangle-config-list
-		       (superman-read-config pro)))
-	 window-config)
+	 (proconfig (superman-read-config pro))
+	 (config-list (if proconfig (progn (superman-distangle-config-list
+		       proconfig)) '("PROJECT")))
+	 window-config)    
+    
     (if position
 	(setq superman-config-cycle-pos position)
       (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
@@ -323,7 +325,7 @@ find the next window configuration."
 (defun superman-read-rsync (project)
   (let* (rsync)
     (save-window-excursion
-      (superman-goto-project project "Configuration" 'create)
+      (superman-goto-project project "Configuration" nil)
       (goto-char (point-min))
       (while (re-search-forward "^[ \t]*rsync:[ \t]*" (point-max) t)
 	(if rsync
