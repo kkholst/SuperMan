@@ -143,3 +143,71 @@
 
 
 * Configuration
+
+* GitFiles
+** projects/Kal-El
+
+*** Kal-El.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/docs
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/help
+
+*** smash.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
+:GitStatus: Committed
+:END:
+
+*** S.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/hints
+
+*** using-ediff-as-git-difftool.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
+:GitStatus: Committed
+:END:
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/samples
+
+*** template-literate.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/template-literate.org]]
+:GitStatus: Committed
+:END:
+
+*** sample-beamer.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/tools
+
+*** ediff.sh
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
+:GitStatus: Committed
+:END:
+
