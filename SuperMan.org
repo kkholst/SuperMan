@@ -1,44 +1,44 @@
-* Notes
-*** Memo 1
-:PROPERTIES:
-:NoteDate: <2013-01-21 Mon>
-:END:
-Husk alle ting 
-* Tasks
-*** TODO Some task 
-:PROPERTIES:
-:TaskDate: <2013-01-21 Mon>
-:END:
-* Configuration
-windows:PROJECT
-windows:DOCUMENTS
 
-
+* Bookmarks
+*** MyBookmark
+:PROPERTIES:
+:Link: [[file:~/configuration/emacs.library/SuperMan/SuperMan.org::*Bookmarks][Bookmarks]]
+:BookmarkDate: <2013-03-15 Fri 09:46>
+:END:
 * Documents
+
+** Lisp files
+
+*** superman
 :PROPERTIES:
-:COLUMNS:  %19ITEM(Title) %15GitStatus(Git Status) %50LastCommit(Last Commit) %8TODO(ToDo)
-:CATEGORY: Lisp-files
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-08 Tue 12:54>
+:GitInit:  <2012-12-20 Thu 08:47> initial commit
+:LastCommit: <2013-03-07 Thu 12:39> added view-mode to superman-mode
+:END:
+
+*** superman-capture
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-capture.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-14 Mon 21:21>
+:GitInit:  <2013-01-14 Mon 17:28> first commit of capture el
+:LastCommit: <2013-05-31 Fri 14:34> capture git-files (key: G-A). Fixed bug when changing to new project
 :END:
 
 *** superman-config
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-config.el]]
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-config.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:54>
 :GitInit: <2012-12-18 Tue 07:25> initial commit
-:LastCommit: <2013-01-21 Mon 10:01> fixed links
+:LastCommit: <2013-05-31 Fri 14:34> capture git-files (key: G-A). Fixed bug when changing to new project
 :END:
-*** superman
-:PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman.el]]
-:GitStatus: Modified
-:CaptureDate: <2013-01-08 Tue 12:54>
-:GitInit:  <2012-12-20 Thu 08:47> initial commit
-:LastCommit: <2013-01-21 Mon 10:01> fixed links
-:END:
+
 *** superman-deft
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-deft.el]]
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-deft.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:53>
 :GitInit:  <2012-12-18 Tue 07:25> initial commit
@@ -46,47 +46,45 @@ windows:DOCUMENTS
 :END:
 *** superman-git
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-git.el]]
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-git.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:52>
 :GitInit: <2013-01-07 Mon 16:10> first commit
-:LastCommit: <2013-01-21 Mon 10:01> fixed links
+:LastCommit: <2013-05-24 Fri 09:41> extended git branching
 :END:
-*** superman-summary
-:PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-summary.el]]
-:GitStatus: Modified
-:CaptureDate: <2013-01-11 Fri 15:14>
-:GitInit: <2013-01-06 Sun 15:12> first working edition of agenda hack
 
-:LastCommit: <2013-01-21 Mon 10:01> fixed links
+*** superman-google
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-google.el]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-21 Mon 16:45>
+:GitInit:  <2013-01-18 Fri 21:45> first commit
+:LastCommit: <2013-01-28 Mon 21:20> added view others and cleaned up log-view
 :END:
 *** superman-manager
 
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-manager.el]]
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-manager.el]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-08 Tue 12:11>
 :GitInit: <2013-01-06 Sun 18:41> new project-manager after move from one long org file to multiple lisp files
-:LastCommit: <2013-01-21 Mon 10:27> Revert "iconv --from-code UTF-8 --to-code US-ASCII -c inputfile > outputfile"
+:LastCommit: <2013-05-31 Fri 14:34> capture git-files (key: G-A). Fixed bug when changing to new project
 :END:
-*** superman-capture
+
+*** superman-views
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/lisp/superman-capture.el]]
-:GitStatus: Committed
-:CaptureDate: <2013-01-14 Mon 21:21>
-:GitInit:  <2013-01-14 Mon 17:28> first commit of capture el
-:LastCommit: <2013-01-18 Fri 21:45> fixed some issues
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-views.el]]
+:GitStatus: Modified
+:CaptureDate: <2013-03-13 Wed 11:17>
+:GitInit:  <2013-01-21 Mon 18:29> rename of summary to views
+:LastCommit: <2013-06-10 Mon 09:58> deleted obsolete double next-entry function
 :END:
 
 ** Misc
-   :PROPERTIES:
-   :CATEGORY: Misc
-   :END:
 
 *** OLD stuff
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/code/org-project-manager.org]]
+:FileName: [[~/configuration/emacs.library/SuperMan/code/org-project-manager.org]]
 :CaptureDate: <2012-10-31 Wed 11:27>
 :GitStatus: Committed
 :GitInit: <2012-08-29 Wed 14:23> Moved code from SuperMan.el to org-project-manager.org (load via org-babel-load-file)
@@ -95,24 +93,260 @@ windows:DOCUMENTS
 
 *** SuperManPlans
 :PROPERTIES:
-:FileName: [[~/.sitelisp/SuperMan/ProjectManagerPlans.org]]
+:FileName: [[~/configuration/emacs.library/SuperMan/ProjectManagerPlans.org]]
 :GitStatus: Committed
 :CaptureDate: <2013-01-13 Sun 18:38>
 :GitInit: <2012-08-24 Fri 10:07> git-hub repos started
-
 :LastCommit: <2013-01-15 Tue 09:32> minor fixes
 :END:
-    
-
-
-* Bookmarks
-*** [[file:~/.sitelisp/SuperMan/SuperMan.org::*Bookmarks][Bookmarks]]
+* Notes
+*** DONE Memo 1
 :PROPERTIES:
-:Bookmark: t
-:CaptureDate: <2013-01-21 Mon>
+:NoteDate: <2013-01-21 Mon>
 :END:
-* All The Rest
-sdsdf
-sdf
-sdf
-sdf
+Husk alle ting 
+*** TODO ttt 
+:PROPERTIES:
+:NoteDate: <2013-01-29 Tue>
+:END:
+
+*** Remember
+asdasdasd asasdasd
+
+:PROPERTIES:
+:NoteDate: <2013-03-22 Fri>
+:END:
+### Superman: edit this item
+# C-c C-c to save 
+# C-c C-q to quit without saving
+### ---yeah #%*^#@!--------------
+
+* Text
+  :PROPERTIES:
+  :freetext: t
+  :END:
+
+1. Husk   
+2. At
+3. committe
+4. 
+
+* Configuration
+windows:PROJECT
+
+
+*** unison
+:PROPERTIES:
+:UNISON:unison-gtk
+:ROOT-1:/home/ifsv/nqh369/.sitelisp/SuperMan/ 
+:ROOT-2:~/Dropbox/SuperMan 
+:SWITCHES:default
+:END:
+
+* GitFiles
+
+
+** /
+
+*** SuperMan.org
+:PROPERTIES:
+:FileName: [[//SuperMan.org]]
+:GitStatus: Committed
+:END:
+
+*** SampleProjectManager.org
+:PROPERTIES:
+:FileName: [[//SampleProjectManager.org]]
+:GitStatus: Committed
+:END:
+
+*** README.org
+:PROPERTIES:
+:FileName: [[//README.org]]
+:GitStatus: Committed
+:END:
+
+*** ProjectManagerPlans.org
+:PROPERTIES:
+:FileName: [[//ProjectManagerPlans.org]]
+:GitStatus: Committed
+:END:
+
+*** .gitignore
+:PROPERTIES:
+:FileName: [[//.gitignore]]
+:GitStatus: Committed
+:END:
+
+** code
+
+*** org-project-manager.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/code/org-project-manager.org]]
+:GitStatus: Committed
+:END:
+
+** help/Kal-El
+
+*** smash.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/help/Kal-El/smash.org]]
+:GitStatus: Committed
+:END:
+
+*** savant-syndrom.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/help/Kal-El/savant-syndrom.org]]
+:GitStatus: Committed
+:END:
+
+** lisp
+
+*** superman.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-views.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-views.el]]
+:GitStatus: Modified
+:GitInit:  <2013-01-21 Mon 18:29> rename of summary to views
+:LastCommit: <2013-06-10 Mon 09:58> deleted obsolete double next-entry function
+:END:
+
+*** superman-test.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-test.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-manager.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-manager.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-google.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-google.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-git.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-git.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-deft.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-deft.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-config.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-config.el]]
+:GitStatus: Committed
+:END:
+
+*** superman-capture.el
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/lisp/superman-capture.el]]
+:GitStatus: Committed
+:END:
+
+** manager
+
+*** Projects.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/manager/Projects.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El
+
+*** smash.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/smash.org]]
+:GitStatus: Committed
+:END:
+
+*** sample-beamer.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/sample-beamer.org]]
+:GitStatus: Committed
+:END:
+
+*** Kal-El.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/Kal-El.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/docs
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/help
+
+*** smash.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/help/smash.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/hints
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
+:GitStatus: Committed
+:END:
+
+** projects/Kal-El/samples
+
+
+*** template-literate.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/samples/template-literate.org]]
+:GitStatus: Committed
+:END:
+
+
+*** sample-beamer.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
+:GitStatus: Committed
+:END:
+
+** projects/demo-project/org
+
+*** demo-project.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/demo-project/org/demo-project.org]]
+:GitStatus: Committed
+:END:
+
+** projects/help-project/org
+
+*** help-project.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/projects/help-project/org/help-project.org]]
+:GitStatus: Committed
+:END:
+
+** test-project/org
+
+*** testproject.org
+:PROPERTIES:
+:FileName: [[~/configuration/emacs.library/SuperMan/test-project/org/testproject.org]]
+:GitStatus: Committed
+:END:
+
