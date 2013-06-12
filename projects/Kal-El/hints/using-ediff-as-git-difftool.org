@@ -1,6 +1,6 @@
 ulf.zeitform.de/en/documents/git-ediff.html
 
-1. change path to file emacsclient in the script:
+1. copy the file [[../tools/ediff.sh]] change path to file emacsclient in the script:
 
 [[~/bin/ediff.sh]]
 
