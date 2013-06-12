@@ -1608,6 +1608,26 @@ according to git."
       (superman-goto-shell)
       (insert  (concat "cd " dir ";" superman-cmd-git " push")))))
 
+
+(defun superman-view-git-master-push-pull-and-return (&optional project masterbranch)
+  (interactive)
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 (gitsvn (file-exists-p (concat dir "/.git/svn")))
+	 (current (replace-regexp-in-string "* " "" (car (superman-git-branches dir))))
+	 (master (or masterbranch "master"))
+	 (cmd (concat "cd " dir ";" superman-cmd-git " ")))	 
+    (shell-command (concat cmd "checkout " master))
+    (if gitsvn 
+	(shell-command (concat cmd "pull"))
+      (shell-command (concat cmd "svn rebase")))
+    (shell-command (concat cmd "merge " current))
+    (if gitsvn 
+	(shell-command (concat cmd "push"))
+      (shell-command (concat cmd "svn push")))
+    (shell-command (concat cmd "checkout " current))
+    (shell-command (concat cmd "merge " master))
+))
+
 (defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
 of the item at point.
@@ -1701,6 +1721,7 @@ for git and other actions like commit, history search and pretty log-view."
 
 ;; Git control
 (define-key superman-view-mode-map "GA" 'superman-capture-git-section)
+(define-key superman-view-mode-map "GM" 'superman-view-git-master-push-pull-and-return)
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
 (define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
@@ -1766,7 +1787,6 @@ not in a section prompt for section first.
 	 cat
 	 `("Item"
 	   ,(mapcar #'(lambda (p) (list p nil)) props)))))))
-
 
 ;;}}}
 ;;{{{ easy menu
