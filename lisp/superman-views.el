@@ -758,6 +758,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (setq buffer-read-only t))
 
 
+(unless org-todo-keyword-faces
 (setq org-todo-keyword-faces
       (quote (("TODO" :foreground "red" :weight bold)
 	      ("URGENT" :foreground "goldenrod1" :weight bold)
@@ -766,7 +767,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	      ("WAITING" :foreground "purple" :weight bold)
 	      ("PERMANENT" :foreground "SkyBlue3" :weight bold)
 	      ("DONE" :foreground "forest green" :weight bold)
-	      ("CANCELED" :foreground "slate grey" :weight bold))))
+	      ("CANCELED" :foreground "slate grey" :weight bold)))))
 
 ;;}}}
 ;;{{{ Formatting items and column names
@@ -1682,7 +1683,6 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
-(define-key superman-view-mode-map "N" 'superman-new-item)
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
@@ -1727,6 +1727,7 @@ for git and other actions like commit, history search and pretty log-view."
 
 (setq superman-capture-alist
       '(("Documents" superman-capture-document)
+	("GitFiles" superman-capture-document)
 	("Notes" superman-capture-note)
 	("Tasks" superman-capture-task)
 	("Meetings" superman-capture-meeting)
