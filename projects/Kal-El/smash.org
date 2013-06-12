@@ -1,6 +1,0 @@
-* Smashing windows 
-
-Superman implements a simple approach to saving window-configurations.
-
-M-x superman-save-config RET 
-M-x superman-switch-config RET

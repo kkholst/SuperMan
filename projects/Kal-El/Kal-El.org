@@ -1,34 +1,123 @@
-* Configuration
-unison-gtk:~/emacs-genome/snps/ProjectManager/help/Kal-El/ ~/Dropbox/ProjectManager/help/Kal-El/
-*** unison
+
+#+TODO: SUBMITTED ACCEPTED REVISION | PUBLISHED
+\bibliographypeer{../../bib/huge}
+\bibliographystylepeer{abbrvnat}
+\bibliographywork{../../bib/huge}
+\bibliographystylework{abbrvnat}
+\bibliographyother{../../bib/huge}
+\bibliographystyleother{abbrvnat}
+\renewcommand{\section}[1]{}
+\renewcommand{\subsection}[1]{}
+\renewcommand{\subsubsection}[1]{}
+
+
+* Documents
+  :PROPERTIES:
+  :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
+  :Ball2:    GitStatus  :width 10 :face superman-get-git-status-face
+  :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face
+  :Ball4:    FileName  :fun superman-dont-trim
+  :Ball5: 
+  :END:
+** SuperMan
+      :PROPERTIES:
+      :CATEGORY: start-me-up
+      :END:
+
+*** Start here
 :PROPERTIES:
-:UNISON:unison-gtk
-:ROOT-1:~/emacs-genome/snps/ProjectManager/help/Kal-El/ 
-:ROOT-2:~/emacs-genome/genes/SuperMan/projects/Kal-El/
-:SWITCHES:default
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
+:GitStatus: Committed
+:GitInit:  <2013-06-11 Tue 18:21> first version
+:LastCommit: <2013-06-11 Tue 18:21> first version
 :END:
-* Mailbox
+
+
+
+*** Window configurations
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
+:GitStatus: Committed
+:CaptureDate: <2013-01-11 Fri 16:41>
+:GitInit:  <2013-01-11 Fri 20:48> first smash
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+** Org-mode
+    
+*** sample-beamer
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
+:GitStatus: Committed
+:CaptureDate: <2013-03-07 Thu 12:05>
+:GitInit:  <2013-03-07 Thu 12:05> first commit
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+
+** LaTeX
+
+
+
+*** ediff.sh
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
+:GitStatus: Committed
+:GitInit:  <2013-06-12 Wed 10:44> first commit
+:LastCommit: <2013-06-12 Wed 10:44> first commit
+:END:
+
+
+*** using-ediff-as-git-difftool.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
+:GitStatus: Committed
+:GitInit:  <2013-06-12 Wed 10:38> first commit
+:LastCommit: <2013-06-12 Wed 10:44> added link to shell script
+:END:
+
+
+*** latex useful packages
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
+:GitStatus: Committed
+:GitInit:  <2013-05-03 Fri 09:32> first commit
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+** Git
+
+
+
 * Bookmarks
+
+
 ** Links
    :PROPERTIES:
    :CATEGORY: url
    :END:
-*** http://en.wikipedia.org/wiki/Superboy_%28Kal-El%29
-   :PROPERTIES:
-   :Bookmark: t
-   :CATEGORY: url
-   :END:
-*** [[file:~/emacs-genome/snps/ProjectManager/lisp/superman-capture.el::(function%20superman-goto-project-bookmarks)%20"\n%20-%20%25a%25?")%20'append)][file:~/emacs-genome/snps/ProjectManager/lisp/superman-capture.el::(function superman-goto-project-bookmarks) "\n - %a%?") 'append)]]
-   :PROPERTIES:
-   :Bookmark: t
-   :CATEGORY: url
-   :END:
-* Notes
-*** Alias name: Man in Steel
+
+*** Org-mode
 :PROPERTIES:
-:NoteDate: <2013-01-16 Wed>
+:BookmarkDate: <2013-05-29 Wed>
+:Link: http://orgmode.org/
 :END:
-* Calendar
+*** superboy
+   :PROPERTIES:
+   :Bookmark: t
+   :CATEGORY: url
+   :LINK: http://en.wikipedia.org/wiki/Superboy_%28Kal-El%29
+   :END:
+
+* Notes
+
+*** TODO Alias name: Man in Steel
+:PROPERTIES:
+:NoteDate: <2013-03-22 Fri>
+:END:
+
+
+
 * Tasks
 ** Save Smallville
    :PROPERTIES:
@@ -49,28 +138,8 @@ unison-gtk:~/emacs-genome/snps/ProjectManager/help/Kal-El/ ~/Dropbox/ProjectMana
 :PROPERTIES:
 :TaskDate: <2013-03-07 Thu>
 :END:
-* Documents
-** Getting started
-   :PROPERTIES:
-   :CATEGORY: start-me-up
-   :END:
-*** smash
-:PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/smash.org]]
-:GitStatus: Committed
-:CaptureDate: <2013-01-11 Fri 16:41>
-:GitInit:  <2013-01-11 Fri 20:48> first smash
-:LastCommit: <2013-03-07 Thu 12:10> first commit
-:END:
 
 
 
 
-*** sample-beamer
-:PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/sample-beamer.org]]
-:GitStatus: Committed
-:CaptureDate: <2013-03-07 Thu 12:05>
-:GitInit:  <2013-03-07 Thu 12:05> first commit
-:LastCommit: <2013-03-07 Thu 12:09> set emacs-lisp block to eval never
-:END:
+* Configuration
