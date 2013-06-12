@@ -1,0 +1,23 @@
+ulf.zeitform.de/en/documents/git-ediff.html
+
+1. change path to file emacsclient in the script:
+
+[[~/bin/ediff.sh]]
+
+2. change .gitconfig as follows:
+
+#+BEGIN_EXAMPLE
+[diff]
+	tool = ediff
+	guitool = ediff
+
+[difftool "ediff"]
+        cmd = ~/bin/ediff.sh $LOCAL $REMOTE $MERGED
+
+[merge]
+        tool = ediff
+
+[mergetool "ediff"]
+        cmd = ~/bin/ediff.sh $LOCAL $REMOTE $MERGED $BASE
+        trustExitCode = true
+#+END_EXAMPLE
