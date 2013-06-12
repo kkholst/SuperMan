@@ -9,7 +9,7 @@
 
 * Notes
 * Bookmarks
-* Mailbox
+* Mail
 **** EMAIL: from Paul: bonjour <2012-10-06 Sat>
     :PROPERTIES:
     :CaptureDate: [2012-10-06 Sat]
