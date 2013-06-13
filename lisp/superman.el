@@ -60,7 +60,7 @@
 	  ;; (if  (completing-read (concat "Value for " prop ": ")
 	 (val (read-string (concat "Value for " prop ": ") curval)))
     (org-entry-put pom prop val))
-  (org-agenda-redo))
+  (superman-redo))
 
 (defun superman-return ()
   (interactive)
@@ -348,7 +348,7 @@ Enabling superman mode electrifies the superman buffer for project management."
   (interactive)
   (save-window-excursion
     (superman-new-project))
-  (org-agenda-redo))
+  (superman-redo))
 
 (defun superman-clean-up ()
   (save-excursion
