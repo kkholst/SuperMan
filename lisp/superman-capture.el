@@ -184,6 +184,7 @@ turn it off."
 		  (funcall thing (cdr val))))))))
 
 (defvar superman-capture-before-clean-scene-hook nil)
+(defvar superman-capture-after-clean-scene-hook nil)
 
 (defun superman-clean-scene ()
   (interactive)
@@ -209,7 +210,8 @@ turn it off."
     (delete-region (point-min) (point))
     (kill-buffer (current-buffer))
     (set-window-configuration scene)
-    (when superman-view-mode (superman-redo))))
+    (run-hooks 'superman-capture-after-clean-scene-hook)
+    (when (or superman-view-mode superman-mode) (superman-redo))))
 
 (defun superman-quit-scene ()
   (interactive)
@@ -321,7 +323,11 @@ To undo all this call 'superman-delete-project'. "
 	     (define-key
 	       superman-capture-mode-map
 	       [(tab)]
-	       'superman-complete-project-property)))
+	       'superman-complete-project-property)
+	     (setq
+	      superman-capture-after-clean-scene-hook
+	      'superman-update-project-overview)
+	     ))
 	 (superman-capture-before-clean-scene-hook
 	  `(lambda () (save-buffer)
 	     (superman-create-project ,nickname 'ask))))
@@ -345,8 +351,6 @@ To undo all this call 'superman-delete-project'. "
 		  ("Index" "")
 		  ("Category" ,category)))
      superman-project-level)))
-
-
 
 
 (defun superman-complete-project-property ()
