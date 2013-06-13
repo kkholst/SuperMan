@@ -85,6 +85,19 @@
 :LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
+
+*** use-git-for-Rforge.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
+:GitStatus: Committed
+:GitInit:  <2013-06-13 Thu 08:35> init
+:LastCommit: <2013-06-13 Thu 08:35> init
+:END:
+
+
+** Rforge
+
+
 ** Git
 
 
@@ -150,7 +163,9 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Committed
+:GitStatus: Modified
+:GitInit:  <2013-03-07 Thu 12:10> first commit
+:LastCommit: <2013-06-12 Wed 11:07> dont know
 :END:
 
 ** projects/Kal-El/docs
