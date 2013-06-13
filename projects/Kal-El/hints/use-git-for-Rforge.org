@@ -1,0 +1,6 @@
+Navigate to the SCM Repository of the Rforge project. Then copy the
+"svn checkout" line and replace "svn checkout" by "git svn clone". 
+
+E.g. to checkout the subproject riskPlots of the riskscore project do this
+
+git svn clone checkout svn://scm.r-forge.r-project.org/svnroot/riskscore/pkg/riskPlots/
