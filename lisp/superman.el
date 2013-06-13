@@ -344,11 +344,16 @@ Enabling superman mode electrifies the superman buffer for project management."
   (superman-mode t))
 
 
+(defun superman-update-project-overview ()
+  (if (get-buffer "*S*")
+      (switch-to-buffer (get-buffer "*S*"))
+    (S))
+  (superman-redo))
+
 (defun superman-new-project ()
   (interactive)
-  (save-window-excursion
-    (superman-new-project))
-  (superman-redo))
+  (superman-capture-project))
+
 
 (defun superman-clean-up ()
   (save-excursion

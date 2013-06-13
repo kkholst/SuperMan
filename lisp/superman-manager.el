@@ -449,9 +449,7 @@ and others."
 ;; '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
 
 
-(fset 'superman-new-project 'superman-capture-project)
-
-
+;; (fset 'superman-new-project 'superman-capture-project)
 
 (defun superman-create-project (&optional project ask)
   "Create the index file, the project directory, and subdirectories if
@@ -516,9 +514,9 @@ and others."
       (org-cut-subtree))
     (widen)
     (superman-parse-projects)
+    (set-window-configuration scene)
     (when superman-mode
-      (superman-redo))
-    (set-window-configuration scene)))
+      (superman-redo))))
       
       
 
