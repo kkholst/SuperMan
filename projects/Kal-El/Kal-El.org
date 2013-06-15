@@ -104,7 +104,7 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
 :LastCommit: <2013-06-13 Thu 08:54> test
 :END:
