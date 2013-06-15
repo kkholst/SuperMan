@@ -101,14 +101,25 @@ use the location of the current project, if no project is current prompt for pro
 		     (let ((branches (superman-git-branches dir)))
 		       (completing-read "Choose branch to checkout: "
 					(mapcar* 'cons branches (make-list (length branches) `()))
-					nil t))))
-	 (git-message
-	  (shell-command-to-string
-	   (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n"))))
-    (pop-to-buffer "*S-git-response*")
-    (insert git-message)
+					nil t)))))
+    (superman-git-cmd-to-msg 
+     (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")
+     "*S-git-return*"
+     (concat "Superman git checkout branch '" branch "' returns:\n\n"))
     (when superman-view-mode (superman-redo))))
 
+
+
+(defun superman-git-cmd-to-msg (cmd buf &optional intro)
+  "Execute CMD with `shell-command-to-string' and display
+result in buffer BUF. Optional INTRO is shown before the
+result."
+  (let ((intro (or intro "Superman returns:\n\n")))
+    (shell-command-to-string cmd)
+    (set-buffer (get-buffer-create buf))
+    (let ((buffer-read-only nil))
+      (erase-buffer))
+    (with-help-window buf)))
    
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
