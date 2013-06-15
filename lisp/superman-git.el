@@ -101,10 +101,12 @@ use the location of the current project, if no project is current prompt for pro
 		     (let ((branches (superman-git-branches dir)))
 		       (completing-read "Choose branch to checkout: "
 					(mapcar* 'cons branches (make-list (length branches) `()))
-					nil t)))))
-    (message
-     (shell-command-to-string
-      (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")))
+					nil t))))
+	 (git-message
+	  (shell-command-to-string
+	   (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n"))))
+    (pop-to-buffer "*S-git-response*")
+    (insert git-message)
     (when superman-view-mode (superman-redo))))
 
    
