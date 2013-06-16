@@ -633,7 +633,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (loc (concat (superman-get-location pro) (car pro)))
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 ;; (org-agenda-window-setup 'current-window)
-	 (project-header (concat "Project: " (car pro)))
+	 ;; (project-header (concat "Project: " (car pro)))
 	 (index (superman-get-index pro))
 	 (ibuf (or (get-file-buffer index)
 		   (find-file index)))
@@ -655,6 +655,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+    ;; previous project
+    (when (> (length superman-project-history) 1)
+      (insert "\t\t" (cadr superman-project-history) "[M-right], " (car (reverse superman-project-history)) "[M-left]"))
     (insert (superman-project-view-header pro))
     (goto-char (point-max))
     (insert "\n")
@@ -976,6 +979,10 @@ beginning of the list."
 (defun superman-one-right (&optional left)
   "Move column to the right."
   (interactive "P")
+  (if (get-text-property (point-at-bol) 'nickname)
+      (if left
+	  (superman-previous-project)
+	(superman-next-project))
   (let* ((dim (superman-ball-dimensions))
 	 (balls (get-text-property (superman-cat-point) 'balls))
 	 (buffer-read-only nil)
@@ -986,7 +993,7 @@ beginning of the list."
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat))))
+      (superman-refresh-cat)))))
     
 (defun superman-one-left ()
   "Move column to the left."
@@ -1207,12 +1214,15 @@ current section."
 (defun superman-next-project (&optional backwards)
   "Switch to next project in `superman-project-history'"
   (interactive "P")
-  (let* ((phist
-	  (member (car superman-current-project)
-		  (if backwards
-		      (reverse superman-project-history)
-		    superman-project-history)))
-	 (next (cadr phist)))
+  (let* ((next (if backwards
+		   (car (reverse superman-project-history))
+		 (cadr superman-project-history))))
+	 ;; (phist
+	  ;; (member (car superman-current-project)
+		  ;; (if backwards
+		      ;; (reverse superman-project-history)
+		    ;; superman-project-history)))
+	 ;; (next (cadr phist)))
     (when next
     (superman-switch-to-project
      (assoc
@@ -1311,7 +1321,12 @@ current section."
     ))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
+  "Delet entry at point. Prompt user unless DONT-PROMT is non-nil. Redo the view-buffer
+unless DONT-REDO is non-nil.
+
+If point is before the first category do nothing."
   (interactive)
+  (when (previous-single-property-change (point-at-bol) 'cat)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
 	 (file (superman-filename-at-point t)))
@@ -1339,7 +1354,7 @@ current section."
     (when marker
       (save-excursion
 	(org-with-point-at marker (org-cut-subtree)))))
-  (unless dont-redo (superman-redo)))
+  (unless dont-redo (superman-redo))))
 
 (defun superman-view-delete-all (&optional dont-prompt)
   (interactive)

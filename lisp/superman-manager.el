@@ -192,8 +192,8 @@ the `superman-home'.")
   (add-hook 'after-save-hook 'superman-refresh nil 'local))
 
 (define-key superman-manager-mode-map [(meta return)] 'superman-return)
-(define-key superman-manager-mode-map [(meta n)] 'superman-next-project)
-(define-key superman-manager-mode-map [(meta p)] 'superman-previous-project)
+;; (define-key superman-manager-mode-map [(meta n)] 'superman-next-project)
+;; (define-key superman-manager-mode-map [(meta p)] 'superman-previous-project)
 (define-key superman-manager-mode-map [f1] 'superman-manager)
 
 (defun superman-manager ()
@@ -274,26 +274,6 @@ the `superman-home'.")
   (let ((pro (superman-project-at-point)))
     (if pro
 	(superman-switch-to-project pro nil))))
-
-(defun superman-forward-project ()
-  (interactive)
-  (re-search-forward
-   (format "^\\*\\{%d\\} " superman-project-level) nil t))
-
-(defun superman-backward-project ()
-  (interactive)
-  (re-search-backward
-   (format "^\\*\\{%d\\} " superman-project-level) nil t))
-
-(defun superman-next-project (arg)
-  (interactive  "p")
-  (superman-forward-project)
-  (superman-return))
-
-(defun superman-previous-project (arg)
-  (interactive  "p")
-  (superman-backward-project)
-  (superman-return))
 
 ;;}}}
 ;;{{{ parsing dynamically updating lists
@@ -674,7 +654,14 @@ If NOSELECT is set return the project."
 	 (pro (or project (superman-select-project)))
 	 (stay (eq pro curpro)))
     (unless stay
-      (add-to-list 'superman-project-history  (car pro))
+      (if (member (car pro) superman-project-history)
+	 (progn
+	   (setq superman-project-history
+		 (cons (car pro) superman-project-history))
+	   (delete-dups superman-project-history))
+	  (setq superman-project-history
+		(cons (car pro) superman-project-history)))
+      ;; (add-to-list 'superman-project-history (car pro))
       (superman-save-project curpro)
       (superman-activate-project pro))
     (if noselect

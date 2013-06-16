@@ -108,18 +108,18 @@ use the location of the current project, if no project is current prompt for pro
      (concat "Superman git checkout branch '" branch "' returns:\n\n"))
     (when superman-view-mode (superman-redo))))
 
-
-
 (defun superman-git-cmd-to-msg (cmd buf &optional intro)
   "Execute CMD with `shell-command-to-string' and display
 result in buffer BUF. Optional INTRO is shown before the
 result."
-  (let ((intro (or intro "Superman returns:\n\n")))
-    (shell-command-to-string cmd)
+  (let ((intro (or intro "Superman returns:\n\n"))
+	(msg (shell-command-to-string cmd)))
+    (when superman-view-mode (superman-redo))
     (set-buffer (get-buffer-create buf))
     (let ((buffer-read-only nil))
       (erase-buffer))
-    (with-help-window buf)))
+    (with-help-window buf
+      (insert (concat intro msg)))))
    
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
