@@ -275,6 +275,17 @@ the `superman-home'.")
     (if pro
 	(superman-switch-to-project pro nil))))
 
+(defun superman-forward-project ()
+  (interactive)
+  (re-search-forward
+   (format "^\\*\\{%d\\} " superman-project-level) nil t))
+
+(defun superman-backward-project ()
+  (interactive)
+  (re-search-backward
+   (format "^\\*\\{%d\\} " superman-project-level) nil t))
+
+
 ;;}}}
 ;;{{{ parsing dynamically updating lists
 
@@ -305,7 +316,8 @@ the `superman-home'.")
     (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
-    (while (superman-forward-project)
+    (while
+	 (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
 	       (category (superman-get-property nil (superman-property 'category) 'inherit))
@@ -344,10 +356,8 @@ the `superman-home'.")
 				   (cons "config" config)
 				   (cons 'todo todo)
 				   (cons "publish-directory" publish-dir))))))
-      superman-project-alist)))
-  
-  
-  
+      superman-project-alist))) 
+
 (defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)
@@ -540,7 +550,7 @@ the active status of projects."
   (unless (superman-manager-mode 1))
   (goto-char (point-min))
   (while (superman-forward-project)
-    (superman-set-others)))
+	(superman-set-others)))
 
 ;;}}}
 ;;{{{ listing projects

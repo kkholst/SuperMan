@@ -120,7 +120,14 @@ result."
       (erase-buffer))
     (with-help-window buf
       (insert (concat intro msg)))))
-   
+
+(defun superman-git-status (dir)
+  (interactive)
+  (superman-git-cmd-to-msg
+   (concat "cd " dir "; " superman-cmd-git " status " "\n")
+   "*S-git-return*"
+   (concat "Superman git status '" dir "' returns:\n\n")))
+     
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
 Else return FILE as it is."
