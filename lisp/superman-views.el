@@ -253,31 +253,32 @@ and the keybinding to initialize git control otherwise."
 (defun superman-get-unisons (project)
   (let (unisons)
     (save-window-excursion
-      (superman-goto-project project "Configuration" nil nil nil)
-      (org-narrow-to-subtree)
-      (goto-char (point-min))
-      (while (re-search-forward ":UNISON:" nil t)
-	(org-back-to-heading t)
-	(let ((hdr (progn 
-		     (looking-at org-complex-heading-regexp)
-		     (match-string-no-properties 4))))
-	  (setq
-	   unisons
-	   (append
-	    unisons
-	    (list (cons hdr
-			(concat
-			 (superman-get-property (point) "UNISON")
-			 " "
-			 (superman-get-property (point) "ROOT-1")
-			 " "
-			 (superman-get-property (point) "ROOT-2")
-			 " "
-			 (if (string= (superman-get-property (point) "SWITCHES") "default")
-			     superman-unison-switches
-			   (superman-get-property (point) "SWITCHES"))))))))
-	(outline-next-heading)))
-	unisons))
+      (when
+	  (superman-goto-project project "Configuration" nil nil nil)
+	(org-narrow-to-subtree)
+	(goto-char (point-min))
+	(while (re-search-forward ":UNISON:" nil t)
+	  (org-back-to-heading t)
+	  (let ((hdr (progn 
+		       (looking-at org-complex-heading-regexp)
+		       (match-string-no-properties 4))))
+	    (setq
+	     unisons
+	     (append
+	      unisons
+	      (list (cons hdr
+			  (concat
+			   (superman-get-property (point) "UNISON")
+			   " "
+			   (superman-get-property (point) "ROOT-1")
+			   " "
+			   (superman-get-property (point) "ROOT-2")
+			   " "
+			   (if (string= (superman-get-property (point) "SWITCHES") "default")
+			       superman-unison-switches
+			     (superman-get-property (point) "SWITCHES"))))))))
+	  (outline-next-heading))))
+      unisons))
 
 (defun superman-view-insert-unison-buttons (project)
   "Insert unison buttons"
