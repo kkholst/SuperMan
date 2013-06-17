@@ -69,14 +69,18 @@ that never should get git controlled.")
 (defun superman-git-branches (dir)
   (let* ((branch-list
 	  (mapcar #'(lambda (x)
-		     (replace-regexp-in-string
-		      "^[ \t\n]+\\|[ \t\n]+$" "" x nil t))
-	  (delete "" (split-string
-		      (shell-command-to-string
-		       (concat "cd " dir "; " superman-cmd-git " branch")) "\n"))))
-	 (master (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list)))
-	 (others (delete master branch-list)))
-    (cons master others)))
+		      (replace-regexp-in-string
+		       "^[ \t\n]+\\|[ \t\n]+$" "" x nil t))
+		  (delete "" (split-string
+			      (shell-command-to-string
+			       (concat "cd " dir "; " superman-cmd-git " branch")) "\n"))))
+	 (current (if branch-list (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list))
+		    "master"))
+	 (others (when branch-list (delete current branch-list))))
+    (cons current others)))
+
+(defvar superman-mouse-map (make-sparse-keymap))
+(define-key superman-mouse-map [mouse-1] 'superman-view-git-status)
 
 (defun superman-git-new-branch (&optional dir)
   "Create a new branch in git directory DIR. If DIR is nil
@@ -102,13 +106,13 @@ use the location of the current project, if no project is current prompt for pro
 		       (completing-read "Choose branch to checkout: "
 					(mapcar* 'cons branches (make-list (length branches) `()))
 					nil t)))))
-    (superman-git-cmd-to-msg 
+    (superman-run-cmd 
      (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")
      "*S-git-return*"
      (concat "Superman git checkout branch '" branch "' returns:\n\n"))
     (when superman-view-mode (superman-redo))))
 
-(defun superman-git-cmd-to-msg (cmd buf &optional intro)
+(defun superman-run-cmd (cmd buf &optional intro)
   "Execute CMD with `shell-command-to-string' and display
 result in buffer BUF. Optional INTRO is shown before the
 result."
@@ -122,8 +126,7 @@ result."
       (insert (concat intro msg)))))
 
 (defun superman-git-status (dir)
-  (interactive)
-  (superman-git-cmd-to-msg
+  (superman-run-cmd
    (concat "cd " dir "; " superman-cmd-git " status " "\n")
    "*S-git-return*"
    (concat "Superman git status '" dir "' returns:\n\n")))

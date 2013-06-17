@@ -86,7 +86,7 @@ just before the capture buffer is given to the user.")
 	 (scene (current-window-configuration))
 	 head-point
 	 (body "")
-	 (title (concat "### Captured " what " for project " (car project)))
+	 (title (concat "### Superman captures " what " for project " (car project)))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
     (if heading
 	(cond ((stringp heading)

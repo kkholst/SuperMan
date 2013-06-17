@@ -533,7 +533,7 @@ the active status of projects."
 (defun superman-set-others ()
   (interactive)
   (let* ((pro (assoc (superman-project-at-point t)
-		     superman-project-alist))
+		     superman-project-alist)) (superman-forward-project)
 	 (others (cdr (assoc (superman-property 'others) (cadr pro))))
 	 (init (if others (concat others ", ") "")))
     ;; (org-entry-get nil "others")

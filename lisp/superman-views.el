@@ -248,20 +248,131 @@ and the keybinding to initialize git control otherwise."
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
 
-(defun superman-view-branch (project)
-  "Insert the git branch(es) if project is git controlled"
-  (when (superman-git-p loc)
-    (let* ((loc (get-text-property (point-min) 'git-dir))
-	   (branches (superman-git-branches loc))
-	   (master (car branches))
-	   (others (mapconcat #'(lambda (x)x) (cdr branches) " "))
-	   (branch-string (concat "\nBranch: [" master "] " others)))
-      (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
-      (put-text-property (+ 3 (length "Branch:"))
-			 (+ (length "Branch:") 3 (length master))
-			 'face 'font-lock-warning-face branch-string)
-      branch-string)))
 
+
+(defun superman-get-unisons (project)
+  (let (unisons)
+    (save-window-excursion
+      (superman-goto-project project "Configuration" nil nil nil)
+      (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (while (re-search-forward ":UNISON:" nil t)
+	(org-back-to-heading t)
+	(let ((hdr (progn 
+		     (looking-at org-complex-heading-regexp)
+		     (match-string-no-properties 4))))
+	  (setq
+	   unisons
+	   (append
+	    unisons
+	    (list (cons hdr
+			(concat
+			 (superman-get-property (point) "UNISON")
+			 " "
+			 (superman-get-property (point) "ROOT-1")
+			 " "
+			 (superman-get-property (point) "ROOT-2")
+			 " "
+			 (if (string= (superman-get-property (point) "SWITCHES") "default")
+			     superman-unison-switches
+			   (superman-get-property (point) "SWITCHES"))))))))
+	(outline-next-heading)))
+	unisons))
+
+(defun superman-view-insert-unison-buttons (project)
+  "Insert unison buttons"
+  (let* ((pro (or project superman-current-project (superman-select-project)))
+	 (title "Unison:")
+	 (uu (superman-get-unisons pro))
+	 (current-unison (car uu))
+	 (unison-name (car current-unison))
+	 (unison-cmd (cdr current-unison))
+	 (map (make-sparse-keymap)))
+    (when uu
+	(define-key map [mouse-2] `(lambda () (interactive)
+				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+      (insert "\n")
+      (put-text-property 0 (length title) 'face 'org-level-2 title)
+      (insert title " ")
+      (add-text-properties
+       0 (length unison-name) 
+       (list
+	'button (list t)
+	'face 'font-lock-warning-face
+	'keymap map
+	'mouse-face 'highlight
+	'follow-link t
+	'help-echo "run unison")
+       unison-name)
+      (insert "[" unison-name "]  "))))
+
+(defvar superman-git-branch-map (make-sparse-keymap))
+;; (define-key superman-git-branch-map [mouse-1] 'superman-button-git-status)
+(define-key superman-git-branch-map [mouse-2] 'superman-button-git-status)
+;; (define-key superman-git-branch-map [mouse-3] 'superman-button-git-status)
+;; (define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
+
+(defun superman-view-insert-git-branches (project)
+  "Insert the git branch(es) if project is git controlled.
+Translate the branch names into buttons."
+  (let ((pro (or project superman-current-project (superman-select-project)))
+	(loc (or (get-text-property (point-min) 'git-dir)
+		 (superman-get-location project))))
+    (when (superman-git-p loc)
+      (let* ((loc (get-text-property (point-min) 'git-dir))
+	     (bb (superman-git-branches loc))
+	     (current-branch (car bb))
+	     (other-branches (cdr bb))
+	     (title "Branches:"))
+	(when bb
+	  (insert "\n")
+	  (put-text-property 0 (length title) 'face 'org-level-2 title)
+	  (insert title " ")
+	  (add-text-properties
+	       0 (length current-branch) 
+	       (list
+		'button (list t)
+		'face 'font-lock-warning-face
+		'keymap superman-git-branch-map
+		'mouse-face 'highlight
+		'follow-link t
+		'help-echo "git status")
+	       current-branch)
+	  (insert "[" current-branch "]  ")
+	  (while other-branches
+	    (let ((b (car other-branches)))
+	      (add-text-properties
+	       0 (length b) 
+	       (list
+		'button (list t)
+		'face 'font-lock-keyword-face
+		'keymap superman-git-branch-map
+		'mouse-face 'highlight
+		'follow-link t
+		'help-echo "git status")
+	       b)
+	      (setq other-branches (cdr other-branches))
+	      (insert b "  "))))))))
+
+(defun superman-button-git-status (ev)
+  (interactive "e")
+  (mouse-set-point ev)
+  (superman-view-git-status))
+
+;; (branches (superman-git-branches loc)))))))
+;; (master (car branches))
+;; (others (mapconcat #'(lambda (x)x) (cdr branches) " "))
+;; (branch-string (concat "\nBranch: [" master "] " others)))
+;; (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
+;; (make-text-button (+ 3 (length "Branch:"))
+;; (+ (length "Branch:") 3 (length master))
+;; (list 'action 'superman-button-git-status
+;; 'help-echo "git status")
+;; branch-string)
+;; (put-text-property (+ 3 (length "Branch:"))
+;; (+ (length "Branch:") 3 (length master))
+;; 'face 'font-lock-warning-face branch-string)
+;; branch-string))))
 
 
 (defun superman-view-others (project)
@@ -622,6 +733,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			  ,(superman-read-balls (point))))))
 	  (reverse cats))))))
 
+
+
 (defun superman-view-project (&optional project)
   "Display the current project in a view buffer."
   (interactive)
@@ -659,6 +772,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (when (> (length superman-project-history) 1)
       (insert "\t\t" (cadr superman-project-history) "[M-right], " (car (reverse superman-project-history)) "[M-left]"))
     (insert (superman-project-view-header pro))
+    (superman-view-insert-git-branches pro)
+    (superman-view-insert-unison-buttons pro)
     (goto-char (point-max))
     (insert "\n")
     ;; loop cats
@@ -680,17 +795,17 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			     (outline-previous-heading)
 			     (point)))
 		 ;; (folded (superman-get-property sec-head  "startFolded"))
-		(free (superman-get-property sec-head "freeText")))
+		 (free (superman-get-property sec-head "freeText")))
 	    (goto-char (point-min))
 	    (setq cat-point (point-marker))
 	    (if free
 		(save-restriction
 		  (org-narrow-to-subtree)
-		   (let ((text (buffer-substring
-				(progn (org-end-of-meta-data-and-drawers)
-				       (point))
-				(point-max))))
-		     (with-current-buffer vbuf (insert text))))
+		  (let ((text (buffer-substring
+			       (progn (org-end-of-meta-data-and-drawers)
+				      (point))
+			       (point-max))))
+		    (with-current-buffer vbuf (insert text))))
 	      ;; loop over section cat
 	      ;; format elements (if any and if wanted)
 	      ;; region is narrowed to section
@@ -735,30 +850,30 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       (insert (superman-column-names balls)))
 	      (delete-region (point) (point-max)))
 	    (goto-char (point-max))
-	  (widen)
-	  ;; (when folded (hide-subtree))
-	  (setq cats (cdr cats))))))
-      ;; leave index buffer widened
-      (set-buffer ibuf)
-      (widen)
-      (show-all)
-      (switch-to-buffer vbuf))
-    (goto-char (point-min))
-    ;; facings
-    (save-excursion
-      (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-	(add-text-properties
-	 (match-beginning 0) (match-end 0)
-	 '(face org-link))))
-    ;; default-dir
-    (setq default-directory
-	  (superman-project-home
-	   (superman-view-current-project)))
-    ;; minor-mode
-    (superman-view-mode-on)
-    ;; check modified
-    (superman-view-git-update-status nil nil nil 'dont)
-    (setq buffer-read-only t))
+	    (widen)
+	    ;; (when folded (hide-subtree))
+	    (setq cats (cdr cats))))))
+    ;; leave index buffer widened
+    (set-buffer ibuf)
+    (widen)
+    (show-all)
+    (switch-to-buffer vbuf))
+  (goto-char (point-min))
+  ;; facings
+  (save-excursion
+    (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+      (add-text-properties
+       (match-beginning 0) (match-end 0)
+       '(face org-link))))
+  ;; default-dir
+  (setq default-directory
+	(superman-project-home
+	 (superman-view-current-project)))
+  ;; minor-mode
+  (superman-view-mode-on)
+  ;; check modified
+  (superman-view-git-update-status nil nil nil 'dont)
+  (setq buffer-read-only t))
 
 
 (unless org-todo-keyword-faces
@@ -867,7 +982,7 @@ Value is the formatted string with text-properties (special balls)."
   (let ((hdr  (concat "\n\n"
 		      (superman-view-others pro)
 		      (superman-view-control pro)
-		      (superman-view-branch pro)
+		      ;; (superman-view-branches pro)
 		      ;; "\n"
 		      ;; (superman-view-show-hot-keys)
 		      )))
@@ -1368,6 +1483,15 @@ If point is before the first category do nothing."
       (widen)
       (superman-redo))))
 
+
+(defun superman-view-git-status ()
+  "Show git status of current project."
+  (interactive)
+  (let ((git-dir
+	 (get-text-property (point-min) 'git-dir)))
+  (superman-git-status git-dir)))
+
+
 (defun superman-view-git-diff ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -1747,7 +1871,8 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gl" 'superman-view-git-log)
 (define-key superman-view-mode-map "GL" 'superman-view-git-log-decorationonly)
 (define-key superman-view-mode-map "GP" 'superman-git-push)
-(define-key superman-view-mode-map "Gs" 'superman-view-git-search)
+(define-key superman-view-mode-map "Gs" 'superman-view-git-status)
+(define-key superman-view-mode-map "GS" 'superman-view-git-search)
 (define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
 (define-key superman-view-mode-map "GU" 'superman-view-git-update-status-forced)
 (define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
