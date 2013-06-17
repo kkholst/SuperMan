@@ -626,7 +626,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 			 " "
 			 (car vv)
 			 "\n:PROPERTIES:"
-			 "\n:FileName: [[" (abbreviate-file-name (expand-file-name (concat keys "/" (car vv)) gittop)) "]]"
+			 "\n:FileName: [[" (abbreviate-file-name (expand-file-name (concat (if (string= keys "/") "." keys) "/" (car vv)) gittop)) "]]"
 			 "\n:GitStatus: Unknown"
 			 ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 			 "\n:END:\n\n")

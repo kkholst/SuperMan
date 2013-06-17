@@ -1950,6 +1950,7 @@ not in a section prompt for section first.
     ["Dired" superman-view-dired t]
     ["File list" superman-view-file-list t]
     ("Git"
+     ["Git master pull-push and return" superman-view-git-master-push-pull-and-return t]
      ["Git file-list" superman-capture-git-section t]
      ["Git update" superman-view-git-update-status t]
      ["Git commit" superman-view-git-commit t]
