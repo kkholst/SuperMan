@@ -1492,7 +1492,6 @@ If point is before the first category do nothing."
 	 (get-text-property (point-min) 'git-dir)))
   (superman-git-status git-dir)))
 
-
 (defun superman-view-git-diff ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -1710,33 +1709,42 @@ according to git."
     (if (not dir) (message "Project is not git-controlled.")
       (if force
 	  (superman-loop 'superman-view-set-status-at-point nil beg end nil)
-      (let* ((file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
-	     (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
-	     (status-list
-	      (delq nil
-		    (mapcar (lambda (x)
-			      (if (string= "" x) nil
-				(let ((el (split-string x " ")))
-				  (cons (caddr el) (cadr el)))))
-			    (split-string git-status "\n")))))
-	(while file-list
-	  (let* ((file (car file-list))
-		 (status
-		  (superman-status-label
-		   (or (cdr (assoc (file-relative-name file dir)
-				   status-list)) "C")))
-		 (pom (get-text-property 0 'org-hd-marker file))
-		 (current-status
-		  (superman-get-property pom "GitStatus")))
-	    (unless (string= status current-status)
-	      (org-entry-put pom (superman-property 'gitstatus) status)
-	      (when (or
-		     (string= (downcase status) "modified")
-		     (and (stringp current-status)
-			  (string= (downcase current-status) "modified")))
-		(superman-git-set-status pom file nil)))
-	    ;; (org-entry-put pom "GitStatus" status)))
-	    (setq file-list (cdr file-list))))))
+	(let* ((superman-file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
+	       (git-file-list (delete ""
+				      (split-string
+				       (shell-command-to-string
+					(concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+	       (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+	       (status-list
+		(when (not (string= git-status ""))
+		  (delq nil
+			(mapcar (lambda (x)
+				  (if (string= "" x) nil
+				    (let ((el (split-string x " ")))
+				      (cons (caddr el) (cadr el)))))
+				(split-string git-status "\n"))))))
+	  ;; check modified for all files in superman-file-list
+	  ;; that also are in git-file-list 
+	  (while superman-file-list
+	    (let* ((file (car superman-file-list))
+		   (status
+		    (if (member (file-relative-name file dir) git-file-list)
+			(superman-status-label
+			 (or (cdr (assoc (file-relative-name file dir)
+					 status-list)) "C"))
+		      "Untracked"))
+		   (pom (get-text-property 0 'org-hd-marker file))
+		   (current-status
+		    (superman-get-property pom "GitStatus")))
+	      (unless (or (string= status "Untracked") (string= status current-status))
+		(org-entry-put pom (superman-property 'gitstatus) status)
+		(when (or
+		       (string= (downcase status) "modified")
+		       (and (stringp current-status)
+			    (string= (downcase current-status) "modified")))
+		  (superman-git-set-status pom file nil)))
+	      ;; (org-entry-put pom "GitStatus" status)))
+	      (setq superman-file-list (cdr superman-file-list))))))
       (unless dont-redo (superman-redo)))))
 
 
