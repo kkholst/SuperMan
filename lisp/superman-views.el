@@ -243,19 +243,17 @@ and the keybinding to initialize git control otherwise."
 	 (control (if (superman-git-p loc)
 		      (concat "Version control: Git repository at "
 			      ;;FIXME: would like to have current git status
-			       "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
+			      "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
 		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
 
 
-
 (defun superman-get-unisons (project)
   (let (unisons)
     (save-window-excursion
-      (when
-	  (superman-goto-project project "Configuration" nil nil nil)
-	(org-narrow-to-subtree)
+      (when (superman-goto-project project "Configuration" nil nil t nil)
+	;; (org-narrow-to-subtree)
 	(goto-char (point-min))
 	(while (re-search-forward ":UNISON:" nil t)
 	  (org-back-to-heading t)
@@ -277,77 +275,91 @@ and the keybinding to initialize git control otherwise."
 			   (if (string= (superman-get-property (point) "SWITCHES") "default")
 			       superman-unison-switches
 			     (superman-get-property (point) "SWITCHES"))))))))
-	  (outline-next-heading))))
+	  (outline-next-heading))
+	(widen)))
       unisons))
 
 (defun superman-view-insert-unison-buttons (project)
   "Insert unison buttons"
-  (let* ((pro (or project superman-current-project (superman-select-project)))
+  (let* ((pro (or project superman-current-project
+		  (superman-select-project)))
 	 (title "Unison:")
-	 (uu (superman-get-unisons pro))
-	 (current-unison (car uu))
-	 (unison-name (car current-unison))
-	 (unison-cmd (cdr current-unison))
-	 (map (make-sparse-keymap)))
-    (when uu
+	 (unison-list (superman-get-unisons pro))
+	 (i 1))
+    (while unison-list
+      (let* ((current-unison (car unison-list))
+	     (unison-name (car current-unison))
+	     (unison-cmd (cdr current-unison))
+	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive)
 				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
-      (insert "\n")
-      (put-text-property 0 (length title) 'face 'org-level-2 title)
-      (insert title " ")
-      (add-text-properties
-       0 (length unison-name) 
-       (list
-	'button (list t)
-	'face 'font-lock-warning-face
-	'keymap map
-	'mouse-face 'highlight
-	'follow-link t
-	'help-echo "run unison")
-       unison-name)
-      (insert "[" unison-name "]  "))))
+	(define-key map [follow-link] `(lambda () (interactive)
+				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+	(when (= i 1)
+	  (insert "\n")
+	  (put-text-property 0 (length title) 'face 'org-level-2 title)
+	  (insert title " "))
+	(add-text-properties
+	 0 (length unison-name) 
+	 (list
+	  'button (list t)
+	  'face 'font-lock-warning-face
+	  'keymap map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo unison-cmd)
+	 unison-name)
+	(insert "[" unison-name "]  "))
+      (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 (defvar superman-git-branch-map (make-sparse-keymap))
 ;; (define-key superman-git-branch-map [mouse-1] 'superman-button-git-status)
 (define-key superman-git-branch-map [mouse-2] 'superman-button-git-status)
 ;; (define-key superman-git-branch-map [mouse-3] 'superman-button-git-status)
-;; (define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
+(define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
 
 (defun superman-view-insert-git-branches (project)
   "Insert the git branch(es) if project is git controlled.
 Translate the branch names into buttons."
   (let ((pro (or project superman-current-project (superman-select-project)))
 	(loc (or (get-text-property (point-min) 'git-dir)
-		 (superman-get-location project))))
+		 (superman-project-home project))))
     (when (superman-git-p loc)
-      (let* ((loc (get-text-property (point-min) 'git-dir))
-	     (bb (superman-git-branches loc))
-	     (current-branch (car bb))
-	     (other-branches (cdr bb))
+      (let* ((branch-list (superman-git-branches loc))
+	     (current-branch (car branch-list))
+	     (other-branches (cdr branch-list))
 	     (title "Branches:"))
-	(when bb
+	(when branch-list
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " ")
 	  (add-text-properties
-	       0 (length current-branch) 
-	       (list
-		'button (list t)
-		'face 'font-lock-warning-face
-		'keymap superman-git-branch-map
-		'mouse-face 'highlight
-		'follow-link t
-		'help-echo "git status")
-	       current-branch)
+	   0 (length current-branch) 
+	   (list
+	    'button (list t)
+	    'face 'font-lock-warning-face
+	    'keymap superman-git-branch-map
+	    'mouse-face 'highlight
+	    'follow-link t
+	    'help-echo "git status")
+	   current-branch)
 	  (insert "[" current-branch "]  ")
 	  (while other-branches
-	    (let ((b (car other-branches)))
+	    (let* ((b (car other-branches))
+		   (map (make-sparse-keymap))
+		   (checkout-branch-cmd
+		    (concat "cd " loc "; " superman-cmd-git " checkout " b "\n")))
+	      (define-key map [mouse-2]
+		`(lambda () (interactive)
+		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
+	      (define-key map [follow-link] `(lambda () (interactive)
+		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
 	      (add-text-properties
 	       0 (length b) 
 	       (list
 		'button (list t)
 		'face 'font-lock-keyword-face
-		'keymap superman-git-branch-map
+		'keymap map
 		'mouse-face 'highlight
 		'follow-link t
 		'help-echo "git status")
@@ -359,21 +371,6 @@ Translate the branch names into buttons."
   (interactive "e")
   (mouse-set-point ev)
   (superman-view-git-status))
-
-;; (branches (superman-git-branches loc)))))))
-;; (master (car branches))
-;; (others (mapconcat #'(lambda (x)x) (cdr branches) " "))
-;; (branch-string (concat "\nBranch: [" master "] " others)))
-;; (put-text-property 0 (length "Branch:") 'face 'org-level-2 branch-string)
-;; (make-text-button (+ 3 (length "Branch:"))
-;; (+ (length "Branch:") 3 (length master))
-;; (list 'action 'superman-button-git-status
-;; 'help-echo "git status")
-;; branch-string)
-;; (put-text-property (+ 3 (length "Branch:"))
-;; (+ (length "Branch:") 3 (length master))
-;; 'face 'font-lock-warning-face branch-string)
-;; branch-string))))
 
 
 (defun superman-view-others (project)
@@ -417,9 +414,10 @@ Translate the branch names into buttons."
 If ON is non-nil keep mark for already marked items.
 If DONT-MOVE is non-nil stay at item."
   (interactive)
-  (if (org-agenda-bulk-marked-p)
-      (unless on (org-agenda-bulk-unmark))
-    (org-agenda-bulk-mark)))
+  (when (get-text-property (point-at-bol) 'org-marker)
+    (if (org-agenda-bulk-marked-p)
+	(unless on (org-agenda-bulk-unmark))
+      (org-agenda-bulk-mark))))
 
 (defun superman-view-mark-all (&optional arg)
   (interactive "P")
@@ -516,6 +514,7 @@ If MARKED is non-nil run only on marked items."
 					    ((eq (car b) 'todo) "Status")))))
 			balls)) balls 'no-face)))
     (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
+    (put-text-property 0 (length cols) 'column-names t cols)
     (put-text-property 0 (length cols) 'names (length cols) cols)
     cols))
 
@@ -744,7 +743,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		(or project
 		    superman-current-project
 		    (superman-switch-to-project nil t))))
-	 (loc (concat (superman-get-location pro) (car pro)))
+	 (loc (superman-project-home pro))
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 ;; (org-agenda-window-setup 'current-window)
 	 ;; (project-header (concat "Project: " (car pro)))
@@ -1044,16 +1043,17 @@ end of the list.
 
 If pos exceeds the length of the list place last element at the
 beginning of the list."
-  (let ((len (length list)))
+  (let ((len (length list))
+	(newlist (copy-sequence list)))
     (cond ((< pos 0)
-	   (nconc (cdr list) (list (car list))))
+	   (nconc (cdr newlist) (list (car newlist))))
 	  ((> pos (- len 2))
-	   (nconc (list (nth (- len 1) list)) (butlast list 1)))
+	   (nconc (list (nth (- len 1) newlist)) (butlast newlist 1)))
 	  (t
-	   (nconc (butlast list (- len pos))
-	     (list (nth (+ pos 1) list))
-	     (list (nth pos list))
-	     (nthcdr (+ pos 2) list))))))
+	   (nconc (butlast newlist (- len pos))
+	     (list (nth (+ pos 1) newlist))
+	     (list (nth pos newlist))
+	     (nthcdr (+ pos 2) newlist))))))
 	     
 
 (defun superman-change-balls (new-balls)
@@ -1095,11 +1095,9 @@ beginning of the list."
 (defun superman-one-right (&optional left)
   "Move column to the right."
   (interactive "P")
-  (if (get-text-property (point-at-bol) 'nickname)
-      (if left
-	  (superman-previous-project)
-	(superman-next-project))
-  (let* ((dim (superman-ball-dimensions))
+  (if (get-text-property (point-at-bol) 'column-names)
+      ;; swap columns
+      (let* ((dim (superman-ball-dimensions))
 	 (balls (get-text-property (superman-cat-point) 'balls))
 	 (buffer-read-only nil)
 	 (new-balls (superman-swap-balls balls
@@ -1107,9 +1105,14 @@ beginning of the list."
 					   (nth 2 dim))))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
+	(message (concat "Len!: " (int-to-string (length superman-document-balls))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat)))))
+      (superman-refresh-cat)))
+    ;; swap projects
+      (if left
+	  (superman-previous-project)
+	(superman-next-project))))
     
 (defun superman-one-left ()
   "Move column to the left."
@@ -1408,33 +1411,42 @@ current section."
 
 (defun superman-next-entry ()
   (interactive)
-  ;; check if current section is folded
-  (let* ((beg (point-at-bol))
-	(nextsubcat (or (next-single-property-change (point-at-eol) 'subcat) (point-max)))
-	(nextcat (or (next-single-property-change (point-at-eol) 'cat) (point-max)))
-	(closecat (min nextcat nextsubcat)))
-    (if (overlays-in beg closecat)
-	;; (if (get-text-property (point-at-bol) 'cat)
-	;;     (goto-char nextcat)
-	(goto-char closecat)
-    (goto-char
-       (or (next-single-property-change (point-at-eol) 'org-hd-marker)
-	   (point))))))
+  (forward-line 1))
+
+  ;; (cond ((or (get-text-property (point-at-bol) 'org-marker)
+	     ;; (get-text-property (point-at-bol) 'columns))
+	 ;; (forward-line 1))
+	;; ;; ((get-text-property (point-at-bol) 'sub-cat)
+	;; ((or (get-text-property (point-at-bol) 'cat)
+	     ;; (get-text-property (point-at-bol) 'sub-cat))
+	 ;; (let* ((start (point-at-bol))
+		;; (stop (save-excursion
+			;; (goto-char start)
+			;; (org-forward-heading-same-level 1)
+			;; (if (= (point) start) (point-max)
+			  ;; (point))))
+		;; (nextsubcat (or (next-single-property-change (point-at-eol) 'subcat) (point-max)))
+		;; (nextcat (or (next-single-property-change (point-at-eol) 'cat) (point-max)))
+		;; (closecat (min nextcat nextsubcat)))
+	   ;; ;; check if current section is folded
+	   ;; (if (overlays-in start closecat)
+	       ;; (goto-char closecat))))))
 
 (defun superman-previous-entry ()
-  (interactive)
-  ;; check if current section is folded
-  (let* ((end (point-at-eol))
-	(prevsubcat (or (previous-single-property-change (point-at-bol) 'subcat) (point-min)))
-	(prevcat (or (previous-single-property-change (point-at-bol) 'cat) (point-min)))
-	(closecat (max prevcat prevsubcat)))	
-    (if (overlays-in closecat end)
-	(goto-char closecat)
-      (goto-char
-       (or (previous-single-property-change (point-at-bol) 'org-hd-marker)
-	    (point-min))))
-    (beginning-of-line)
-    ))
+ (interactive)
+  (previous-line 1))
+  ;; ;; check if current section is folded
+  ;; (let* ((end (point-at-eol))
+	;; (prevsubcat (or (previous-single-property-change (point-at-bol) 'subcat) (point-min)))
+	;; (prevcat (or (previous-single-property-change (point-at-bol) 'cat) (point-min)))
+	;; (closecat (max prevcat prevsubcat)))	
+    ;; (if (overlays-in closecat end)
+	;; (goto-char closecat)
+      ;; (goto-char
+       ;; (or (previous-single-property-change (point-at-bol) 'org-hd-marker)
+	    ;; (point-min))))
+    ;; (beginning-of-line)
+    ;; ))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-redo do-delete-file)
   "Delet entry at point. Prompt user unless DONT-PROMT is non-nil. Redo the view-buffer
