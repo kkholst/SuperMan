@@ -108,7 +108,7 @@ use the location of the current project, if no project is current prompt for pro
 					nil t)))))
     (superman-run-cmd 
      (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")
-     "*S-git-return*"
+     "*Superman-returns*"
      (concat "Superman git checkout branch '" branch "' returns:\n\n"))
     (when superman-view-mode (superman-redo))))
 
@@ -121,14 +121,22 @@ result."
     (when superman-view-mode (superman-redo))
     (set-buffer (get-buffer-create buf))
     (let ((buffer-read-only nil))
-      (erase-buffer))
-    (with-help-window buf
-      (insert (concat intro msg)))))
+      ;; (erase-buffer))
+      (with-help-window buf
+	(insert (concat
+		 (concat "\n*** " (format-time-string "<%Y-%m-%d %a %H:%M>") " "
+			 intro msg))))
+      (save-window-excursion
+	(set-buffer buf)
+	(goto-char (point-max))
+	(re-search-backward "^***" nil t)
+	(forward-line 2)
+	(recenter 1)))))
 
 (defun superman-git-status (dir)
   (superman-run-cmd
    (concat "cd " dir "; " superman-cmd-git " status " "\n")
-   "*S-git-return*"
+   "*Superman-returns*"
    (concat "Superman git status '" dir "' returns:\n\n")))
      
 (defun superman-relative-name (file dir)
