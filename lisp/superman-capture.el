@@ -416,8 +416,9 @@ To undo all this call 'superman-delete-project'. "
 
 ;;}}}
 ;;{{{ capture synchronization commands
-(setq superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
+(defvar superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
       ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
+(defvar superman-unison-cmd "unison-gtk")
 
 (defun superman-capture-unison (&optional project)
   (interactive)
@@ -429,7 +430,7 @@ To undo all this call 'superman-delete-project'. "
     (superman-capture
      pro
      "Configuration"
-     `("Unison" (("UNISON" "unison-gtk")
+     `("Unison" (("UNISON" superman-unison-cmd)
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
