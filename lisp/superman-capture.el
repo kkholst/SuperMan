@@ -1,4 +1,4 @@
-½;;; superman-capture.el --- superman captures stuff
+;;; superman-capture.el --- superman captures stuff
 
 ;; Copyright (C) 2013  Klaus Kähler Holst, Thomas Alexander Gerds
 
