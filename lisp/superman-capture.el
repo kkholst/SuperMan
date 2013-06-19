@@ -1,4 +1,4 @@
-;;; superman-capture.el --- superman captures stuff
+½;;; superman-capture.el --- superman captures stuff
 
 ;; Copyright (C) 2013  Klaus Kähler Holst, Thomas Alexander Gerds
 
@@ -430,7 +430,7 @@ To undo all this call 'superman-delete-project'. "
     (superman-capture
      pro
      "Configuration"
-     `("Unison" (("UNISON" superman-unison-cmd)
+     `("Unison" (("UNISON" 'superman-unison-cmd)
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))

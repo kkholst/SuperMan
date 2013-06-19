@@ -770,7 +770,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     ;; previous project
     (when (> (length superman-project-history) 1)
-      (insert "\t\t" (cadr superman-project-history) "[M-right], " (car (reverse superman-project-history)) "[M-left]"))
+      (insert "\t\t" (car (reverse superman-project-history)) "[M-left], " (cadr superman-project-history) "[M-right]"))
     (insert (superman-project-view-header pro))
     (superman-view-insert-git-branches pro)
     (superman-view-insert-unison-buttons pro)
