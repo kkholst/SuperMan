@@ -375,16 +375,15 @@ the `superman-home'.")
 function is very similar to `org-property-values' with two differences:
 1) values are returned without text-properties.
 2) The function does not call widen and hence search can be restricted to region."
-  (let (values)
-    (save-excursion
-      (save-restriction
-	;; (widen)
-	(goto-char (point-min))
-	(let ((re (org-re-property key)))
-	  (while (re-search-forward re nil t)
-	    (add-to-list 'values (org-trim (match-string-no-properties 1))))
-	  (setq values (delete "" values)))))
-    values))
+  (save-excursion
+    (save-restriction
+      ;; (widen)
+      (goto-char (point-min))
+      (let ((re (org-re-property key))
+	    values)
+	(while (re-search-forward re nil t)
+	  (add-to-list 'values (org-trim (match-string-no-properties 3))))
+	(delete "" values)))))
 
 
 (defun superman-property-keys (&optional include-specials include-defaults)
