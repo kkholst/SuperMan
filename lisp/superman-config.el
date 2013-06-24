@@ -157,7 +157,7 @@ then fill relative to project."
 		    (other-window 1)))))
     (select-window (nth 0 top-windows))))
     
-(defun superman-switch-config (&optional project position)
+(defun superman-switch-config (&optional project position config)
   "Switch to the next user defined window configuration of PROJECT.
 
 If no window configuration exists, as specified in the subtree
@@ -167,26 +167,32 @@ Configuration in index file of PROJECT, use
 If POSITION is an integer n then switch to the nth window configuration
 of PROJECT and set `superman-default-config',
 else cycle the value `superman-config-cycle-pos' and use it to
-find the next window configuration."
+find the next window configuration.
+
+If CONFIG is non-nil it should be a window configuration
+given in superman notation."
   (interactive)
-  (let* ((pro (or project
-		  superman-current-project
-		  (superman-switch-to-project nil t)))
-	 (position (when (integerp position) position)) 
-	 (proconfig (superman-read-config pro))
-	 (config-list (if proconfig (progn (superman-distangle-config-list
-		       proconfig)) '("PROJECT")))
-	 window-config)    
-    
-    (if position
-	(setq superman-config-cycle-pos position)
-      (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
-	  (setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
-	(setq superman-config-cycle-pos 0)))
-    (setq window-config
-	  (superman-distangle-config
-	   (nth superman-config-cycle-pos config-list)))
-    (superman-smash-windows window-config pro)))
+  (let ((pro (or project
+		 superman-current-project
+		 (superman-switch-to-project nil t))))
+    (if config
+	(superman-smash-windows
+	 (superman-distangle-config config)
+	 pro)
+      (let* ((position (when (integerp position) position)) 
+	     (proconfig (superman-read-config pro))
+	     (config-list (if proconfig (progn (superman-distangle-config-list
+						proconfig)) '("PROJECT")))
+	     window-config)
+	(if position
+	    (setq superman-config-cycle-pos position)
+	  (if (> (length config-list) (1+ superman-config-cycle-pos));; cycle-pos starts at 0
+	      (setq superman-config-cycle-pos (1+ superman-config-cycle-pos))
+	    (setq superman-config-cycle-pos 0)))
+	(setq window-config
+	      (superman-distangle-config
+	       (nth superman-config-cycle-pos config-list)))
+	(superman-smash-windows window-config pro)))))
 ;;}}}
 ;;{{{ functions that find things
 

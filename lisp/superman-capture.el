@@ -203,11 +203,12 @@ turn it off."
 	    (kill-line)
 	    (forward-line -1))
 	(end-of-line)))
-    (save-buffer)
+    ;; (save-buffer)
     (run-hooks 'superman-capture-before-clean-scene-hook)
     (goto-char (point-min))
     (outline-next-heading)
     (delete-region (point-min) (point))
+    (save-buffer)
     (kill-buffer (current-buffer))
     (set-window-configuration scene)
     (run-hooks 'superman-capture-after-clean-scene-hook)
@@ -430,7 +431,7 @@ To undo all this call 'superman-delete-project'. "
     (superman-capture
      pro
      "Configuration"
-     `("Unison" (("UNISON" 'superman-unison-cmd)
+     `("Unison" (("UNISON" "superman-unison-cmd")
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))

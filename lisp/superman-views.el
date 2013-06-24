@@ -247,8 +247,96 @@ and the keybinding to initialize git control otherwise."
 		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
+(defun superman-view-others (project)
+  "Insert the names and emails of the others (if any)." 
+  (let ((pro (or project (superman-view-current-project)))
+	(others (superman-get-others pro)))
+    (if others
+	(let ((key "Others: "))
+	  (put-text-property 0 (length key) 'face 'org-level-2 key)
+	  (concat key others "\n"))
+      "")))
 
 
+
+(defun superman-current-cat ()
+  (let ((cat-point (superman-cat-point)))
+    (when cat-point
+      (get-text-property cat-point 'cat))))
+
+(defun superman-current-subcat ()
+  (let* ((cat-pos (superman-cat-point))
+	 (subcat-pos (superman-subcat-point))
+	 (subp (and subcat-pos (> subcat-pos cat-pos))))
+    (when cat-pos
+      (get-text-property
+       (if subp subcat-pos cat-pos)
+       (if subp 'subcat 'cat)))))
+
+(defun superman-current-subcat-pos ()
+  (let* ((cat-pos (superman-cat-point))
+	 (subcat-pos (superman-subcat-point))
+	 (subp (and subcat-pos (> subcat-pos cat-pos))))
+    (when cat-pos
+      (if subp subcat-pos cat-pos))))
+
+;;}}}
+;;{{{ window configuration
+(defun superman-get-configs (project)
+  (let (configs
+	(case-fold-search t))
+    (save-window-excursion
+      (when (superman-goto-project project "Configuration" nil nil t nil)
+	;; (org-narrow-to-subtree)
+	(goto-char (point-min))
+	(while (re-search-forward ":Config:" nil t)
+	  (org-back-to-heading t)
+	  (let ((hdr (progn 
+		       (looking-at org-complex-heading-regexp)
+		       (match-string-no-properties 4))))
+	    (setq
+	     configs
+	     (append
+	      configs
+	      (list (cons hdr (superman-get-property (point) "Config")))))
+	    (outline-next-heading)))
+	(widen)))
+    configs))
+
+(defun superman-view-insert-config-buttons (project)
+  "Insert unison buttons"
+  (let* ((pro (or project superman-current-project
+		  (superman-select-project)))
+	 (title "WindowConfig:")
+	 (config-list (superman-get-configs pro))
+	 (i 1))
+    (while config-list
+      (let* ((current-config (car config-list))
+	     (config-name (car current-config))
+	     (config-cmd (cdr current-config))
+	     (map (make-sparse-keymap)))
+	(define-key map [mouse-2] `(lambda () (interactive)
+				     (superman-switch-config nil nil ,config-cmd)))
+	(define-key map [follow-link] `(lambda () (interactive)
+					 (superman-smash-windows ,config-cmd)))
+	(when (= i 1)
+	  (insert "\n")
+	  (put-text-property 0 (length title) 'face 'org-level-2 title)
+	  (insert title " "))
+	(add-text-properties
+	 0 (length config-name) 
+	 (list
+	  'button (list t)
+	  'face 'font-lock-warning-face
+	  'keymap map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo config-cmd)
+	 config-name)
+	(insert "[" config-name "]  "))
+      (setq i (+ i 1) config-list (cdr config-list)))))
+;;}}}
+;;{{{ unison
 (defun superman-get-unisons (project)
   (let (unisons)
     (save-window-excursion
@@ -277,7 +365,7 @@ and the keybinding to initialize git control otherwise."
 			     (superman-get-property (point) "SWITCHES"))))))))
 	  (outline-next-heading))
 	(widen)))
-      unisons))
+    unisons))
 
 (defun superman-view-insert-unison-buttons (project)
   "Insert unison buttons"
@@ -311,6 +399,9 @@ and the keybinding to initialize git control otherwise."
 	 unison-name)
 	(insert "[" unison-name "]  "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
+
+;;}}}
+;;{{{ git branches
 
 (defvar superman-git-branch-map (make-sparse-keymap))
 ;; (define-key superman-git-branch-map [mouse-1] 'superman-button-git-status)
@@ -371,40 +462,6 @@ Translate the branch names into buttons."
   (interactive "e")
   (mouse-set-point ev)
   (superman-view-git-status))
-
-
-(defun superman-view-others (project)
-  "Insert the names and emails of the others (if any)." 
-  (let ((pro (or project (superman-view-current-project)))
-	(others (superman-get-others pro)))
-    (if others
-	(let ((key "Others: "))
-	  (put-text-property 0 (length key) 'face 'org-level-2 key)
-	  (concat key others "\n"))
-      "")))
-
-
-
-(defun superman-current-cat ()
-  (let ((cat-point (superman-cat-point)))
-    (when cat-point
-      (get-text-property cat-point 'cat))))
-
-(defun superman-current-subcat ()
-  (let* ((cat-pos (superman-cat-point))
-	 (subcat-pos (superman-subcat-point))
-	 (subp (and subcat-pos (> subcat-pos cat-pos))))
-    (when cat-pos
-      (get-text-property
-       (if subp subcat-pos cat-pos)
-       (if subp 'subcat 'cat)))))
-
-(defun superman-current-subcat-pos ()
-  (let* ((cat-pos (superman-cat-point))
-	 (subcat-pos (superman-subcat-point))
-	 (subp (and subcat-pos (> subcat-pos cat-pos))))
-    (when cat-pos
-      (if subp subcat-pos cat-pos))))
 
 ;;}}}
 ;;{{{ Marking elements
@@ -751,7 +808,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (ibuf (or (get-file-buffer index)
 		   (find-file index)))
 	 ;; (cats superman-cats)
-	 (cats (superman-parse-cats ibuf 1))
+	 (cats (delete-if
+		#'(lambda (cat) (string= "Configuration" (car cat)))
+		(superman-parse-cats ibuf 1)))
 	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
     (switch-to-buffer vbuf)
@@ -773,6 +832,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (insert "\t\t" (car (reverse superman-project-history)) "[M-left], " (cadr superman-project-history) "[M-right]"))
     (insert (superman-project-view-header pro))
     (superman-view-insert-git-branches pro)
+    (superman-view-insert-config-buttons pro)
     (superman-view-insert-unison-buttons pro)
     (goto-char (point-max))
     (insert "\n")
@@ -1079,18 +1139,22 @@ beginning of the list."
 (defun superman-next-ball (&optional arg)
   "Move to ARGth next column."
   (interactive "p")
-  (let* ((current (nth 2 (superman-ball-dimensions)))
-	 (colstart (superman-compute-columns-start))
-	 (j (max 0 (min (- (length colstart) 1)
-			(+ current arg)))))
-    (beginning-of-line)
-    (forward-char (+ 2 ;; offset for whole line
-		     (nth j colstart)))))
+  (if (get-text-property (point-at-bol) 'columns)
+      (let* ((current (nth 2 (superman-ball-dimensions)))
+	     (colstart (superman-compute-columns-start))
+	     (j (max 0 (min (- (length colstart) 1)
+			    (+ current arg)))))
+	(beginning-of-line)
+	(forward-char (+ 2 ;; offset for whole line
+			 (nth j colstart))))
+     (right-char 1)))
 
 (defun superman-previous-ball ()
   "Move to previous column."
   (interactive)
-  (superman-next-ball -1))
+  (if (get-text-property (point-at-bol) 'columns)
+      (superman-next-ball -1)
+    (left-char 1)))
     
 (defun superman-one-right (&optional left)
   "Move column to the right."
