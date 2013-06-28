@@ -45,9 +45,9 @@ If JABBER is non-nil message about non-existing headings.
 	 value)
     (if index
       	(progn
-	  (find-file index)
 	  (unless (file-exists-p (file-name-directory index))
-	    (make-directory  (file-name-directory index))))
+	    (make-directory (file-name-directory index) 'with-parents))
+	  (find-file index))
       (error (concat "Project " pro " does not have an index.")))
     (widen)
     (show-all)
@@ -70,20 +70,29 @@ If JABBER is non-nil message about non-existing headings.
 	(end-of-line)
 	(if (outline-next-heading)
 	    (beginning-of-line)
-	(goto-char (point-max)))))
+	  (goto-char (point-max)))))
     (unless leave-narrowed
       (widen)
       (show-all))
-  value))
+    value))
 
 (defvar superman-setup-scene-hook nil "Hook run by superman-capture
 just before the capture buffer is given to the user.")
 
-(defun superman-capture (project heading plist &optional level)
+(defun superman-capture (project heading plist &optional level scene)
+  "Superman captures entries, i.e. outline-heading, to be added to the index file of a
+PROJECT at a given HEADING. A special case is where a new projects is captured
+for the supermanager. The PLIST is a list of properties for the new entry possibly with
+pre-specified default values.
+
+If LEVEL is given it this is the level of the new heading (default is 3).
+If scene is given it is used to determine what should happen after the capture.
+Default is to set the old window configuration.
+"
   (let* ((what (car plist))
 	 (level (or level 3))
 	 (props (cadr plist))
-	 (scene (current-window-configuration))
+	 (scene (or scene (current-window-configuration)))
 	 head-point
 	 (body "")
 	 (title (concat "### Superman captures " what " for project " (car project)))
@@ -189,8 +198,8 @@ turn it off."
 (defun superman-clean-scene ()
   (interactive)
   (let ((scene (get-text-property (point-min) 'scene))
-	req
-	next)
+	 req
+	 next)
     (goto-char (point-min))
     (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
       (goto-char next)
@@ -210,7 +219,9 @@ turn it off."
     (delete-region (point-min) (point))
     (save-buffer)
     (kill-buffer (current-buffer))
-    (set-window-configuration scene)
+    (if (window-configuration-p scene)
+	(set-window-configuration scene)
+      (call-interactively scene))
     (run-hooks 'superman-capture-after-clean-scene-hook)
     (when (or superman-view-mode superman-mode) (superman-redo))))
 
@@ -303,12 +314,34 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		   (hdr ,(file-name-nondirectory file))
 		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
 
-(defun superman-capture-project (&optional nickname category)
-  "Create a new project. If CATEGORY is nil prompt for project category with completion in existing categories.
-If NICKNAME is nil prompt for nickname.
 
-This function modifies the 'superman' and creates and visits the index file of the new project.
-To undo all this call 'superman-delete-project'. "
+(defun superman-view-new-project ()
+  (interactive)
+  "Hook to be run when a new project is captured.
+Creates the project directory and index file."
+  (let* ((case-fold-search t)
+	 (nick
+	  (progn
+	    (outline-next-heading)
+	    (superman-get-property (point) "nickname")))
+	 (pro (progn
+		(save-buffer)
+		(assoc nick superman-project-alist))))
+    (superman-create-project pro)
+    (superman-update-project-overview)
+    ;; (superman-view-project pro)
+    (superman-switch-config pro nil "PROJECT | *S* / SUPERMANUAL")))
+
+(defun superman-capture-project (&optional nickname category)
+  "Create a new project. If CATEGORY is nil prompt for project category
+with completion in existing categories. If NICKNAME is nil prompt for nickname.
+
+This function modifies your 'superman-project-alist', it first 
+saves the new entry to the file superman-home, the it creates
+directories and the index file, if these do not exist already, and
+finally it visit the new project is visited.
+
+To undo all this call 'superman-delete-project' from the supermanager (M-x superman). "
   (interactive)
   (superman-refresh)
   (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
@@ -320,18 +353,11 @@ To undo all this call 'superman-delete-project'. "
 				(superman-parse-project-categories))
 			nil nil)))
 	 (superman-setup-scene-hook
-	  '(lambda () 
-	     (define-key
-	       superman-capture-mode-map
-	       [(tab)]
-	       'superman-complete-project-property)
-	     (setq
-	      superman-capture-after-clean-scene-hook
-	      'superman-update-project-overview)
-	     ))
-	 (superman-capture-before-clean-scene-hook
-	  `(lambda () (save-buffer)
-	     (superman-create-project ,nickname 'ask))))
+	  #'(lambda ()
+	      (define-key
+		superman-capture-mode-map
+		[(tab)]
+		'superman-complete-project-property))))
     ;; category)
     ;; check if nickname exists 
     (while (assoc nickname superman-project-alist)
@@ -345,13 +371,14 @@ To undo all this call 'superman-delete-project'. "
      category
      `("Project" (("Nickname" ,nickname)
 		  ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
+		  ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ("Others" "")
 		  ;; ("Location" ("" (required t)))
 		  ("Location" "")
 		  (hdr ,(concat "ACTIVE " nickname))
 		  ("Index" "")
 		  ("Category" ,category)))
-     superman-project-level)))
+     superman-project-level 'superman-view-new-project)))
 
 
 (defun superman-complete-project-property ()

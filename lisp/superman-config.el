@@ -114,14 +114,17 @@ Returns the corresponding buffer."
     hlist))
 
 (defun superman-read-config (project)
-  (let* ((config
-	  (if superman-sticky-config superman-sticky-config nil)))
+  (let ((config
+	 (if superman-sticky-config superman-sticky-config nil))
+	(case-fold-search t))
     (save-window-excursion
       (save-restriction
 	(when (superman-goto-project project "Configuration" nil nil 'narrow nil)
 	  (goto-char (point-min))
 	  (while (outline-next-heading)
-	    (let ((this-config (superman-get-property (point) "Config")))
+	    (let* ((this-config
+		    (or (superman-get-property (point) "Config")
+			(cdr (assoc (downcase (org-get-heading t t)) superman-config-alist)))))
 	      (when this-config
 		(if config
 		    (setq
@@ -130,7 +133,7 @@ Returns the corresponding buffer."
 		  (setq config this-config)))))
 	  (when (not config) (setq config superman-default-config)))
 	config))))
-  ;;}}}
+;;}}}
 
 ;;{{{ smashing window configs
 (defun superman-smash-windows (window-config project)
@@ -223,6 +226,10 @@ given in superman notation."
 (defun superman-location (project)
   (let ((loc (concat (superman-get-location project) (car project))))
     (find-file loc)))
+
+(defun supermanual (&optional project)
+  (interactive)
+  (find-file supermanual))
 
 (defun superman-timeline (project)
   "Display a project specific timeline based on the index file."

@@ -286,22 +286,24 @@ and the keybinding to initialize git control otherwise."
   (let (configs
 	(case-fold-search t))
     (save-window-excursion
-      (when (superman-goto-project project "Configuration" nil nil t nil)
-	;; (org-narrow-to-subtree)
+      (when (superman-goto-project project "Configuration" nil nil 'narrow nil)
 	(goto-char (point-min))
-	(while (re-search-forward ":Config:" nil t)
-	  (org-back-to-heading t)
-	  (let ((hdr (progn 
-		       (looking-at org-complex-heading-regexp)
-		       (match-string-no-properties 4))))
+	(while (outline-next-heading)
+	  (let ((config (or (superman-get-property (point) "Config")
+			    (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
+		(hdr (org-get-heading t t)))
 	    (setq
 	     configs
 	     (append
 	      configs
-	      (list (cons hdr (superman-get-property (point) "Config")))))
-	    (outline-next-heading)))
+	      (list (cons hdr config))))
+	    ))
 	(widen)))
     configs))
+
+(defun supermanual ()
+  (interactive)
+  (find-file superman-manual))
 
 (defun superman-view-insert-config-buttons (project)
   "Insert unison buttons"
@@ -316,6 +318,8 @@ and the keybinding to initialize git control otherwise."
 	     (config-cmd (cdr current-config))
 	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive)
+				     (superman-switch-config nil nil ,config-cmd)))
+	(define-key map [return] `(lambda () (interactive)
 				     (superman-switch-config nil nil ,config-cmd)))
 	(define-key map [follow-link] `(lambda () (interactive)
 					 (superman-smash-windows ,config-cmd)))
@@ -381,8 +385,10 @@ and the keybinding to initialize git control otherwise."
 	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive)
 				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
-	(define-key map [follow-link] `(lambda () (interactive)
+	(define-key map [return] `(lambda () (interactive)
 				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+	(define-key map [follow-link] `(lambda () (interactive)
+					 (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
 	(when (= i 1)
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
@@ -406,6 +412,7 @@ and the keybinding to initialize git control otherwise."
 (defvar superman-git-branch-map (make-sparse-keymap))
 ;; (define-key superman-git-branch-map [mouse-1] 'superman-button-git-status)
 (define-key superman-git-branch-map [mouse-2] 'superman-button-git-status)
+(define-key superman-git-branch-map [return] 'superman-view-git-status)
 ;; (define-key superman-git-branch-map [mouse-3] 'superman-button-git-status)
 (define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
 
@@ -441,6 +448,9 @@ Translate the branch names into buttons."
 		   (checkout-branch-cmd
 		    (concat "cd " loc "; " superman-cmd-git " checkout " b "\n")))
 	      (define-key map [mouse-2]
+		`(lambda () (interactive)
+		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
+	      (define-key map [return]
 		`(lambda () (interactive)
 		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
 	      (define-key map [follow-link] `(lambda () (interactive)
@@ -1656,9 +1666,8 @@ If point is before the first category do nothing."
 	(find-file index)))
     (show-all)
     (widen)
-    (when pom (goto-char pom))
+    (when pom (goto-char pom))))
     ;;(org-narrow-to-subtree)
-    ))
 
 (defun superman-view-file-list ()
   (interactive)
@@ -1691,29 +1700,29 @@ If point is before the first category do nothing."
 (defun superman-hot-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (b (superman-current-cat))
-	 f)
-    (cond ((string-match "Mail" b)
-	   (save-excursion
-	     (beginning-of-line)
-	     (if (re-search-forward org-bracket-link-regexp nil t)
-		 (org-open-at-point))))
-	  ;; (message "Open mail"))
-	  ((string-match "Bookmarks" b)
-	   (save-excursion
-	     (beginning-of-line)
-	     (if (re-search-forward org-bracket-link-regexp nil t)
-		 (org-open-at-point))))
-	  ((string-match "Notes" b)
-	   (save-excursion
-	     (superman-view-index)
-	     (org-narrow-to-subtree)))
-	  (superman-mode
-	   (superman-return))
-	  ;; (message "Follow-link"))
-	  ((setq f (superman-get-property m "filename"))
-	   (org-open-link-from-string f))
-	  (t (message "Nothing to do here")))))
+	     (b (superman-current-cat))
+	     f)
+	(cond ((string-match "Mail" b)
+	       (save-excursion
+		 (beginning-of-line)
+		 (if (re-search-forward org-bracket-link-regexp nil t)
+		     (org-open-at-point))))
+	      ;; (message "Open mail"))
+	      ((string-match "Bookmarks" b)
+	       (save-excursion
+		 (beginning-of-line)
+		 (if (re-search-forward org-bracket-link-regexp nil t)
+		     (org-open-at-point))))
+	      ((string-match "Notes" b)
+	       (save-excursion
+		 (superman-view-index)
+		 (org-narrow-to-subtree)))
+	      (superman-mode
+	       (superman-return))
+	      ;; (message "Follow-link"))
+	      ((setq f (superman-get-property m "filename"))
+	       (org-open-link-from-string f))
+	      (t (message "Nothing to do here")))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
@@ -1937,7 +1946,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "S" 'superman-sort-section)
 (define-key superman-view-mode-map "V" 'superman-switch-config)
 (define-key superman-view-mode-map "!" 'superman-goto-shell)
-(define-key superman-view-mode-map "?" 'superman-view-help)
+(define-key superman-view-mode-map "?" 'supermanual)
 
 (define-key superman-view-mode-map "Bn" 'superman-new-ball)
 (define-key superman-view-mode-map "Bx" 'superman-delete-ball)

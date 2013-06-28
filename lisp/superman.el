@@ -345,14 +345,13 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 
 (defun superman-update-project-overview ()
-  (if (get-buffer "*S*")
-      (switch-to-buffer (get-buffer "*S*"))
-    (S))
-  (superman-redo))
+  (save-excursion
+    (if (get-buffer "*S*")
+	(switch-to-buffer (get-buffer "*S*"))
+      (S))
+    (superman-redo)))
 
-(defun superman-new-project ()
-  (interactive)
-  (superman-capture-project))
+(fset 'superman-new-project 'superman-capture-project)
 
 
 (defun superman-clean-up ()
@@ -387,18 +386,8 @@ Enabling superman mode electrifies the superman buffer for project management."
 (define-key superman-mode-map "x" 'superman-delete-project)
 (define-key superman-mode-map "V" 'superman-change-view)
 (define-key superman-mode-map "N" 'superman-new-project)
-(define-key superman-mode-map "?" 'superman-show-help)
+(define-key superman-mode-map "?" 'supermanual)
 
-(defun superman-show-help ()
-  (interactive)
-  (let ((msg
-	(concat 
-	 "------------------\n"
-	"[return]:\t\t Open project at point\n"
-	"[n]:     \t\t New project\n"
-	"[space]: \t\t Switch to project\n"
-	 "------------------\n")))
-    (funcall superman-help-fun msg)))
 
 ;;}}}  
 (provide 'superman)

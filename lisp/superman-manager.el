@@ -96,6 +96,9 @@ category: Name of the category property
 (defvar superman-home (concat (file-name-directory (locate-library "superman")) "../manager/" "Projects.org")
   "File for managing projects. See the manual
     for structure and syntax.")
+(defvar supermanual
+  (concat (file-name-directory (locate-library "superman")) "../manager/" "Supermanual.org")
+  "File with instructions for using superman.")
 (defvar superman-default-content "" "Initial contents of org project index file.")
 (defvar superman-project-subdirectories nil)
 (defvar superman-project-level 4
@@ -127,7 +130,10 @@ the `superman-home'.")
 (defvar superman-save-buffers 'save-some-buffers
     "Function to be called to save buffers before switching project.")
 
+(defvar superman-config-alist '(("supermanual" . "PROJECT / SUPERMANUAL")))
+
 ;; config
+
 (setq superman-config-action-alist '(("INDEX" . superman-find-index)
 				    ("TODO" . superman-todo)
 				    ("TIMELINE" . superman-timeline)
@@ -135,9 +141,11 @@ the `superman-home'.")
 				    ("DOCUMENTS" . superman-view-documents)
 				    ("FILELIST" . superman-file-list)
 				    ("PROJECT" . superman-view-project)
+				    ("SUPERMANUAL" . supermanual)
 				    ("magit" . superman-magit)
 				    ("recent.org" . superman-recent-org)
 				    ("*shell*" . superman-start-shell)
+				    ("*S*" . superman-visit-home)
                                     ("*ielm*" . 
 				     (lambda (project) 
 				       (if (get-buffer "*ielm*") 
@@ -405,9 +413,10 @@ and others."
 	  (setq range (org-get-property-block))
 	  (goto-char (car range))
 	  (while (re-search-forward
-		  (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
+		  org-property-re
+		  ;; (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
 		  (cdr range) t)
-	    (add-to-list 'rtn (org-match-string-no-properties 1)))
+	    (add-to-list 'rtn (org-match-string-no-properties 2)))
 	  (outline-next-heading))))
     (when include-specials
       (setq rtn (append org-special-properties rtn)))
@@ -438,13 +447,14 @@ and others."
 ;; '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
 
 
-;; (fset 'superman-new-project 'superman-capture-project)
 
-(defun superman-create-project (&optional project ask)
+(defun superman-create-project (project &optional ask)
   "Create the index file, the project directory, and subdirectories if
                                     'superman-project-subdirectories' is set."
   (interactive)
-  (let ((pro (assoc project superman-project-alist)))
+  (let ((pro (if (stringp project)
+		 (assoc project superman-project-alist)
+	       project)))
     (when pro
       (let ((dir (concat (superman-get-location pro) (car pro)))
 	    (index (superman-get-index pro)))
@@ -452,8 +462,9 @@ and others."
 	  (unless (file-exists-p (file-name-directory index))
 	    (make-directory (file-name-directory index) t))
 	  (find-file index)
-	  (insert "***** Index of project " (car pro) " (this line can be deleted.)\n")
-	  (save-buffer))
+	  (unless (file-exists-p index)
+	    (insert "***** Index of project " (car pro) " (this line can be deleted.)\n")
+	    (save-buffer)))
 	;; (append-to-file superman-default-content nil index)
 	(unless (or (not dir) (file-exists-p dir) (not (and ask (y-or-n-p (concat "Create directory (and default sub-directories) " dir "? ")))))
 	  (make-directory dir)
@@ -490,23 +501,27 @@ and others."
 	 (scene (current-window-configuration))
 	 (pro (or project (superman-project-at-point)))
 	 (dir (concat (superman-get-location pro) (car pro)))
-	 (index (superman-get-index pro)))
+	 (index (superman-get-index pro))
+	 (ibuf (get-file-buffer index)))
     (when (and (file-exists-p dir)
-	       (yes-or-no-p (concat "Remove project directory tree? " dir)))
+	       (yes-or-no-p (concat "Remove project directory tree? " dir " ")))
       (move-file-to-trash dir))
     (when (and (file-exists-p index)
 	       (yes-or-no-p (concat "Remove index file? " index)))
       (move-file-to-trash index))
+    (when (buffer-live-p ibuf)
+	(kill-buffer ibuf))
     (superman-view-index)
     (org-narrow-to-subtree)
     (when (yes-or-no-p "Delete this project from SuperMan control? ")
       (org-cut-subtree))
     (widen)
     (superman-parse-projects)
+    (delete (car pro) superman-project-history)
+    (when (buffer-live-p (get-buffer (concat "*Project[" (car pro) "]*")))
+      (kill-buffer (concat "*Project[" (car pro) "]*")))
     (set-window-configuration scene)
-    (when superman-mode
-      (superman-redo))))
-      
+    (when superman-mode (superman-redo))))
       
 
 ;;}}}
@@ -766,6 +781,9 @@ If NOSELECT is set return the project."
 
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
+(defun superman-visit-home (project)
+  (S)
+  (re-search-forward (car project) nil t))
 
 (defun superman-project-home (project)
   (concat (superman-get-location project) (car project)))
