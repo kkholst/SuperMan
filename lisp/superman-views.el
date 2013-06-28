@@ -301,9 +301,13 @@ and the keybinding to initialize git control otherwise."
 	(widen)))
     configs))
 
-(defun supermanual ()
+;; (defun supermanual ()
+;;   (interactive)
+;;   (find-file superman-manual))
+(defun supermanual (&optional project)
   (interactive)
-  (find-file superman-manual))
+  (find-file supermanual))
+
 
 (defun superman-view-insert-config-buttons (project)
   "Insert unison buttons"

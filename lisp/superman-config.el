@@ -227,10 +227,6 @@ given in superman notation."
   (let ((loc (concat (superman-get-location project) (car project))))
     (find-file loc)))
 
-(defun supermanual (&optional project)
-  (interactive)
-  (find-file supermanual))
-
 (defun superman-timeline (project)
   "Display a project specific timeline based on the index file."
   (interactive)
