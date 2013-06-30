@@ -25,7 +25,30 @@
 
 ;;; Code:
 
-;;{{{ superman capture
+;;{{{ variables and hooks
+
+(defvar superman-setup-scene-hook nil "Hook run by superman-capture
+just before the capture buffer is given to the user.")
+(defvar superman-capture-before-clean-scene-hook nil
+"Hook run by superman-clean-scene
+just before the capture buffer is cleaned.")
+(defvar superman-capture-after-clean-scene-hook nil
+"Hook run by superman-clean-scene
+just before the capture buffer is killed.")
+
+(defvar superman-capture-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-view-mode' commands.")
+(define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
+(define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
+
+(defvar superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
+      ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
+(defvar superman-unison-cmd "unison-gtk")
+
+;;}}}
+
+
+;;{{{ superman goto project
 
 (defun superman-goto-project (&optional project heading create end-of leave-narrowed jabber)
   "Goto project index file call `widen' and then search for HEADING
@@ -76,8 +99,9 @@ If JABBER is non-nil message about non-existing headings.
       (show-all))
     value))
 
-(defvar superman-setup-scene-hook nil "Hook run by superman-capture
-just before the capture buffer is given to the user.")
+;;}}}
+;;{{{ superman capture
+
 
 (defun superman-capture (project heading plist &optional level scene)
   "Superman captures entries, i.e. outline-heading, to be added to the index file of a
@@ -162,8 +186,7 @@ Default is to set the old window configuration.
     (superman-capture-mode)
     (run-hooks 'superman-setup-scene-hook)))
 
-(defvar superman-capture-mode-map (make-sparse-keymap)
-  "Keymap used for `superman-view-mode' commands.")
+
 
 (define-minor-mode superman-capture-mode
 "Toggle superman capture mode.
@@ -178,10 +201,6 @@ turn it off."
   (when superman-hl-line (hl-line-mode 1))
   (superman-capture-mode t))
 
-
-(define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
-(define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
-
 (defun superman-make-value (val)
   (cond ((stringp val) val)
 	((functionp val) (funcall val))
@@ -191,9 +210,6 @@ turn it off."
 		  (add-text-properties 0 (length thing) (cdr val) thing))
 		 ((functionp thing)
 		  (funcall thing (cdr val))))))))
-
-(defvar superman-capture-before-clean-scene-hook nil)
-(defvar superman-capture-after-clean-scene-hook nil)
 
 (defun superman-clean-scene ()
   (interactive)
@@ -231,7 +247,8 @@ turn it off."
     (delete-region (point-min) (point-max))
     (save-buffer)
     (kill-buffer (current-buffer))
-    (set-window-configuration scene)))
+    (when (window-configuration-p scene)
+      (set-window-configuration scene))))
 
 ;; (superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
 
@@ -332,9 +349,10 @@ Creates the project directory and index file."
     ;; (superman-view-project pro)
     (superman-switch-config pro nil "PROJECT | *S* / SUPERMANUAL")))
 
-(defun superman-capture-project (&optional nickname category)
+(defun superman-capture-project (&optional nickname category loc)
   "Create a new project. If CATEGORY is nil prompt for project category
 with completion in existing categories. If NICKNAME is nil prompt for nickname.
+If LOC is given it is the mother directory of the project.  
 
 This function modifies your 'superman-project-alist', it first 
 saves the new entry to the file superman-home, the it creates
@@ -352,6 +370,11 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 				  (list x))
 				(superman-parse-project-categories))
 			nil nil)))
+	 (loc (or loc
+		  (save-excursion
+		    (superman-go-home category)
+		    (superman-get-property (point) "category" 'inherit))
+		  superman-default-directory))
 	 (superman-setup-scene-hook
 	  #'(lambda ()
 	      (define-key
@@ -363,9 +386,6 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (while (assoc nickname superman-project-alist)
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (setq category (or category
-		       (completing-read "Category: "
-					(mapcar (lambda (x) (list x)) (superman-parse-project-categories)) nil nil)))
     (superman-capture
      `("*S*" (("index" . ,superman-home)))
      category
@@ -374,7 +394,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		  ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ("Others" "")
 		  ;; ("Location" ("" (required t)))
-		  ("Location" "")
+		  ("Location" ,loc)
 		  (hdr ,(concat "ACTIVE " nickname))
 		  ("Index" "")
 		  ("Category" ,category)))
@@ -383,10 +403,13 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 (defun superman-complete-project-property ()
   (interactive)
-  (let ((curprop (save-excursion (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+  (let ((curprop (progn (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
     (cond ((string= (downcase curprop) (downcase (superman-property 'index)))
 	   (insert (read-file-name (concat "Set " curprop ": "))))
 	  ((string= (downcase curprop) (downcase (superman-property 'location)))
+	   (goto-char (+ (point) (length curprop) 2))
+	   (kill-line) ;; kill rest of the line
+	   (insert " ")
 	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
     
 (defun superman-capture-note (&optional project)
@@ -444,9 +467,6 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 ;;}}}
 ;;{{{ capture synchronization commands
-(defvar superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
-      ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
-(defvar superman-unison-cmd "unison-gtk")
 
 (defun superman-capture-unison (&optional project)
   (interactive)

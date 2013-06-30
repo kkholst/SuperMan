@@ -782,8 +782,16 @@ If NOSELECT is set return the project."
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
 (defun superman-visit-home (project)
+  "Open the supermanager and leave point at PROJECT"
   (S)
   (re-search-forward (car project) nil t))
+
+(defun superman-go-home (&optional heading)
+  "Visit the file superman-home and leave point at PROJECT."
+  (find-file superman-home) 
+  (re-search-forward
+   (format org-complex-heading-regexp-format (regexp-quote heading))
+   nil t))
 
 (defun superman-project-home (project)
   (concat (superman-get-location project) (car project)))

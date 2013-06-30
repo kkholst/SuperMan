@@ -241,12 +241,15 @@ and sets the variable superman-view-current-project."
 and the keybinding to initialize git control otherwise."
   (let* ((loc (get-text-property (point-min) 'git-dir))
 	 (control (if (superman-git-p loc)
-		      (concat "Version control: Git repository at "
-			      ;;FIXME: would like to have current git status
-			      "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
+		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
+			(put-text-property 0 1 'superman-header-marker t git-dir-link)
+			(concat "Version control: Git repository at "
+				;;FIXME: would like to have current git status as well
+				git-dir-link))
 		    "Version control: not set. <> press `GI' to initialize git")))
     (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
     control))
+
 (defun superman-view-others (project)
   "Insert the names and emails of the others (if any)." 
   (let ((pro (or project (superman-view-current-project)))
@@ -282,7 +285,7 @@ and the keybinding to initialize git control otherwise."
 
 ;;}}}
 ;;{{{ window configuration
-(defun superman-get-configs (project)
+(defun superman-view-read-config (project)
   (let (configs
 	(case-fold-search t))
     (save-window-excursion
@@ -292,12 +295,12 @@ and the keybinding to initialize git control otherwise."
 	  (let ((config (or (superman-get-property (point) "Config")
 			    (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
 		(hdr (org-get-heading t t)))
-	    (setq
-	     configs
-	     (append
-	      configs
-	      (list (cons hdr config))))
-	    ))
+	    (when config 
+	      (setq
+	       configs
+	       (append
+		configs
+		(list (cons hdr config)))))))
 	(widen)))
     configs))
 
@@ -314,7 +317,7 @@ and the keybinding to initialize git control otherwise."
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
 	 (title "WindowConfig:")
-	 (config-list (superman-get-configs pro))
+	 (config-list (superman-view-read-config pro))
 	 (i 1))
     (while config-list
       (let* ((current-config (car config-list))
@@ -331,6 +334,9 @@ and the keybinding to initialize git control otherwise."
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " "))
+	(put-text-property
+	   0 1
+	   'superman-header-marker t config-name)
 	(add-text-properties
 	 0 (length config-name) 
 	 (list
@@ -345,7 +351,7 @@ and the keybinding to initialize git control otherwise."
       (setq i (+ i 1) config-list (cdr config-list)))))
 ;;}}}
 ;;{{{ unison
-(defun superman-get-unisons (project)
+(defun superman-view-read-unison (project)
   (let (unisons)
     (save-window-excursion
       (when (superman-goto-project project "Configuration" nil nil t nil)
@@ -355,14 +361,17 @@ and the keybinding to initialize git control otherwise."
 	  (org-back-to-heading t)
 	  (let ((hdr (progn 
 		       (looking-at org-complex-heading-regexp)
-		       (match-string-no-properties 4))))
+		       (match-string-no-properties 4)))
+		(unison-cmd (superman-get-property (point) "UNISON")))
+	    (when (string= unison-cmd "superman-unison-cmd")
+	      (setq unison-cmd superman-unison-cmd))
 	    (setq
 	     unisons
 	     (append
 	      unisons
 	      (list (cons hdr
 			  (concat
-			   (superman-get-property (point) "UNISON")
+			   unison-cmd
 			   " "
 			   (superman-get-property (point) "ROOT-1")
 			   " "
@@ -380,7 +389,7 @@ and the keybinding to initialize git control otherwise."
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
 	 (title "Unison:")
-	 (unison-list (superman-get-unisons pro))
+	 (unison-list (superman-view-read-unison pro))
 	 (i 1))
     (while unison-list
       (let* ((current-unison (car unison-list))
@@ -388,15 +397,18 @@ and the keybinding to initialize git control otherwise."
 	     (unison-cmd (cdr current-unison))
 	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive)
-				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+				     (async-shell-command ,unison-cmd)))
 	(define-key map [return] `(lambda () (interactive)
-				     (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+				    (async-shell-command ,unison-cmd)))
 	(define-key map [follow-link] `(lambda () (interactive)
-					 (superman-run-cmd ,unison-cmd "*Superman-Unison*")))
+					 (async-shell-command ,unison-cmd)))
 	(when (= i 1)
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " "))
+	(put-text-property
+	 0 1
+	 'superman-header-marker t unison-name)
 	(add-text-properties
 	 0 (length unison-name) 
 	 (list
@@ -435,6 +447,9 @@ Translate the branch names into buttons."
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " ")
+	  (put-text-property
+	   0 1
+	   'superman-header-marker t current-branch)
 	  (add-text-properties
 	   0 (length current-branch) 
 	   (list
@@ -1230,8 +1245,27 @@ current section."
       (superman-change-balls new-balls)
       (superman-save-balls)
       (superman-refresh-cat))))
-  
-  
+
+
+(defun superman-tab (&optional arg)
+  (interactive)
+  (let ((inside-header (not (previous-single-property-change (point) 'cat)))
+	(mark (next-single-property-change (+ 1 (point)) 'superman-header-marker)))
+    (if inside-header
+	(if mark
+	    (goto-char mark)
+	  (goto-char (next-single-property-change (point) 'cat)))
+      (org-cycle arg))))
+
+(defun superman-shifttab (&optional arg)
+  (interactive)
+  (let ((inside-header (not (previous-single-property-change (point) 'cat))))
+    (if inside-header
+	(let ((mark (previous-single-property-change (- (point) 1) 'superman-header-marker)))
+	  (if mark (goto-char (- mark 1))
+	    (goto-char (point-min))))
+      (org-shifttab arg))))
+
 (defun superman-one-up (&optional down)
   "Move item in project view up or down."
   (interactive "P")
@@ -1275,10 +1309,10 @@ current section."
 	    (goto-char (point-min))
 	    (re-search-forward curcat nil t)
 	    (beginning-of-line))
-	  ;; (goto-char (if down
-	  ;; (next-single-property-change (point-at-eol) 'cat)
-	  ;; (previous-single-property-change (point-at-bol) 'cat)))
-	  (forward-line (if down 1 -1))))))
+	;; (goto-char (if down
+	;; (next-single-property-change (point-at-eol) 'cat)
+	;; (previous-single-property-change (point-at-bol) 'cat)))
+	(forward-line (if down 1 -1))))))
 
 (defun superman-one-down ()
   (interactive)
@@ -1931,6 +1965,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "n" 'superman-next-entry)
 (define-key superman-view-mode-map "p" 'superman-previous-entry)
 
+(define-key superman-view-mode-map [(tab)] 'superman-tab)
+(define-key superman-view-mode-map [(shift tab)] 'superman-shifttab)
+(define-key superman-view-mode-map [S-iso-lefttab] 'superman-shifttab)
 (define-key superman-view-mode-map [(up)] 'superman-previous-entry)
 (define-key superman-view-mode-map [(down)] 'superman-next-entry)
 (define-key superman-view-mode-map "i" 'superman-view-index)
