@@ -913,9 +913,10 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			 "\n"
 			 ))
 		      (end-of-line))
-		  (setq count (+ count 1))
-		  (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-		  (with-current-buffer vbuf (insert line "\n")))))
+		  (when (eq (org-current-level) 3)
+		    (setq count (+ count 1))
+		    (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+		    (with-current-buffer vbuf (insert line "\n"))))))
 	    ;; (widen)
 	    ;; (show-all)
 	    (set-buffer vbuf)
@@ -1738,8 +1739,11 @@ If point is before the first category do nothing."
 (defun superman-hot-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
-	     (b (superman-current-cat))
-	     f)
+	 (b (superman-current-cat))
+	 f)
+    (if (not m)
+	(error "Nothing to do here")
+    (org-with-point-at m
 	(cond ((string-match "Mail" b)
 	       (save-excursion
 		 (beginning-of-line)
@@ -1760,7 +1764,7 @@ If point is before the first category do nothing."
 	      ;; (message "Follow-link"))
 	      ((setq f (superman-get-property m "filename"))
 	       (org-open-link-from-string f))
-	      (t (message "Nothing to do here")))))
+	      (t (message "Nothing to do here")))))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
@@ -2111,6 +2115,6 @@ not in a section prompt for section first.
 
 (provide 'superman-views)
 
-;;; superman-summary.el ends here
+;;; superman-views.el ends here
 
 

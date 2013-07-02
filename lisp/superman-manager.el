@@ -43,6 +43,7 @@
 (require 'superman-capture)  ;; capture information
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
+(require 'superman-pub)   ;; publication manager
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
@@ -82,10 +83,10 @@ filename: Name of the filename property
 others: Name of the others (collaborators) property
 category: Name of the category property
 ")
+
 (defun superman-property (label)
   (interactive)
-  (cdr (assoc label superman-property-list))
-)
+  (cdr (assoc label superman-property-list)))
 
 (defvar superman-default-directory
   (file-name-as-directory org-directory)
@@ -788,7 +789,8 @@ If NOSELECT is set return the project."
 
 (defun superman-go-home (&optional heading)
   "Visit the file superman-home and leave point at PROJECT."
-  (find-file superman-home) 
+  (find-file superman-home)
+  (goto-char (point-min))
   (re-search-forward
    (format org-complex-heading-regexp-format (regexp-quote heading))
    nil t))

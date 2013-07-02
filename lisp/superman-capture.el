@@ -539,6 +539,8 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
   (when (eq major-mode 'gnus-article-mode)
       (gnus-article-show-summary))
   (gnus-summary-select-article-buffer)
+  (unless (use-region-p)
+    (mark-whole-buffer))
   (let* ((buf (current-buffer))
 	 (link (org-store-link 1))
 	 (entry (or project
