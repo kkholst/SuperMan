@@ -116,6 +116,7 @@ Default is to set the old window configuration.
   (let* ((what (car plist))
 	 (level (or level 3))
 	 (props (cadr plist))
+	 (kill-whole-line t)
 	 (scene (or scene (current-window-configuration)))
 	 head-point
 	 (body "")
@@ -214,8 +215,9 @@ turn it off."
 (defun superman-clean-scene ()
   (interactive)
   (let ((scene (get-text-property (point-min) 'scene))
-	 req
-	 next)
+	(kill-whole-line t)
+	req
+	next)
     (goto-char (point-min))
     (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
       (goto-char next)
@@ -225,7 +227,8 @@ turn it off."
 		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-warning-face)
 		(error (concat (or req "This is a required field"))))
 	    (beginning-of-line)
-	    (kill-line)
+	    (let ((kill-whole-line t))
+	      (kill-line))
 	    (forward-line -1))
 	(end-of-line)))
     ;; (save-buffer)
@@ -408,7 +411,8 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	   (insert (read-file-name (concat "Set " curprop ": "))))
 	  ((string= (downcase curprop) (downcase (superman-property 'location)))
 	   (goto-char (+ (point) (length curprop) 2))
-	   (kill-line) ;; kill rest of the line
+	   (let ((kill-whole-line t))
+	     (kill-line)) ;; kill rest of the line)
 	   (insert " ")
 	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
     

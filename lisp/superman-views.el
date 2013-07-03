@@ -1351,7 +1351,8 @@ current section."
   (interactive)
   (if superman-view-mode
       (let ((marker (org-get-at-bol 'org-hd-marker))
-	    (buffer-read-only nil))
+	    (buffer-read-only nil)
+	    (kill-whole-line t))
 	(when marker
 	  (beginning-of-line)
 	  (kill-line)
@@ -1512,6 +1513,7 @@ current section."
   "Refresh view of all lines in current category inclusive column names."
   (interactive)
   (let ((start (superman-cat-point))
+	(kill-whole-line t)
 	(end (or (next-single-property-change (point) 'cat) (point-max))))
     (if (not start)
 	(message "Point is not in category.")

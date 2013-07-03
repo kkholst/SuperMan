@@ -367,8 +367,9 @@ Enabling superman mode electrifies the superman buffer for project management."
     (goto-char (point-min))
     (while (re-search-forward "^Project category:" nil t)
       (when (progn (forward-line 1) (looking-at "^[ \t]*$"))
+	(let ((kill-whole-line t))
 	(kill-line 2)
-	(kill-line -1)))))
+	(kill-line -1))))))
 
 (setq superman-agenda-balls
       '((index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
@@ -386,6 +387,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 	     (goto-char (next-single-property-change (point) 'org-hd-marker)))
       (let* ((buffer-read-only nil)
 	     (pom (get-text-property (point-at-bol) 'org-hd-marker))
+	     (kill-whole-line t)
 	     (line
 	      (org-with-point-at pom
 		(superman-format-thing pom  superman-agenda-balls))))
