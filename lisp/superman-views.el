@@ -955,6 +955,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		    (member cat superman-views-permanent-cats) (> count 0))
 		(progn (end-of-line)
 		       (insert " [" (int-to-string count) "]")
+		       (when (assoc "GitStatus" balls)
+			 (insert "\t" "[" (superman-make-button "Update" '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
+				 "]"))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
