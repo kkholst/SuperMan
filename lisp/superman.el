@@ -249,6 +249,21 @@
   
 (defalias 'S 'superman)
 
+(defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
+
+(defun S-TODO ()
+  (let ((org-agenda-buffer-name (concat "*S-TODO*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands
+	 '(("P" "Projects-TODO"
+	    ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
+			((org-agenda-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp)))))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook 'superman-format-agenda))))))
+    (push ?P unread-command-events)
+    (call-interactively 'org-agenda)))
+
+
 (defun S-todo ()
   (let ((org-agenda-buffer-name (concat "*S-todo*"))
 	(org-agenda-sticky nil)
@@ -258,19 +273,12 @@
 			;; (list 'todo "TODO"
 			(list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 			      `((org-agenda-overriding-header  (concat "Project category: ",cat))
-				(org-agenda-files (quote ,(superman-index-list cat))))))
-		     (superman-parse-project-categories))
+				(org-agenda-files (quote ,(superman-index-list cat nil nil nil nil superman-exclude-from-todo-regexp))))))
+			(superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook
-	      '(lambda ()
-		 (superman-clean-up)
-		 (superman-on)
-		 (org-agenda-mode))))))))
+	     (org-agenda-finalize-hook 'superman-format-agenda))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
-;; (when (get-buffer "*S-todo*")
-;; (kill-buffer "*S-todo*"))
-;; (rename-buffer "*S-todo*"))
 
 (defun S-agenda ()
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
@@ -300,7 +308,7 @@
 				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook 'superman-clean-up))))))
+	     (org-agenda-finalize-hook 'superman-format-agenda))))))
     (push ?B unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -316,7 +324,7 @@
 				(org-agenda-files (quote ,(superman-index-list cat))))))
 		     (superman-parse-project-categories))
 	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook 'superman-clean-up))))))
+	     (org-agenda-finalize-hook 'superman-format-agenda))))))
     (push ?C unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -361,6 +369,42 @@ Enabling superman mode electrifies the superman buffer for project management."
       (when (progn (forward-line 1) (looking-at "^[ \t]*$"))
 	(kill-line 2)
 	(kill-line -1)))))
+
+(setq superman-agenda-balls
+      '((index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
+	(todo ("width" 7) ("face" superman-get-todo-face))
+	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
+	("DEADLINE" ("fun" superman-trim-date) ("face" font-lock-warning-face))
+	("CaptureDate" ("fun" superman-trim-date) ("face" font-lock-string-face))
+	("FileName" ("fun" superman-dont-trim))))
+
+(defun superman-format-agenda ()
+  (save-excursion
+    (goto-char (point-min))
+    ;; (superman-clean-up)
+    (while (ignore-errors
+	     (goto-char (next-single-property-change (point) 'org-hd-marker)))
+      (let* ((buffer-read-only nil)
+	     (pom (get-text-property (point-at-bol) 'org-hd-marker))
+	     (line
+	      (org-with-point-at pom
+		(superman-format-thing pom  superman-agenda-balls))))
+	(beginning-of-line)
+	(kill-line)
+	(insert line "\n")))
+    (goto-char (point-min))
+    (beginning-of-line)
+    (put-text-property (point-at-bol) (point-at-eol) 'cat t)
+    (end-of-line)
+    (insert "\n")
+    (insert (superman-column-names superman-agenda-balls))
+    (superman-view-mode t)
+    (let* ((org-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))
+	   obuf)
+      (while org-files
+	(when (setq obuf (get-file-buffer (car org-files)))
+	  (kill-buffer obuf))
+	(setq org-files (cdr org-files))))))
 
 (defun superman-visit-project ()
   (interactive)

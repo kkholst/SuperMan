@@ -423,6 +423,29 @@ and the keybinding to initialize git control otherwise."
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 ;;}}}
+;;{{{ superman-buttons
+
+(defun superman-make-button (string &optional keys face help)
+  (let ((map (make-sparse-keymap))
+	(face (or face 'font-lock-warning-face))
+	(help (or help "S-button")))
+    (while keys
+      (define-key map (caar keys) (cdar keys))
+      (setq keys (cdr keys)))
+    (add-text-properties
+     0 (length string) 
+     (list
+      'button (list t)
+      'face face
+      'keymap map
+      'mouse-face 'highlight
+      'follow-link t
+      'help-echo help)
+     string)
+    string))
+
+  
+;;}}}
 ;;{{{ git branches
 
 (defvar superman-git-branch-map (make-sparse-keymap))
@@ -933,6 +956,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		    (member cat superman-views-permanent-cats) (> count 0))
 		(progn (end-of-line)
 		       (insert " [" (int-to-string count) "]")
+		       (insert "\t" "[" (superman-make-button "Update" '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
+			       "]")
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
@@ -988,17 +1013,20 @@ a formatted string with faces."
 	      ;; thing is marker
 	      (cond ((stringp (car ball)) ;; properties
 		     (superman-get-property thing (car ball) t))
-		    ((eq (car ball) 'todo) ;; special: todo state
-		     (org-with-point-at thing 
-		       (org-back-to-heading t)
-		       (and (looking-at org-todo-line-regexp)
-			    (match-end 2) (match-string 2))))
 		    ((eq (car ball) 'hdr) ;; special: header
 		     (org-with-point-at thing 
 		       (org-back-to-heading t)
 		       (looking-at org-complex-heading-regexp)
 		       (match-string 4)))
-		    (t "--"))
+		    ((eq (car ball) 'todo) ;; special: todo state
+		     (org-with-point-at thing 
+		       (org-back-to-heading t)
+		       (and (looking-at org-todo-line-regexp)
+			    (match-end 2) (concat (match-string 2)))))
+		    ((eq (car ball) 'index) ;; special: index filename
+		     (file-name-sans-extension
+		      (file-name-nondirectory (buffer-file-name (current-buffer)))))
+		     (t "--"))
 	    ;; thing is alist
 	    (or (cdr (assoc (car ball) (cadr thing))) "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))

@@ -570,12 +570,14 @@ the active status of projects."
 ;;}}}
 ;;{{{ listing projects
 
-(defun superman-index-list (&optional category state extension not-exist-ok update)
+(defun superman-index-list (&optional category state extension not-exist-ok update exclude-regexp)
   "Return a list of project specific indexes.
 Projects are filtered by CATEGORY unless CATEGORY is nil.
 Projects are filtered by the todo-state regexp STATE unless STATE is nil.
 Only existing files are returned unless NOT-EXIST-OK is non-nil.
 Only files ending on EXTENSION are returned unless EXTENSION is nil.
+Only files not matching EXCLUDE-REGEXP are included.a
+
 If UPDATE is non-nil first parse the file superman.
 Examples:
  (superman-index-list nil \"ACTIVE\")
@@ -594,14 +596,16 @@ Examples:
 			       (string-match state (superman-get-state p)))) p))))
 	 (palist (if (or category state)
 		     (delq nil (mapcar testfun superman-project-alist))
-		   superman-project-alist)))
-    (delete-dups (delq nil (mapcar #'(lambda (x)
+		   superman-project-alist))
+	 (index-list (delete-dups (delq nil (mapcar #'(lambda (x)
 				      (let ((f (superman-get-index x)))
 					(when (and (or not-exist-ok (file-exists-p f))
+						   (or (not exclude-regexp) (not (string-match exclude-regexp f)))
 						   (or (not extension)
 						       (string= extension (file-name-extension f))))
 					  f)))
 				   palist)))))
+    index-list))
 
 ;;}}}
 ;;{{{ selecting projects

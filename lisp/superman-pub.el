@@ -59,7 +59,9 @@
 		  (not (string= next previous))
 		  (not (string= next "Entry key")))
 	(let* ((field-info (bibtex-find-text-internal t nil t))
-	       (field-key (when field-info (car field-info)))
+	       (field-key (when field-info
+			    (downcase
+			     (car field-info))))
 	       (end-of-field (nth 2 field-info))
 	       (field-val (when field-info
 			    (replace-regexp-in-string "[\n}{]*" ""
