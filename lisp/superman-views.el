@@ -427,7 +427,6 @@ and the keybinding to initialize git control otherwise."
 
 (defun superman-make-button (string &optional keys face help)
   (let ((map (make-sparse-keymap))
-	(face (or face 'font-lock-warning-face))
 	(help (or help "S-button")))
     (while keys
       (define-key map (caar keys) (cdar keys))
@@ -956,8 +955,6 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		    (member cat superman-views-permanent-cats) (> count 0))
 		(progn (end-of-line)
 		       (insert " [" (int-to-string count) "]")
-		       (insert "\t" "[" (superman-make-button "Update" '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
-			       "]")
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
