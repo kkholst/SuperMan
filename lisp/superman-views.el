@@ -2072,6 +2072,7 @@ not in a section prompt for section first.
   (interactive)
   (let* ((pro (or (superman-view-current-project t)
 		  (superman-select-project)))
+	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (cat (or (superman-current-cat)
 		   (completing-read
 			(concat "Choose category for new item in project " (car  pro) ": ")
@@ -2087,13 +2088,10 @@ not in a section prompt for section first.
       (re-search-forward cat nil t))
     (if fun
 	(funcall (cadr fun) pro)
-      (let* (
-	     ;; (cat-point (superman-cat-point))
-	     (props (superman-view-property-keys)))
-	     ;; (balls (if cat-point (get-text-property cat-point 'balls))))
+      (let* ((props (superman-view-property-keys)))
 	(superman-capture
 	 pro
-	 cat
+	 (or marker cat)
 	 `("Item"
 	   ,(mapcar #'(lambda (p) (list p nil)) props)))))))
 

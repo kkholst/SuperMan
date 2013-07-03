@@ -373,6 +373,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 				  (list x))
 				(superman-parse-project-categories))
 			nil nil)))
+	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
 	 (loc (or loc
 		  (save-excursion
 		    (superman-go-home category)
@@ -391,7 +392,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
     (superman-capture
      `("*S*" (("index" . ,superman-home)))
-     category
+     (or marker category)
      `("Project" (("Nickname" ,nickname)
 		  ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
@@ -416,50 +417,54 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	   (insert " ")
 	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
     
-(defun superman-capture-note (&optional project)
+(defun superman-capture-note (&optional project marker)
   (interactive)
   (let ((pro (or project
 		 superman-view-current-project
-		 (superman-select-project))))
+		 (superman-select-project)))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture pro
-		      "Notes"
+		      (or marker "Notes")
 		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
-(defun superman-capture-bookmark (&optional project)
+(defun superman-capture-bookmark (&optional project marker)
   (interactive)
     (let ((pro (or project
 		   superman-view-current-project
-		   (superman-select-project))))
+		   (superman-select-project)))
+	  (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture pro
-		      "Bookmarks"
+		      (or marker "Bookmarks")
 		      `("Bookmark" (("BookmarkDate"  ,(format-time-string "<%Y-%m-%d %a>"))
 				    ("Link" nil))))))
 
-(defun superman-capture-task (&optional project)
+(defun superman-capture-task (&optional project marker)
   (interactive)
   (let ((pro (or project
 		 superman-view-current-project
-		 (superman-select-project))))
+		 (superman-select-project)))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture
      pro
-     "Tasks"
+     (or marker "Tasks")
      `("Task" (("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
 	       (fun 'org-todo))))))
 
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
 
-(defun superman-capture-meeting (&optional project)
+(defun superman-capture-meeting (&optional project marker)
   (interactive)
   (let ((pro (or project
 		 superman-view-current-project
 		 (superman-select-project)))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
 	(superman-capture-before-clean-scene-hook
 	 (list 'superman-google-export-appointment))
 	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
     (superman-capture
      pro
-     "Calendar"
+     (or marker "Calendar")
      `("Meeting" (("MeetingDate" ,date)
 		  ("Participants" nil)
 		  ("Location" nil)
@@ -615,14 +620,15 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
     mime-line))
 ;;}}}
 ;;{{{ capture cats
-(defun superman-capture-cat (&optional project)
+(defun superman-capture-cat (&optional project marker)
   (interactive)
   (let ((pro (or project
 		 superman-view-current-project
-		 (superman-select-project))))
+		 (superman-select-project)))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture
      pro
-     nil
+     marker 
      `("Section" (("Ball1" "todo :face superman-get-todo-face")
 		  ("Ball2" "hdr :name Title :width 13 :face font-lock-function-name-face")
 		  ("Ball3" "")))
