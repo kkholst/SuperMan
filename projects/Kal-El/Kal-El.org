@@ -101,12 +101,22 @@
 ** Git
 
 
+
+*** GitSvnWorkFlow.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/GitSvnWorkFlow.org]]
+:GitStatus: Committed
+:GitInit:  <2013-07-06 Sat 08:48> copy-and-paste from net
+:LastCommit: <2013-07-06 Sat 08:48> copy-and-paste from net
+:END:
+
+
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-06-15 Sat 09:55> ff
+:LastCommit: <2013-06-17 Mon 16:30> test
 :END:
 
 
@@ -162,10 +172,9 @@
 :TaskDate: <2013-03-07 Thu>
 :END:
 
-
-
-
 * Configuration
+
+** Supermanual
 
 * GitFiles
 ** projects/Kal-El
@@ -173,9 +182,9 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-06-15 Sat 09:55> ff
+:LastCommit: <2013-06-17 Mon 16:30> test
 :END:
 
 ** projects/Kal-El/docs
@@ -184,6 +193,8 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
 :GitStatus: Committed
+:GitInit:  <2013-05-03 Fri 09:32> first commit
+:LastCommit: <2013-05-03 Fri 09:32> first commit
 :END:
 
 ** projects/Kal-El/help
@@ -192,12 +203,16 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
 :GitStatus: Committed
+:GitInit:  <2013-05-29 Wed 17:46> moved in place
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 *** S.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
 :GitStatus: Committed
+:GitInit:  <2013-06-11 Tue 18:21> first version
+:LastCommit: <2013-06-11 Tue 18:21> first version
 :END:
 
 ** projects/Kal-El/hints
@@ -206,12 +221,16 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
 :GitStatus: Committed
+:GitInit:  <2013-06-12 Wed 10:38> first commit
+:LastCommit: <2013-06-12 Wed 10:44> added link to shell script
 :END:
 
 *** latex-useful-packages.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
 :GitStatus: Committed
+:GitInit:  <2013-05-29 Wed 17:46> moved in place
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 ** projects/Kal-El/samples
@@ -220,12 +239,16 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/template-literate.org]]
 :GitStatus: Committed
+:GitInit:  <2013-06-12 Wed 10:55> literate-programming template + new doc
+:LastCommit: <2013-06-12 Wed 10:55> literate-programming template + new doc
 :END:
 
 *** sample-beamer.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
 :GitStatus: Committed
+:GitInit:  <2013-05-29 Wed 17:46> moved in place
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 ** projects/Kal-El/tools
@@ -234,5 +257,7 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
 :GitStatus: Committed
+:GitInit:  <2013-06-12 Wed 10:44> first commit
+:LastCommit: <2013-06-12 Wed 10:44> first commit
 :END:
 
