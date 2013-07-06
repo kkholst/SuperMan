@@ -1,0 +1,19 @@
+                           __  __                         _ 
+ ___ _   _ _ __   ___ _ __|  \/  | __ _ _ __  _   _  __ _| |
+/ __| | | | '_ \ / _ \ '__| |\/| |/ _` | '_ \| | | |/ _` | |
+\__ \ |_| | |_) |  __/ |  | |  | | (_| | | | | |_| | (_| | |
+|___/\__,_| .__/ \___|_|  |_|  |_|\__,_|_| |_|\__,_|\__,_|_|
+          |_|                                                                                                            _ 
+
+* Project view 
+** Adding information
+
+*** Items: Documents, Tasks, Notes, etc.
+    
+Press `N' to add a new item. If the point is in a section add an item
+in this section, for example call superman-capture-document when the
+cursor is in the section Documents.
+
+** Git control
+
+
