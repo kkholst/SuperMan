@@ -39,4 +39,4 @@ The properties have the following meaning:
         then type N for superman-new-project. You will get
         prompted for NICKNAME and CATEGORY
 - Y: :: Last question: Does the super project contain itself?
-- S: :: Nice question. Probably the answer is: /Yes! But,.../. To find a better answer please refer to logicomix (www.logicomix.com).
+- S: :: Nice question. Probably the answer is: /Yes! But,.../. To find a better answer please read logicomix (www.logicomix.com).
