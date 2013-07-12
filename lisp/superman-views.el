@@ -25,6 +25,8 @@
 
 ;;{{{ Variables
 
+(defvar superman-column-separator 2 "Number of characters between columns")
+
 (defvar superman-hl-line nil "Set to non-nil in order to
 highlight the current line in superman views.")
 
@@ -128,7 +130,8 @@ Column showing the todo-state
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("EmailDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
-	("Link" ("fun" superman-trim-bracketed-filename) ("width" 48))))
+	("Link" ("fun" superman-trim-bracketed-filename) ("width" 48))
+	(attac ("Link" ("fun" superman-trim-bracketed-filename) ("width" full)))))
 
 ;;}}}
 ;;{{{ faces
@@ -138,18 +141,24 @@ Column showing the todo-state
 
 (defun superman-trim-string (str &rest args)
   "Trim string STR to a given length by either calling substring
-or by adding whitespace characters."
+or by adding whitespace characters. The length is stored in the first
+element of the list ARGS. If length is a string which cannot be converted
+to an integer then do not trim the string STR."
   (let* ((slen (length str))
 	 (len (car args))
-	 (numlen (cond ((integerp len) len)
-		       ((stringp len)
-			(setq len (string-to-int len))
-			(if (< len 1) 13 len))
-		       (t 13)))
-	 (diff (- numlen slen)))
-    (if (> diff 0)
-	(concat str (make-string diff (string-to-char " ")))
-      (substring str 0 numlen))))
+	 (numlen (cond
+		  ((integerp len) len)
+		  ((eq len 'full) "full")
+		  ((stringp len)
+		     (setq len (string-to-int len))
+		     (if (< len 1) 13 len))
+		  (t 13)))
+	 (diff (unless (eq len 'full) (- numlen slen))))
+    (if diff
+	(if (> diff 0)
+	    (concat str (make-string diff (string-to-char " ")))
+	  (substring str 0 numlen))
+      str)))
 
 (defun superman-trim-link (link &rest args)
   ;;  Bracket links
@@ -179,12 +188,14 @@ or by adding whitespace characters."
   (if (string-match org-bracket-link-regexp file)
       (let ((filename (org-match-string-no-properties 1 file))
 	    (len (car args))
+	    (match (match-end 3))
+	    (match-string (org-match-string-no-properties 3 file))
 	    trimmed-file-name)
-	(if (match-end 3)
+	(if match
 	    (setq trimmed-file-name
 		  (replace-match
 		   (superman-trim-string
-		    (org-match-string-no-properties 3 file) len)
+		    match-string len)
 		   t t file 3))
 	  (setq trimmed-file-name
 		(org-make-link-string
@@ -609,22 +620,61 @@ If MARKED is non-nil run only on marked items."
 ;;}}}
 ;;{{{ Columns and balls
 
-
 (defun superman-column-names (balls)
-  (let ((cols
-	 (superman-format-thing
+  (let* ((col-names
 	  (list "columns"
 		(mapcar #'(lambda (b)
 			    (cons (car b)
 				  (or (cadr (assoc "name" (cdr b)))
 				      (cond ((stringp (car b)) (car b))
 					    ((eq (car b) 'hdr) "Title")
-					    ((eq (car b) 'todo) "Status")))))
-			balls)) balls 'no-face)))
+					    ((eq (car b) 'todo) "Status")
+					    ((eq (car b) 'attac) " ")
+					    ((eq (car b) 'org-hd-marker)
+					     (symbol-name (cadr (assoc "fun" (cdr b)))))))))
+			balls)))
+	 (cols (superman-format-column-names col-names balls)))
     (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
     (put-text-property 0 (length cols) 'column-names t cols)
     (put-text-property 0 (length cols) 'names (length cols) cols)
     cols))
+
+
+(defun superman-format-column-names (names balls)
+    "Format column names NAMES according to balls, similar to
+`superman-format-thing'.
+Returns the formatted string with text-properties."
+    (let ((column-names "")
+	  (column-widths (list 0))
+	  (copy-balls balls)
+	  (map (make-sparse-keymap)))
+      (define-key map [mouse-2] 'superman-sort-section)
+      (define-key map [return] 'superman-sort-section)
+      ;; loop columns
+      (while copy-balls
+	(let* ((b (car copy-balls))
+	       (name (superman-play-ball names b 'no-face))
+	       (sort-cmd (concat "sort-by-" name)))
+	;; make this name a button 
+	(add-text-properties
+	 superman-column-separator
+	 (length name) 
+	 (list
+	  'button (list t)
+	  'face 'font-lock-comment-face
+	  'keymap map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo sort-cmd)
+	 name)
+	(setq column-widths (append column-widths (list (length name))))
+	(setq column-names (concat column-names name))
+	(setq copy-balls (cdr copy-balls))))
+      ;; text property: columns
+      (put-text-property 0 (length column-names) 'columns column-widths column-names)
+      column-names))
+
+
 
 (defun superman-read-balls (&optional pom)
   (let ((i 1)
@@ -677,7 +727,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       ;; prefer string
 		       `(,key ,(superman-string-to-thing value t nil))))))
 	      (cdr plist))))
-	 (when (string-match "^todo\\|hdr$" prop)
+	 (when (string-match "^todo\\|hdr\\|index\\|org-hd-marker" prop)
 	   (setq prop (intern prop)))
 	 (append (list prop) args)))
 
@@ -753,8 +803,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 col-width
 	 (sort-fold-case t) 
 	 (cols (cdr (get-text-property (point-at-bol) 'columns)))
+	 (n (get-text-property (superman-cat-point) 'n-items))
 	 (pos (superman-current-subcat-pos))
-	 key
 	 next
 	 beg
 	 end)
@@ -762,10 +812,11 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (while (> cc (+ col-start (car cols)))
 	(setq col-start (+ col-start (car cols)))
 	(setq cols (cdr cols)))
-      ;; the first two characters of each column are blank
-      ;; thus, we shift by 2
-      (setq col-start (+ 2 col-start))
-      (setq col-width (- (car cols) 1))
+      ;; the first x characters of each column are blank, 
+      ;; where x is defined by superman-column-separator,
+      ;; thus, we shift by superman-column-separator
+      (setq col-start (+ superman-column-separator col-start))
+      (setq col-width (- (car cols) superman-column-separator))
       (goto-char pos)
       (goto-char (next-single-property-change (point-at-eol) 'org-marker))
       (setq beg (point))
@@ -777,28 +828,38 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (narrow-to-region beg end)
       (goto-char (point-min))
       ;; sort by sort-key if any
-      (if (setq key (get-text-property (+ (point) col-start) 'sort-key))
-	  (let* ((sort-string (int-to-string key))
-		 (slen (length sort-string))
-		 pos)
-	    (insert sort-string)
-	    (put-text-property (point-at-bol) (point) 'delete slen)
-	    (while (re-search-forward "^" nil t)
+      (if (get-text-property (+ (point) col-start) 'sort-key)
+	  (let (key)
+	    (if reverse 
+		(let ((maxkey (apply 'max (superman-loop
+					   #'(lambda (&rest args)
+					       (get-text-property (+ (point) col-start) 'sort-key)) '(nil)))))
+		  (goto-char (point-min))
+		  (setq key (get-text-property (+ (point) col-start) 'sort-key))
+		  (insert (int-to-string (+ (- maxkey key) 1)))
+		  (while (re-search-forward "^" nil t)
+		    (setq key (get-text-property (+ (point) col-start) 'sort-key))
+		    (insert (int-to-string (+ (- maxkey key) 1)))))
+	      (goto-char (point-min))
 	      (setq key (get-text-property (+ (point) col-start) 'sort-key))
-	      ;; (goto-char (+ (point) col-start))
-	      (if key (insert (int-to-string key))))
+	      (insert (int-to-string key))
+	      (while (re-search-forward "^" nil t)
+		(setq key (get-text-property (+ (point) col-start) 'sort-key))
+		(insert (int-to-string key))))
 	    (sort-numeric-fields 0 (point-min) (point-max))
 	    (goto-char (point-min))
 	    (while (re-search-forward "^" nil t)
 	      (delete-region (point)
-			     (+ (point) (skip-chars-forward "[0-9]")))
+			     (+ (point)
+				(skip-chars-forward "[0-9]")))
 	      (end-of-line)))
+	;; sort using sort-subr
 	(sort-subr reverse 'forward-line 'end-of-line
 		   `(lambda () (forward-char ,col-start))
 		   `(lambda () (forward-char ,col-width))))
       (widen)
       (goto-char pp)
-      (forward-char (+ 2 col-start)))))
+      (forward-char (+ superman-column-separator col-start)))))
       
 
 (defun superman-sort-by-status (a b)
@@ -906,7 +967,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			     (outline-previous-heading)
 			     (point)))
 		 ;; (folded (superman-get-property sec-head  "startFolded"))
-		 (free (superman-get-property sec-head "freeText")))
+		 (free (superman-get-property sec-head "freeText"))
+		 (attac-balls (or (cdr (assoc 'attac balls)) balls))
+		 (buttons (superman-get-property sec-head "buttons")))
 	    (goto-char (point-min))
 	    (setq cat-point (point-marker))
 	    (if free
@@ -921,24 +984,25 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	      ;; format elements (if any and if wanted)
 	      ;; region is narrowed to section
 	      (while (outline-next-heading)
-		(if (eq (org-current-level) 2)
-		    (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
-		      (setq line (concat "*** " subhdr))
-		      (put-text-property 0 (length line) 'subcat subhdr line)
-		      (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
-		      (put-text-property 0 (length line) 'face 'org-level-3 line)
-		      (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-		      (with-current-buffer vbuf
-			(insert
-			 line
-			 ;;"\n" (superman-column-names balls)
-			 "\n"
-			 ))
-		      (end-of-line))
-		  (when (eq (org-current-level) 3)
-		    (setq count (+ count 1))
-		    (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-		    (with-current-buffer vbuf (insert line "\n"))))))
+		(cond ((eq (org-current-level) 2)
+		       ;; sub-headings
+		       (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
+			 (setq line (concat "*** " subhdr))
+			 (put-text-property 0 (length line) 'subcat subhdr line)
+			 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
+			 (put-text-property 0 (length line) 'face 'org-level-3 line)
+			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
+			 (with-current-buffer vbuf (insert line "\n" ))
+			 (end-of-line)))
+		      ;; items
+		      ((eq (org-current-level) 3)
+		       (setq count (+ count 1))
+		       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+		       (with-current-buffer vbuf (insert line "\n")))
+		      ;; attachments
+		      ((eq (org-current-level) 4) 
+		       (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
+		       (with-current-buffer vbuf (insert line "\n"))))))
 	    ;; (widen)
 	    ;; (show-all)
 	    (set-buffer vbuf)
@@ -948,6 +1012,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	    (beginning-of-line)
 	    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	    (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
+	    (put-text-property (point-at-bol) (point-at-eol) 'n-items count)
 	    (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
 	    (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker cat-point)
 	    (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat))
@@ -956,13 +1021,19 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		(progn (end-of-line)
 		       (insert " [" (int-to-string count) "]")
 		       (when (assoc "GitStatus" balls)
-			 (insert "\t" "[" (superman-make-button "Update" '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
+			 (insert "\t" "[" (superman-make-button
+					   "Update"
+					   '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
 				 "]"))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
-		       ;; insert column names 
-		       (insert (superman-column-names balls)))
+		       ;; insert column names
+		       (insert (superman-column-names balls))
+		       (when buttons
+			 (beginning-of-line)
+			 (funcall (intern buttons))
+			 (insert "\n")))
 	      (delete-region (point) (point-max)))
 	    (goto-char (point-max))
 	    (widen)
@@ -1013,6 +1084,11 @@ a formatted string with faces."
 	      ;; thing is marker
 	      (cond ((stringp (car ball)) ;; properties
 		     (superman-get-property thing (car ball) t))
+		    ;; important:
+		    ;; when introducing new special things 
+		    ;; also adapt superman-distangle-ball
+		    ((eq (car ball) 'org-hd-marker) ;; special: marker
+		     thing)
 		    ((eq (car ball) 'hdr) ;; special: header
 		     (org-with-point-at thing 
 		       (org-back-to-heading t)
@@ -1023,30 +1099,34 @@ a formatted string with faces."
 		       (org-back-to-heading t)
 		       (and (looking-at org-todo-line-regexp)
 			    (match-end 2) (concat (match-string 2)))))
+		    ((eq (car ball) 'attac) ;; special: attachment
+		     nil)
 		    ((eq (car ball) 'index) ;; special: index filename
 		     (file-name-sans-extension
-		      (file-name-nondirectory (buffer-file-name (current-buffer)))))
-		     (t "--"))
+		      (file-name-nondirectory
+		       (buffer-file-name (current-buffer)))))
+		    (t "--"))
 	    ;; thing is alist
 	    (or (cdr (assoc (car ball) (cadr thing))) "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))
-	 (u (get-text-property 0 'face raw-string))
-	 (fun (or (cadr (assoc "fun" (cdr ball)))
-		  'superman-trim-string))
-	 (width (or (cdr (assoc "width" (cdr ball)))
-		    (list 23)))
+	 (fun (or (cadr (assoc "fun" (cdr ball))) 'superman-trim-string))
+	 (width (or (cdr (assoc "width" (cdr ball))) (list 23)))
 	 (args (cdr (assoc "args" (cdr ball))))
+	 (preserve-props (assoc "preserve" (cdr ball)))
 	 (trim-args (nconc width args))
 	 (trimmed-string
 	  (concat "  " ;; column sep
 		  (apply fun raw-string trim-args)))
-	 (face
-	  (or (cadr (assoc "face" ball))
-	      (get-text-property 0 'face raw-string)))
-	 (sort-key (get-text-property 2 'sort-key trimmed-string)))
+	 (len (length trimmed-string))
+	 (face (unless
+		   (markerp raw-string)
+		 (or (cadr (assoc "face" ball))
+		     (get-text-property 0 'face raw-string))))
+	 (sort-key (get-text-property superman-column-separator 'sort-key trimmed-string)))
     ;; remove all existing text-properties
-    (set-text-properties 0 (length trimmed-string) nil trimmed-string)
-    (when sort-key (put-text-property 0 (length trimmed-string) 'sort-key sort-key trimmed-string))
+    (unless preserve-props
+      (set-text-properties 0 len nil trimmed-string))
+    (when sort-key (put-text-property 0 len 'sort-key sort-key trimmed-string))
     (unless no-face
       (when (and (not (facep face)) (functionp face)) ;; apply function to get face
 	(setq face (funcall
@@ -1055,26 +1135,22 @@ a formatted string with faces."
 		     "^[ \t\n]+\\|[ \t\n]+$" ""
 		     raw-string))))
       (when (or (facep face) (listp face))
-	(setq trimmed-string (org-add-props trimmed-string nil 'face face))))
+	(put-text-property 0 len 'face face trimmed-string)))
     ;; (put-text-property 0 (length trimmed-string) 'face face trimmed-string)))
     trimmed-string))
 
 (defun superman-format-thing (thing balls &optional no-face)
   "Format THING according to balls. THING is either
 a marker which points to a header in a buffer 
-or an association list. A ball has the form
+or an association list. 
 
-'(key (\"face\" face-or-fun) (\"trim\" fun args))
-
-Value is the formatted string with text-properties (special balls)."
+Returns the formatted string with text-properties."
   (let ((item "")
 	ilen
 	(column-widths (list 0))
 	(marker (cond ((markerp thing) thing)
 		      ((cdr (assoc "marker" (cadr thing))))))
-	(copy-balls balls)
-	text-props
-	(beg 0))
+	(copy-balls balls))
     ;; loop columns
     (while copy-balls
       (let* ((b (car copy-balls))
@@ -1203,7 +1279,7 @@ beginning of the list."
 	     (j (max 0 (min (- (length colstart) 1)
 			    (+ current arg)))))
 	(beginning-of-line)
-	(forward-char (+ 2 ;; offset for whole line
+	(forward-char (+ superman-column-separator ;; offset for whole line
 			 (nth j colstart))))
      (right-char 1)))
 
@@ -1227,10 +1303,10 @@ beginning of the list."
 					   (nth 2 dim))))
 	 (beg (previous-single-property-change (point-at-bol) 'cat))
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
-	(message (concat "Len!: " (int-to-string (length superman-document-balls))))
+	;; (message (concat "Len!: " (int-to-string (length superman-document-balls))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat)))
+      (superman-refresh-cat new-balls)))
     ;; swap projects
       (if left
 	  (superman-previous-project)
@@ -1254,7 +1330,7 @@ by calling `superman-save-balls' subsequently."
 	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
     (save-excursion
       (superman-change-balls new-balls)
-      (superman-refresh-cat))))
+      (superman-refresh-cat new-balls))))
 
 (defun superman-new-ball ()
   "Add a new column to show a property of all items in the
@@ -1273,7 +1349,7 @@ current section."
     (save-excursion
       (superman-change-balls new-balls)
       (superman-save-balls)
-      (superman-refresh-cat))))
+      (superman-refresh-cat new-balls))))
 
 
 (defun superman-tab (&optional arg)
@@ -1316,7 +1392,8 @@ current section."
 		(progn
 		  (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
 		  (outline-next-heading)
-		  (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+		  (if (< (nth 0 (org-heading-components)) 2)
+		      (error "Cannot move item outside category"))
 		  (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
 		  (org-demote)
 		  (goto-char (previous-single-property-change (point) 'current-item))
@@ -1325,7 +1402,8 @@ current section."
 		  (org-promote))
 	      (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
 	      (outline-previous-heading)
-	      (if (< (nth 0 (org-heading-components)) 2) (error "Cannot move item outside category"))
+	      (if (< (nth 0 (org-heading-components)) 2)
+		  (error "Cannot move item outside category"))
 	      (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
 	      (org-demote)
 	      (goto-char (next-single-property-change (point) 'current-item))
@@ -1509,7 +1587,7 @@ current section."
     (eval cmd)
     (goto-line (+ 1 curline))))
 
-(defun superman-refresh-cat ()
+(defun superman-refresh-cat (new-balls)
   "Refresh view of all lines in current category inclusive column names."
   (interactive)
   (let ((start (superman-cat-point))
@@ -1530,9 +1608,13 @@ current section."
 	 (balls (get-text-property (superman-cat-point) 'balls)))
     (when (and marker (not (org-get-at-bol 'subcat)) (not (org-get-at-bol 'subcat)))
       (beginning-of-line)
-      (let ((newline (superman-format-thing marker balls)))
-	(if (looking-at ".*")
-	    (replace-match newline))
+      (let ((newline (superman-format-thing marker balls))
+	    (beg (previous-single-property-change (point-at-eol) 'org-hd-marker))
+	    (end (next-single-property-change (point) 'org-hd-marker)))
+	(delete-region beg end)
+	(insert newline)
+	;; (if (looking-at ".*")
+	    ;; (replace-match newline))
 	(beginning-of-line)
 	(while (or (org-activate-bracket-links (point-at-eol)) (org-activate-plain-links (point-at-eol)))
 	  (add-text-properties
@@ -1645,7 +1727,7 @@ If point is before the first category do nothing."
   (interactive)
   (let ((git-dir
 	 (get-text-property (point-min) 'git-dir)))
-  (superman-git-status git-dir)))
+    (superman-git-status git-dir)))
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -1773,28 +1855,18 @@ If point is before the first category do nothing."
 	 f)
     (if (not m)
 	(error "Nothing to do here")
-    (org-with-point-at m
-	(cond ((string-match "Mail" b)
-	       (save-excursion
-		 (beginning-of-line)
-		 (if (re-search-forward org-bracket-link-regexp nil t)
-		     (org-open-at-point))))
-	      ;; (message "Open mail"))
-	      ((string-match "Bookmarks" b)
-	       (save-excursion
-		 (beginning-of-line)
-		 (if (re-search-forward org-bracket-link-regexp nil t)
-		     (org-open-at-point))))
-	      ((string-match "Notes" b)
-	       (save-excursion
-		 (superman-view-index)
-		 (org-narrow-to-subtree)))
-	      (superman-mode
+      (org-with-point-at m
+	(cond (superman-mode
 	       (superman-return))
-	      ;; (message "Follow-link"))
-	      ((setq f (superman-get-property m "filename"))
-	       (org-open-link-from-string f))
-	      (t (message "Nothing to do here")))))))
+	      ((re-search-forward org-bracket-link-regexp nil t)
+	       (org-open-at-point))
+	      (t
+	       (widen)
+	       (show-all)
+	       (org-narrow-to-subtree)
+	       (switch-to-buffer (marker-buffer m))))))))
+	      ;; ((superman-view-index)
+	       ;; (org-narrow-to-subtree)))))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")

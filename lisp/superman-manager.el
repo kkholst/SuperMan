@@ -586,25 +586,30 @@ Examples:
   (interactive "P")
   (when update
     (superman-refresh))
-  (let* ((testfun (lambda (p)
-		    (let ((p-cat (superman-get-category p)))
-		    (when (and
-			   (or (not category)
-			       (not p-cat)
-			       (string= (downcase category) (downcase p-cat)))
-			   (or (not state)
-			       (string-match state (superman-get-state p)))) p))))
+  (let* ((testfun
+	  (lambda (p)
+	    (let ((p-cat (superman-get-category p)))
+	      (when (and
+		     (or (not category)
+			 (not p-cat)
+			 (string= (downcase category) (downcase p-cat)))
+		     (or (not state)
+			 (string-match state (superman-get-state p)))) p))))
 	 (palist (if (or category state)
 		     (delq nil (mapcar testfun superman-project-alist))
 		   superman-project-alist))
-	 (index-list (delete-dups (delq nil (mapcar #'(lambda (x)
-				      (let ((f (superman-get-index x)))
-					(when (and (or not-exist-ok (file-exists-p f))
-						   (or (not exclude-regexp) (not (string-match exclude-regexp f)))
-						   (or (not extension)
-						       (string= extension (file-name-extension f))))
-					  f)))
-				   palist)))))
+	 (index-list
+	  (delete-dups
+	   (delq nil
+		 (mapcar
+		  #'(lambda (x)
+		      (let ((f (superman-get-index x)))
+			(when (and (or not-exist-ok (file-exists-p f))
+				   (or (not exclude-regexp) (not (string-match exclude-regexp f)))
+				   (or (not extension)
+				       (string= extension (file-name-extension f))))
+			  f)))
+		  palist)))))
     index-list))
 
 ;;}}}
@@ -680,16 +685,20 @@ Unless NOSELECT is nil, set the next window config of project.
 If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
-	 (pro (or project (superman-select-project)))
+	 (pro (cond (project
+		     (if (stringp project)
+			 (assoc project superman-project-alist)
+		       project))
+		    (t (superman-select-project))))
 	 (stay (eq pro curpro)))
     (unless stay
       (if (member (car pro) superman-project-history)
-	 (progn
-	   (setq superman-project-history
-		 (cons (car pro) superman-project-history))
-	   (delete-dups superman-project-history))
-	  (setq superman-project-history
-		(cons (car pro) superman-project-history)))
+	  (progn
+	    (setq superman-project-history
+		  (cons (car pro) superman-project-history))
+	    (delete-dups superman-project-history))
+	(setq superman-project-history
+	      (cons (car pro) superman-project-history)))
       ;; (add-to-list 'superman-project-history (car pro))
       (superman-save-project curpro)
       (superman-activate-project pro))

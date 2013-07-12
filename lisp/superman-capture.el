@@ -187,8 +187,6 @@ Default is to set the old window configuration.
     (superman-capture-mode)
     (run-hooks 'superman-setup-scene-hook)))
 
-
-
 (define-minor-mode superman-capture-mode
 "Toggle superman capture mode.
 With argument ARG turn superman-doccapture-mode on if ARG is positive, otherwise
@@ -610,11 +608,11 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
               (when (or (not (file-exists-p file))
                         (y-or-n-p (concat "File " file " exists, overwrite?" )))
                 (mm-save-part-to-file data file))
-              (setq mime-line (concat "\n**** Attac: " (file-name-nondirectory file)
+              (setq mime-line (concat "\n**** " (file-name-nondirectory file)
 				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
-				      "\n:EmailDate:" date 
+				      "\n:EmailDate: " date 
 				      ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
-				      "\n:Link:" "[[file:" file "][" (file-name-nondirectory file) "]]"
+				      "\n:Link:" " [[file:" file "][" (file-name-nondirectory file) "]]"
                                       "\n:END:\n"
                                       mime-line)))))))
     mime-line))

@@ -100,7 +100,80 @@
     (shell-command  "bibtex2html -nobibsource -o /tmp/superman-pub /tmp/superman-pub.bib")
     (shell-command-to-string "html2text -ascii /tmp/superman-pub.html")))
   
+(defun superman-show-bibtex (&optional marker &rest args)
+  (org-with-point-at (or marker (point))
+    (save-restriction
+      (org-narrow-to-subtree)
+      (re-search-forward "BibTeX" nil t)
+      (forward-line 1)
+      (replace-regexp-in-string
+       "^[ \t]*" ""
+       (buffer-substring
+       (point)
+       (progn (forward-paragraph) (point)))))))
 
+(defun superman-show-plain (&optional marker &rest args)
+  (if (markerp marker)
+      (org-with-point-at (or marker (point))
+	(save-restriction
+	  (org-narrow-to-subtree)
+	  (re-search-forward "Plain" nil t)
+	  (forward-line 1)
+	  (replace-regexp-in-string
+	   "^[ \t]*" ""
+	   (buffer-substring
+	    (point)
+	    (progn (forward-paragraph) (point))))))
+    marker))
+
+(defun superman-pub-make-sort-buttons (&optional names)
+  (let ((names (or names '("year" "author" "journal" "title"))))
+    (while names
+      (let* ((name (car names))
+	     (sort-cmd (concat "sort-publications-by-" name))
+	     (map (make-sparse-keymap)))
+	(define-key map [mouse-2]
+	  `(lambda () (interactive)
+	     (superman-sort-publications-by ,name)))
+	(define-key map [return]
+	  `(lambda () (interactive)
+	     (superman-sort-publications-by ,name)))
+	(add-text-properties
+	 0 (length name) 
+	 (list
+	  'button (list t)
+	  'face 'font-lock-warning-face
+	  'keymap map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo sort-cmd)
+	 name)
+	(insert name " "))
+      (setq names (cdr names)))))
+
+(defun superman-sort-publications-by (&optional column)
+  "Idea is simple but not very efficient:
+first produce a single column view of the section, then
+sort the section, and finally play the original balls.
+"
+  (let ((cat-head (superman-cat-point))
+	(column (or column "year"))
+	(buffer-read-only nil))
+    (if (not cat-head)
+	(message "Nothing to sort here")
+      (let ((cat-tail (or (next-single-property-change (point) 'cat) (point-max)))
+	    (balls (get-text-property cat-head 'balls))
+	    (temp-balls `((,column ("width" 4)))))
+	;; (delete-region cat-head cat-tail)
+	(save-excursion
+	  (superman-change-balls temp-balls)
+	  (superman-refresh-cat temp-balls)
+	  (goto-char (previous-single-property-change (point) 'names))
+	  (superman-sort-section)
+	  (superman-change-balls balls)
+	  (superman-refresh-cat balls))))))
+				 
+  
 
 (provide 'superman-pub)
 

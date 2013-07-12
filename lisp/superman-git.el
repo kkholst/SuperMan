@@ -137,7 +137,13 @@ result."
   (superman-run-cmd
    (concat "cd " dir "; " superman-cmd-git " status " "\n")
    "*Superman-returns*"
-   (concat "Superman git status '" dir "' returns:\n\n")))
+   (concat "git status '" dir "' returns:\n\n")))
+
+(defun superman-git-pull (dir)
+  (superman-run-cmd
+   (concat "cd " dir "; " superman-cmd-git " pull " "\n")
+   "*Superman-returns*"
+   (concat "git pull '" dir "' returns:\n\n")))
      
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
