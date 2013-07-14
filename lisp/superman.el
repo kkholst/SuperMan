@@ -168,7 +168,7 @@
     ;; parse projects by category using superman-balls
     (while projects
       (let* ((pro (car projects))
-	     (cat (cdr (assoc "category" (cadr pro))))
+	     (cat (or (cdr (assoc "category" (cadr pro))) "CatWoman"))
 	     (m (- howmany-cats (length (member cat cats))))
 	     (tail (cdr (nth m cat-alist))))
 	(if tail
@@ -180,21 +180,16 @@
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
 	     (tail (cdr cat)))
-	;; sort projects by lastvisit date
-	;; see http://emacswiki.org/emacs/DestructiveOperations
-	;; (setq tail
-	;; (sort tail
-	;; (lambda (p q)
-	;; (org-time<=
-	;; (or (superman-get-lastvisit p) "<1971-09-13 Mon 08:55>")
-	;; (or (superman-get-lastvisit q) "<1971-09-13 Mon 08:55>")))))
-	(insert "\n** " cat-name " [" (int-to-string (length tail)) "]")
+	(insert "\n** " cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
+	(put-text-property (point-at-bol) (point-at-eol) 'balls superman-balls)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
+	(insert " [" (int-to-string (length tail)) "]")
 	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
+	(put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail cat-name)
 	;; column names
 	(org-back-to-heading)
 	(end-of-line)
@@ -448,6 +443,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-format-agenda (&optional balls)
   (let ((balls (or balls superman-agenda-balls))
 	(redo-cmd org-agenda-redo-command)
+	(count 0)
 	agenda-buffers)
     (save-excursion
       (org-mode);; major
@@ -458,27 +454,32 @@ Enabling superman mode electrifies the superman buffer for project management."
       (beginning-of-line)
       (insert "\n")
       (goto-char (point-min))
-      (insert "Superman TODO list")
+      (insert "SuperToDo")
+      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
+      (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (end-of-line)
       (insert "\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor
-      ;; (superman-clean-up)
       (while (ignore-errors
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
+	(setq count (+ count 1))
 	(let* ((buffer-read-only nil)
 	       (pom (get-text-property (point-at-bol) 'org-hd-marker))
 	       (kill-whole-line t)
-	       ;; (font-lock-global-modes nil)
 	       (line
 		(org-with-point-at pom
 		  (superman-format-thing pom balls))))
 	  (setq agenda-buffers (append (list (marker-buffer pom)) agenda-buffers))
 	  (beginning-of-line)
 	  (kill-line)
-	  (insert line "\n"))))))
-      ;; (superman-clean-buffer-list agenda-buffers))))
+	  (insert line "\n")))
+      (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
+      (goto-char (point-min))
+      (end-of-line)
+      (insert " [" (int-to-string count) "]"))))
+;; (superman-clean-buffer-list agenda-buffers)))
 
 ;; FIXME: this still does not make sense,
 ;;        because different agendas use different

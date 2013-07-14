@@ -1005,6 +1005,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       (with-current-buffer vbuf (insert line "\n"))))))
 	    ;; (widen)
 	    ;; (show-all)
+	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail cat)
 	    (set-buffer vbuf)
 	    (goto-char cat-head)
 	    (insert "\n** " cat "\n")
@@ -1023,7 +1024,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       (when (assoc "GitStatus" balls)
 			 (insert "\t" "[" (superman-make-button
 					   "Update"
-					   '(([mouse-2] . superman-view-git-update-status) ([return] . superman-view-git-update-status)))
+					   '(([mouse-2] . superman-view-git-update-status)
+					     ([return] . superman-view-git-update-status)))
 				 "]"))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
@@ -1601,12 +1603,13 @@ current section."
       (kill-line)
       (insert (superman-column-names new-balls) "\n"))))
 
-(defun superman-view-redo-line ()
+(defun superman-view-redo-line (&optional marker balls)
   (interactive)
   (let* ((buffer-read-only nil)
-	 (marker (org-get-at-bol 'org-hd-marker))
-	 (balls (get-text-property (superman-cat-point) 'balls)))
-    (when (and marker (not (org-get-at-bol 'subcat)) (not (org-get-at-bol 'subcat)))
+	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
+	 (balls (or balls (get-text-property (superman-cat-point) 'balls))))
+    (when (and marker (not (get-text-property (point-at-bol) 'cat))
+	       (not (get-text-property (point-at-bol) 'subcat)))
       (beginning-of-line)
       (let ((newline (superman-format-thing marker balls))
 	    (beg (previous-single-property-change (point-at-eol) 'org-hd-marker))
@@ -1629,8 +1632,9 @@ current section."
     (when marker
       (save-excursion
 	(org-with-point-at marker
-	  (org-todo)))
-      (superman-view-redo-line))))
+	  (org-todo)
+	  (save-buffer)))
+      (superman-view-redo-line marker))))
 
 
 
