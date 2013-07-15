@@ -305,7 +305,7 @@ and the keybinding to initialize git control otherwise."
 	(while (outline-next-heading)
 	  (let ((config (or (superman-get-property (point) "Config")
 			    (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
-		(hdr (org-get-heading t t)))
+		(hdr (or (org-get-heading t t) "NoHeading")))
 	    (when config 
 	      (setq
 	       configs
@@ -2095,7 +2095,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Q" 'superman-unison)
 (define-key superman-view-mode-map "R" 'superman-redo)
 (define-key superman-view-mode-map "S" 'superman-sort-section)
-(define-key superman-view-mode-map "V" 'superman-switch-config)
+(define-key superman-view-mode-map "V" 'superman-change-view)
 (define-key superman-view-mode-map "!" 'superman-goto-shell)
 (define-key superman-view-mode-map "?" 'supermanual)
 

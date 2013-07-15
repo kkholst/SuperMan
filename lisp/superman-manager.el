@@ -147,7 +147,8 @@ the `superman-home'.")
 				    ("magit" . superman-magit)
 				    ("recent.org" . superman-recent-org)
 				    ("*shell*" . superman-start-shell)
-				    ("*S*" . superman-visit-home)
+				    ("*S*" . superman)
+				    ("*S-todo*" . S-todo)
                                     ("*ielm*" . 
 				     (lambda (project) 
 				       (if (get-buffer "*ielm*") 
@@ -493,11 +494,14 @@ and others."
       (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
 	  (rename-file index new-index))
       (superman-goto-profile pro)
-      (org-set-property (superman-property 'location) (file-name-directory target))
+      (org-set-property (superman-property 'location)
+			(file-name-directory target))
       (org-set-property (superman-property 'index)
-			(or new-index (replace-regexp-in-string
-				       (file-name-directory dir)
-				       (file-name-directory target) index)))
+			(or new-index
+			    (replace-regexp-in-string
+			     (expand-file-name (file-name-directory dir))
+			     (expand-file-name (file-name-directory target))
+			     (expand-file-name index))))
       (save-buffer))))
 
 (defun superman-delete-project (&optional project)

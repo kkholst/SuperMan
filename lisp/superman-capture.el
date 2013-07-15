@@ -348,6 +348,7 @@ Creates the project directory and index file."
     (superman-create-project pro)
     (superman-update-project-overview)
     ;; (superman-view-project pro)
+    (superman-switch-to-project pro)
     (superman-switch-config pro nil "PROJECT | *S* / SUPERMANUAL")))
 
 (defun superman-capture-project (&optional nickname category loc)
