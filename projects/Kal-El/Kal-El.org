@@ -45,6 +45,16 @@
 
 
 
+
+*** Projects.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/manager/Projects.org]]
+:GitStatus: Committed
+:GitInit:  <2013-03-01 Fri 14:24> first commit
+:LastCommit: <2013-07-15 Mon 11:10> added todo and calendar projects
+:END:
+
+
 ** Org-mode
     
 *** sample-beamer
@@ -58,6 +68,8 @@
 
 
 ** LaTeX
+
+
 
 
 
@@ -95,9 +107,9 @@
 *** git-svn Rforge
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
-:GitStatus: Modified
+:GitStatus: Committed
 :GitInit:  <2013-06-13 Thu 08:35> init
-:LastCommit: <2013-06-13 Thu 08:35> init
+:LastCommit: <2013-07-15 Mon 10:44> some progress
 :END:
 
 
@@ -105,9 +117,9 @@
 *** git-svn WorkFlow
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/GitSvnWorkFlow.org]]
-:GitStatus: Modified
+:GitStatus: Committed
 :GitInit:  <2013-07-06 Sat 08:48> copy-and-paste from net
-:LastCommit: <2013-07-06 Sat 08:48> copy-and-paste from net
+:LastCommit: <2013-07-15 Mon 10:44> some progress
 :END:
 
 
@@ -119,7 +131,7 @@
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
 :GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-07-06 Sat 08:49> next
+:LastCommit: <2013-07-15 Mon 10:44> some progress
 :END:
 
 * Bookmarks
@@ -184,7 +196,7 @@
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
 :GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-06-17 Mon 16:30> test
+:LastCommit: <2013-07-15 Mon 10:44> some progress
 :END:
 
 ** projects/Kal-El/docs
@@ -202,7 +214,7 @@
 *** smash.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-05-29 Wed 17:46> moved in place
 :LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
