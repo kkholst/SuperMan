@@ -36,7 +36,7 @@ The properties have the following meaning:
 
 - Y: :: Ok. How do I register my projects.
 - S: :: That is easy: first open the SuperMan via M-x S RET,
-        then type N for superman-new-project. You will get
-        prompted for NICKNAME and CATEGORY
-- Y: :: Last question: Does the super project contain itself?
+        then type N for superman-new-project. You will be
+        prompted for NICKNAME and CATEGORY. See the 
+- Y: :: I will try ... last question: Does the SuperMan project contain itself?
 - S: :: Nice question. Probably the answer is: /Yes! But,.../. To find a better answer please read logicomix (www.logicomix.com).

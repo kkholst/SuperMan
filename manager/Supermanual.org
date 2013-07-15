@@ -8,12 +8,21 @@
 * Project view 
 ** Adding information
 
-*** Items: Documents, Tasks, Notes, etc.
-    
 Press `N' to add a new item. If the point is in a section add an item
 in this section, for example call superman-capture-document when the
 cursor is in the section Documents.
 
 ** Git control
 
+SuperMan provides a limited set of commands to git control a project. 
+   
+* Window configurations
+Superman implements a simple approach to save and restore project specific window-configurations.
 
+** Save the current configuration
+
+M-x superman-save-config RET 
+
+** Restore a window configuration
+
+M-x superman-switch-config RET
