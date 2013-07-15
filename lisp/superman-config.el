@@ -114,9 +114,14 @@ Returns the corresponding buffer."
     hlist))
 
 (defun superman-read-config (project)
-  (let ((config
-	 (if superman-sticky-config superman-sticky-config nil))
-	(case-fold-search t))
+  (let* ((p-config (superman-get-config project))
+	 (config
+	  (if (and superman-sticky-config
+		   (or (not p-config)
+		       (not (string-match "non-sticky"
+				      p-config))))
+	      superman-sticky-config))
+	 (case-fold-search t))
     (save-window-excursion
       (save-restriction
 	(when (superman-goto-project project "Configuration" nil nil 'narrow nil)
@@ -131,7 +136,8 @@ Returns the corresponding buffer."
 		     config
 		     (concat config " : " this-config))
 		  (setq config this-config)))))
-	  (when (not config) (setq config superman-default-config)))
+	  (when (not config)
+	    (setq config superman-default-config)))
 	config))))
 ;;}}}
 

@@ -149,6 +149,7 @@ the `superman-home'.")
 				    ("*shell*" . superman-start-shell)
 				    ("*S*" . superman)
 				    ("*S-todo*" . S-todo)
+				    ("*S-agenda*" . S-agenda)
                                     ("*ielm*" . 
 				     (lambda (project) 
 				       (if (get-buffer "*ielm*") 
@@ -826,6 +827,9 @@ If NOSELECT is set return the project."
 ;;                (if loc 
 ;;                                (concat (file-name-as-directory loc)
 ;;                                        (car project)))))
+
+(defun superman-get-config (project)
+  (cdr (assoc "config" (cadr project))))
 
 (defun superman-get-publish-directory (project)
   (cdr (assoc "publish-directory" (cadr project))))

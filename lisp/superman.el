@@ -247,7 +247,7 @@
 
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
 
-(defun S-todo ()
+(defun S-todo (&optional project)
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-TODO*"))
 	(org-agenda-sticky nil)
@@ -279,7 +279,7 @@
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 
-(defun S-agenda ()
+(defun S-agenda (&optional project)
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands nil))
