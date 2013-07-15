@@ -208,10 +208,12 @@ given in superman notation."
     (find-file index)))
 
 
-(defun superman-file-list (project)
+(defun superman-file-list (project &optional ext)
+  "List files in project's location that match extension EXT"
   (if (featurep 'file-list)
       (let ((loc (concat (superman-get-location project) (car project))))
-	(cond ((file-list-select-internal nil "." nil nil loc (concat "*File-list-" (car project) "*")))
+	(cond ((file-list-select-internal nil (or ext ".")
+					  nil nil loc (concat "*File-list-" (car project) "*")))
 	      (t
 	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
 	       (toggle-read-only -1)
@@ -232,66 +234,56 @@ given in superman notation."
   (interactive)
   (let* ((index (superman-get-index project))
 	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-buffer-name (concat "*T*"))
 	 (org-agenda-sticky nil)
 	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
-    (find-file index)
-     (push ?L unread-command-events)
-     (call-interactively 'org-agenda)))
-;; (let ((tmp-file-name (concat "/tmp/timeline" index)))
-;; (find-file-noselect tmp-file-name)
-;; (with-temp-buffer (get-file-buffer tmp-file-name)
-;; (erase-buffer)
-;; (insert-buffer (get-file-buffer index))
-;; (save-buffer)
-;; ;; (switch-to-buffer (get-file-buffer index))
-;; (message (buffer-name (current-buffer)))
-;; (test)
-;; (org-timeline 'yeah)
-;; (test)))))
+    (if (file-exists-p index)
+	(progn (find-file index)
+	       (push ?L unread-command-events)
+	       (call-interactively 'org-agenda))
+      (switch-to-buffer
+       (get-buffer-create org-agenda-buffer-name))
+      (insert "Empty time-line (project index file does not yet exist."))))
 
-
-;; (defun superman-timeline (project)
-  ;; (let (tbuf)
-    ;; (save-window-excursion
-      ;; (let ((index (superman-get-index project))
-            ;; (org-agenda-sticky nil)
-            ;; (org-agenda-buffer-name (concat "*" (car project) "-timeline*")))
-        ;; (if (not (file-exists-p index))
-            ;; (progn
-              ;; (switch-to-buffer bufname)
-              ;; (setq tbuf (get-buffer bufname))
-              ;; (toggle-read-only -1)
-	      ;; (erase-buffer)
-              ;; (insert "TIMELINE: Project index file does not exist yet"))
-          ;; ;; (when (get-buffer bufname)
-            ;; ;; (kill-buffer bufname))
-          ;; (find-file index)
-          ;; (org-timeline 'yeah)
-	  ;; ;; (rename-buffer bufname)
-	  ;; (local-set-key [(return)] 'org-return)
-	  ;; (setq tbuf (current-buffer)))))
-    ;; (switch-to-buffer tbuf)))
 
 (defun superman-recent-org (project)
   (car (superman-list-files
-	(concat (superman-get-location project) (car project)) "^[^\\.].*\\.org$" "time")))
+	(concat (superman-get-location project)
+		(car project)) "^[^\\.].*\\.org$" "time")))
 
+
+(setq superman-project-todolist-balls
+      '((todo ("width" 7) ("face" superman-get-todo-face))
+	(index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
+	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
+	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-warning-face))
+	("CaptureDate" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-string-face))))
 
 (defun superman-todo (&optional project)
-  "Display a project specific timeline based on the index file."
+  "Display a project specific todo-list based on all org files."
   (interactive)
-  (let* ((index (superman-get-index (or project superman-current-project)))
-	 (org-agenda-window-setup 'current-window)
-	 (org-agenda-buffer-name (concat "*T*"))
+  (let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
 	 (org-agenda-sticky nil)
-	 (org-agenda-files (list index))
-	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
-    (find-file index)
-    ))
-     ;; (push ?T unread-command-events)
-     ;; (call-interactively 'org-agenda)))
-  ;; (find-file (superman-find-index project))
+	 (org-agenda-custom-commands
+	  `(("T" "Projects-TODO"
+	     ((todo ""
+		    ((org-agenda-files 
+		      (mapcar 'file-list-make-file-name
+			      (file-list-select-internal
+			       nil
+			       (or "^[^\\.#].*org$" ".") nil nil
+			       (superman-project-home
+				superman-current-project) nil t))))))
+	     ((org-agenda-window-setup 'current-window)
+	      (org-agenda-finalize-hook
+	       (lambda ()
+		 (superman-format-agenda
+		  superman-project-todolist-balls
+		  'superman-todo
+		  "Project ToDo list"))))))))
+    (push ?T unread-command-events)
+    (call-interactively 'org-agenda)))
+
+	 
 
 (defun old-superman-todo (project)
   (let (tbuf)

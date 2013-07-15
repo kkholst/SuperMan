@@ -371,7 +371,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 				  (list x))
 				(superman-parse-project-categories))
 			nil nil)))
-	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
+	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (loc (or loc
 		  (save-excursion
 		    (superman-go-home category)

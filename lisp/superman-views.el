@@ -1020,7 +1020,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	    (if (or (not (member cat superman-capture-alist))
 		    (member cat superman-views-permanent-cats) (> count 0))
 		(progn (end-of-line)
-		       (insert " [" (int-to-string count) "]")
+		       (unless free (insert " [" (int-to-string count) "]"))
 		       (when (assoc "GitStatus" balls)
 			 (insert "\t" "[" (superman-make-button
 					   "Update"
@@ -1862,7 +1862,7 @@ If point is before the first category do nothing."
       (org-with-point-at m
 	(cond (superman-mode
 	       (superman-return))
-	      ((re-search-forward org-bracket-link-regexp nil t)
+	      ((re-search-forward org-any-link-re nil t)
 	       (org-open-at-point))
 	      (t
 	       (widen)

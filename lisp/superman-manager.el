@@ -33,9 +33,10 @@
 (require 'popup nil t) ;; https://github.com/auto-complete/popup-el.git
 (require 'winner) 
 (require 'ido)
-(require 'org-colview)
+;; (require 'org-colview)
 (require 'org-publish)
 (require 'vc)
+(require 'cl)
 
 ;; Loading extensions
 (require 'superman) ;; a project to manage projects
@@ -493,7 +494,10 @@ and others."
 	  (rename-file index new-index))
       (superman-goto-profile pro)
       (org-set-property (superman-property 'location) (file-name-directory target))
-      (org-set-property (superman-property 'index) (or new-index (replace-regexp-in-string (file-name-directory dir) (file-name-directory target) index)))
+      (org-set-property (superman-property 'index)
+			(or new-index (replace-regexp-in-string
+				       (file-name-directory dir)
+				       (file-name-directory target) index)))
       (save-buffer))))
 
 (defun superman-delete-project (&optional project)

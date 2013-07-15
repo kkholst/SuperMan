@@ -228,12 +228,13 @@
 ;;{{{ cycle view 
 
 (defvar superman-views nil)
-(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-todo-C 'S-agenda))
+(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-agenda))
 
 (defun superman-change-view  (&optional arg)
   (interactive "p")
   ;; cycle view list
-  (when (eq major-mode 'org-agenda-mode)
+  (when (or (eq major-mode 'org-agenda-mode)
+	    superman-view-mode)
     (let ((current  (car superman-views))
 	  (rest  (cdr superman-views)))
       (setq superman-views rest)
@@ -256,7 +257,11 @@
 			((org-agenda-files
 			  (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook 'superman-format-todolist))))))
+	     (org-agenda-finalize-hook
+	      (lambda ()
+		(superman-format-agenda
+		 superman-todolist-balls
+		 'S-todo))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -274,23 +279,6 @@
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 
-
-;; (defun S-todo ()
-  ;; (let ((org-agenda-buffer-name (concat "*S-todo*"))
-	;; (org-agenda-sticky nil)
-	;; (org-agenda-custom-commands
-	 ;; `(("P" "Projects-TODO neither B or C"
-	    ;; ,(mapcar #'(lambda (cat)
-			;; ;; (list 'todo "TODO"
-			;; (list 'tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
-			      ;; `((org-agenda-overriding-header  (concat "Project category: ",cat))
-				;; (org-agenda-files (quote ,(superman-index-list cat nil nil nil nil superman-exclude-from-todo-regexp))))))
-			;; (superman-parse-project-categories))
-	    ;; ((org-agenda-window-setup 'current-window)
-	     ;; (org-agenda-finalize-hook 'superman-format-agenda))))))
-    ;; (push ?P unread-command-events)
-    ;; (call-interactively 'org-agenda)))
-
 (defun S-agenda ()
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
@@ -306,38 +294,6 @@
 		    (org-agenda-overriding-header "Superman agenda"))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
-
-;; (defun S-todo-B ()
-  ;; (let ((org-agenda-buffer-name (concat "*S-todo-B*"))
-	;; (org-agenda-sticky nil)
-	;; (org-agenda-custom-commands
-	 ;; `(("B" "Projects-TODO class B"
-	    ;; ,(mapcar #'(lambda (cat)
-			;; ;; (list 'todo "TODO"
-			;; (list 'tags-todo "PRIORITY=\"B\""
-			      ;; `((org-agenda-overriding-header  (concat "Project category: ",cat))
-				;; (org-agenda-files (quote ,(superman-index-list cat))))))
-		     ;; (superman-parse-project-categories))
-	    ;; ((org-agenda-window-setup 'current-window)
-	     ;; (org-agenda-finalize-hook 'superman-format-agenda))))))
-    ;; (push ?B unread-command-events)
-    ;; (call-interactively 'org-agenda)))
-
-;; (defun S-todo-C ()
-  ;; (let ((org-agenda-buffer-name (concat "*S-todo-C*"))
-	;; (org-agenda-sticky nil)
-	;; (org-agenda-custom-commands
-	 ;; `(("C" "Projects-TODO class C"
-	    ;; ,(mapcar #'(lambda (cat)
-			;; ;; (list 'todo "TODO"
-			;; (list 'tags-todo "PRIORITY=\"C\""
-			      ;; `((org-agenda-overriding-header  (concat "Project category: ",cat))
-				;; (org-agenda-files (quote ,(superman-index-list cat))))))
-		     ;; (superman-parse-project-categories))
-	    ;; ((org-agenda-window-setup 'current-window)
-	     ;; (org-agenda-finalize-hook 'superman-format-agenda))))))
-    ;; (push ?C unread-command-events)
-    ;; (call-interactively 'org-agenda)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -428,19 +384,20 @@ Enabling superman mode electrifies the superman buffer for project management."
   (superman-trim-project-attribute marker "category" args))
 
 (setq superman-todolist-balls
-      '((org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
+      '((todo ("width" 7) ("face" superman-get-todo-face))
+	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
 	(org-hd-marker ("width" 23) ("name" "Nick") ("fun" superman-trim-project-nickname) ("preserve" t))
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
-	("DEADLINE" ("fun" superman-trim-date) ("face" font-lock-warning-face))
-	("CaptureDate" ("fun" superman-trim-date) ("face" font-lock-string-face))
+	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-warning-face))
+	("CaptureDate" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-string-face))
 	("FileName" ("fun" superman-dont-trim))))
 
 (defun superman-format-todolist ()
   (superman-format-agenda superman-todolist-balls))
 
-(defun superman-format-agenda (&optional balls)
+(defun superman-format-agenda (&optional balls redo title)
   (let ((balls (or balls superman-agenda-balls))
 	(redo-cmd org-agenda-redo-command)
 	(count 0)
@@ -454,7 +411,8 @@ Enabling superman mode electrifies the superman buffer for project management."
       (beginning-of-line)
       (insert "\n")
       (goto-char (point-min))
-      (insert "SuperToDo")
+      (insert (or title "* SuperToDo"))
+      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
       (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
