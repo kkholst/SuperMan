@@ -65,7 +65,6 @@ branch for the new feature.
 
 #+BEGIN_EXAMPLE
 git checkout -b new_feature
-
 #+END_EXAMPLE
 
 This will make a new branch (the -b) and switch to it (checkout). Once

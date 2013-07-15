@@ -24,24 +24,26 @@
       :CATEGORY: start-me-up
       :END:
 
+
 *** Start here
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
 :GitStatus: Committed
 :GitInit:  <2013-06-11 Tue 18:21> first version
-:LastCommit: <2013-06-11 Tue 18:21> first version
+:LastCommit: <2013-07-15 Mon 10:19> did some more
 :END:
 
 
-
-*** Window configurations
+*** Supermanual.org
 :PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
+:FileName: [[~/emacs-genome/genes/SuperMan/manager/Supermanual.org]]
 :GitStatus: Committed
-:CaptureDate: <2013-01-11 Fri 16:41>
-:GitInit:  <2013-01-11 Fri 20:48> first smash
-:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:GitInit:  <2013-07-06 Sat 08:52> figlet makes the start
+:LastCommit: <2013-07-15 Mon 10:19> did some more
 :END:
+
+
+
 
 ** Org-mode
     
@@ -86,29 +88,30 @@
 :END:
 
 
-** Rforge
+
+** Git
 
 
-*** use-git-for-Rforge.org
+*** git-svn Rforge
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-06-13 Thu 08:35> init
 :LastCommit: <2013-06-13 Thu 08:35> init
 :END:
 
 
-** Git
 
-
-
-*** GitSvnWorkFlow.org
+*** git-svn WorkFlow
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/GitSvnWorkFlow.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-07-06 Sat 08:48> copy-and-paste from net
 :LastCommit: <2013-07-06 Sat 08:48> copy-and-paste from net
 :END:
+
+
+** Admin
 
 
 *** Kal-El.org
@@ -116,11 +119,8 @@
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
 :GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-06-17 Mon 16:30> test
+:LastCommit: <2013-07-06 Sat 08:49> next
 :END:
-
-
-** Admin
 
 * Bookmarks
 
@@ -212,7 +212,7 @@
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
 :GitStatus: Committed
 :GitInit:  <2013-06-11 Tue 18:21> first version
-:LastCommit: <2013-06-11 Tue 18:21> first version
+:LastCommit: <2013-07-15 Mon 10:19> did some more
 :END:
 
 ** projects/Kal-El/hints
