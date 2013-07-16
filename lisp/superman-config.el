@@ -114,13 +114,11 @@ Returns the corresponding buffer."
     hlist))
 
 (defun superman-read-config (project)
-  (let* ((p-config (superman-get-config project))
-	 (config
-	  (if (and superman-sticky-config
-		   (or (not p-config)
-		       (not (string-match "non-sticky"
-				      p-config))))
-	      superman-sticky-config))
+  (let* ((config (superman-get-config project))
+	 (config (when superman-sticky-config
+		     (if config 
+			 (concat superman-sticky-config " : " config)
+		       superman-sticky-config)))
 	 (case-fold-search t))
     (save-window-excursion
       (save-restriction
@@ -264,7 +262,7 @@ given in superman notation."
 	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-warning-face))
 	("CaptureDate" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-string-face))))
 
-(defun superman-todo (&optional project)
+(defun superman-project-todo (&optional project)
   "Display a project specific todo-list based on all org files."
   (interactive)
   (let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
@@ -288,23 +286,6 @@ given in superman notation."
 		  "Project ToDo list"))))))))
     (push ?T unread-command-events)
     (call-interactively 'org-agenda)))
-
-	 
-
-(defun old-superman-todo (project)
-  (let (tbuf)
-    (save-window-excursion
-      (let* ((location (concat (superman-get-location project) (car project)))
-	     (org-files (superman-list-files location "^[^\\.].*\\.org$" nil))
-	     (org-agenda-sticky nil) 
-	     (org-agenda-files org-files)
-	     (bufname (concat "*TODO[" (car project) "]*")))
-	(when (get-buffer bufname)
-	  (kill-buffer bufname))
-	(org-todo-list org-match)
-	(rename-buffer bufname)
-	(setq tbuf (current-buffer))))
-    (switch-to-buffer tbuf)))
 
 ;;}}}
 ;;{{{ superman-shell

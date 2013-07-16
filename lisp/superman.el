@@ -91,6 +91,16 @@
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
+  (insert "\t" (superman-make-button "[Agenda]"
+			'(([mouse-2] . superman-agenda)
+			  ([return] . superman-agenda))
+			font-lock-keyword-face
+			"Agenda across all projects") "\t")
+  (insert (superman-make-button "[TodoList]"
+			'(([mouse-2] . superman-todo)
+			  ([return] . superman-todo))
+			font-lock-keyword-face
+			"TodoList across all projects"))
   (insert "\n"))
 
   ;; (insert "\n\nKeys: \n")
@@ -185,7 +195,7 @@
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'balls superman-balls)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
-	(insert " [" (int-to-string (length tail)) "]")
+	(insert "[" (int-to-string (length tail)) "]")
 	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
@@ -244,16 +254,19 @@
   (superman-on))
   
 (defalias 'S 'superman)
+(defalias 'S-todo 'superman-todo)
+(defalias 'S-agenda 'superman-agenda)
 
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
 
-(defun S-todo (&optional project)
+(defun superman-todo (&optional project)
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-TODO*"))
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
-	 '(("P" "Projects-TODO"
+	 `(("P" "Projects-TODO"
 	    ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
+			;; ((todo ""
 			((org-agenda-files
 			  (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
@@ -261,9 +274,22 @@
 	      (lambda ()
 		(superman-format-agenda
 		 superman-todolist-balls
-		 'S-todo))))))))
-    (push ?P unread-command-events)
-    (call-interactively 'org-agenda)))
+		 'superman-todo
+		  "* SupermanTodoList"
+		  (concat "\t"
+			 (superman-make-button "[Agenda]"
+					       '(([mouse-2] . superman-agenda)
+						 ([return] . superman-agenda))
+					       font-lock-keyword-face
+					       "Agenda across all projects")
+			 "\t"
+			 (superman-make-button "[Projects]"
+					       '(([mouse-2] . superman)
+						 ([return] . superman))
+					       font-lock-keyword-face
+					       "List of projects"))))))))))
+  (push ?P unread-command-events)
+  (call-interactively 'org-agenda)))
 
 (defun S-todo-B ()
   (interactive)
@@ -279,9 +305,16 @@
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 
-(defun S-agenda (&optional project)
+
+(defun superman-make-agenda-title (string face)
+  (put-text-property 0 (length string) 'face face string)
+  string)
+    
+(defun superman-agenda (&optional project)
+  (interactive)
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
+	(title "SupermanAgenda")
 	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
 		 '("A" "Superman agenda"
@@ -291,9 +324,23 @@
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
 		    (org-agenda-window-setup 'current-window)
-		    (org-agenda-overriding-header "Superman agenda"))))
-    (push ?A unread-command-events)
-    (call-interactively 'org-agenda)))
+		    (org-agenda-overriding-header
+		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
+			     "\t"
+			     (superman-make-button "[TodoList]"
+						   '(([mouse-2] . superman-todo)
+						     ([return] . superman-todo))
+						   font-lock-keyword-face
+						   "TodoList across all projects")
+			     "\t"
+			     (superman-make-button "[Projects]"
+						   '(([mouse-2] . superman)
+						     ([return] . superman))
+						   font-lock-keyword-face
+						   "List of projects")
+			     "\n")))))
+  (push ?A unread-command-events)
+  (call-interactively 'org-agenda)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -397,7 +444,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-format-todolist ()
   (superman-format-agenda superman-todolist-balls))
 
-(defun superman-format-agenda (&optional balls redo title)
+(defun superman-format-agenda (&optional balls redo title buttons)
   (let ((balls (or balls superman-agenda-balls))
 	(redo-cmd org-agenda-redo-command)
 	(count 0)
@@ -411,12 +458,13 @@ Enabling superman mode electrifies the superman buffer for project management."
       (beginning-of-line)
       (insert "\n")
       (goto-char (point-min))
-      (insert (or title "* SuperToDo"))
+      (insert (or title "* SupermanAgenda"))
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
       (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
+      (if buttons (insert buttons))
       (end-of-line)
       (insert "\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor
@@ -434,8 +482,8 @@ Enabling superman mode electrifies the superman buffer for project management."
 	  (kill-line)
 	  (insert line "\n")))
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
-      (goto-char (point-min))
-      (end-of-line)
+      ;; (goto-char (point-min))
+      (goto-char (next-single-property-change (point-min) 'face))
       (insert " [" (int-to-string count) "]"))))
 ;; (superman-clean-buffer-list agenda-buffers)))
 
