@@ -13,23 +13,3 @@
 :LastVisit: <2013-07-15 Mon 10:11>
 :END:
 
-**** ACTIVE Calendar
-:PROPERTIES:
-:Nickname: Calendar
-:InitialVisit: <2013-07-15 Mon>
-:LastVisit: <2013-07-15 Mon 11:08>
-:Location: ~/emacs-genome/genes/SuperMan/projects/
-:Category: Krypton
-:config: non-sticky
-:END:
-
-
-**** ACTIVE TodoList
-:PROPERTIES:
-:Nickname: TodoList
-:InitialVisit: <2013-07-15 Mon>
-:LastVisit: <2013-07-15 Mon 11:11>
-:Location: ~/emacs-genome/genes/SuperMan/projects/
-:config: non-sticky
-:Category: Krypton
-:END:
