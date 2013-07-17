@@ -41,7 +41,7 @@
       '((todo ("width" 9) ("face" superman-get-todo-face))
 	(hdr ("width" 27) ("face" font-lock-function-name-face))
 	("lastvisit" ("fun" superman-trim-date) ("width" 17) ("face" font-lock-type-face) ("sort-key" t))
-	("others" ("width" (44) ("face" font-lock-keyword-face)))))
+	("others" ("width" 66) ("face" font-lock-keyword-face))))
 
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
@@ -314,7 +314,6 @@
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
-	(title "SupermanAgenda")
 	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
 		 '("A" "Superman agenda"
@@ -339,8 +338,8 @@
 						   font-lock-keyword-face
 						   "List of projects")
 			     "\n")))))
-  (push ?A unread-command-events)
-  (call-interactively 'org-agenda)))
+    (push ?A unread-command-events)
+    (call-interactively 'org-agenda)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -433,7 +432,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (setq superman-todolist-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
-	(org-hd-marker ("width" 23) ("name" "Nick") ("fun" superman-trim-project-nickname) ("preserve" t))
+	(org-hd-marker ("width" 23) ("name" "Nick") ("fun" superman-trim-project-nickname))
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))

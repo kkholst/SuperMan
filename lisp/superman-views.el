@@ -465,60 +465,58 @@ and the keybinding to initialize git control otherwise."
 ;; (define-key superman-git-branch-map [mouse-3] 'superman-button-git-status)
 (define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
 
-(defun superman-view-insert-git-branches (project)
+(defun superman-view-insert-git-branches (&optional dir)
   "Insert the git branch(es) if project is git controlled.
 Translate the branch names into buttons."
-  (let ((pro (or project superman-current-project (superman-select-project)))
-	(loc (or (get-text-property (point-min) 'git-dir)
-		 (superman-project-home project))))
-    (when (superman-git-p loc)
-      (let* ((branch-list (superman-git-branches loc))
-	     (current-branch (car branch-list))
-	     (other-branches (cdr branch-list))
-	     (title "Branches:"))
-	(when branch-list
-	  (insert "\n")
-	  (put-text-property 0 (length title) 'face 'org-level-2 title)
-	  (insert title " ")
-	  (put-text-property
-	   0 1
-	   'superman-header-marker t current-branch)
-	  (add-text-properties
-	   0 (length current-branch) 
-	   (list
-	    'button (list t)
-	    'face 'font-lock-warning-face
-	    'keymap superman-git-branch-map
-	    'mouse-face 'highlight
-	    'follow-link t
-	    'help-echo "git status")
-	   current-branch)
-	  (insert "[" current-branch "]  ")
-	  (while other-branches
-	    (let* ((b (car other-branches))
-		   (map (make-sparse-keymap))
-		   (checkout-branch-cmd
-		    (concat "cd " loc "; " superman-cmd-git " checkout " b "\n")))
-	      (define-key map [mouse-2]
-		`(lambda () (interactive)
-		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	      (define-key map [return]
-		`(lambda () (interactive)
-		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	      (define-key map [follow-link] `(lambda () (interactive)
-		   (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	      (add-text-properties
-	       0 (length b) 
-	       (list
-		'button (list t)
-		'face 'font-lock-keyword-face
-		'keymap map
-		'mouse-face 'highlight
-		'follow-link t
-		'help-echo "git status")
-	       b)
-	      (setq other-branches (cdr other-branches))
-	      (insert b "  "))))))))
+  (let ((loc (or dir
+		 (get-text-property (point-min) 'git-dir))))
+    (let* ((branch-list (superman-git-branches loc))
+	   (current-branch (car branch-list))
+	   (other-branches (cdr branch-list))
+	   (title "Branches:"))
+      (when branch-list
+	(insert "\n")
+	(put-text-property 0 (length title) 'face 'org-level-2 title)
+	(insert title " ")
+	(put-text-property
+	 0 1
+	 'superman-header-marker t current-branch)
+	(add-text-properties
+	 0 (length current-branch) 
+	 (list
+	  'button (list t)
+	  'face 'font-lock-warning-face
+	  'keymap superman-git-branch-map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo "git status")
+	 current-branch)
+	(insert "[" current-branch "]  ")
+	(while other-branches
+	  (let* ((b (car other-branches))
+		 (map (make-sparse-keymap))
+		 (checkout-branch-cmd
+		  (concat "cd " loc "; " superman-cmd-git " checkout " b "\n")))
+	    (define-key map [mouse-2]
+	      `(lambda () (interactive)
+		 (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
+	    (define-key map [return]
+	      `(lambda () (interactive)
+		 (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
+	    (define-key map [follow-link] `(lambda () (interactive)
+					     (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
+	    (add-text-properties
+	     0 (length b) 
+	     (list
+	      'button (list t)
+	      'face 'font-lock-keyword-face
+	      'keymap map
+	      'mouse-face 'highlight
+	      'follow-link t
+	      'help-echo "git status")
+	     b)
+	    (setq other-branches (cdr other-branches))
+	    (insert b "  ")))))))
 
 (defun superman-button-git-status (ev)
   (interactive "e")
@@ -621,26 +619,14 @@ If MARKED is non-nil run only on marked items."
 ;;{{{ Columns and balls
 
 (defun superman-column-names (balls)
-  (let* ((col-names
-	  (list "columns"
-		(mapcar #'(lambda (b)
-			    (cons (car b)
-				  (or (cadr (assoc "name" (cdr b)))
-				      (cond ((stringp (car b)) (car b))
-					    ((eq (car b) 'hdr) "Title")
-					    ((eq (car b) 'todo) "Status")
-					    ((eq (car b) 'attac) " ")
-					    ((eq (car b) 'org-hd-marker)
-					     (symbol-name (cadr (assoc "fun" (cdr b)))))))))
-			balls)))
-	 (cols (superman-format-column-names col-names balls)))
+  (let ((cols (superman-format-column-names balls)))
     (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
     (put-text-property 0 (length cols) 'column-names t cols)
     (put-text-property 0 (length cols) 'names (length cols) cols)
     cols))
 
 
-(defun superman-format-column-names (names balls)
+(defun superman-format-column-names (balls)
     "Format column names NAMES according to balls, similar to
 `superman-format-thing'.
 Returns the formatted string with text-properties."
@@ -653,7 +639,14 @@ Returns the formatted string with text-properties."
       ;; loop columns
       (while copy-balls
 	(let* ((b (car copy-balls))
-	       (name (superman-play-ball names b 'no-face))
+	       (col-name (cond ((cadr (assoc "name" b)))
+			       ((stringp (car b)) (car b))
+			       ((eq (car b) 'hdr) "Title")
+			       ((eq (car b) 'todo) "Status")
+			       ((eq (car b) 'attac) " ")
+			       ((eq (car b) 'org-hd-marker))
+			       (symbol-name (cadr (assoc "fun" (cdr b))))))
+	       (name (superman-play-ball col-name  b 'no-face))
 	       (sort-cmd (concat "sort-by-" name)))
 	;; make this name a button 
 	(add-text-properties
@@ -913,6 +906,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		    superman-current-project
 		    (superman-switch-to-project nil t))))
 	 (loc (superman-project-home pro))
+	 (gitp (superman-git-p loc))
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 ;; (org-agenda-window-setup 'current-window)
 	 ;; (project-header (concat "Project: " (car pro)))
@@ -925,6 +919,10 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		(superman-parse-cats ibuf 1)))
 	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
+    ;; update git status
+    (when gitp
+      (switch-to-buffer ibuf)
+      (superman-view-git-update-status loc nil nil nil 'dont))
     (switch-to-buffer vbuf)
     (setq buffer-read-only nil)
     (erase-buffer)
@@ -943,7 +941,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (when (> (length superman-project-history) 1)
       (insert "\t\t" (car (reverse superman-project-history)) "[M-left], " (cadr superman-project-history) "[M-right]"))
     (insert (superman-project-view-header pro))
-    (superman-view-insert-git-branches pro)
+    (when gitp
+      (superman-view-insert-git-branches loc))
     (superman-view-insert-config-buttons pro)
     (superman-view-insert-unison-buttons pro)
     (goto-char (point-max))
@@ -1059,8 +1058,6 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (superman-view-current-project)))
   ;; minor-mode
   (superman-view-mode-on)
-  ;; check modified
-  (superman-view-git-update-status nil nil nil 'dont)
   (setq buffer-read-only t))
 
 
@@ -1082,39 +1079,41 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
   "Play BALL at THING which is a marker or an alist and return
 a formatted string with faces."
   (let* ((raw-string
-	  (if (markerp thing)
-	      ;; thing is marker
-	      (cond ((stringp (car ball)) ;; properties
-		     (superman-get-property thing (car ball) t))
-		    ;; important:
-		    ;; when introducing new special things 
-		    ;; also adapt superman-distangle-ball
-		    ((eq (car ball) 'org-hd-marker) ;; special: marker
-		     thing)
-		    ((eq (car ball) 'hdr) ;; special: header
-		     (org-with-point-at thing 
-		       (org-back-to-heading t)
-		       (looking-at org-complex-heading-regexp)
-		       (match-string 4)))
-		    ((eq (car ball) 'todo) ;; special: todo state
-		     (org-with-point-at thing 
-		       (org-back-to-heading t)
-		       (and (looking-at org-todo-line-regexp)
-			    (match-end 2) (concat (match-string 2)))))
-		    ((eq (car ball) 'attac) ;; special: attachment
-		     nil)
-		    ((eq (car ball) 'index) ;; special: index filename
-		     (file-name-sans-extension
-		      (file-name-nondirectory
-		       (buffer-file-name (current-buffer)))))
-		    (t "--"))
-	    ;; thing is alist
-	    (or (cdr (assoc (car ball) (cadr thing))) "--")))
+	  (cond ((markerp thing)
+		 ;; thing is marker
+		 (cond ((stringp (car ball)) ;; properties
+			(superman-get-property thing (car ball) t))
+		       ;; important:
+		       ;; when introducing new special things 
+		       ;; also adapt superman-distangle-ball
+		       ((eq (car ball) 'org-hd-marker) ;; special: marker
+			thing)
+		       ((eq (car ball) 'hdr) ;; special: header
+			(org-with-point-at thing 
+			  (org-back-to-heading t)
+			  (looking-at org-complex-heading-regexp)
+			  (match-string 4)))
+		       ((eq (car ball) 'todo) ;; special: todo state
+			(org-with-point-at thing 
+			  (org-back-to-heading t)
+			  (and (looking-at org-todo-line-regexp)
+			       (match-end 2) (concat (match-string 2)))))
+		       ((eq (car ball) 'attac) ;; special: attachment
+			nil)
+		       ((eq (car ball) 'index) ;; special: index filename
+			(file-name-sans-extension
+			 (file-name-nondirectory
+			  (buffer-file-name (current-buffer)))))
+		       (t "--")))
+		((stringp thing) thing)
+		;; thing is alist
+		((listp thing) (cdr (assoc (car ball) (cadr thing))))
+		(t "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))
 	 (fun (or (cadr (assoc "fun" (cdr ball))) 'superman-trim-string))
 	 (width (or (cdr (assoc "width" (cdr ball))) (list 23)))
 	 (args (cdr (assoc "args" (cdr ball))))
-	 (preserve-props (assoc "preserve" (cdr ball)))
+	 ;; (preserve-props (assoc "preserve" (cdr ball)))
 	 (trim-args (nconc width args))
 	 (trimmed-string
 	  (concat "  " ;; column sep
@@ -1126,8 +1125,8 @@ a formatted string with faces."
 		     (get-text-property 0 'face raw-string))))
 	 (sort-key (get-text-property superman-column-separator 'sort-key trimmed-string)))
     ;; remove all existing text-properties
-    (unless preserve-props
-      (set-text-properties 0 len nil trimmed-string))
+    ;; (unless preserve-props
+    ;; (set-text-properties 0 len nil trimmed-string))
     (when sort-key (put-text-property 0 len 'sort-key sort-key trimmed-string))
     (unless no-face
       (when (and (not (facep face)) (functionp face)) ;; apply function to get face
@@ -1917,7 +1916,7 @@ if it exists and add text-property org-hd-marker."
       filename)))
 
 
-(defun superman-view-git-update-status-forced (&optional beg end dont-redo)
+(defun superman-view-git-update-status-with-date (&optional beg end dont-redo)
   (interactive)
   (superman-view-git-update-status beg end t dont-redo))
 
@@ -1930,24 +1929,30 @@ if it exists and add text-property org-hd-marker."
 	  (superman-git-set-status pom file nil))))
 
 				     
-(defun superman-view-git-update-status (&optional beg end force dont-redo)
-  "Update git status for all registered entries within BEG and END.
-If FORCE is non-nil run uncondionally through all entries that have a filename.
-This comes at the cost of one separate call to git status for each file.
+(defun superman-view-git-update-status (&optional dir beg end with-date dont-redo)
+  "Update git status below DIR for all registered entries within BEG and END.
 
-If FORCE is nil run only through those files that have changed status
-according to git."
+If WITH-DATE is nil run only the status of files between BEG and END. This works by
+comparing the file-list with the result of git status (called once).
+
+If WITH-DATE is non-nil run uncondionally through all entries between BEG and END that have
+a filename and update both the status and the date of the last change.
+This comes at the cost of separate calls to git status for each file, which can be
+lengthy on some systems."
   (interactive)
-  (let ((dir (get-text-property (point-min) 'git-dir)))
-    (if (not dir) (message "Project is not git-controlled.")
-      (if force
+  (let ((case-fold-search t)
+	(dir (or dir (get-text-property (point-min) 'git-dir))))
+    (if (not dir)
+	(message "Argument DIR is required in this case.")
+      (if with-date
 	  (superman-loop 'superman-view-set-status-at-point nil beg end nil)
-	(let* ((superman-file-list (delq nil (superman-loop 'superman-filename-with-pom (list t) beg end)))
-	       (git-file-list (delete ""
-				      (split-string
-				       (shell-command-to-string
-					(concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
-	       (git-status (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+	(let* ((git-status-list (delete ""
+					(split-string
+					 (shell-command-to-string
+					  (concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+	       (git-status
+		(shell-command-to-string
+		 (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
 	       (status-list
 		(when (not (string= git-status ""))
 		  (delq nil
@@ -1955,29 +1960,32 @@ according to git."
 				  (if (string= "" x) nil
 				    (let ((el (split-string x " ")))
 				      (cons (caddr el) (cadr el)))))
-				(split-string git-status "\n"))))))
-	  ;; check modified for all files in superman-file-list
-	  ;; that also are in git-file-list 
-	  (while superman-file-list
-	    (let* ((file (car superman-file-list))
-		   (status
-		    (if (member (file-relative-name file dir) git-file-list)
-			(superman-status-label
-			 (or (cdr (assoc (file-relative-name file dir)
-					 status-list)) "C"))
-		      "Untracked"))
-		   (pom (get-text-property 0 'org-hd-marker file))
-		   (current-status
-		    (superman-get-property pom "GitStatus")))
-	      (unless (or (string= status "Untracked") (string= status current-status))
-		(org-entry-put pom (superman-property 'gitstatus) status)
-		(when (or
-		       (string= (downcase status) "modified")
-		       (and (stringp current-status)
-			    (string= (downcase current-status) "modified")))
-		  (superman-git-set-status pom file nil)))
-	      ;; (org-entry-put pom "GitStatus" status)))
-	      (setq superman-file-list (cdr superman-file-list))))))
+				(split-string git-status "\n")))))
+	       file)
+	  ;; check status for all entries 
+	  ;; by comparing the filename (if any) against git-status-list
+	  (save-excursion
+	    (when superman-view-mode (set-buffer
+				      (get-file-buffer
+				       (get-text-property (point-min) 'index))))
+	    (goto-char (or beg (point-min)))
+	    (while (and (re-search-forward ":filename:" end t)
+			(setq file (superman-filename-at-point 'noerror)))
+	      (let* ((status
+		      (if (member (file-relative-name file dir) git-status-list)
+			  (superman-status-label
+			   (or (cdr (assoc (file-relative-name file dir)
+					   status-list)) "C"))
+			"Untracked"))
+		     (current-status
+		      (superman-get-property (point) "GitStatus")))
+		(unless (or (string= status "Untracked") (string= status current-status))
+		  (org-entry-put (point) (superman-property 'gitstatus) status)
+		  (when (or
+			 (string= (downcase status) "modified")
+			 (and (stringp current-status)
+			      (string= (downcase current-status) "modified")))
+		    (superman-git-set-status (point) file nil))))))))
       (unless dont-redo (superman-redo)))))
 
 
@@ -2035,7 +2043,7 @@ If dont-redo the agenda is not reversed."
        (superman-view-marked-files)
        dir
        'commit nil)
-      (superman-view-git-update-status nil nil nil)
+      (superman-view-git-update-status dir nil nil nil)
       (unless dont-redo (superman-redo)))))
 
 ;;}}}
@@ -2119,7 +2127,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gs" 'superman-view-git-status)
 (define-key superman-view-mode-map "GS" 'superman-view-git-search)
 (define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
-(define-key superman-view-mode-map "GU" 'superman-view-git-update-status-forced)
+(define-key superman-view-mode-map "GU" 'superman-view-git-update-status-with-date)
 (define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
 (define-key superman-view-mode-map "GBn" 'superman-git-new-branch)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
