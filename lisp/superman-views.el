@@ -1918,7 +1918,7 @@ if it exists and add text-property org-hd-marker."
 
 (defun superman-view-git-update-status-with-date (&optional beg end dont-redo)
   (interactive)
-  (superman-view-git-update-status beg end t dont-redo))
+  (superman-view-git-update-status nil beg end t dont-redo))
 
   
 (defun superman-view-set-status-at-point ()
