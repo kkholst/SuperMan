@@ -195,7 +195,7 @@
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'balls superman-balls)
 	(put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " cat-name))
-	(insert "[" (int-to-string (length tail)) "]")
+	(insert " [" (int-to-string (length tail)) "]")
 	;; loop over projects (tail) in category
 	(insert "\n")
 	(superman-format-loop tail superman-balls)
