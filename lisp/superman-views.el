@@ -1827,7 +1827,7 @@ If point is before the first category do nothing."
   (interactive)
   (let ((pro (superman-view-current-project)))
     (split-window-vertically)
-      (other-window 1)
+    (other-window 1)
     (superman-file-list pro)))
 
 (defun superman-view-dired ()
@@ -1837,10 +1837,7 @@ If point is before the first category do nothing."
 	 (dir 
 	  (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
 	      (get-text-property (point-min) 'git-dir)
-	      (default-directory)))
-	 )
-    ;; (split-window-vertically)
-    ;;   (other-window 1)
+	      (default-directory))))
     (find-file dir)))
 
 (defun superman-view-git-init ()
