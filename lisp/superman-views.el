@@ -1686,31 +1686,33 @@ If point is before the first category do nothing."
   (when (previous-single-property-change (point-at-bol) 'cat)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
-	 (file (superman-filename-at-point t)))
+	 (file (superman-filename-at-point t))
+	 (regret nil))
     (unless dont-prompt
       (superman-view-index)
       (org-narrow-to-subtree)
-      (yes-or-no-p "Delete this entry?"))
+      (setq regret (not (yes-or-no-p "Delete this entry?"))))
     (set-window-configuration scene)
-    (when file
-      (when (and do-delete-file
-		 (yes-or-no-p
-		  (concat "Delete file "
-			  (file-name-nondirectory file))))
-	(if (string-match
-	     (superman-get-property marker "GitStatus")
-	     "Committed\\|Modified")
-	    (shell-command (concat
-			    "cd "
-			    (file-name-directory file)
-			    ";"
-			    superman-cmd-git " rm -f "
-			    (file-name-nondirectory file)))
-	  (when (file-exists-p file)
-	    (delete-file file)))))
-    (when marker
-      (save-excursion
-	(org-with-point-at marker (org-cut-subtree)))))
+    (unless regret
+      (when file
+	(when (and do-delete-file
+		   (yes-or-no-p
+		    (concat "Delete file "
+			    (file-name-nondirectory file))))
+	  (if (string-match
+	       (superman-get-property marker "GitStatus")
+	       "Committed\\|Modified")
+	      (shell-command (concat
+			      "cd "
+			      (file-name-directory file)
+			      ";"
+			      superman-cmd-git " rm -f "
+			      (file-name-nondirectory file)))
+	    (when (file-exists-p file)
+	      (delete-file file)))))
+      (when marker
+	(save-excursion
+	  (org-with-point-at marker (org-cut-subtree))))))
   (unless dont-redo (superman-redo))))
 
 (defun superman-view-delete-all (&optional dont-prompt)
