@@ -957,6 +957,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	     cat-head
 	     cat-point
 	     (count 0)
+	     countsub
+	     tempsub
 	     line)
 	;; back to vbuf
 	(set-buffer vbuf)
@@ -991,11 +993,15 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			 (put-text-property 0 (length line) 'subcat subhdr line)
 			 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 			 (put-text-property 0 (length line) 'face 'org-level-3 line)
+;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
 			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-			 (with-current-buffer vbuf (insert line "\n" ))
+			 (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
+			 (with-current-buffer vbuf (insert line " \n" ))
 			 (end-of-line)))
 		      ;; items
-		      ((eq (org-current-level) 3)
+		      ((eq (org-current-level) 3)		       
+		       (if countsub
+			   (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
 		       (setq count (+ count 1))
 		       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
 		       (with-current-buffer vbuf (insert line "\n")))
@@ -1007,6 +1013,15 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	    ;; (show-all)
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail cat)
 	    (set-buffer vbuf)
+
+	    (save-excursion 
+	      (while countsub 		
+		(setq tempsub (pop countsub))
+		(goto-char (nth 1 tempsub))
+		(put-text-property (- (point-at-eol) 1) (point-at-eol) 'display 
+;;				     		   (concat (get-text-property (nth 1 tempsub)'display) " [" (int-to-string (car tempsub)) "]"))
+				   (concat " [" (int-to-string (car tempsub)) "]"))
+		))
 	    (goto-char cat-head)
 	    (insert "\n** " cat "\n")
 	    (forward-line -1)
