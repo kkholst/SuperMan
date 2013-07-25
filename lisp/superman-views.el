@@ -124,7 +124,7 @@ Column showing the todo-state
 	(hdr ("width" 49) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("face" font-lock-function-name-face) ("name" "Description"))
+	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
 	("Link" ("fun" superman-trim-link) ("width" 48) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
@@ -202,7 +202,7 @@ to an integer then do not trim the string STR."
 		 filename
 		 (superman-trim-string
 		  (file-name-nondirectory filename) len))))
-	trimmed-file-name)
+-file-name)
     (superman-trim-string file (car args))))
 
 (defun superman-trim-filename (filename &rest args)
@@ -1868,7 +1868,6 @@ If point is before the first category do nothing."
       (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
       (superman-redo))))
 
-
 (defun superman-hot-return ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -2077,11 +2076,35 @@ for git and other actions like commit, history search and pretty log-view."
   (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
+
+(defun superman-view-second-link ()
+  (interactive)
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (b (superman-current-cat))
+	 f)
+    (if (not m)
+	(error "Nothing to do here")
+      (org-with-point-at m
+	(cond (superman-mode
+	       (superman-return))
+	      ((re-search-forward org-any-link-re nil t)
+	       (re-search-forward org-any-link-re nil t)
+	       (org-open-at-point))
+	      (t
+	       (widen)
+	       (show-all)
+	       (org-narrow-to-subtree)
+	       (switch-to-buffer (marker-buffer m))))))))
+	      ;; ((superman-view-index)
+	       ;; (org-narrow-to-subtree)))))))
+
+
 (define-key superman-view-mode-map [return] 'superman-hot-return)
 (define-key superman-view-mode-map [(meta left)] 'superman-one-left)
 (define-key superman-view-mode-map [(meta right)] 'superman-one-right)
 (define-key superman-view-mode-map [(meta up)] 'superman-one-up)
 (define-key superman-view-mode-map [(meta down)] 'superman-one-down)
+(define-key superman-view-mode-map [(meta return)] 'superman-view-second-link)
 
 (define-key superman-view-mode-map [(right)] 'superman-next-ball)
 (define-key superman-view-mode-map [(left)] 'superman-previous-ball)
