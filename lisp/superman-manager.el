@@ -554,18 +554,17 @@ the active status of projects."
    (read-string "NickName for project: "
 		(nth 4 (org-heading-components)))))
 
-(defun superman-set-others ()
+(defun superman-set-others (project)
   (interactive)
-  (let* ((pro (assoc (superman-project-at-point t)
-		     superman-project-alist)) (superman-forward-project)
-	 (others (cdr (assoc (superman-property 'others) (cadr pro))))
+  (let* ((pro (or project (superman-select-project)))
+	 (others (superman-get-others pro))
 	 (init (if others (concat others ", ") "")))
-    ;; (org-entry-get nil "others")
     (if pro
 	(org-set-property
 	 (superman-property 'others)
 	 (replace-regexp-in-string
-	  "[,\t ]+$" ""     (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
+	  "[,\t ]+$" ""
+	  (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
 (defun superman-fix-others ()
   "Update the others property (collaborator names) of all projects in `superman-home'."
@@ -574,7 +573,7 @@ the active status of projects."
   (unless (superman-manager-mode 1))
   (goto-char (point-min))
   (while (superman-forward-project)
-	(superman-set-others)))
+	(superman-set-others (superman-project-at-point))))
 
 ;;}}}
 ;;{{{ listing projects

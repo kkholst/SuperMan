@@ -1854,7 +1854,18 @@ If point is before the first category do nothing."
 	 (b (superman-current-cat))
 	 f)
     (if (not m)
-	(error "Nothing to do here")
+	(save-excursion
+	  (beginning-of-line)
+	  (cond ((looking-at "Others")
+		 (let ((nick (get-text-property (point-min) 'nickname)))
+		   (save-window-excursion
+		     (find-file superman-home)
+		     (goto-char (point-min))
+		     (re-search-forward (concat ":nickname:[ \t]*" nick) nil nil)
+		     (superman-set-others (assoc nick superman-project-alist))
+		     (save-buffer)))
+		 (superman-redo))
+		(t (error "Nothing to do here"))))
       (org-with-point-at m
 	(cond (superman-mode
 	       (superman-return))
@@ -1865,8 +1876,8 @@ If point is before the first category do nothing."
 	       (show-all)
 	       (org-narrow-to-subtree)
 	       (switch-to-buffer (marker-buffer m))))))))
-	      ;; ((superman-view-index)
-	       ;; (org-narrow-to-subtree)))))))
+;; ((superman-view-index)
+;; (org-narrow-to-subtree)))))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
