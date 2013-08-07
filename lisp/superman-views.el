@@ -124,7 +124,7 @@ Column showing the todo-state
 	(hdr ("width" 49) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("face" font-lock-function-name-face) ("name" "Description"))
+	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
 	("Link" ("fun" superman-trim-link) ("width" 48) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
@@ -202,7 +202,7 @@ to an integer then do not trim the string STR."
 		 filename
 		 (superman-trim-string
 		  (file-name-nondirectory filename) len))))
-	trimmed-file-name)
+-file-name)
     (superman-trim-string file (car args))))
 
 (defun superman-trim-filename (filename &rest args)
@@ -956,6 +956,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	     cat-head
 	     cat-point
 	     (count 0)
+	     countsub
+	     tempsub
 	     line)
 	;; back to vbuf
 	(set-buffer vbuf)
@@ -990,11 +992,15 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			 (put-text-property 0 (length line) 'subcat subhdr line)
 			 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 			 (put-text-property 0 (length line) 'face 'org-level-3 line)
+;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
 			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-			 (with-current-buffer vbuf (insert line "\n" ))
+			 (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
+			 (with-current-buffer vbuf (insert line " \n" ))
 			 (end-of-line)))
 		      ;; items
-		      ((eq (org-current-level) 3)
+		      ((eq (org-current-level) 3)		       
+		       (if countsub
+			   (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
 		       (setq count (+ count 1))
 		       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
 		       (with-current-buffer vbuf (insert line "\n")))
@@ -1006,6 +1012,15 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	    ;; (show-all)
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail cat)
 	    (set-buffer vbuf)
+
+	    (save-excursion 
+	      (while countsub 		
+		(setq tempsub (pop countsub))
+		(goto-char (nth 1 tempsub))
+		(put-text-property (- (point-at-eol) 1) (point-at-eol) 'display 
+;;				     		   (concat (get-text-property (nth 1 tempsub)'display) " [" (int-to-string (car tempsub)) "]"))
+				   (concat " [" (int-to-string (car tempsub)) "]"))
+		))
 	    (goto-char cat-head)
 	    (insert "\n** " cat "\n")
 	    (forward-line -1)
@@ -1685,31 +1700,33 @@ If point is before the first category do nothing."
   (when (previous-single-property-change (point-at-bol) 'cat)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
-	 (file (superman-filename-at-point t)))
+	 (file (superman-filename-at-point t))
+	 (regret nil))
     (unless dont-prompt
       (superman-view-index)
       (org-narrow-to-subtree)
-      (yes-or-no-p "Delete this entry?"))
+      (setq regret (not (yes-or-no-p "Delete this entry?"))))
     (set-window-configuration scene)
-    (when file
-      (when (and do-delete-file
-		 (yes-or-no-p
-		  (concat "Delete file "
-			  (file-name-nondirectory file))))
-	(if (string-match
-	     (superman-get-property marker "GitStatus")
-	     "Committed\\|Modified")
-	    (shell-command (concat
-			    "cd "
-			    (file-name-directory file)
-			    ";"
-			    superman-cmd-git " rm -f "
-			    (file-name-nondirectory file)))
-	  (when (file-exists-p file)
-	    (delete-file file)))))
-    (when marker
-      (save-excursion
-	(org-with-point-at marker (org-cut-subtree)))))
+    (unless regret
+      (when file
+	(when (and do-delete-file
+		   (yes-or-no-p
+		    (concat "Delete file "
+			    (file-name-nondirectory file))))
+	  (if (string-match
+	       (superman-get-property marker "GitStatus")
+	       "Committed\\|Modified")
+	      (shell-command (concat
+			      "cd "
+			      (file-name-directory file)
+			      ";"
+			      superman-cmd-git " rm -f "
+			      (file-name-nondirectory file)))
+	    (when (file-exists-p file)
+	      (delete-file file)))))
+      (when marker
+	(save-excursion
+	  (org-with-point-at marker (org-cut-subtree))))))
   (unless dont-redo (superman-redo))))
 
 (defun superman-view-delete-all (&optional dont-prompt)
@@ -1846,7 +1863,6 @@ If point is before the first category do nothing."
     (let ((pro (superman-view-current-project)))
       (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
       (superman-redo))))
-
 
 (defun superman-hot-return ()
   (interactive)
@@ -2076,11 +2092,35 @@ for git and other actions like commit, history search and pretty log-view."
   (when superman-hl-line (hl-line-mode 1))
   (superman-view-mode t))
 
+
+(defun superman-view-second-link ()
+  (interactive)
+  (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (b (superman-current-cat))
+	 f)
+    (if (not m)
+	(error "Nothing to do here")
+      (org-with-point-at m
+	(cond (superman-mode
+	       (superman-return))
+	      ((re-search-forward org-any-link-re nil t)
+	       (re-search-forward org-any-link-re nil t)
+	       (org-open-at-point))
+	      (t
+	       (widen)
+	       (show-all)
+	       (org-narrow-to-subtree)
+	       (switch-to-buffer (marker-buffer m))))))))
+	      ;; ((superman-view-index)
+	       ;; (org-narrow-to-subtree)))))))
+
+
 (define-key superman-view-mode-map [return] 'superman-hot-return)
 (define-key superman-view-mode-map [(meta left)] 'superman-one-left)
 (define-key superman-view-mode-map [(meta right)] 'superman-one-right)
 (define-key superman-view-mode-map [(meta up)] 'superman-one-up)
 (define-key superman-view-mode-map [(meta down)] 'superman-one-down)
+(define-key superman-view-mode-map [(meta return)] 'superman-view-second-link)
 
 (define-key superman-view-mode-map [(right)] 'superman-next-ball)
 (define-key superman-view-mode-map [(left)] 'superman-previous-ball)
