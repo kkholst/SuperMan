@@ -1573,7 +1573,7 @@ current section."
       (delete-other-windows)
       (goto-char (point-min))
       (put-text-property (point) (point-at-eol) 'capture (point))
-      (insert "### Superman edit this " (if catp "section" item)
+      (insert "### Superman edit this " (if catp "section" "item")
 	      "\n# C-c C-c to save "
 	      "\n# C-c C-q to quit without saving"
 	      "\n### ---yeah #%*^#@!--------------"
