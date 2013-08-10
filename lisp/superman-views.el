@@ -202,7 +202,7 @@ to an integer then do not trim the string STR."
 		 filename
 		 (superman-trim-string
 		  (file-name-nondirectory filename) len))))
--file-name)
+	trimmed-file-name)
     (superman-trim-string file (car args))))
 
 (defun superman-trim-filename (filename &rest args)
@@ -254,11 +254,11 @@ and the keybinding to initialize git control otherwise."
 	 (control (if (superman-git-p loc)
 		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
 			(put-text-property 0 1 'superman-header-marker t git-dir-link)
-			(concat "Version control: Git repository at "
+			(concat "Control: Git repository at "
 				;;FIXME: would like to have current git status as well
 				git-dir-link))
-		    "Version control: not set. <> press `GI' to initialize git")))
-    (put-text-property 0 (length "Version control: ") 'face 'org-level-2 control)
+		    "Control: not set. <> press `GI' to initialize git")))
+    (put-text-property 0 (length "Control: ") 'face 'org-level-2 control)
     control))
 
 (defun superman-view-others (project)
@@ -301,19 +301,19 @@ and the keybinding to initialize git control otherwise."
 	(case-fold-search t))
     (save-window-excursion
       (when (superman-goto-project project "Configuration" nil nil 'narrow nil)
-	(goto-char (point-min))
-	(while (outline-next-heading)
-	  (let ((config (or (superman-get-property (point) "Config")
-			    (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
-		(hdr (or (org-get-heading t t) "NoHeading")))
-	    (when config 
-	      (setq
-	       configs
-	       (append
-		configs
-		(list (cons hdr config)))))))
-	(widen)))
-    configs))
+	  (goto-char (point-min))
+	  (while (outline-next-heading)
+	    (let ((config (or (superman-get-property (point) "Config")
+			      (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
+		  (hdr (or (org-get-heading t t) "NoHeading")))
+	      (when config 
+		(setq
+		 configs
+		 (append
+		  configs
+		  (list (cons hdr config)))))))
+	  (widen)))
+      configs))
 
 ;; (defun supermanual ()
 ;;   (interactive)
@@ -329,7 +329,13 @@ and the keybinding to initialize git control otherwise."
 		  (superman-select-project)))
 	 (title "WindowConfig:")
 	 (config-list (superman-view-read-config pro))
+	 (title-marker 
+	  (save-excursion
+	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
+	    (goto-char (point-min))
+	    (point-marker)))
 	 (i 1))
+    (put-text-property 0 (length title) 'superman-e-marker title-marker title)
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
@@ -670,16 +676,47 @@ Returns the formatted string with text-properties."
 
 
 (defun superman-read-balls (&optional pom)
-  (let ((i 1)
-	ball
-	balls)
-    (while
-	(setq ball
-	      (superman-get-property pom (concat "Ball" (int-to-string i)) nil t))
-      (setq balls (append balls (list
-				 (superman-distangle-ball ball)))
-	    i (+ i 1)))
-    balls))
+  "Read and return balls, i.e. column properties, at point or marker POM."
+  (org-with-point-at pom
+    (save-excursion
+      (let ((case-fold-search t)
+	    (beg (point))
+	    (end (org-end-of-meta-data-and-drawers))
+	    balls)
+	(save-excursion
+	  (goto-char beg)
+	  (when (re-search-forward "PROPERTIES" end t)
+	    (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end t)
+	      (setq balls
+		    (append balls
+			    `(,(superman-distangle-ball
+				(replace-regexp-in-string
+				 "[ \t]+$"
+				 ""
+				 (replace-regexp-in-string
+				  "^[ \t]+"
+				  ""
+				  (buffer-substring (point) (point-at-eol))))))))
+	      (goto-char (point-at-eol)))
+	    balls))))))
+
+(defun superman-delete-balls (&optional pom)
+  "Delete balls, i.e. column properties, at point or marker POM."
+  (org-with-point-at pom
+    (save-excursion
+    (let ((case-fold-search t)
+	  (beg (point))
+	  (end (org-end-of-meta-data-and-drawers))
+	  (kill-whole-line t)
+	  balls)
+      (save-excursion
+	(goto-char beg)
+	(when (re-search-forward "PROPERTIES" end t)
+	  (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end t)
+	    (beginning-of-line)
+	    (kill-line)
+	    (goto-char (point-at-bol)))
+	  balls))))))
 
 
 (defun superman-string-to-thing (string &optional prefer-string prefer-symbol)
@@ -732,20 +769,19 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (let ((cat-point (superman-cat-point)))
       (if (not cat-point)
 	  (message "Point is not inside a category.")
-	(let ((pom (get-text-property cat-point 'org-hd-marker))
-	      (balls (get-text-property cat-point 'balls))
-	      (i 1))
+	(let* ((pom (get-text-property cat-point 'org-hd-marker))
+	       (balls (get-text-property cat-point 'balls))
+	       (i 1))
+	  (superman-delete-balls pom)
 	  (while balls
 	    (org-entry-put
 	     pom
 	     (concat "Ball" (int-to-string i))
 	     (superman-ball-to-string (car balls)))
 	    (setq balls (cdr balls)
-		  i (+ i 1)))
-	  (org-entry-put
-	   pom
-	   (concat "Ball" (int-to-string i)) ""))
-	(superman-view-save-index-buffer)))))
+		  i (+ i 1))))
+	(superman-view-save-index-buffer)
+	(superman-redo)))))
 
 (defun superman-thing-to-string (thing)
   (cond ((stringp thing) thing)
@@ -1499,65 +1535,77 @@ current section."
 	 (catp  (org-get-at-bol 'cat))
 	 (E-buf (generate-new-buffer-name "*Edit by SuperMan*"))
 	 (scene (current-window-configuration))
-	 (all-props (if catp nil (superman-view-property-keys)))
+	 (all-props (if (or (not marker) catp) nil (superman-view-property-keys)))
 	 range
-	 (balls (get-text-property (superman-cat-point) 'balls))
+	 (cat-point (superman-cat-point))
+	 (balls (when cat-point
+		  (get-text-property (superman-cat-point) 'balls)))
 	 prop
 	 used-props)
+    (if (not marker)
+	(if (setq marker (org-get-at-bol 'superman-e-marker))
+	    nil
+	  (message "Nothing to edit here")))
     ;; add properties defined by balls to all-props
-    (while balls
-      (when (stringp (setq prop (caar balls)))
-	(add-to-list
-	 'all-props
-	 prop))
-      (setq balls (cdr balls)))
-    (set-buffer (marker-buffer marker))
-    (widen)
-    (show-all)
-    (switch-to-buffer
-     (make-indirect-buffer (marker-buffer marker) E-buf))
-    (goto-char marker)
-    (org-narrow-to-subtree)
-    (when (outline-next-heading)
-      (narrow-to-region (point-min) (point)))
-    (org-mode)
-    (show-all)
-    (delete-other-windows)
-    (goto-char (point-min))
-    (put-text-property (point) (point-at-eol) 'capture (point))
-    (insert "### Superman: edit this item" 
-	    "\n# C-c C-c to save "
-	    "\n# C-c C-q to quit without saving"
-	    "\n### ---yeah #%*^#@!--------------"
-	    "\n\n")
-    (goto-char (point-min))
-    (put-text-property (point) (point-at-eol) 'scene scene)
-    (unless catp
-      (if (re-search-forward org-property-start-re nil t)
-	  (progn
-	    (setq range (org-get-property-block))
-	    (goto-char (car range))
-	    (while (re-search-forward
-		    (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
-		    (cdr range) t)
-	      (put-text-property (point) (+ (point) 1) 'prop-marker (point))
-	      (add-to-list 'used-props (org-match-string-no-properties 1)))
-	    (goto-char (cdr range))
-	    (forward-line -1)
-	    (end-of-line))
-	(outline-next-heading)
-	(end-of-line)
-	(insert "\n:PROPERTIES:\n:END:\n")
-	(forward-line -2)
-	(end-of-line))
-      (while all-props
-	(when (not (member (car all-props) used-props))
-	  (insert "\n:" (car all-props) ": ")
-	  (put-text-property (- (point) 1) (point) 'prop-marker (point)))
-	(setq all-props (cdr all-props)))))
+    (when marker
+      (while balls
+	(when (stringp (setq prop (caar balls)))
+	  (add-to-list
+	   'all-props
+	   prop))
+	(setq balls (cdr balls)))
+      (set-buffer (marker-buffer marker))
+      (widen)
+      (show-all)
+      (switch-to-buffer
+       (make-indirect-buffer (marker-buffer marker) E-buf))
+      (goto-char marker)
+      ;; narrow to section
+      (org-narrow-to-subtree)
+      ;; narrow to item
+      (when (and cat-point
+		 (not catp)
+		 ;; (not (superman-get-property (point-min) "freeText"))
+		 (outline-next-heading))
+	(narrow-to-region (point-min) (point)))
+      (org-mode)
+      (show-all)
+      (delete-other-windows)
+      (goto-char (point-min))
+      (put-text-property (point) (point-at-eol) 'capture (point))
+      (insert "### Superman edit this " (if catp "section" item)
+	      "\n# C-c C-c to save "
+	      "\n# C-c C-q to quit without saving"
+	      "\n### ---yeah #%*^#@!--------------"
+	      "\n\n")
+      (goto-char (point-min))
+      (put-text-property (point) (point-at-eol) 'scene scene)
+      (unless catp
+	(if (re-search-forward org-property-start-re nil t)
+	    (progn
+	      (setq range (org-get-property-block))
+	      (goto-char (car range))
+	      (while (re-search-forward
+		      (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
+		      (cdr range) t)
+		(put-text-property (point) (+ (point) 1) 'prop-marker (point))
+		(add-to-list 'used-props (org-match-string-no-properties 1)))
+	      (goto-char (cdr range))
+	      (forward-line -1)
+	      (end-of-line))
+	  (outline-next-heading)
+	  (end-of-line)
+	  (insert "\n:PROPERTIES:\n:END:\n")
+	  (forward-line -2)
+	  (end-of-line))
+	(while all-props
+	  (when (not (member (car all-props) used-props))
+	    (insert "\n:" (car all-props) ": ")
+	    (put-text-property (- (point) 1) (point) 'prop-marker (point)))
+	  (setq all-props (cdr all-props))))
     (goto-char (next-single-property-change (point-min) 'capture))
     (end-of-line)
-    (superman-capture-mode))
+    (superman-capture-mode))))
 
 ;;}}}
 ;;{{{ Switch between projects
@@ -1821,7 +1869,11 @@ If point is before the first category do nothing."
 
 (defun superman-view-index ()
   (interactive)
-  (let* ((pom (org-get-at-bol 'org-hd-marker))
+  (let* ((pom (cond ((org-get-at-bol 'org-hd-marker))
+		    ((org-get-at-bol 'column-names)
+		     (get-text-property (superman-cat-point)
+					'org-hd-marker))
+		    ((org-get-at-bol 'superman-e-marker))))
 	 (ibuf (or (and pom (marker-buffer pom))
 		   (get-file-buffer
 		    (get-text-property (point-min) 'index))

@@ -191,8 +191,8 @@ Default is to set the old window configuration.
 "Toggle superman capture mode.
 With argument ARG turn superman-doccapture-mode on if ARG is positive, otherwise
 turn it off."
-     :lighter " *S*-Capture"
-     :group 'org
+:lighter " *S*-Capture"
+:group 'org
      :keymap 'superman-capture-mode-map)
 
 (defun superman-capture-mode-on ()
@@ -217,7 +217,9 @@ turn it off."
 	req
 	next)
     (goto-char (point-min))
-    (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
+    (while (setq next (next-single-property-change
+		       (point-at-eol)
+		       'prop-marker))
       (goto-char next)
       (if (looking-at "[ \t]*\n")
 	  (if (setq req (get-text-property (point) 'required))
@@ -349,7 +351,7 @@ Creates the project directory and index file."
     (superman-update-project-overview)
     ;; (superman-view-project pro)
     (superman-switch-to-project pro)
-    (superman-switch-config pro nil "PROJECT | *S* / SUPERMANUAL")))
+    (superman-switch-config pro nil "PROJECT")))
 
 (defun superman-capture-project (&optional nickname category loc)
   "Create a new project. If CATEGORY is nil prompt for project category
@@ -376,7 +378,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	 (loc (or loc
 		  (save-excursion
 		    (superman-go-home category)
-		    (superman-get-property (point) "category" 'inherit))
+		    (superman-get-property (point) "location" 'inherit))
 		  superman-default-directory))
 	 (superman-setup-scene-hook
 	  #'(lambda ()
