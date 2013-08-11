@@ -50,7 +50,7 @@ just before the capture buffer is killed.")
 
 ;;{{{ superman goto project
 
-(defun superman-goto-project (&optional project heading create end-of leave-narrowed jabber)
+(defun superman-goto-project (&optional project heading create end-of leave-narrowed jabber propertystring)
   "Goto project index file call `widen' and then search for HEADING
 and narrow the buffer to this subtree.
 
@@ -81,6 +81,11 @@ If JABBER is non-nil message about non-existing headings.
 		(create
 		 (goto-char (point-max))
 		 (insert "\n* " head "\n")
+		 (if propertystring (progn 
+			     (insert ":PROPERTIES:\n")
+			     (insert propertystring)
+			     (insert "\n:END:\n\n")
+			     ))
 		 ;; (org-set-property "Project" pro)
 		 (forward-line -1)
 		 'create)
@@ -135,13 +140,15 @@ Default is to set the old window configuration.
     (switch-to-buffer
      (make-indirect-buffer (current-buffer) S-buf))
     (delete-other-windows)
-    (insert "\n"
-	    (make-string level (string-to-char "*"))
-	    " NIX \n")
-    (forward-line -1)
+    (unless (= level 0) (progn
+			  (insert "\n"
+				  (make-string level (string-to-char "*"))
+				  " NIX \n")
+			  (forward-line -1)))
     (org-narrow-to-subtree)
-    (skip-chars-forward "[* ]")
-    (kill-line)
+    (unless (= level 0) (progn 
+			  (skip-chars-forward "[* ]")
+			  (kill-line)))
     (goto-char (point-min))
     (insert title)
     (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
@@ -154,35 +161,38 @@ Default is to set the old window configuration.
     (put-text-property (point-min) (point) 'face font-lock-string-face)
     (org-mode)
     (show-all)
-    (end-of-line)
-    (setq head-point (point))
-    (insert "\n:PROPERTIES:")
-    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-    (while props
-      (let* ((el (car props))
-	     (key (car el))
-	     (val (ignore-errors (nth 1 el)))
-	     (req (nth 2 el)))
-	(cond ((stringp key)
-	       (ignore-errors
-		 (insert "\n:" key ": ")
-		 ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-		 (put-text-property (- (point) 1) (point) 'prop-marker (point))
-		 (if req 
-		     (put-text-property (- (point) 1) (point) 'required "required-field"))
-		 (when val (insert (superman-make-value val)))))
-	      ((eq key 'fun) (ignore-errors (funcall (cdr el))))
-	      ((eq key 'hdr) (ignore-errors
-			       (save-excursion
-				 (org-back-to-heading)
-				 (end-of-line)
-				 (insert (superman-make-value val)))))
-	      ((eq key 'body) (setq body (concat body (superman-make-value val)))))
-	(setq props (cdr props))))
-    (insert "\n:END:\n")
+    (if (= level 0)
+	(goto-char (point-max))
+      (end-of-line))
+    (setq head-point (point))    
+    (if plist (progn
+		(insert "\n:PROPERTIES:")
+		;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+		(while props
+		  (let* ((el (car props))
+			 (key (car el))
+			 (val (ignore-errors (nth 1 el)))
+			 (req (nth 2 el)))
+		    (cond ((stringp key)
+			   (ignore-errors
+		   (insert "\n:" key ": ")
+		   ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+		   (put-text-property (- (point) 1) (point) 'prop-marker (point))
+		   (if req 
+		       (put-text-property (- (point) 1) (point) 'required "required-field"))
+		   (when val (insert (superman-make-value val)))))
+			  ((eq key 'fun) (ignore-errors (funcall (cdr el))))
+			  ((eq key 'hdr) (ignore-errors
+					   (save-excursion
+					     (org-back-to-heading)
+					     (end-of-line)
+					     (insert (superman-make-value val)))))
+			  ((eq key 'body) (setq body (concat body (superman-make-value val)))))
+		    (setq props (cdr props))))
+		(insert "\n:END:\n")))
     (insert body)
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-    (insert "\n")
+    (unless (= level 0) (insert "\n"))
     (goto-char head-point)
     (superman-capture-mode)
     (run-hooks 'superman-setup-scene-hook)))
@@ -427,6 +437,21 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (superman-capture pro
 		      (or marker "Notes")
 		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
+
+(defun superman-capture-text (&optional project marker)
+  (interactive)
+  (let ((pro (or project
+		 superman-view-current-project
+		 (superman-select-project)))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+    (save-excursion
+      (superman-goto-project project "Text" 'create nil nil nil ":FreeText: t")
+      )
+    (superman-capture pro
+		      (or marker "Text")
+		      nil 0)))
+;;		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
+
 
 (defun superman-capture-bookmark (&optional project marker)
   (interactive)
