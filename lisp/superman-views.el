@@ -406,8 +406,14 @@ and the keybinding to initialize git control otherwise."
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
 	 (title "Unison:")
+	 (title-marker 
+	  (save-excursion
+	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
+	    (goto-char (point-min))
+	    (point-marker)))
 	 (unison-list (superman-view-read-unison pro))
 	 (i 1))
+    (put-text-property 0 (length title) 'superman-e-marker title-marker title)
     (while unison-list
       (let* ((current-unison (car unison-list))
 	     (unison-name (car current-unison))
