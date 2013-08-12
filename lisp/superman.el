@@ -4,7 +4,7 @@
 
 ;; Authors:
 ;; Thomas Alexander Gerds <tag@biostat.ku.dk>
-;; Klaus Kähler Holst <kkho@biostat.ku.dk>
+;; Klaus Kaehler Holst <kkho@biostat.ku.dk>
 ;;
 ;; Keywords: tools
 
@@ -255,7 +255,7 @@
   
 (defalias 'S 'superman)
 (defalias 'S-todo 'superman-todo)
-(defalias 'S-todo-B 'superman-todo-B)
+;; (defalias 'S-todo-B 'superman-todo-B)
 (defalias 'S-agenda 'superman-agenda)
 
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
@@ -266,8 +266,9 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("P" "Projects-TODO"
-	    ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
-			;; ((todo ""
+	    ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
+	    ;; ((todo 
+	    ((alltodo ""
 			((org-agenda-files
 			  (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
@@ -283,60 +284,52 @@
 						 ([return] . superman-agenda))
 					       font-lock-keyword-face
 					       "Agenda across all projects")
-			 "\t"
-			 (superman-make-button "[Projects]"
-					       '(([mouse-2] . superman)
-						 ([return] . superman))
-					       font-lock-keyword-face
-					       "List of projects")
-			 "\t"
-			 (superman-make-button "[TODO B/C]"
-					       '(([mouse-2] . superman-todo-B)
-						 ([return] . superman-todo-B))
-					       font-lock-keyword-face
-					       "Todo list priority B/C across all projects")
-
-			 )))))))))
-  (push ?P unread-command-events)
-  (call-interactively 'org-agenda)))
-
-(defun superman-todo-B (&optional project)
-  (interactive)
-  (let ((org-agenda-buffer-name (concat "*S-TODO*"))
-	(org-agenda-sticky nil)
-	(org-agenda-custom-commands
-	 `(("P" "Projects-TODO"
-	    ((tags-todo "PRIORITY=\"C\"|PRIORITY=\"B\""
-			;; ((todo ""
-			((org-agenda-files
-			  (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
-	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook
-	      (lambda ()
-		(superman-format-agenda
-		 superman-todolist-balls
-		 'superman-todo
-		 "* SupermanTodoList"
-		 (concat "\t"
-			 (superman-make-button "[Agenda]"
-					       '(([mouse-2] . superman-agenda)
-						 ([return] . superman-agenda))
-					       font-lock-keyword-face
-					       "Agenda across all projects")
-			 "\t"
-			 (superman-make-button "[TODO]"
-					       '(([mouse-2] . superman-todo)
-						 ([return] . superman-todo))
-					       font-lock-keyword-face
-					       "Todo list across all projects")
 			 "\t"
 			 (superman-make-button "[Projects]"
 					       '(([mouse-2] . superman)
 						 ([return] . superman))
 					       font-lock-keyword-face
 					       "List of projects"))))))))))
-    (push ?P unread-command-events)
-    (call-interactively 'org-agenda)))
+  (push ?P unread-command-events)
+  (call-interactively 'org-agenda)))
+
+;; (defun superman-todo-B (&optional project)
+  ;; (interactive)
+  ;; (let ((org-agenda-buffer-name (concat "*S-TODO*"))
+	;; (org-agenda-sticky nil)
+	;; (org-agenda-custom-commands
+	 ;; `(("P" "Projects-TODO"
+	    ;; ((tags-todo "PRIORITY=\"C\"|PRIORITY=\"B\""
+			;; ;; ((todo ""
+			;; ((org-agenda-files
+			  ;; (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
+	    ;; ((org-agenda-window-setup 'current-window)
+	     ;; (org-agenda-finalize-hook
+	      ;; (lambda ()
+		;; (superman-format-agenda
+		 ;; superman-todolist-balls
+		 ;; 'superman-todo
+		 ;; "* SupermanTodoList"
+		 ;; (concat "\t"
+			 ;; (superman-make-button "[Agenda]"
+					       ;; '(([mouse-2] . superman-agenda)
+						 ;; ([return] . superman-agenda))
+					       ;; font-lock-keyword-face
+					       ;; "Agenda across all projects")
+			 ;; "\t"
+			 ;; (superman-make-button "[TODO]"
+					       ;; '(([mouse-2] . superman-todo)
+						 ;; ([return] . superman-todo))
+					       ;; font-lock-keyword-face
+					       ;; "Todo list across all projects")
+			 ;; "\t"
+			 ;; (superman-make-button "[Projects]"
+					       ;; '(([mouse-2] . superman)
+						 ;; ([return] . superman))
+					       ;; font-lock-keyword-face
+					       ;; "List of projects"))))))))))
+    ;; (push ?P unread-command-events)
+    ;; (call-interactively 'org-agenda)))
 
 ;; (defun S-todo-B ()
   ;; (interactive)
@@ -578,4 +571,5 @@ LIST includes the buffers that are related to one of the items."
 ;;}}}  
 (provide 'superman)
 ;;; superman.el ends here
+
 
