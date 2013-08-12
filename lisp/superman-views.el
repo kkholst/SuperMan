@@ -2250,6 +2250,7 @@ for git and other actions like commit, history search and pretty log-view."
 	("GitFiles" superman-capture-document)
 	("Notes" superman-capture-note)
 	("Tasks" superman-capture-task)
+	("Text" superman-capture-text)
 	("Meetings" superman-capture-meeting)
 	("Bookmarks" superman-capture-bookmark)))
 
