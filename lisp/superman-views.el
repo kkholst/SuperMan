@@ -344,8 +344,7 @@ and the keybinding to initialize git control otherwise."
 
 (defun superman-view-insert-capture-buttons ()
   "Insert capture buttons"
-  (let* ((title "")
-	 ;; (section-list (superman-parse-cats (current-buffer)))
+  (let* ((title "Capture")
 	 (cat-list '("Document" "Task" "Note" "Bookmark"))
 	 (i 1))
     (while cat-list
@@ -357,9 +356,9 @@ and the keybinding to initialize git control otherwise."
 	(define-key map [return]  `(lambda () (interactive) (,cmd)))
 	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
 	(when (= i 1)
-	  (insert "\t"))
-	;; (put-text-property 0 (length title) 'face 'org-level-2 title)
-	;; (insert title " "))
+	  (insert "\n"))
+	(put-text-property 0 (length title) 'face 'org-level-2 title)
+	(insert title " "))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t cat-name)
