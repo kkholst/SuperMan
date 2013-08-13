@@ -48,6 +48,19 @@
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
+;;{{{ reload
+(defun superman-reload ()
+  "Re-load all superman lisp files."
+  (interactive)
+  (require 'loadhist)
+  (let* ((dir (file-name-directory (locate-library "superman")))
+	 (exts (list "" "-views" "-capture" "-git" "-config" "-pub" "-deft")))
+    (while exts
+      (load (concat "superman" (car exts)) 'noerror)
+      (setq exts (cdr exts)))
+    (message "Successfully reloaded SuperMan")))
+;;}}}
+
 ;;{{{ variables and user options
 
 (defvar superman-property-list 

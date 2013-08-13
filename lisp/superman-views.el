@@ -254,11 +254,11 @@ and the keybinding to initialize git control otherwise."
 	 (control (if (superman-git-p loc)
 		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
 			(put-text-property 0 1 'superman-header-marker t git-dir-link)
-			(concat "Control: Git repository at "
+			(concat "Contrl: Git repository at "
 				;;FIXME: would like to have current git status as well
 				git-dir-link))
-		    "Control: not set. <> press `GI' to initialize git")))
-    (put-text-property 0 (length "Control: ") 'face 'org-level-2 control)
+		    "Contrl: not set. <> press `GI' to initialize git")))
+    (put-text-property 0 (length "Contrl: ") 'face 'org-level-2 control)
     control))
 
 (defun superman-view-others (project)
@@ -344,21 +344,22 @@ and the keybinding to initialize git control otherwise."
 
 (defun superman-view-insert-capture-buttons ()
   "Insert capture buttons"
-  (let* ((title "Capture")
+  (let* ((title "Capture:")
 	 (cat-list '("Document" "Task" "Note" "Bookmark"))
 	 (i 1))
     (while cat-list
       (let* ((cat (car cat-list))
-	     (cat-name (substring cat 0 1))
+	     ;; (cat-name (substring cat 0 1))
+	     (cat-name cat)
 	     (cmd (intern (concat "superman-capture-" (downcase cat))))
 	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive) (,cmd)))
 	(define-key map [return]  `(lambda () (interactive) (,cmd)))
 	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
 	(when (= i 1)
-	  (insert "\n"))
-	(put-text-property 0 (length title) 'face 'org-level-2 title)
-	(insert title " "))
+	  (insert "\n")
+	  (put-text-property 0 (length title) 'face 'org-level-2 title)
+	  (insert title " "))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t cat-name)
@@ -379,7 +380,7 @@ and the keybinding to initialize git control otherwise."
   "Insert unison buttons"
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
-	 (title "WindowConfig:")
+	 (title "Window:")
 	 (config-list (superman-view-read-config pro))
 	 (title-marker 
 	  (save-excursion
@@ -537,7 +538,7 @@ Translate the branch names into buttons."
     (let* ((branch-list (superman-git-branches loc))
 	   (current-branch (car branch-list))
 	   (other-branches (cdr branch-list))
-	   (title "Branches:"))
+	   (title "Branch:"))
       (when branch-list
 	(insert "\n")
 	(put-text-property 0 (length title) 'face 'org-level-2 title)
@@ -1032,15 +1033,17 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-    ;; capture buttons
     ;; link to previously selected projects
-    (superman-view-insert-capture-buttons)
     (superman-view-insert-project-buttons)
     (insert (superman-project-view-header pro))
     (when gitp
       (superman-view-insert-git-branches loc))
     (superman-view-insert-config-buttons pro)
     (superman-view-insert-unison-buttons pro)
+    ;; capture buttons
+    (insert "\n")
+    (superman-view-insert-capture-buttons)
+    ;; link to previously selected projects
     (goto-char (point-max))
     (insert "\n")
     ;; loop cats
