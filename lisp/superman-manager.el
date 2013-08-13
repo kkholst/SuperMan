@@ -182,6 +182,12 @@ the `superman-home'.")
 ;; (setq org-agenda-show-inherited-tags (list))
 
 ;;}}}
+;;{{{ faces
+(custom-set-faces
+ '(superman-capture-button ((t (:background "SeaGreen4" :foreground "white smoke" :inverse-video nil :box (:line-width 2 :color "yellow" :style pressed-button) :weight bold))) t)
+ '(superman-project-button ((t (:background "white smoke" :foreground "Darkblue" :inverse-video nil :box (:line-width 2 :color "orange" :style pressed-button) :weight bold))) t))
+
+;;}}}
 ;;{{{ the pro-file in manager-mode
 
 ;; The project manager is in org-mode (major-mode). To bind specific

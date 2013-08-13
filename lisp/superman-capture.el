@@ -152,6 +152,7 @@ Default is to set the old window configuration.
     (goto-char (point-min))
     (insert title)
     (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
+    (put-text-property (point-at-bol) (point-at-eol) 'type 'capture)
     (insert "\n#"
 	    (make-string (length title) (string-to-char "-"))
 	    "\n# C-c C-c to save "
@@ -256,8 +257,13 @@ turn it off."
 
 (defun superman-quit-scene ()
   (interactive)
-  (let ((scene (get-text-property (point-min) 'scene)))
-    (delete-region (point-min) (point-max))
+  (let ((scene (get-text-property (point-min) 'scene))
+	(type (get-text-property (point-min) 'type)))
+    (if (eq type 'capture)
+	(delete-region (point-min) (point-max))
+      (goto-char (point-min))
+      (outline-next-heading)
+      (delete-region (point-min) (point)))
     (save-buffer)
     (kill-buffer (current-buffer))
     (when (window-configuration-p scene)

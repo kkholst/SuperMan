@@ -257,6 +257,7 @@ given in superman notation."
 
 (setq superman-project-todolist-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
+	(priority ("width" 8) ("face" superman-get-priority-face))
 	(index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
 	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-warning-face))

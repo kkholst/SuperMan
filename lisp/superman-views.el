@@ -323,6 +323,59 @@ and the keybinding to initialize git control otherwise."
   (find-file supermanual))
 
 
+
+(defun superman-view-insert-project-buttons ()
+  "Insert project buttons"
+  (when (> (length superman-project-history) 1)
+    (let* ((prev (car (reverse superman-project-history)))
+	   (next (cadr superman-project-history))
+	   (map-next (make-sparse-keymap))
+	   (map-prev (make-sparse-keymap)))
+      (define-key map-next [mouse-2] `superman-next-project)
+      (define-key map-next [return]  `superman-next-project)
+      (define-key map-next [follow-link]  `superman-next-project)
+      (define-key map-prev [mouse-2] `superman-previous-project)
+      (define-key map-prev [return]  `superman-previous-project)
+      (define-key map-prev [follow-link]  `superman-previous-project)
+      (put-text-property 0 1 'superman-header-marker t prev)
+      (add-text-properties 0 (length prev) (list 'button (list t) 'face 'superman-project-button 'keymap map-prev 'mouse-face 'highlight 'follow-link t 'help-echo "superman-previous-project") prev)
+      (add-text-properties 0 (length next) (list 'button (list t) 'face 'superman-project-button 'keymap map-next 'mouse-face 'highlight 'follow-link t 'help-echo "superman-next-project") next)
+      (insert "\t\tPrev: " prev "\tNext: " next))))
+
+(defun superman-view-insert-capture-buttons ()
+  "Insert capture buttons"
+  (let* ((title "")
+	 ;; (section-list (superman-parse-cats (current-buffer)))
+	 (cat-list '("Document" "Task" "Note" "Bookmark"))
+	 (i 1))
+    (while cat-list
+      (let* ((cat (car cat-list))
+	     (cat-name (substring cat 0 1))
+	     (cmd (intern (concat "superman-capture-" (downcase cat))))
+	     (map (make-sparse-keymap)))
+	(define-key map [mouse-2] `(lambda () (interactive) (,cmd)))
+	(define-key map [return]  `(lambda () (interactive) (,cmd)))
+	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
+	(when (= i 1)
+	  (insert "\t"))
+	;; (put-text-property 0 (length title) 'face 'org-level-2 title)
+	;; (insert title " "))
+	(put-text-property
+	 0 1
+	 'superman-header-marker t cat-name)
+	(add-text-properties
+	 0 (length cat-name) 
+	 (list
+	  'button (list t)
+	  'face 'superman-capture-button
+	  'keymap map
+	  'mouse-face 'highlight
+	  'follow-link t
+	  'help-echo (concat "capture " (downcase cat)))
+	 cat-name)
+	(insert "" cat-name " "))
+      (setq i (+ i 1) cat-list (cdr cat-list)))))
+
 (defun superman-view-insert-config-buttons (project)
   "Insert unison buttons"
   (let* ((pro (or project superman-current-project
@@ -980,9 +1033,10 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-    ;; previous project
-    (when (> (length superman-project-history) 1)
-      (insert "\t\t" (car (reverse superman-project-history)) "[M-left], " (cadr superman-project-history) "[M-right]"))
+    ;; capture buttons
+    ;; link to previously selected projects
+    (superman-view-insert-capture-buttons)
+    (superman-view-insert-project-buttons)
     (insert (superman-project-view-header pro))
     (when gitp
       (superman-view-insert-git-branches loc))
@@ -1536,8 +1590,8 @@ current section."
 	  ;; heading
 	  (outline-next-heading)
 	  (narrow-to-region (point) (point-max))
-	  (superman-property-keys)
-	  ))))))
+	  (superman-property-keys)))))))
+
 
 (defun superman-view-edit-item ()
   "Put item at point into capture mode"
@@ -1583,7 +1637,7 @@ current section."
       (show-all)
       (delete-other-windows)
       (goto-char (point-min))
-      (put-text-property (point) (point-at-eol) 'capture (point))
+      (put-text-property (point) (point-at-eol) 'edit-point (point))
       (insert "### Superman edit this " (if catp "section" "item")
 	      "\n# C-c C-c to save "
 	      "\n# C-c C-q to quit without saving"
@@ -1591,6 +1645,7 @@ current section."
 	      "\n\n")
       (goto-char (point-min))
       (put-text-property (point) (point-at-eol) 'scene scene)
+      (put-text-property (point) (point-at-eol) 'type 'edit)
       (unless catp
 	(if (re-search-forward org-property-start-re nil t)
 	    (progn
@@ -1614,7 +1669,7 @@ current section."
 	    (insert "\n:" (car all-props) ": ")
 	    (put-text-property (- (point) 1) (point) 'prop-marker (point)))
 	  (setq all-props (cdr all-props))))
-    (goto-char (next-single-property-change (point-min) 'capture))
+    (goto-char (next-single-property-change (point-min) 'edit-point))
     (end-of-line)
     (superman-capture-mode))))
 
