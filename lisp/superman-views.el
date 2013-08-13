@@ -655,6 +655,7 @@ Returns the formatted string with text-properties."
 			       ((stringp (car b)) (car b))
 			       ((eq (car b) 'hdr) "Title")
 			       ((eq (car b) 'todo) "Status")
+			       ((eq (car b) 'priority) "Priority")
 			       ((eq (car b) 'attac) " ")
 			       ((eq (car b) 'org-hd-marker))
 			       (symbol-name (cadr (assoc "fun" (cdr b))))))
@@ -1011,7 +1012,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			     (point)))
 		 ;; (folded (superman-get-property sec-head  "startFolded"))
 		 (free (superman-get-property sec-head "freeText"))
-		 (attac-balls (or (cdr (assoc 'attac balls)) balls))
+		 (attac-balls (cdr (assoc 'attac balls)))
 		 (buttons (superman-get-property sec-head "buttons")))
 	    (goto-char (point-min))
 	    (setq cat-point (point-marker))
@@ -1034,7 +1035,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			 (put-text-property 0 (length line) 'subcat subhdr line)
 			 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 			 (put-text-property 0 (length line) 'face 'org-level-3 line)
-;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
+			 ;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
 			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 			 (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
 			 (with-current-buffer vbuf (insert line " \n" ))
@@ -1047,20 +1048,19 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
 		       (with-current-buffer vbuf (insert line "\n")))
 		      ;; attachments
-		      ((eq (org-current-level) 4) 
+		      ((and (eq (org-current-level) 4) attac-balls)
 		       (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
 		       (with-current-buffer vbuf (insert line "\n"))))))
 	    ;; (widen)
 	    ;; (show-all)
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail cat)
 	    (set-buffer vbuf)
-
 	    (save-excursion 
 	      (while countsub 		
 		(setq tempsub (pop countsub))
 		(goto-char (nth 1 tempsub))
 		(put-text-property (- (point-at-eol) 1) (point-at-eol) 'display 
-;;				     		   (concat (get-text-property (nth 1 tempsub)'display) " [" (int-to-string (car tempsub)) "]"))
+				   ;;				     		   (concat (get-text-property (nth 1 tempsub)'display) " [" (int-to-string (car tempsub)) "]"))
 				   (concat " [" (int-to-string (car tempsub)) "]"))
 		))
 	    (goto-char cat-head)
@@ -1154,7 +1154,12 @@ a formatted string with faces."
 			(org-with-point-at thing 
 			  (org-back-to-heading t)
 			  (and (looking-at org-todo-line-regexp)
-			       (match-end 2) (concat (match-string 2)))))
+			       (match-end 2) (match-string 2))))
+		       ((eq (car ball) 'priority) ;; special: priority
+			(org-with-point-at thing 
+			  (org-back-to-heading t)
+			  (looking-at org-complex-heading-regexp)
+			  (match-string 3)))
 		       ((eq (car ball) 'attac) ;; special: attachment
 			nil)
 		       ((eq (car ball) 'index) ;; special: index filename

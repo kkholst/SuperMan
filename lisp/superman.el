@@ -70,7 +70,19 @@
 	      superman-project-alist)))
     (superman-switch-to-project pro)))
 
+(defun superman-get-priority-face (kwd)
+  "Get face for priority symbols"
+  (if (< (length kwd) 3)
+      'org-priority
+    (or (org-face-from-face-or-color
+	 'priority 'org-priority
+	 (cdr (assoc (string-to-char
+		      (substring kwd 2 3))
+		     org-priority-faces)))
+	'org-priority)))
+
 (defun superman-get-todo-face (kwd)
+  "A slight modification of `org-get-tag-face'"
   (or (org-face-from-face-or-color
        'todo 'org-todo (cdr (assoc kwd org-todo-keyword-faces)))
       (and (member kwd org-done-keywords) 'org-done)
@@ -471,6 +483,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (setq superman-todolist-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
+	(priority ("width" 8) ("face" superman-get-priority-face))
 	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
 	(org-hd-marker ("width" 23) ("name" "Nick") ("fun" superman-trim-project-nickname))
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
