@@ -345,7 +345,7 @@ and the keybinding to initialize git control otherwise."
 (defun superman-view-insert-capture-buttons ()
   "Insert capture buttons"
   (let* ((title "Capture:")
-	 (cat-list '("Document" "Task" "Note" "Bookmark"))
+	 (cat-list '("Document" "Task" "Note" "Bookmark" "Text"))
 	 (i 1))
     (while cat-list
       (let* ((cat (car cat-list))
@@ -489,13 +489,13 @@ and the keybinding to initialize git control otherwise."
 	 0 (length unison-name) 
 	 (list
 	  'button (list t)
-	  'face 'font-lock-warning-face
+	  'face 'superman-config-button
 	  'keymap map
 	  'mouse-face 'highlight
 	  'follow-link t
 	  'help-echo unison-cmd)
 	 unison-name)
-	(insert "[" unison-name "]  "))
+	(insert "" unison-name "  "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 ;;}}}
@@ -550,13 +550,13 @@ Translate the branch names into buttons."
 	 0 (length current-branch) 
 	 (list
 	  'button (list t)
-	  'face 'font-lock-warning-face
+	  'face 'superman-branch-button
 	  'keymap superman-git-branch-map
 	  'mouse-face 'highlight
 	  'follow-link t
 	  'help-echo "git status")
 	 current-branch)
-	(insert "[" current-branch "]  ")
+	(insert current-branch "  ")
 	(while other-branches
 	  (let* ((b (car other-branches))
 		 (map (make-sparse-keymap))
@@ -1134,11 +1134,12 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		(progn (end-of-line)
 		       (unless free (insert " [" (int-to-string count) "]"))
 		       (when (assoc "GitStatus" balls)
-			 (insert "\t" "[" (superman-make-button
+			 (insert "\t" (superman-make-button
 					   "Update"
 					   '(([mouse-2] . superman-view-git-update-status)
-					     ([return] . superman-view-git-update-status)))
-				 "]"))
+					     ([return] . superman-view-git-update-status))
+					   'superman-other-button)
+				 ))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
