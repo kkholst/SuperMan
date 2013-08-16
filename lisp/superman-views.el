@@ -278,10 +278,13 @@ and the keybinding to initialize git control otherwise."
     (if others
 	(let ((key
 	       (superman-make-button
-	       "Others:"
-	       'superman-capture-others
-	       'superman-header-button-face
-	       "Set names of collaborators")))
+		"Others:"
+		`(lambda ()
+		   (interactive)
+		   (superman-capture-others
+		    ,(car pro)))
+		'superman-header-button-face
+		"Set names of collaborators")))
 	  ;; (put-text-property 0 (length key) 'face 'org-level-2 key)
 	  (concat key " " others "\n"))
       "")))
@@ -423,11 +426,12 @@ which there is a function superman-capture-n."
 	(put-text-property
 	 0 1
 	 'superman-header-marker t config-name)
-	(insert (superman-make-button "[" config-name "]  "
-				      `(lambda () (interactive)
-					 (superman-switch-config nil nil ,config-cmd))
-				      'font-lock-warning-face
-				      config-cmd)))
+	(insert "[" (superman-make-button config-name
+					  `(lambda () (interactive)
+					     (superman-switch-config nil nil ,config-cmd))
+					  'font-lock-warning-face
+					  config-cmd)
+		"]  "))
       (setq i (+ i 1) config-list (cdr config-list)))))
 ;;}}}
 ;;{{{ unison
@@ -487,13 +491,8 @@ which there is a function superman-capture-n."
       (let* ((current-unison (car unison-list))
 	     (unison-name (car current-unison))
 	     (unison-cmd (cdr current-unison)))
-	(define-key map [mouse-2] `(lambda () (interactive)
-				     (async-shell-command ,unison-cmd)))
-	(define-key map [return] `(lambda () (interactive)
-				    (async-shell-command ,unison-cmd)))
 	(when (= i 1)
 	  (insert "\n")
-	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " "))
 	(put-text-property
 	 0 1
@@ -502,7 +501,7 @@ which there is a function superman-capture-n."
 		(superman-make-button
 		 unison-name 
 		 `(lambda () (interactive)
-				     (async-shell-command ,unison-cmd))
+		    (async-shell-command ,unison-cmd))
 		 'font-lock-warning-face
 		unison-name) "] "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
