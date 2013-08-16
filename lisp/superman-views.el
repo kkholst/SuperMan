@@ -106,6 +106,12 @@ Column showing the todo-state
 	("GitStatus" ("width" 10) ("face" superman-get-git-status-face))
 	("LastCommit" ("fun" superman-trim-date) ("face" font-lock-string-face))
 	("FileName" ("fun" superman-dont-trim))))
+
+(setq superman-default-balls
+      '((todo ("width" 6) ("face" superman-get-todo-face))
+	(hdr ("width" 23) ("face" font-lock-function-name-face))
+	("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))))
+
 (setq superman-meeting-balls
       '((hdr ("width" 23) ("face" font-lock-function-name-face))
 	("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))
@@ -251,24 +257,33 @@ and sets the variable superman-view-current-project."
   "Insert the git repository if project is git controlled
 and the keybinding to initialize git control otherwise."
   (let* ((loc (get-text-property (point-min) 'git-dir))
+	 (button (superman-make-button "Contrl:"
+				       'superman-view-git-status
+				       'superman-header-button-face
+				       "Show git status"))
 	 (control (if (superman-git-p loc)
 		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
 			(put-text-property 0 1 'superman-header-marker t git-dir-link)
-			(concat "Contrl: Git repository at "
+			(concat "Git repository at "
 				;;FIXME: would like to have current git status as well
 				git-dir-link))
-		    "Contrl: not set. <> press `GI' to initialize git")))
-    (put-text-property 0 (length "Contrl: ") 'face 'org-level-2 control)
-    control))
+		    "not set. <> press `GI' to initialize git control")))
+    ;; (put-text-property 0 (length "Contrl: ") 'face 'org-level-2 control)
+    (concat button " " control)))
 
 (defun superman-view-others (project)
   "Insert the names and emails of the others (if any)." 
   (let ((pro (or project (superman-view-current-project)))
 	(others (superman-get-others pro)))
     (if others
-	(let ((key "Others: "))
-	  (put-text-property 0 (length key) 'face 'org-level-2 key)
-	  (concat key others "\n"))
+	(let ((key
+	       (superman-make-button
+	       "Others:"
+	       'superman-capture-others
+	       'superman-header-button-face
+	       "Set names of collaborators")))
+	  ;; (put-text-property 0 (length key) 'face 'org-level-2 key)
+	  (concat key " " others "\n"))
       "")))
 
 
@@ -338,14 +353,18 @@ and the keybinding to initialize git control otherwise."
       (define-key map-prev [return]  `superman-previous-project)
       (define-key map-prev [follow-link]  `superman-previous-project)
       (put-text-property 0 1 'superman-header-marker t prev)
-      (add-text-properties 0 (length prev) (list 'button (list t) 'face 'superman-project-button 'keymap map-prev 'mouse-face 'highlight 'follow-link t 'help-echo "superman-previous-project") prev)
-      (add-text-properties 0 (length next) (list 'button (list t) 'face 'superman-project-button 'keymap map-next 'mouse-face 'highlight 'follow-link t 'help-echo "superman-next-project") next)
+      (add-text-properties 0 (length prev) (list 'button (list t) 'face 'superman-next-project-button-face 'keymap map-prev 'mouse-face 'highlight 'follow-link t 'help-echo "superman-previous-project") prev)
+      (add-text-properties 0 (length next) (list 'button (list t) 'face 'superman-next-project-button-face 'keymap map-next 'mouse-face 'highlight 'follow-link t 'help-echo "superman-next-project") next)
       (insert "\t\tPrev: " prev "\tNext: " next))))
 
-(defun superman-view-insert-capture-buttons ()
-  "Insert capture buttons"
-  (let* ((title "Capture:")
-	 (cat-list '("Document" "Task" "Note" "Bookmark"))
+(defun superman-view-insert-capture-buttons (prey)
+  "Insert capture buttons. PREY is a list of names n for 
+which there is a function superman-capture-n."
+  (let* ((title "")
+	 ;; (capture-alist superman-capture-alist)
+	 (cat-list
+	  (or prey 
+	      '("Document" "Task" "Note" "Bookmark")))
 	 (i 1))
     (while cat-list
       (let* ((cat (car cat-list))
@@ -367,7 +386,7 @@ and the keybinding to initialize git control otherwise."
 	 0 (length cat-name) 
 	 (list
 	  'button (list t)
-	  'face 'superman-capture-button
+	  'face 'superman-capture-button-face
 	  'keymap map
 	  'mouse-face 'highlight
 	  'follow-link t
@@ -377,10 +396,15 @@ and the keybinding to initialize git control otherwise."
       (setq i (+ i 1) cat-list (cdr cat-list)))))
 
 (defun superman-view-insert-config-buttons (project)
-  "Insert unison buttons"
+  "Insert window configuration buttons"
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
-	 (title "Window:")
+	 (title
+	  (superman-make-button
+	   "Config:"
+	   'superman-capture-config
+	   'superman-header-button-face
+	   "Capture current window configuration"))
 	 (config-list (superman-view-read-config pro))
 	 (title-marker 
 	  (save-excursion
@@ -392,32 +416,18 @@ and the keybinding to initialize git control otherwise."
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
-	     (config-cmd (cdr current-config))
-	     (map (make-sparse-keymap)))
-	(define-key map [mouse-2] `(lambda () (interactive)
-				     (superman-switch-config nil nil ,config-cmd)))
-	(define-key map [return] `(lambda () (interactive)
-				     (superman-switch-config nil nil ,config-cmd)))
-	(define-key map [follow-link] `(lambda () (interactive)
-					 (superman-smash-windows ,config-cmd)))
+	     (config-cmd (cdr current-config)))
 	(when (= i 1)
 	  (insert "\n")
-	  (put-text-property 0 (length title) 'face 'org-level-2 title)
 	  (insert title " "))
 	(put-text-property
-	   0 1
-	   'superman-header-marker t config-name)
-	(add-text-properties
-	 0 (length config-name) 
-	 (list
-	  'button (list t)
-	  'face 'font-lock-warning-face
-	  'keymap map
-	  'mouse-face 'highlight
-	  'follow-link t
-	  'help-echo config-cmd)
-	 config-name)
-	(insert "[" config-name "]  "))
+	 0 1
+	 'superman-header-marker t config-name)
+	(insert (superman-make-button "[" config-name "]  "
+				      `(lambda () (interactive)
+					 (superman-switch-config nil nil ,config-cmd))
+				      'font-lock-warning-face
+				      config-cmd)))
       (setq i (+ i 1) config-list (cdr config-list)))))
 ;;}}}
 ;;{{{ unison
@@ -458,7 +468,13 @@ and the keybinding to initialize git control otherwise."
   "Insert unison buttons"
   (let* ((pro (or project superman-current-project
 		  (superman-select-project)))
-	 (title "Unison:")
+	 (title
+	  (superman-make-button
+	   "Unison:"
+	   'superman-capture-unison
+	   'superman-header-button-face
+	   "Capture unison"
+	   ))
 	 (title-marker 
 	  (save-excursion
 	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
@@ -470,14 +486,11 @@ and the keybinding to initialize git control otherwise."
     (while unison-list
       (let* ((current-unison (car unison-list))
 	     (unison-name (car current-unison))
-	     (unison-cmd (cdr current-unison))
-	     (map (make-sparse-keymap)))
+	     (unison-cmd (cdr current-unison)))
 	(define-key map [mouse-2] `(lambda () (interactive)
 				     (async-shell-command ,unison-cmd)))
 	(define-key map [return] `(lambda () (interactive)
 				    (async-shell-command ,unison-cmd)))
-	(define-key map [follow-link] `(lambda () (interactive)
-					 (async-shell-command ,unison-cmd)))
 	(when (= i 1)
 	  (insert "\n")
 	  (put-text-property 0 (length title) 'face 'org-level-2 title)
@@ -485,33 +498,35 @@ and the keybinding to initialize git control otherwise."
 	(put-text-property
 	 0 1
 	 'superman-header-marker t unison-name)
-	(add-text-properties
-	 0 (length unison-name) 
-	 (list
-	  'button (list t)
-	  'face 'font-lock-warning-face
-	  'keymap map
-	  'mouse-face 'highlight
-	  'follow-link t
-	  'help-echo unison-cmd)
-	 unison-name)
-	(insert "[" unison-name "]  "))
+	(insert "["
+		(superman-make-button
+		 unison-name 
+		 `(lambda () (interactive)
+				     (async-shell-command ,unison-cmd))
+		 'font-lock-warning-face
+		unison-name) "] "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 ;;}}}
 ;;{{{ superman-buttons
 
-(defun superman-make-button (string &optional keys face help)
+(defun superman-make-button (string &optional fun face help)
+  "Create a button with label STRING and FACE.
+If FUN is a function then it is bound to mouse-2 and RETURN events.  
+HELP is shown when the mouse over the button."
   (let ((map (make-sparse-keymap))
-	(help (or help "S-button")))
-    (while keys
-      (define-key map (caar keys) (cdar keys))
-      (setq keys (cdr keys)))
+	(help (or help "Superman-button")))
+    (when (functionp fun)
+      (define-key map [return] fun)
+      (define-key map [mouse-2] fun))
+    ;; (while keys
+    ;; (define-key map (caar keys) (cdar keys))
+    ;; (setq keys (cdr keys)))
     (add-text-properties
      0 (length string) 
      (list
       'button (list t)
-      'face face
+      'face (or face 'superman-default-button-face)
       'keymap map
       'mouse-face 'highlight
       'follow-link t
@@ -523,12 +538,6 @@ and the keybinding to initialize git control otherwise."
 ;;}}}
 ;;{{{ git branches
 
-(defvar superman-git-branch-map (make-sparse-keymap))
-;; (define-key superman-git-branch-map [mouse-1] 'superman-button-git-status)
-(define-key superman-git-branch-map [mouse-2] 'superman-button-git-status)
-(define-key superman-git-branch-map [return] 'superman-view-git-status)
-;; (define-key superman-git-branch-map [mouse-3] 'superman-button-git-status)
-(define-key superman-git-branch-map [follow-link] 'superman-button-git-status)
 
 (defun superman-view-insert-git-branches (&optional dir)
   "Insert the git branch(es) if project is git controlled.
@@ -542,51 +551,37 @@ Translate the branch names into buttons."
       (when branch-list
 	(insert "\n")
 	(put-text-property 0 (length title) 'face 'org-level-2 title)
-	(insert title " ")
+	(insert
+	 (superman-make-button
+	  title
+	  'superman-git-new-branch
+	  'superman-header-button-face
+	  "Create new git branch")
+	 " ")
 	(put-text-property
 	 0 1
 	 'superman-header-marker t current-branch)
-	(add-text-properties
-	 0 (length current-branch) 
-	 (list
-	  'button (list t)
-	  'face 'font-lock-warning-face
-	  'keymap superman-git-branch-map
-	  'mouse-face 'highlight
-	  'follow-link t
-	  'help-echo "git status")
-	 current-branch)
+	(superman-make-button
+	 current-branch
+	 'superman-view-git-status
+	 'font-lock-warning-face
+	 "View git status")
 	(insert "[" current-branch "]  ")
 	(while other-branches
 	  (let* ((b (car other-branches))
-		 (map (make-sparse-keymap))
-		 (checkout-branch-cmd
-		  (concat "cd " loc "; " superman-cmd-git " checkout " b "\n")))
-	    (define-key map [mouse-2]
-	      `(lambda () (interactive)
-		 (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	    (define-key map [return]
-	      `(lambda () (interactive)
-		 (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	    (define-key map [follow-link] `(lambda () (interactive)
-					     (superman-run-cmd ,checkout-branch-cmd "*Superman-returns*")))
-	    (add-text-properties
-	     0 (length b) 
-	     (list
-	      'button (list t)
-	      'face 'font-lock-keyword-face
-	      'keymap map
-	      'mouse-face 'highlight
-	      'follow-link t
-	      'help-echo "git status")
-	     b)
+		 (fun
+		  `(lambda ()
+		    (interactive)
+		    (superman-run-cmd ,(concat "cd " loc "; " superman-cmd-git " checkout " b "\n")  "*Superman-returns*")))
+		 (button
+		  (superman-make-button
+		   b
+		   fun
+		   'font-lock-comment-face
+		   "Checkout branch")))
 	    (setq other-branches (cdr other-branches))
-	    (insert b "  ")))))))
+	    (insert button "  ")))))))
 
-(defun superman-button-git-status (ev)
-  (interactive "e")
-  (mouse-set-point ev)
-  (superman-view-git-status))
 
 ;;}}}
 ;;{{{ Marking elements
@@ -1013,6 +1008,19 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (cats (delete-if
 		#'(lambda (cat) (string= "Configuration" (car cat)))
 		(superman-parse-cats ibuf 1)))
+	 (prey (save-excursion
+		 (switch-to-buffer ibuf)
+		 (goto-char (point-min))
+		 ;; FIXME this could streamlined
+		 (let ((c-list
+			(when (re-search-forward ":CaptureButtons:" nil t)
+			  (superman-get-property (point) "CaptureButtons" nil))))
+		   (when c-list
+		     (setq c-list
+			   (split-string
+			    (replace-regexp-in-string
+			     "[ \t]*" ""
+			     c-list) "|" t))))))
 	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
     ;; update git status
@@ -1027,12 +1035,12 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (font-lock-default-function nil)
     ;; insert header, set text-properties and highlight
     (insert  (concat "Project: " (car pro)))
+    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
     (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
     (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
-    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     ;; link to previously selected projects
     (superman-view-insert-project-buttons)
     (insert (superman-project-view-header pro))
@@ -1042,7 +1050,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (superman-view-insert-unison-buttons pro)
     ;; capture buttons
     (insert "\n")
-    (superman-view-insert-capture-buttons)
+    (superman-view-insert-capture-buttons prey)
     ;; link to previously selected projects
     (goto-char (point-max))
     (insert "\n")
@@ -1051,7 +1059,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (let* ((cat (caar cats))
 	     (cat-balls (or (cadar cats)))
 	     (gear (cdr (assoc cat superman-finalize-cat-alist)))
-	     (balls (or cat-balls (eval (nth 0 gear))))
+	     (balls (or cat-balls (eval (nth 0 gear))
+			superman-default-balls))
 	     cat-head
 	     cat-point
 	     (count 0)
@@ -1120,10 +1129,21 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 				   (concat " [" (int-to-string (car tempsub)) "]"))
 		))
 	    (goto-char cat-head)
-	    (insert "\n** " cat "\n")
+	    ;; insert the section name
+	    (let ((fun (or
+			;; (intern (concat "superman-capture-" (downcase cat)))
+			(cadr (assoc cat superman-capture-alist))
+			'superman-capture-item)))
+	      (insert "\n** "
+		      (superman-make-button
+		       cat
+		       fun
+		       "Add new cat")
+		      "\n"))
 	    (forward-line -1)
 	    (beginning-of-line)
-	    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-capture-button-face)
 	    (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
 	    (put-text-property (point-at-bol) (point-at-eol) 'n-items count)
 	    (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
@@ -1133,12 +1153,10 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		    (member cat superman-views-permanent-cats) (> count 0))
 		(progn (end-of-line)
 		       (unless free (insert " [" (int-to-string count) "]"))
-		       (when (assoc "GitStatus" balls)
-			 (insert "\t" "[" (superman-make-button
-					   "Update"
-					   '(([mouse-2] . superman-view-git-update-status)
-					     ([return] . superman-view-git-update-status)))
-				 "]"))
+		       ;; (when (assoc "GitStatus" balls)
+			 ;; (insert "\t"  (superman-make-button
+					;; "Update git status"
+					;; 'superman-view-git-update-status)))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
@@ -1237,9 +1255,8 @@ a formatted string with faces."
 	  (concat "  " ;; column sep
 		  (apply fun raw-string trim-args)))
 	 (len (length trimmed-string))
-	 (face (unless
-		   (markerp raw-string)
-		 (or (cadr (assoc "face" ball))
+	 (face (or (cadr (assoc "face" ball))
+		   (unless (markerp raw-string)
 		     (get-text-property 0 'face raw-string))))
 	 (sort-key (get-text-property superman-column-separator 'sort-key trimmed-string)))
     ;; remove all existing text-properties
@@ -1767,6 +1784,27 @@ current section."
       (superman-view-redo-line marker))))
 
 
+(defun superman-view-priority-up ()
+  (interactive)
+  (let ((marker (org-get-at-bol 'org-hd-marker)))
+    (when marker
+      (save-excursion
+	(org-with-point-at marker
+	  (org-priority-up)
+	  (save-buffer)))
+      (superman-view-redo-line marker))))
+
+(defun superman-view-priority-down ()
+  (interactive)
+  (let ((marker (org-get-at-bol 'org-hd-marker)))
+    (when marker
+      (save-excursion
+	(org-with-point-at marker
+	  (org-priority-down)
+	  (save-buffer)))
+      (superman-view-redo-line marker))))
+
+
 
 (defun superman-next-entry ()
   (interactive)
@@ -1993,13 +2031,9 @@ If point is before the first category do nothing."
 	(save-excursion
 	  (beginning-of-line)
 	  (cond ((looking-at "Others")
-		 (let ((nick (get-text-property (point-min) 'nickname)))
-		   (save-window-excursion
-		     (find-file superman-home)
-		     (goto-char (point-min))
-		     (re-search-forward (concat ":nickname:[ \t]*" nick) nil nil)
-		     (superman-set-others (assoc nick superman-project-alist))
-		     (save-buffer)))
+		 (superman-capture-others
+		  (assoc (get-text-property (point-min) 'nickname)
+			 superman-project-alist))
 		 (superman-redo))
 		(t (error "Nothing to do here"))))
       (org-with-point-at m
@@ -2012,8 +2046,6 @@ If point is before the first category do nothing."
 	       (show-all)
 	       (org-narrow-to-subtree)
 	       (switch-to-buffer (marker-buffer m))))))))
-;; ((superman-view-index)
-;; (org-narrow-to-subtree)))))))
 
 (defun superman-view-git-log (&optional arg)
   (interactive "p")
@@ -2256,6 +2288,8 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map [S-iso-lefttab] 'superman-shifttab)
 (define-key superman-view-mode-map [(up)] 'superman-previous-entry)
 (define-key superman-view-mode-map [(down)] 'superman-next-entry)
+(define-key superman-view-mode-map [(shift up)] 'superman-view-priority-up)
+(define-key superman-view-mode-map [(shift down)] 'superman-view-priority-down)
 (define-key superman-view-mode-map "i" 'superman-view-index)
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
@@ -2316,7 +2350,8 @@ for git and other actions like commit, history search and pretty log-view."
 	("Meetings" superman-capture-meeting)
 	("Bookmarks" superman-capture-bookmark)))
 
-(defun superman-new-item ()
+(fset 'superman-new-item 'superman-capture-item)
+(defun superman-capture-item ()
   "Add a new document, note, task or other item to a project. If called
 from superman project view, assoc a capture function from `superman-capture-alist'.
 If non exists create a new item based on balls and properties in current section. If point is
@@ -2339,8 +2374,7 @@ not in a section prompt for section first.
       (superman-view-project pro)
       (goto-char (point-min))
       (re-search-forward cat nil t))
-    (if fun
-	(funcall (cadr fun) pro)
+    (if fun (funcall (cadr fun) pro)
       (let* ((props (superman-view-property-keys)))
 	(superman-capture
 	 pro

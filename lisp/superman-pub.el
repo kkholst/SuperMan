@@ -113,17 +113,27 @@
        (progn (forward-paragraph) (point)))))))
 
 (defun superman-show-plain (&optional marker &rest args)
+  "Show citation in plain format."
   (if (markerp marker)
-      (org-with-point-at (or marker (point))
-	(save-restriction
-	  (org-narrow-to-subtree)
-	  (re-search-forward "Plain" nil t)
-	  (forward-line 1)
-	  (replace-regexp-in-string
-	   "^[ \t]*" ""
-	   (buffer-substring
-	    (point)
-	    (progn (forward-paragraph) (point))))))
+      (let* ((pdf (superman-get-property marker "pdf"))
+	     (pdf-string (when pdf
+			   (string-match org-bracket-link-regexp pdf)
+			   (org-make-link-string
+			    (org-match-string-no-properties 1 pdf)
+			    "pdf")))
+	     (plain (org-with-point-at marker
+		      (save-restriction
+			(org-narrow-to-subtree)
+			(re-search-forward "Plain" nil t)
+			(forward-line 1)
+			(replace-regexp-in-string
+			 "^[ \t]*" ""
+			 (buffer-substring
+			  (point)
+			  (progn (forward-paragraph) (point))))))))
+	(if pdf
+	    (concat plain pdf-string)
+	  plain))
     marker))
 
 (defun superman-pub-make-sort-buttons (&optional names)

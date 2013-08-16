@@ -330,7 +330,16 @@ index file as LEVEL headings. Then show the updated project view buffer."
     (superman-view-project pro)
     (superman-redo)))
 
-	      
+
+(defun superman-capture-others (&optional project)
+  "Set the names of the OTHERS, i.e. the collaborators, for project PROJECT."
+  (let ((nick (car project)))
+    (save-window-excursion
+      (find-file superman-home)
+      (goto-char (point-min))
+      (re-search-forward (concat ":nickname:[ \t]*" nick) nil nil)
+      (superman-set-others (assoc nick superman-project-alist))
+      (save-buffer))))
 
 (defun superman-capture-document (&optional project)
   (interactive)

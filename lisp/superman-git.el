@@ -51,11 +51,12 @@ that never should get git controlled.")
 
 (defun superman-git-p (dir)
   "Test if directory DIR is under git control."
-  (string-match
-   "^true"
-   (shell-command-to-string
-    (concat "cd " dir ";"
-	    superman-cmd-git " rev-parse --is-inside-work-tree "))))
+  (when (and dir (file-exists-p dir))
+    (string=
+     "true\n"
+     (shell-command-to-string
+      (concat "cd " dir ";"
+	      superman-cmd-git " rev-parse --is-inside-work-tree ")))))
 
 (defun superman-git-toplevel (file)
   "Find the toplevel directory DIR is under git control."

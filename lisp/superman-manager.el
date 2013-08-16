@@ -196,9 +196,95 @@ the `superman-home'.")
 
 ;;}}}
 ;;{{{ faces
-(custom-set-faces
- '(superman-capture-button ((t (:background "SeaGreen4" :foreground "white smoke" :inverse-video nil :box (:line-width 2 :color "yellow" :style pressed-button) :weight bold))) t)
- '(superman-project-button ((t (:background "white smoke" :foreground "Darkblue" :inverse-video nil :box (:line-width 2 :color "orange" :style pressed-button) :weight bold))) t))
+
+(defface superman-default-button-face
+  '((t (:box (:line-width 1 :color "gray88" :style released-button))))
+  "Default face used for superman-buttons."
+  :group 'superman)
+
+(defface superman-capture-button-face
+  '((((class color) (min-colors 88) (background light))
+     :inherit superman-default-button-face
+     :height 0.8
+     :foreground "darkblue"
+     :background "mintcream")
+    (((class color) (min-colors 88) (background dark))
+     :inherit superman-default-button-face
+     :height 0.8
+     :foreground "mintcream"
+     :background "darkblue")
+    (((class color) (min-colors 8) (background light))
+     :inherit superman-default-button-face
+     :height 0.8
+     :foreground "white"
+     :background "gray55")
+    (((class color) (min-colors 8) (background dark))
+     :inherit superman-default-button-face
+     :height 0.8
+     :foreground "gray55"
+     :background "white")
+    (t (:inherit superman-default-button-face
+		 :height 0.8
+		 :inverse-video t
+		 :bold t)))
+  "Face for superman capture buttons."
+  :group 'superman)
+
+(defface superman-project-button-face
+  '((((class color) (min-colors 88) (background light))
+     :inherit superman-default-button-face
+     :height 1.3
+     :foreground "yellow"
+     :background "red")
+    (((class color) (min-colors 88) (background dark))
+     :inherit superman-default-button-face
+     :height 1.3
+     :foreground "red"
+     :background "yellow")
+    (((class color) (min-colors 8) (background light))
+     :inherit superman-default-button-face
+     :height 1.3
+     :foreground "black"
+     :background "gray88")
+    (((class color) (min-colors 8) (background dark))
+     :inherit superman-default-button-face
+     :height 1.3
+     :foreground "gray88"
+     :background "black")
+    (t (:inherit superman-default-button-face
+		 :height 1.3
+		 :inverse-video t
+		 :bold t)))
+  "Face for superman project buttons."
+  :group 'superman)
+
+(defface superman-next-project-button-face
+  '((((class color) (background dark)
+     :inherit superman-project-button-face
+     :background "LightYellow1"
+     :inverse-video t
+     :height 0.8))
+    (t
+     :inherit superman-project-button-face
+     :foreground "LightYellow1"
+     :inverse-video t
+     :height 0.8))
+  "Face for next superman project buttons."
+  :group 'superman)
+
+(defface superman-capture-button-face
+  '((t (:inherit superman-default-button-face
+		 :box (:line-width 1 :color "gray88" :style released-button)
+		 :foreground "seagreen4")))
+  "Face used for the selected tab."
+  :group 'superman)
+
+(defface superman-header-button-face
+  '((t (:inherit superman-default-button-face
+		 :box (:line-width 1 :color "gray88" :style released-button)
+		 :background "lightyellow")))
+  "Face used for the selected tab."
+  :group 'superman)
 
 ;;}}}
 ;;{{{ the pro-file in manager-mode
@@ -227,37 +313,6 @@ the `superman-home'.")
 ;; (define-key superman-manager-mode-map [(meta p)] 'superman-previous-project)
 (define-key superman-manager-mode-map [f1] 'superman-manager)
 
-(defun superman-manager ()
-  (interactive)
-  (pop-to-buffer "*superman-manager*")
-  (local-set-key "d" 'superman-view-documents)
-  (local-set-key "D" 'superman-view-all-documents)
-  (local-set-key "N" 'superman-new-project)
-  (insert "Press 'd' to view documents")
-  (insert "Press 'n' to view notes")
-  (insert "Press 'N' to add a project"))
-
-
-;; (defun superman-view-all-documents ()
-;;  (interactive)
-;;  (org-tags-view nil "LastCommit={.+}&GitStatus<>{Comitted}"))
-;; (defun superman-manager-mode (&optional arg)
-;;  "A minor mode for using org Project Manager."
-;;  (interactive "P")
-;;  ;; (make-variable-buffer-local 'hippie-expand-try-functions-list)
-;;  (setq superman-manager-mode
-;;      (not (or (and (null arg) superman-manager-mode)
-;;               (<= (prefix-numeric-value arg) 0))))    
-;;  (add-hook 'after-save-hook 'superman-refresh nil 'local))
-;; (defvar superman-manager-mode nil)
-;; (make-variable-buffer-local 'superman-manager-mode)
-;;(or (assq 'superman-manager-mode minor-mode-map-alist)
-;;    (setq minor-mode-map-alist
-;;        (append minor-mode-map-alist
-;;                (list (cons 'superman-manager-mode superman-manager-mode-map)))))
-;;(or (assq 'superman-manager-mode minor-mode-alist)
-;;    (setq minor-mode-alist
-;;        (cons '(superman-manager-mode " Project") minor-mode-alist)))
 (add-hook 'find-file-hooks 
         (lambda ()
           (let ((file (buffer-file-name)))
@@ -690,11 +745,15 @@ Examples:
 		     )
       (save-buffer))))
 
-(defun superman-save-project (&optional project)
+(defun superman-save-project (project)
   (interactive)
+  (save-excursion
+    (let ((pbuf (get-file-buffer (superman-get-index project))))
+      (when pbuf
+	(switch-to-buffer pbuf)
+	(save-buffer))))
   (when (functionp superman-save-buffers)
-    (funcall superman-save-buffers))
-  (let* ((pro (or project superman-current-project)))))
+    (funcall superman-save-buffers)))
 
 ;;}}}
 ;;{{{ switching projects (see also superman-config)
@@ -729,7 +788,8 @@ If NOSELECT is set return the project."
 	(setq superman-project-history
 	      (cons (car pro) superman-project-history)))
       ;; (add-to-list 'superman-project-history (car pro))
-      (superman-save-project curpro)
+      (when curpro
+	(superman-save-project curpro))
       (superman-activate-project pro))
     (if noselect
 	superman-current-project

@@ -241,9 +241,14 @@ given in superman notation."
 	 (org-agenda-sticky nil)
 	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
     (if (file-exists-p index)
-	(progn (find-file index)
-	       (push ?L unread-command-events)
-	       (call-interactively 'org-agenda))
+	(progn
+	  ;; to be 100% sure that the agenda is not accidentally written
+	  ;; to the index file
+	  (switch-to-buffer
+	   (get-buffer-create org-agenda-buffer-name))
+	  (find-file index)
+	  (push ?L unread-command-events)
+	  (call-interactively 'org-agenda))
       (switch-to-buffer
        (get-buffer-create org-agenda-buffer-name))
       (insert "Empty time-line (project index file does not yet exist."))))
@@ -266,27 +271,37 @@ given in superman notation."
 (defun superman-project-todo (&optional project)
   "Display a project specific todo-list based on all org files."
   (interactive)
-  (let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
-	 (org-agenda-sticky nil)
-	 (org-agenda-custom-commands
-	  `(("T" "Projects-TODO"
-	     ((todo ""
-		    ((org-agenda-files 
-		      (mapcar 'file-list-make-file-name
-			      (file-list-select-internal
-			       nil
-			       (or "^[^\\.#].*org$" ".") nil nil
-			       (superman-project-home
-				superman-current-project) nil t))))))
-	     ((org-agenda-window-setup 'current-window)
-	      (org-agenda-finalize-hook
-	       (lambda ()
-		 (superman-format-agenda
-		  superman-project-todolist-balls
-		  'superman-todo
-		  "Project ToDo list"))))))))
-    (push ?T unread-command-events)
-    (call-interactively 'org-agenda)))
+  (let ((loc (superman-project-home superman-current-project)))
+    (if (file-exists-p loc)
+	(let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
+	       (org-agenda-sticky nil)
+	       (org-agenda-custom-commands
+		(when (file-exists-p loc)
+		  `(("T" "Projects-TODO"
+		     ((todo ""
+			    ((org-agenda-files 
+			      (mapcar 'file-list-make-file-name
+				      (file-list-select-internal
+				       nil
+				       (or "^[^\\.#].*org$" ".") nil nil
+				       loc
+				       nil t))))))
+		     ((org-agenda-window-setup 'current-window)
+		      (org-agenda-finalize-hook
+		       (lambda ()
+			 (superman-format-agenda
+			  superman-project-todolist-balls
+			  'superman-todo
+			  "Project ToDo list")))))))))
+	  ;; to be 100% sure that the agenda is not accidentally written
+	  ;; to the index file
+	  (switch-to-buffer (get-buffer-create org-agenda-buffer-name))
+	  (push ?T unread-command-events)
+	  (call-interactively 'org-agenda))
+      (switch-to-buffer (get-buffer-create (concat "*Todo[" (car project) "]*")))
+      (erase-buffer)
+      (insert "Superman Project TODO:\n\n Directory " loc " does not exist or is not readable."))))
+      
 
 ;;}}}
 ;;{{{ superman-shell

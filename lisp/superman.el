@@ -88,9 +88,6 @@
       (and (member kwd org-done-keywords) 'org-done)
       'org-todo))
 
-;; (:foreground "blue" :weight bold :underline t)
-;; (if (member kwd org-done-keywords-for-agenda) 'org-done
-;; 'org-todo))
 
 ;;}}}
 ;;{{{ superman 
@@ -103,16 +100,14 @@
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
-  (insert "\t" (superman-make-button "[Agenda]"
-			'(([mouse-2] . superman-agenda)
-			  ([return] . superman-agenda))
-			font-lock-keyword-face
-			"Agenda across all projects") "\t")
-  (insert (superman-make-button "[TodoList]"
-			'(([mouse-2] . superman-todo)
-			  ([return] . superman-todo))
-			font-lock-keyword-face
-			"TodoList across all projects"))
+  (insert "\t" (superman-make-button "Agenda"
+				     'superman-agenda
+				     'superman-next-project-button-face
+				     "Agenda across all projects") "\t")
+  (insert (superman-make-button "TodoList"
+				'superman-todo
+				'superman-next-project-button-face
+				"TodoList across all projects"))
   (insert "\n"))
 
   ;; (insert "\n\nKeys: \n")
@@ -197,6 +192,9 @@
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
+    (insert "\n")
+    (superman-view-insert-capture-buttons '("Project"))
+    (insert "\n")
     ;; loop over categories
     (while cat-alist
       (let* ((cat (car cat-alist))
@@ -281,81 +279,26 @@
 	    ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 	    ;; ((todo 
 	    ((alltodo ""
-			((org-agenda-files
-			  (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
+		      ((org-agenda-files
+			(reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
 	      (lambda ()
 		(superman-format-agenda
 		 superman-todolist-balls
-		 'superman-todo
-		 "* SupermanTodoList"
+		 'superman-todo "* SupermanTodoList"
 		 (concat "\t"
-			 (superman-make-button "[Agenda]"
-					       '(([mouse-2] . superman-agenda)
-						 ([return] . superman-agenda))
-					       font-lock-keyword-face
+			 (superman-make-button "Agenda"
+					       'superman-agenda
+					       'superman-next-project-button-face
 					       "Agenda across all projects")
 			 "\t"
-			 (superman-make-button "[Projects]"
-					       '(([mouse-2] . superman)
-						 ([return] . superman))
-					       font-lock-keyword-face
+			 (superman-make-button "Projects"
+					       'superman
+					       'superman-next-project-button-face
 					       "List of projects"))))))))))
-  (push ?P unread-command-events)
-  (call-interactively 'org-agenda)))
-
-;; (defun superman-todo-B (&optional project)
-  ;; (interactive)
-  ;; (let ((org-agenda-buffer-name (concat "*S-TODO*"))
-	;; (org-agenda-sticky nil)
-	;; (org-agenda-custom-commands
-	 ;; `(("P" "Projects-TODO"
-	    ;; ((tags-todo "PRIORITY=\"C\"|PRIORITY=\"B\""
-			;; ;; ((todo ""
-			;; ((org-agenda-files
-			  ;; (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
-	    ;; ((org-agenda-window-setup 'current-window)
-	     ;; (org-agenda-finalize-hook
-	      ;; (lambda ()
-		;; (superman-format-agenda
-		 ;; superman-todolist-balls
-		 ;; 'superman-todo
-		 ;; "* SupermanTodoList"
-		 ;; (concat "\t"
-			 ;; (superman-make-button "[Agenda]"
-					       ;; '(([mouse-2] . superman-agenda)
-						 ;; ([return] . superman-agenda))
-					       ;; font-lock-keyword-face
-					       ;; "Agenda across all projects")
-			 ;; "\t"
-			 ;; (superman-make-button "[TODO]"
-					       ;; '(([mouse-2] . superman-todo)
-						 ;; ([return] . superman-todo))
-					       ;; font-lock-keyword-face
-					       ;; "Todo list across all projects")
-			 ;; "\t"
-			 ;; (superman-make-button "[Projects]"
-					       ;; '(([mouse-2] . superman)
-						 ;; ([return] . superman))
-					       ;; font-lock-keyword-face
-					       ;; "List of projects"))))))))))
-    ;; (push ?P unread-command-events)
-    ;; (call-interactively 'org-agenda)))
-
-;; (defun S-todo-B ()
-  ;; (interactive)
-  ;; (let ((org-agenda-buffer-name (concat "*S-TODO-BC*"))
-	;; (org-agenda-sticky nil)
-	;; (org-agenda-custom-commands
-	 ;; '(("P" "Projects-TODO"
-	    ;; ((tags-todo "PRIORITY=\"C\"|PRIORITY=\"B\""
-			;; ((org-agenda-files
-			  ;; (reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
-	    ;; ((org-agenda-window-setup 'current-window)
-	     ;; (org-agenda-finalize-hook 'superman-format-todolist))))))
-    ;; (push ?P unread-command-events)
-    ;; (call-interactively 'org-agenda)))
+    (push ?P unread-command-events)
+    (call-interactively 'org-agenda)))
 
 
 (defun superman-make-agenda-title (string face)
@@ -378,16 +321,14 @@
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
 			     "\t"
-			     (superman-make-button "[TodoList]"
-						   '(([mouse-2] . superman-todo)
-						     ([return] . superman-todo))
-						   font-lock-keyword-face
+			     (superman-make-button "TodoList"
+						   'superman-todo
+						   'superman-next-project-button-face
 						   "TodoList across all projects")
 			     "\t"
-			     (superman-make-button "[Projects]"
-						   '(([mouse-2] . superman)
-						     ([return] . superman))
-						   font-lock-keyword-face
+			     (superman-make-button "Projects"
+						   'superman
+						   'superman-next-project-button-face
 						   "List of projects")
 			     "\n")))))
     (push ?A unread-command-events)
@@ -462,17 +403,18 @@ Enabling superman mode electrifies the superman buffer for project management."
 	marker
 	(superman-trim-string marker args))))
 
-(defun superman-trim-project-nickname  (marker attribute &optional args)
+(defun superman-trim-project-nickname  (marker &optional args)
   (if (not (markerp marker));; column name
       (superman-trim-string marker args)
     (let* ((nick (superman-trim-project-attribute marker "nickname" 'dont args))
-	   (nickname (superman-trim-string nick args)))
-      (superman-make-button
-       nickname
-       `(([mouse-2] . (lambda () (interactive) (superman-switch-to-project ,nick)))
-	 ([mouse-2] . (lambda () (interactive) (superman-switch-to-project ,nick))))
-       nil
-       (concat "Switch to " nick)))))
+	   (nickname (superman-trim-string nick args))
+	   (button       (superman-make-button
+			  nickname
+			  `(lambda () (interactive) (superman-switch-to-project ,nick))
+			  nil
+			  ;; font-lock-string-face
+			  (concat "Switch to " nick))))
+      button)))
 				  
 
 (defun superman-trim-project-others  (marker attribute &optional args)
@@ -485,7 +427,11 @@ Enabling superman mode electrifies the superman buffer for project management."
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	(priority ("width" 8) ("face" superman-get-priority-face))
 	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
-	(org-hd-marker ("width" 23) ("name" "Nick") ("fun" superman-trim-project-nickname))
+	(org-hd-marker ("width" 33)
+		       ("name" "Nick")
+		       ;; ("face" superman-next-project-button-face)
+		       ("face" superman-next-project-button-face)
+		       ("fun" superman-trim-project-nickname))
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
@@ -511,14 +457,14 @@ Enabling superman mode electrifies the superman buffer for project management."
       (insert "\n")
       (goto-char (point-min))
       (insert (or title "* SupermanAgenda"))
-      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
       (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
       (end-of-line)
-      (insert "\n" (superman-column-names balls))
+      (insert "\n\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor
       (while (ignore-errors
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
