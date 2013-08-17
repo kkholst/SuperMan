@@ -129,9 +129,9 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Modified
+:GitStatus: Committed
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-07-15 Mon 11:10> added todo and calendar projects
+:LastCommit: <2013-08-17 Sat 08:47> fixed typo
 :END:
 
 * Bookmarks
