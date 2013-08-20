@@ -518,9 +518,10 @@ HELP is shown when the mouse over the button."
     (when (functionp fun)
       (define-key map [return] fun)
       (define-key map [mouse-2] fun))
-    ;; (while keys
-    ;; (define-key map (caar keys) (cdar keys))
-    ;; (setq keys (cdr keys)))
+    ;; (when keys
+      ;; (while keys
+	;; (define-key map (caar keys) (cdar keys))
+	;; (setq keys (cdr keys))))
     (add-text-properties
      0 (length string) 
      (list
@@ -535,8 +536,7 @@ HELP is shown when the mouse over the button."
 
   
 ;;}}}
-;;{{{ git branches
-
+;;{{{ git branches and remote
 
 (defun superman-view-insert-git-branches (&optional dir)
   "Insert the git branch(es) if project is git controlled.
@@ -546,8 +546,14 @@ Translate the branch names into buttons."
     (let* ((branch-list (superman-git-branches loc))
 	   (current-branch (car branch-list))
 	   (other-branches (cdr branch-list))
-	   (title "Branch:"))
+	   (title "Branch:")
+	   (olen (length other-branches))
+	   push-pull)
       (when branch-list
+	(setq other-branches
+	      (delete-if (lambda (x) (string-match "remotes/origin" x)) other-branches))
+	(when (< (length other-branches) olen)
+	  (setq push-pull t))
 	(insert "\n")
 	(put-text-property 0 (length title) 'face 'org-level-2 title)
 	(insert
@@ -570,8 +576,11 @@ Translate the branch names into buttons."
 	  (let* ((b (car other-branches))
 		 (fun
 		  `(lambda ()
-		    (interactive)
-		    (superman-run-cmd ,(concat "cd " loc "; " superman-cmd-git " checkout " b "\n")  "*Superman-returns*")))
+		     (interactive)
+		     (superman-run-cmd
+		      ,(concat "cd " loc "; "
+			       superman-cmd-git " checkout " b "\n")
+		      "*Superman-returns*")))
 		 (button
 		  (superman-make-button
 		   b
@@ -579,7 +588,36 @@ Translate the branch names into buttons."
 		   'font-lock-comment-face
 		   "Checkout branch")))
 	    (setq other-branches (cdr other-branches))
-	    (insert button "  ")))))))
+	    (insert "[" button "]  ")))
+	(when (> olen 0)
+	  (insert (superman-make-button
+		   "-> merge"
+		   `(lambda () (interactive)
+		      (superman-git-merge-branches ,loc))
+		   'font-lock-type-face
+		   "Merge two branches")))
+	(when push-pull
+	  (insert "\n"
+		  (superman-make-button
+		   "Remote:"
+		   `(lambda () (interactive) (superman-run-cmd
+					      (concat "cd " ,loc ";" superman-cmd-git " remote show origin " "\n")
+					      "*Superman-returns*"
+					      (concat "`git remote show origin' in\n" ,loc "' returns:\n\n")))
+		   'superman-header-button-face
+		   "Fetch origin of remote repository")
+		  " "
+		  (superman-make-button
+		   "[pull]"
+		   `(lambda () (interactive) (superman-git-pull ,loc))
+		   'font-lock-type-face
+		   "Pull from remote repository")
+		  " "
+		  (superman-make-button
+		   "[push]"
+		   `(lambda () (interactive) (superman-git-push ,loc))
+		   'font-lock-type-face
+		   "Push to remote repository")))))))
 
 
 ;;}}}

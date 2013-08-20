@@ -74,7 +74,7 @@ that never should get git controlled.")
 		       "^[ \t\n]+\\|[ \t\n]+$" "" x nil t))
 		  (delete "" (split-string
 			      (shell-command-to-string
-			       (concat "cd " dir "; " superman-cmd-git " branch")) "\n"))))
+			       (concat "cd " dir "; " superman-cmd-git " branch -a ")) "\n"))))
 	 (current (if branch-list (car (member-if (lambda (x) (string-match "^\\*" x)) branch-list))
 		    "master"))
 	 (others (when branch-list (delete current branch-list))))
@@ -141,11 +141,19 @@ result."
    (concat "git status '" dir "' returns:\n\n")))
 
 (defun superman-git-pull (dir)
+  (interactive)
   (superman-run-cmd
    (concat "cd " dir "; " superman-cmd-git " pull " "\n")
    "*Superman-returns*"
    (concat "git pull '" dir "' returns:\n\n")))
-     
+
+(defun superman-git-push (dir)
+  (interactive)
+  (superman-run-cmd
+   (concat "cd " dir "; " superman-cmd-git " push " "\n")
+   "*Superman-returns*"
+   (concat "git push '" dir "' returns:\n\n")))
+
 (defun superman-relative-name (file dir)
   "If filename FILE is absolute return the relative filename w.r.t. dir,
 Else return FILE as it is."
@@ -369,17 +377,6 @@ or if the file is not inside the location."
 	 (pro (assoc (superman-property-at-point (superman-property 'project)) superman-project-alist)))
     (superman-git-add (list (org-link-display-format file)) pro commit message)
     (superman-git-set-status-at-point check)))
-
-;;}}}
-;;{{{ updating and pushing projects
-
-(defun superman-git-push (&optional project)
-  (interactive)
-  (let* ((pro (or project (superman-view-current-project) (superman-select-project)))
-	 (loc (concat (superman-get-location pro) (car pro)))
-	 (cmd (concat "cd " loc ";" superman-cmd-git " push")))
-    (superman-goto-shell)
-    (insert cmd)))
 
 ;;}}}
 ;;{{{ log-view
