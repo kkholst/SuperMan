@@ -603,7 +603,7 @@ Translate the branch names into buttons."
 		   `(lambda () (interactive) (superman-run-cmd
 					      (concat "cd " ,loc ";" superman-cmd-git " remote show origin " "\n")
 					      "*Superman-returns*"
-					      (concat "`git remote show origin' in\n" ,loc "' returns:\n\n")))
+					      (concat "`git remote show origin' run below \n" ,loc "' returns:\n\n")))
 		   'superman-header-button-face
 		   "Fetch origin of remote repository")
 		  " "

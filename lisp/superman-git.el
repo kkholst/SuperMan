@@ -80,6 +80,21 @@ that never should get git controlled.")
 	 (others (when branch-list (delete current branch-list))))
     (cons current others)))
 
+
+(defun superman-git-merge-branches (dir)
+  (let* ((branch-list (superman-git-branches dir))
+	(current-branch (car branch-list))
+	(other-branches (cdr branch-list))
+	(m-branch (completing-read
+		   (concat "Merge current branch (" current-branch ") with: ")
+		   (mapcar* 'cons other-branches
+			    (make-list (length other-branches) `())))))
+    (superman-run-cmd
+     (concat "cd " dir ";" superman-cmd-git " merge " m-branch  "\n")
+     "*Superman-returns*"
+     (concat "git merge returns:\n\n"))))
+
+
 (defvar superman-mouse-map (make-sparse-keymap))
 (define-key superman-mouse-map [mouse-1] 'superman-view-git-status)
 
