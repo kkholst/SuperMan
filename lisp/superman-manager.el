@@ -259,11 +259,11 @@ the `superman-home'.")
   :group 'superman)
 
 (defface superman-next-project-button-face
-  '((((class color) (background dark)
+  '((((class color) (background dark))
      :inherit superman-project-button-face
      :background "LightYellow1"
      :inverse-video t
-     :height 0.8))
+     :height 0.8)
     (t
      :inherit superman-project-button-face
      :foreground "LightYellow1"
@@ -285,24 +285,6 @@ the `superman-home'.")
 		 :background "lightyellow")))
   "Face used for the selected tab."
   :group 'superman)
-;; >>>>>>> variant B
-;; (custom-set-faces
-;;  '(superman-capture-button ((t (:background "SeaGreen4" :foreground "white smoke" :inverse-video nil :box (:line-width 2 :color "yellow" :style pressed-button) :weight bold))) t)
-;;  '(superman-project-button ((t (:background "white smoke" :foreground "Darkblue" :inverse-video nil :box (:line-width 2 :color "orange" :style pressed-button) :weight bold))) t))
-;; (custom-set-faces
- ;; '(superman-capture-button  ((t (:inherit font-lock-other-type-face :inverse-video nil :weight bold :slant italic
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
- ;; '(superman-other-button ((t (:inherit font-lock-comment-face :inverse-video nil :slant normal
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
- ;; '(superman-branch-button ((t (:inherit font-lock-reference-face :inverse-video nil :weight bold
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
- ;; '(superman-git-button ((t (:inherit font-lock-reference-face :inverse-video nil :weight bold
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
- ;; '(superman-config-button  ((t (:inherit font-lock-type-face :inverse-video nil :weight bold 
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
- ;; '(superman-project-button ((t (:inherit font-lock-reference-face :inverse-video nil :weight bold :slant italic
-					  ;; :box (:line-width 2 :color "gray30" :style pressed-button)))) t)
-;; )
 
 ;;}}}
 ;;{{{ the pro-file in manager-mode
