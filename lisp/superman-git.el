@@ -229,7 +229,6 @@ Else return FILE as it is."
     propval))
 
 (defun superman-filename-at-point (&optional noerror)
-
   "If property FileName exists at point return its value."
   (let* ((file-or-link
 	  (superman-property-at-point

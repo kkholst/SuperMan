@@ -344,21 +344,24 @@ and the keybinding to initialize git control otherwise."
 
 (defun superman-view-insert-project-buttons ()
   "Insert project buttons"
-  (when (> (length superman-project-history) 1)
-    (let* ((prev (car (reverse superman-project-history)))
-	   (next (cadr superman-project-history))
-	   (map-next (make-sparse-keymap))
-	   (map-prev (make-sparse-keymap)))
-      (define-key map-next [mouse-2] `superman-next-project)
-      (define-key map-next [return]  `superman-next-project)
-      (define-key map-next [follow-link]  `superman-next-project)
-      (define-key map-prev [mouse-2] `superman-previous-project)
-      (define-key map-prev [return]  `superman-previous-project)
-      (define-key map-prev [follow-link]  `superman-previous-project)
-      (put-text-property 0 1 'superman-header-marker t prev)
-      (add-text-properties 0 (length prev) (list 'button (list t) 'face 'superman-next-project-button-face 'keymap map-prev 'mouse-face 'highlight 'follow-link t 'help-echo "superman-previous-project") prev)
-      (add-text-properties 0 (length next) (list 'button (list t) 'face 'superman-next-project-button-face 'keymap map-next 'mouse-face 'highlight 'follow-link t 'help-echo "superman-next-project") next)
-      (insert "\t\tPrev: " prev "\tNext: " next))))
+  (if (> (length superman-project-history) 1)
+      (let* ((prev (car (reverse superman-project-history)))
+	     (next (cadr superman-project-history))
+	     (all-button (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))
+	     (next-button (superman-make-button
+			   next
+			   `(lambda () (interactive) (superman-switch-to-project ,prev))
+			   'superman-next-project-button-face
+			   (concat "Switch to project " next)))
+	     (prev-button (superman-make-button
+			   prev
+			   `(lambda () (interactive) (superman-switch-to-project ,prev))
+			   'superman-next-project-button-face
+			   (concat "Switch to project " prev))))
+	(put-text-property 0 1 'superman-header-marker t prev-button)
+	(put-text-property 0 1 'superman-header-marker t next-button)
+	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
+    (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
 (defun superman-view-insert-capture-buttons (prey)
   "Insert capture buttons. PREY is a list of names n for 

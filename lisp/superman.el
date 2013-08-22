@@ -40,6 +40,10 @@
 (setq superman-balls
       '((todo ("width" 9) ("face" superman-get-todo-face))
 	(hdr ("width" 27) ("face" font-lock-function-name-face))
+	;; ("Nickname" ("width" 33)
+	 ;; ("name" "Nick")
+	 ;; ("face" superman-next-project-button-face)
+	 ;; ("fun" superman-make-project-button))
 	("lastvisit" ("fun" superman-trim-date) ("width" 17) ("face" font-lock-type-face) ("sort-key" t))
 	("others" ("width" 66) ("face" font-lock-keyword-face))))
 
@@ -402,6 +406,16 @@ Enabling superman mode electrifies the superman buffer for project management."
     (if dont-trim
 	marker
 	(superman-trim-string marker args))))
+
+(defun superman-make-project-button (nick &optional args)
+  (let* ((nickname (superman-trim-string nick args))
+	 (button (superman-make-button
+		  nickname
+		  `(lambda () (interactive) (superman-switch-to-project ,nick))
+		  nil
+		  ;; font-lock-string-face
+		  (concat "Switch to " nick))))
+    button))
 
 (defun superman-trim-project-nickname  (marker &optional args)
   (if (not (markerp marker));; column name
