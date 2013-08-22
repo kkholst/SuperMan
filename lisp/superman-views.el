@@ -1071,7 +1071,11 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (font-lock-mode -1)
     (font-lock-default-function nil)
     ;; insert header, set text-properties and highlight
-    (insert  (concat "Project: " (car pro)))
+    (insert (superman-make-button
+	     (concat "Project: " (car pro))
+	     'superman-redo
+	     
+	     'superman-project-button-face
     (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
@@ -1175,6 +1179,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		      (superman-make-button
 		       cat
 		       fun
+		       nil
 		       "Add new cat")
 		      "\n"))
 	    (forward-line -1)
@@ -2442,17 +2447,19 @@ not in a section prompt for section first.
     ["File list" superman-view-file-list t]
     ("Git"
      ["Git master pull-push and return" superman-view-git-master-push-pull-and-return t]
-     ["Git file-list" superman-capture-git-section t]
-     ["Git update" superman-view-git-update-status t]
+     ["Git quick update" superman-view-git-update-status t]
+     ["Git update with date" superman-view-git-update-status-with-date t]
      ["Git commit" superman-view-git-commit t]
      ["Git commit all" superman-view-git-commit-all t]
-     ["Git annotate" superman-view-git-annotate t]
      ["Git log" superman-view-git-log t]
      ["Git log (tagged versions)" superman-view-git-log-decorationonly t]
-     ["Git search" superman-view-git-search t]
-     ["Git push" superman-git-push t]
-     ["Git checkout branch" superman-git-checkout-branch t]
-     ["Git new branch" superman-git-new-branch t]
+     ["Git grep" superman-view-git-grep t]
+     ["Git annotate" superman-view-git-annotate t]
+     ["Git search (only in log mode)" superman-view-git-search t]
+     ["Git file-list" superman-capture-git-section t]
+     ;; ["Git push" superman-git-push t]
+     ;; ["Git checkout branch" superman-git-checkout-branch t]
+     ;; ["Git new branch" superman-git-new-branch t]
      ["Git init" superman-view-git-init t])
     ("Columns (balls)"
      ["New column" superman-new-ball t]
