@@ -1074,9 +1074,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (insert (superman-make-button
 	     (concat "Project: " (car pro))
 	     'superman-redo
-	     
 	     'superman-project-button-face
-    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
+	     "Refresh project view"))
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
     (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
     (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
@@ -1180,7 +1180,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		       cat
 		       fun
 		       nil
-		       "Add new cat")
+		       "Add new item")
 		      "\n"))
 	    (forward-line -1)
 	    (beginning-of-line)
@@ -2243,22 +2243,37 @@ If dont-redo the agenda is not reversed."
   (interactive)
   (let* ((filename (superman-filename-at-point))
 	 (file (file-name-nondirectory filename))
-	 (dir (if filename (expand-file-name (file-name-directory filename)))))
+	 (dir (if filename (expand-file-name (file-name-directory filename))))
+	 (fbuf (get-file-buffer file)))
+    (when (and fbuf
+	       (with-current-buffer fbuf (buffer-modified-p))
+	       (y-or-n-p (concat "Save buffer " fbuf "?")))
+      (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
-  (superman-view-git-set-status 'save (not dont-redo) nil)))
+    (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-marked-files (&optional beg end)
   (delq nil (superman-loop
 	     #'(lambda ()
 		 (or (and (superman-marked-p)
-			  (superman-filename-at-point 'no-error)))) nil beg end)))
+			  (superman-filename-at-point
+			   'no-error)))) nil beg end)))
+
+(defun superman-check-if-saved-needed
+   () (member
+       (expand-file-name (buffer-file-name)) files))
 
 (defun superman-view-git-commit-all (&optional commit dont-redo)
   (interactive)
-  (let* ((dir (get-text-property (point-min) 'git-dir)))
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 (files
+	  (mapcar 'expand-file-name 
+		  (superman-view-marked-files))))
+    ;; prevent committing unsaved buffers
+    (save-some-buffers nil 'superman-check-if-saved-needed)
     (when dir
       (superman-git-add
-       (superman-view-marked-files)
+       files
        dir
        'commit nil)
       (superman-view-git-update-status dir nil nil nil)

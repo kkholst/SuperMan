@@ -582,6 +582,7 @@ and others."
       (save-buffer))))
 
 (defun superman-delete-project (&optional project)
+  "Delete the project PROJECT from superman control."
   (interactive)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
@@ -710,8 +711,8 @@ Examples:
 
 (defun superman-select-project ()
   "Select a project from the project alist, 
-              which is modified such that 'superman-current-project'
-              is the first choice."
+The list is re-arranged such that 'superman-current-project'
+is always the first choice."
   (let* ((plist superman-project-alist)
 	 (project-array (mapcar 'superman-format-project
 				(if (not superman-current-project)
