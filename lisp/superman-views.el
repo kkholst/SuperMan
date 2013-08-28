@@ -269,6 +269,7 @@ and the keybinding to initialize git control otherwise."
 				git-dir-link))
 		    "not set. <> press `GI' to initialize git control")))
     ;; (put-text-property 0 (length "Contrl: ") 'face 'org-level-2 control)
+    (put-text-property 0 1 'superman-header-marker t button)
     (concat button " " control)))
 
 (defun superman-view-others (project)
@@ -286,6 +287,7 @@ and the keybinding to initialize git control otherwise."
 		'superman-header-button-face
 		"Set names of collaborators")))
 	  ;; (put-text-property 0 (length key) 'face 'org-level-2 key)
+	  (put-text-property 0 1 'superman-header-marker t key)
 	  (concat key " " others "\n"))
       "")))
 
@@ -360,6 +362,7 @@ and the keybinding to initialize git control otherwise."
 			   (concat "Switch to project " prev))))
 	(put-text-property 0 1 'superman-header-marker t prev-button)
 	(put-text-property 0 1 'superman-header-marker t next-button)
+	(put-text-property 0 1 'superman-header-marker t all-button)
 	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
     (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
@@ -419,6 +422,7 @@ which there is a function superman-capture-n."
 	    (point-marker)))
 	 (i 1))
     (put-text-property 0 (length title) 'superman-e-marker title-marker title)
+    (put-text-property 0 1 'superman-header-marker t title)
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
@@ -490,6 +494,7 @@ which there is a function superman-capture-n."
 	 (unison-list (superman-view-read-unison pro))
 	 (i 1))
     (put-text-property 0 (length title) 'superman-e-marker title-marker title)
+    (put-text-property 0 1 'superman-header-marker t title)
     (while unison-list
       (let* ((current-unison (car unison-list))
 	     (unison-name (car current-unison))
@@ -560,6 +565,7 @@ Translate the branch names into buttons."
 	  (setq push-pull t))
 	(insert "\n")
 	(put-text-property 0 (length title) 'face 'org-level-2 title)
+	(put-text-property 0 1 'superman-header-marker t title)
 	(insert
 	 (superman-make-button
 	  title
@@ -1538,22 +1544,25 @@ current section."
 
 (defun superman-tab (&optional arg)
   (interactive)
-  (let ((inside-header (not (previous-single-property-change (point) 'cat)))
-	(mark (next-single-property-change (+ 1 (point)) 'superman-header-marker)))
-    (if inside-header
-	(if mark
-	    (goto-char mark)
-	  (goto-char (next-single-property-change (point) 'cat)))
-      (org-cycle arg))))
+  (cond ((not (previous-single-property-change (point-at-eol) 'cat))
+	 (let ((mark (next-single-property-change (+ 1 (point)) 'superman-header-marker)))
+	   (if mark (goto-char mark)
+	     (goto-char (next-single-property-change (point) 'cat)))))
+	   (t (org-cycle arg))))
 
 (defun superman-shifttab (&optional arg)
   (interactive)
-  (let ((inside-header (not (previous-single-property-change (point) 'cat))))
-    (if inside-header
-	(let ((mark (previous-single-property-change (- (point) 1) 'superman-header-marker)))
-	  (if mark (goto-char (- mark 1))
-	    (goto-char (point-min))))
-      (org-shifttab arg))))
+  (cond
+   ((eq (point) (point-min))
+    (org-shifttab arg))
+   ((not (previous-single-property-change (point-at-eol) 'cat))
+    (let ((mark (previous-single-property-change
+		 (- (point) 1)
+		 'superman-header-marker)))
+      (if mark
+	  (goto-char (- mark 1))
+	(goto-char (point-min)))))
+   (t (org-shifttab arg))))
 
 (defun superman-one-up (&optional down)
   "Move item in project view up or down."
