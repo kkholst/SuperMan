@@ -115,7 +115,7 @@ for the supermanager. The PLIST is a list of properties for the new entry possib
 pre-specified default values.
 
 If LEVEL is given it this is the level of the new heading (default is 3).
-If scene is given it is used to determine what should happen after the capture.
+If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
   (let* ((what (car plist))
@@ -227,11 +227,15 @@ turn it off."
 	(kill-whole-line t)
 	req
 	next)
+    (goto-char (point-max))    
+    (when (superman-get-property (point) "GoogleCalendar" t nil)
+      (superman-google-export-appointment))
     (goto-char (point-min))
     (while (setq next (next-single-property-change
 		       (point-at-eol)
 		       'prop-marker))
       (goto-char next)
+      ;;
       (if (looking-at "[ \t]*\n")
 	  (if (setq req (get-text-property (point) 'required))
 	      (progn
@@ -503,9 +507,11 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 superman-view-current-project
 		 (superman-select-project)))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
-	(superman-capture-before-clean-scene-hook
-	 (list 'superman-google-export-appointment))
-	(date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
+	;; (date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
+	(date (with-temp-buffer
+		(org-time-stamp t)
+		(buffer-string))))
+    ;; (org-read-date t t)))
     (superman-capture
      pro
      (or marker "Calendar")
@@ -515,8 +521,6 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		  ("GoogleCalendar" ,superman-google-default-calendar)
 		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ('fun 'org-todo))))))
-;; (setq superman-capture-before-clean-scene-hook
-;; 'superman-google-export-appointment))
 
 ;;}}}
 ;;{{{ capture synchronization commands

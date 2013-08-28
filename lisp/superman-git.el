@@ -128,13 +128,17 @@ use the location of the current project, if no project is current prompt for pro
      (concat "Superman git checkout branch '" branch "' returns:\n\n"))
     (when superman-view-mode (superman-redo))))
 
-(defun superman-run-cmd (cmd buf &optional intro)
+(defun superman-run-cmd (cmd buf &optional intro redo-buf)
   "Execute CMD with `shell-command-to-string' and display
 result in buffer BUF. Optional INTRO is shown before the
 result."
   (let ((intro (or intro "Superman returns:\n\n"))
 	(msg (shell-command-to-string cmd)))
-    (when superman-view-mode (superman-redo))
+    (if redo-buf
+	(save-excursion
+	  (set-buffer redo-buf)
+	  (superman-redo))
+      (when superman-view-mode (superman-redo))) 
     (set-buffer (get-buffer-create buf))
     (let ((buffer-read-only nil))
       ;; (erase-buffer))
@@ -142,7 +146,7 @@ result."
 	(insert (concat
 		 (concat "\n*** " (format-time-string "<%Y-%m-%d %a %H:%M>") " "
 			 intro msg))))
-      (save-window-excursion
+      (save-excursion
 	(set-buffer buf)
 	(goto-char (point-max))
 	(re-search-backward "^***" nil t)

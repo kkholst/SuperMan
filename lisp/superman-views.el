@@ -350,7 +350,7 @@ and the keybinding to initialize git control otherwise."
 	     (all-button (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))
 	     (next-button (superman-make-button
 			   next
-			   `(lambda () (interactive) (superman-switch-to-project ,prev))
+			   `(lambda () (interactive) (superman-switch-to-project ,next))
 			   'superman-next-project-button-face
 			   (concat "Switch to project " next)))
 	     (prev-button (superman-make-button
@@ -545,7 +545,8 @@ HELP is shown when the mouse over the button."
   "Insert the git branch(es) if project is git controlled.
 Translate the branch names into buttons."
   (let ((loc (or dir
-		 (get-text-property (point-min) 'git-dir))))
+		 (get-text-property (point-min) 'git-dir)))
+	(view-buf (current-buffer)))
     (let* ((branch-list (superman-git-branches loc))
 	   (current-branch (car branch-list))
 	   (other-branches (cdr branch-list))
@@ -583,7 +584,9 @@ Translate the branch names into buttons."
 		     (superman-run-cmd
 		      ,(concat "cd " loc "; "
 			       superman-cmd-git " checkout " b "\n")
-		      "*Superman-returns*")))
+		      "*Superman-returns*"
+		      nil
+		      ,(buffer-name view-buf))))
 		 (button
 		  (superman-make-button
 		   b
@@ -2084,8 +2087,11 @@ If point is before the first category do nothing."
       (org-with-point-at m
 	(cond (superman-mode
 	       (superman-return))
-	      ((re-search-forward org-any-link-re nil t)
-	       (org-open-at-point))
+	      ((re-search-forward org-any-link-re (save-excursion
+						    (outline-end-of-subtree)
+						    (point))t)
+	       (org-open-at-point)
+	       (widen))
 	      (t
 	       (widen)
 	       (show-all)
