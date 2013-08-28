@@ -600,14 +600,17 @@ Translate the branch names into buttons."
 		   'font-lock-comment-face
 		   "Checkout branch")))
 	    (setq other-branches (cdr other-branches))
+	    (put-text-property 0 1 'superman-header-marker t button)
 	    (insert "[" button "]  ")))
 	(when (> olen 0)
+	  (let ((merge-string "-> merge"))
+	    (put-text-property 0 1 'superman-header-marker t merge-string)	    
 	  (insert (superman-make-button
-		   "-> merge"
+		   merge-string
 		   `(lambda () (interactive)
 		      (superman-git-merge-branches ,loc))
 		   'font-lock-type-face
-		   "Merge two branches")))
+		   "Merge two branches"))))
 	(when push-pull
 	  (let ((title "Remote:")
 		(pull-string "[pull]")
