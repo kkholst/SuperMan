@@ -609,27 +609,33 @@ Translate the branch names into buttons."
 		   'font-lock-type-face
 		   "Merge two branches")))
 	(when push-pull
-	  (insert "\n"
-		  (superman-make-button
-		   "Remote:"
-		   `(lambda () (interactive) (superman-run-cmd
-					      (concat "cd " ,loc ";" superman-cmd-git " remote show origin " "\n")
-					      "*Superman-returns*"
-					      (concat "`git remote show origin' run below \n" ,loc "' returns:\n\n")))
-		   'superman-header-button-face
-		   "Fetch origin of remote repository")
-		  " "
-		  (superman-make-button
-		   "[pull]"
-		   `(lambda () (interactive) (superman-git-pull ,loc))
-		   'font-lock-type-face
-		   "Pull from remote repository")
-		  " "
-		  (superman-make-button
-		   "[push]"
-		   `(lambda () (interactive) (superman-git-push ,loc))
-		   'font-lock-type-face
-		   "Push to remote repository")))))))
+	  (let ((title "Remote:")
+		(pull-string "[pull]")
+		(push-string "[push]"))
+	    (put-text-property 0 1 'superman-header-marker t title)
+	    (put-text-property 0 1 'superman-header-marker t pull-string)
+	    (put-text-property 0 1 'superman-header-marker t push-string)
+	    (insert "\n"
+		    (superman-make-button
+		     title
+		     `(lambda () (interactive) (superman-run-cmd
+						(concat "cd " ,loc ";" superman-cmd-git " remote show origin " "\n")
+						"*Superman-returns*"
+						(concat "`git remote show origin' run below \n" ,loc "' returns:\n\n")))
+		     'superman-header-button-face
+		     "Fetch origin of remote repository")
+		    " "
+		    (superman-make-button
+		     pull-string
+		     `(lambda () (interactive) (superman-git-pull ,loc))
+		     'font-lock-type-face
+		     "Pull changes from remote repository")
+		    " "
+		    (superman-make-button
+		     push-string
+		     `(lambda () (interactive) (superman-git-push ,loc))
+		     'font-lock-type-face
+		     "Push changes to remote repository"))))))))
 
 
 ;;}}}
