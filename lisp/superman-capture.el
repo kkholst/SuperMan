@@ -27,7 +27,8 @@
 
 ;;{{{ variables and hooks
 
-(defvar superman-setup-scene-hook nil "Hook run by superman-capture
+(defvar superman-setup-scene-hook nil "Hook run by superman-capture-internal
+
 just before the capture buffer is given to the user.")
 (defvar superman-capture-before-clean-scene-hook nil
 "Hook run by superman-clean-scene
@@ -107,8 +108,13 @@ If JABBER is non-nil message about non-existing headings.
 ;;}}}
 ;;{{{ superman capture
 
+(defun superman-capture ()
+  (interactive)
+  (let* ((temp (completing-read "Capture template: " superman-capture-alist))
+	 (fun (cadr (assoc temp superman-capture-alist))))
+    (call-interactively fun)))
 
-(defun superman-capture (project heading plist &optional level scene)
+(defun superman-capture-internal (project heading plist &optional level scene)
   "Superman captures entries, i.e. outline-heading, to be added to the index file of a
 PROJECT at a given HEADING. A special case is where a new projects is captured
 for the supermanager. The PLIST is a list of properties for the new entry possibly with
@@ -118,7 +124,7 @@ If LEVEL is given it this is the level of the new heading (default is 3).
 If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
-  (let* ((what (car plist))
+(let* ((what (car plist))
 	 (level (or level 3))
 	 (props (cadr plist))
 	 (kill-whole-line t)
@@ -273,7 +279,7 @@ turn it off."
     (when (window-configuration-p scene)
       (set-window-configuration scene))))
 
-;; (superman-capture superman-current-project "Notes" '("Note" (("a" "b"))))
+;; (superman-capture-internal superman-current-project "Notes" '("Note" (("a" "b"))))
 
 ;;}}}
 ;;{{{ capture documents, notes, etc.
@@ -354,17 +360,19 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		  superman-view-current-project
 		  (superman-select-project)))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
-	 (heading (if (and marker (superman-current-cat))
-		      marker
-		    "Documents"))
+	 (cat-name (get-text-property (point-at-bol) 'cat))
+	 (heading (cond (cat-name)
+			((and marker (superman-current-cat))
+			 marker)
+			(t "Documents")))
 	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
 	 (file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
-    (superman-capture
+    (superman-capture-internal
      pro
      heading
      `("Document" (("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
 		   (hdr ,(file-name-nondirectory file))
-		   ("GitStatus" ,(nth 1 (superman-git-get-status file nil))))))))
+		   ("GitStatus" ,(nth 1 (ignore-errors (superman-git-get-status file nil)))))))))
 
 
 (defun superman-view-new-project ()
@@ -423,7 +431,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (while (assoc nickname superman-project-alist)
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (superman-capture
+    (superman-capture-internal
      `("*S*" (("index" . ,superman-home)))
      (or marker category)
      `("Project" (("Nickname" ,nickname)
@@ -442,13 +450,13 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
   (interactive)
   (let ((curprop (progn (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
     (cond ((string= (downcase curprop) (downcase (superman-property 'index)))
-	   (insert (read-file-name (concat "Set " curprop ": "))))
+	   (goto-char (+ (point) (length curprop) 2))
+	   (delete-region (point) (point-at-eol))
+	   (insert " " (read-file-name (concat "Set " curprop ": "))))
 	  ((string= (downcase curprop) (downcase (superman-property 'location)))
 	   (goto-char (+ (point) (length curprop) 2))
-	   (let ((kill-whole-line t))
-	     (kill-line)) ;; kill rest of the line)
-	   (insert " ")
-	   (insert (read-directory-name (concat "Set " curprop ": ")))))))
+	   (delete-region (point) (point-at-eol))
+	   (insert " " (read-directory-name (concat "Set " curprop ": ")))))))
     
 (defun superman-capture-note (&optional project marker)
   (interactive)
@@ -456,7 +464,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 superman-view-current-project
 		 (superman-select-project)))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture pro
+    (superman-capture-internal pro
 		      (or marker "Notes")
 		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
@@ -469,7 +477,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (save-excursion
       (superman-goto-project project "Text" 'create nil nil nil ":FreeText: t")
       )
-    (superman-capture pro
+    (superman-capture-internal pro
 		      (or marker "Text")
 		      nil 0)))
 ;;		      `("Note" (("NoteDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
@@ -481,7 +489,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		   superman-view-current-project
 		   (superman-select-project)))
 	  (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture pro
+    (superman-capture-internal pro
 		      (or marker "Bookmarks")
 		      `("Bookmark" (("BookmarkDate"  ,(format-time-string "<%Y-%m-%d %a>"))
 				    ("Link" nil))))))
@@ -492,7 +500,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 superman-view-current-project
 		 (superman-select-project)))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture
+    (superman-capture-internal
      pro
      (or marker "Tasks")
      `("Task" (("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
@@ -512,7 +520,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		(org-time-stamp t)
 		(buffer-string))))
     ;; (org-read-date t t)))
-    (superman-capture
+    (superman-capture-internal
      pro
      (or marker "Calendar")
      `("Meeting" (("MeetingDate" ,date)
@@ -532,7 +540,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 (superman-select-project)))
 	(root-1 (read-directory-name "Unison root directory 1: "))
 	(root-2 (read-directory-name "Unison root directory 2: ")))
-    (superman-capture
+    (superman-capture-internal
      pro
      "Configuration"
      `("Unison" (("UNISON" "superman-unison-cmd")
@@ -612,7 +620,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	 (subject (message-fetch-field "subject"))
 	 (date (message-fetch-field "date"))
 	 (attachments (superman-save-attachments pro mailbox (current-buffer) date)))
-    (superman-capture
+    (superman-capture-internal
      entry
      "Mail"
      `("Mail" (("CaptureDate"  ,(format-time-string "<%Y-%m-%d %a>"))
@@ -674,7 +682,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 		 superman-view-current-project
 		 (superman-select-project)))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture
+    (superman-capture-internal
      pro
      marker 
      `("Section" (("Ball1" "todo :face superman-get-todo-face")

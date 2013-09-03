@@ -67,7 +67,7 @@ Returns the corresponding buffer."
 		 superman-view-current-project
 		 superman-current-project
 		 (superman-select-project))))
-    (superman-capture
+    (superman-capture-internal
           pro
 	  "Configuration"
      `("Config" (("Config" ,(superman-current-config)))))))

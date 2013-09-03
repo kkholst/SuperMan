@@ -231,17 +231,19 @@ to an integer then do not trim the string STR."
 	date-string)
     (if (< len 1) (setq len 13))
     (if (string-match org-ts-regexp0 date)
-	(let ((age (abs (org-time-stamp-to-now date))))
-	  (cond ((= age 0)
+	(let* ((days (org-time-stamp-to-now date)))
+	  (cond ((= days 0)
 		 (setq date "today"))
-		((= age 1)
+		((= days 1)
 		 (setq date "yesterday"))
-		(t (setq date (concat (int-to-string age) " days ago"))))
+		((> days 0)
+		 (setq date (concat "in " (int-to-string days) " days")))
+		(t (setq date (concat (int-to-string (abs days)) " days ago"))))
 	  (setq date-string (superman-trim-string date len))
-	  (put-text-property 0 (length date-string) 'sort-key age date-string))
+	  (put-text-property 0 (length date-string) 'sort-key (abs days) date-string))
       (setq date-string (superman-trim-string date len))
       (put-text-property 0 (length date-string) 'sort-key 0 date-string))
-      date-string))
+    date-string))
 
 (defun superman-view-current-project (&optional no-error)
   "Identifies the project associated with the current view buffer
@@ -1044,8 +1046,6 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			  ,(superman-read-balls (point))))))
 	  (reverse cats))))))
 
-
-
 (defun superman-view-project (&optional project)
   "Display the current project in a view buffer."
   (interactive)
@@ -1196,17 +1196,17 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			;; (intern (concat "superman-capture-" (downcase cat)))
 			(cadr (assoc cat superman-capture-alist))
 			'superman-capture-item)))
-	      (insert "\n** "
+	      (insert "\n"
 		      (superman-make-button
-		       cat
+		       (concat "** " cat)
 		       fun
-		       nil
+		       'superman-capture-button-face
 		       "Add new item")
 		      "\n"))
 	    (forward-line -1)
 	    (beginning-of-line)
 	    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
-	    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-capture-button-face)
+	    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-capture-button-face)
 	    (put-text-property (point-at-bol) (point-at-eol) 'cat cat)
 	    (put-text-property (point-at-bol) (point-at-eol) 'n-items count)
 	    (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
@@ -2460,7 +2460,7 @@ not in a section prompt for section first.
       (re-search-forward cat nil t))
     (if fun (funcall (cadr fun) pro)
       (let* ((props (superman-view-property-keys)))
-	(superman-capture
+	(superman-capture-internal
 	 pro
 	 (or marker cat)
 	 `("Item"

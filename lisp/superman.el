@@ -197,14 +197,22 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     (insert "\n")
-    (superman-view-insert-capture-buttons '("Project"))
+    (superman-view-insert-capture-buttons '("New project"))
     (insert "\n")
     ;; loop over categories
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
+	     (cat-fun `(lambda () (interactive)
+			 (superman-capture-project nil ,cat-name)))
 	     (tail (cdr cat)))
-	(insert "\n** " cat-name)
+	;; (insert "\n** " cat-name)
+	(insert "\n** "
+		(superman-make-button
+		 cat-name
+		 cat-fun
+		 'superman-capture-button-face
+		 (concat "Add project in category " cat-name)))
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'balls superman-balls)
