@@ -556,6 +556,8 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		     superman-current-project
 		     (superman-switch-to-project nil t)))
 	    cmd)
+	;; prevent synchronizing unsaved buffers
+	(save-some-buffers nil t)
 	(superman-goto-project pro "Configuration" 'create nil nil nil)
 	(org-narrow-to-subtree)
 	(goto-char (point-min))

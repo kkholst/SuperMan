@@ -412,7 +412,7 @@ which there is a function superman-capture-n."
 		  (superman-select-project)))
 	 (title
 	  (superman-make-button
-	   "Config:"
+	   "View-S:"
 	   'superman-capture-config
 	   'superman-header-button-face
 	   "Capture current window configuration"))
@@ -556,91 +556,98 @@ Translate the branch names into buttons."
 	(view-buf (current-buffer)))
     (let* ((branch-list (superman-git-branches loc))
 	   (current-branch (car branch-list))
+	   (remote (car (member-if (lambda (x) (string-match "^remotes/" x)) branch-list)))
 	   (other-branches (cdr branch-list))
-	   (title "Branch:")
-	   (olen (length other-branches))
-	   push-pull)
-      (when branch-list
-	(setq other-branches
-	      (delete-if (lambda (x) (string-match "remotes/origin" x)) other-branches))
-	(when (< (length other-branches) olen)
-	  (setq push-pull t))
-	(insert "\n")
-	(put-text-property 0 (length title) 'face 'org-level-2 title)
-	(put-text-property 0 1 'superman-header-marker t title)
-	(insert
-	 (superman-make-button
-	  title
-	  'superman-git-new-branch
-	  'superman-header-button-face
-	  "Create new git branch")
-	 " ")
-	(put-text-property
-	 0 1
-	 'superman-header-marker t current-branch)
-	(superman-make-button
-	 current-branch
-	 'superman-view-git-status
-	 'font-lock-warning-face
-	 "View git status")
-	(insert "[" current-branch "]  ")
-	(while other-branches
-	  (let* ((b (car other-branches))
-		 (fun
-		  `(lambda ()
-		     (interactive)
-		     (superman-run-cmd
-		      ,(concat "cd " loc "; "
-			       superman-cmd-git " checkout " b "\n")
-		      "*Superman-returns*"
-		      nil
-		      ,(buffer-name view-buf))))
-		 (button
-		  (superman-make-button
-		   b
-		   fun
-		   'font-lock-comment-face
-		   "Checkout branch")))
-	    (setq other-branches (cdr other-branches))
-	    (put-text-property 0 1 'superman-header-marker t button)
-	    (insert "[" button "]  ")))
-	(when (> olen 0)
-	  (let ((merge-string "-> merge"))
-	    (put-text-property 0 1 'superman-header-marker t merge-string)	    
+	   (title "Branch:"))
+      (when remote 
+	(setq other-branches (delete remote other-branches)))
+      (insert "\n")
+      (put-text-property 0 (length title) 'face 'org-level-2 title)
+      (put-text-property 0 1 'superman-header-marker t title)
+      (insert
+       (superman-make-button
+	title
+	'superman-git-new-branch
+	'superman-header-button-face
+	"Create new git branch")
+       " ")
+      (put-text-property
+       0 1
+       'superman-header-marker t current-branch)
+      (superman-make-button
+       current-branch
+       'superman-view-git-status
+       'font-lock-warning-face
+       "View git status")
+      (insert "[" current-branch "]  ")
+      (while other-branches
+	(let* ((b (car other-branches))
+	       (fun
+		`(lambda ()
+		   (interactive)
+		   (superman-run-cmd
+		    ,(concat "cd " loc "; "
+			     superman-cmd-git " checkout " b "\n")
+		    "*Superman-returns*"
+		    nil
+		    ,(buffer-name view-buf))))
+	       (button
+		(superman-make-button
+		 b
+		 fun
+		 'font-lock-comment-face
+		 "Checkout branch")))
+	  (setq other-branches (cdr other-branches))
+	  (put-text-property 0 1 'superman-header-marker t button)
+	  (insert "[" button "]  ")))
+      (when (> (length other-branches) 0)
+	(let ((merge-string "-> merge"))
+	  (put-text-property 0 1 'superman-header-marker t merge-string)	    
 	  (insert (superman-make-button
 		   merge-string
 		   `(lambda () (interactive)
 		      (superman-git-merge-branches ,loc))
 		   'font-lock-type-face
 		   "Merge two branches"))))
-	(when push-pull
-	  (let ((title "Remote:")
-		(pull-string "[pull]")
-		(push-string "[push]"))
-	    (put-text-property 0 1 'superman-header-marker t title)
-	    (put-text-property 0 1 'superman-header-marker t pull-string)
-	    (put-text-property 0 1 'superman-header-marker t push-string)
-	    (insert "\n"
-		    (superman-make-button
-		     title
-		     `(lambda () (interactive) (superman-run-cmd
-						(concat "cd " ,loc ";" superman-cmd-git " remote show origin " "\n")
-						"*Superman-returns*"
-						(concat "`git remote show origin' run below \n" ,loc "' returns:\n\n")))
-		     'superman-header-button-face
-		     "Fetch origin of remote repository")
-		    " "
-		    (superman-make-button
-		     pull-string
-		     `(lambda () (interactive) (superman-git-pull ,loc))
-		     'font-lock-type-face
-		     "Pull changes from remote repository")
-		    " "
-		    (superman-make-button
-		     push-string
-		     `(lambda () (interactive) (superman-git-push ,loc))
-		     'font-lock-type-face
-		     "Push changes to remote repository"))))))))
+      (when remote
+	(let* ((title "Remote:")
+	       (svn-p (string-match "svn" remote))
+	       (pull-string (if svn-p "rebase" "[pull]"))
+	       (push-string (if svn-p "dcommit" "[push]"))
+	       (pull-cmd (if svn-p "svn rebase" "pull"))
+	       (push-cmd (if svn-p "svn dcommit" "push"))
+	       (remote-cmd (if svn-p "svn fetch" "remote show origin")))
+			   	       ;; git diff --name-status remotes/git-svn
+	  (put-text-property 0 1 'superman-header-marker t title)
+	  (put-text-property 0 1 'superman-header-marker t pull-string)
+	  (put-text-property 0 1 'superman-header-marker t push-string)
+	  (insert "\n"
+		  (superman-make-button
+		   title
+		   `(lambda () (interactive) (superman-run-cmd
+					      (concat "cd " ,loc ";" ,superman-cmd-git " " ,remote-cmd "\n")
+					      "*Superman-returns*"
+					      (concat "`" ,superman-cmd-git " " ,remote-cmd " run below \n" ,loc "' returns:\n\n")))
+		   'superman-header-button-face
+		   "Fetch origin of remote repository")
+		  " "
+		  (superman-make-button
+		   pull-string
+		   `(lambda () (interactive)
+		      (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " " ,pull-cmd "\n")
+					"*Superman-returns*"
+					(concat "`" ,superman-cmd-git " " ,pull-cmd "' run below \n" ,loc "' returns:\n\n")))
+		   'font-lock-type-face
+		   "Pull changes from remote repository")
+		  " "
+		  (superman-make-button
+		   push-string
+		   `(lambda () (interactive)
+		      (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " " ,push-cmd "\n")
+					"*Superman-returns*"
+					(concat "`" ,superman-cmd-git " " ,push-cmd "' run below \n" ,loc "' returns:\n\n")))
+		   'font-lock-type-face
+		   "Push changes to remote repository")))))))
 
 
 ;;}}}
