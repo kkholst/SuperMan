@@ -560,7 +560,8 @@ Translate the branch names into buttons."
 	   (other-branches (cdr branch-list))
 	   (title "Branch:"))
       (when remote 
-	(setq other-branches (delete remote other-branches)))
+	;; (setq other-branches (delete remote other-branches)))
+	(setq other-branches (delete-if (lambda (x) (string-match "remotes/" x)) other-branches)))
       (insert "\n")
       (put-text-property 0 (length title) 'face 'org-level-2 title)
       (put-text-property 0 1 'superman-header-marker t title)
