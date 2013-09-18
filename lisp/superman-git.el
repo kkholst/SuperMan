@@ -559,9 +559,11 @@ or if the file is not inside the location."
 
 (defun superman-git-comment-at-point ()
   (interactive)
-  (let* ((pom (org-get-at-bol 'org-hd-marker))
-	 (path (superman-get-property pom (superman-property 'gitpath) t))
-	 (hash (superman-get-property pom (superman-property 'hash) nil)))
+  (let* ((hash (org-get-at-bol 'org-hd-marker))
+	 (path (get-text-property (point-min) 'dir))
+	 ;;(path (superman-get-property pom (superman-property 'gitpath) t))
+	 ;;(hash (superman-get-property pom (superman-property 'hash) nil))))
+	 )
     (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
 
 (defun superman-git-tag ()

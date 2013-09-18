@@ -96,6 +96,16 @@
 ;;}}}
 ;;{{{ superman 
 
+(defun superman-popup-tip (msg)
+  (save-excursion
+    (goto-char (point-min))
+    (tooltip-show msg)))
+;;    (popup-tip msg)))
+
+(defvar superman-help-fun 'superman-popup-tip 
+  "Function used to display help. Possible values 'tooltip-show or 'popup-tip (depends on popup.el)") 
+
+
 (defun superman-make-header ()
   "Insert header into superman project view buffer"
   (goto-char (point-min))
