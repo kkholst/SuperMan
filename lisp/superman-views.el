@@ -375,7 +375,7 @@ which there is a function superman-capture-n."
 	 ;; (capture-alist superman-capture-alist)
 	 (cat-list
 	  (or prey 
-	      '("Document" "Task" "Note" "Bookmark")))
+	      '("Document" "Task" "Note" "Bookmark" "Meeting")))
 	 (i 1))
     (while cat-list
       (let* ((cat (car cat-list))
@@ -554,9 +554,11 @@ Translate the branch names into buttons."
   (let ((loc (or dir
 		 (get-text-property (point-min) 'git-dir)))
 	(view-buf (current-buffer)))
-    (let* ((branch-list (superman-git-branches loc))
+    (let* ((branch-list (delq nil (superman-git-branches loc)))
 	   (current-branch (car branch-list))
-	   (remote (car (member-if (lambda (x) (string-match "^remotes/" x)) branch-list)))
+	   (remote (car (member-if
+			 (lambda (x)
+			   (string-match "^remotes/" x)) branch-list)))
 	   (other-branches (cdr branch-list))
 	   (title "Branch:"))
       (when remote 
@@ -618,7 +620,7 @@ Translate the branch names into buttons."
 	       (pull-cmd (if svn-p "svn rebase" "pull"))
 	       (push-cmd (if svn-p "svn dcommit" "push"))
 	       (remote-cmd (if svn-p "svn fetch" "remote show origin")))
-			   	       ;; git diff --name-status remotes/git-svn
+	  ;; git diff --name-status remotes/git-svn
 	  (put-text-property 0 1 'superman-header-marker t title)
 	  (put-text-property 0 1 'superman-header-marker t pull-string)
 	  (put-text-property 0 1 'superman-header-marker t push-string)
@@ -1225,9 +1227,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 		(progn (end-of-line)
 		       (unless free (insert " [" (int-to-string count) "]"))
 		       ;; (when (assoc "GitStatus" balls)
-			 ;; (insert "\t"  (superman-make-button
-					;; "Update git status"
-					;; 'superman-view-git-update-status)))
+		       ;; (insert "\t"  (superman-make-button
+		       ;; "Update git status"
+		       ;; 'superman-view-git-update-status)))
 		       ;; insert hot-keys or blank line
 		       (end-of-line)
 		       (insert "\n")
@@ -1943,7 +1945,7 @@ If point is before the first category do nothing."
 			    (file-name-nondirectory file))))
 	  (if (string-match
 	       (superman-get-property marker "GitStatus")
-	       "Committed\\|Modified")
+	       "Committed\\|Modified\\|Unknown")
 	      (shell-command (concat
 			      "cd "
 			      (file-name-directory file)
@@ -2198,11 +2200,15 @@ lengthy on some systems."
     (if (not dir)
 	(message "Argument DIR is required in this case.")
       (if with-date
-	  (superman-loop 'superman-view-set-status-at-point nil beg end nil)
-	(let* ((git-status-list (delete ""
-					(split-string
-					 (shell-command-to-string
-					  (concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+	  (superman-loop
+	   'superman-view-set-status-at-point nil beg end nil)
+	;; quickly update by comparing file lists
+	(let* ((git-status-list
+		(delete
+		 ""
+		 (split-string
+		  (shell-command-to-string
+		   (concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
 	       (git-status
 		(shell-command-to-string
 		 (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
@@ -2218,9 +2224,10 @@ lengthy on some systems."
 	  ;; check status for all entries 
 	  ;; by comparing the filename (if any) against git-status-list
 	  (save-excursion
-	    (when superman-view-mode (set-buffer
-				      (get-file-buffer
-				       (get-text-property (point-min) 'index))))
+	    (when superman-view-mode
+	      (set-buffer
+	       (get-file-buffer
+		(get-text-property (point-min) 'index))))
 	    (goto-char (or beg (point-min)))
 	    (while (and (re-search-forward ":filename:" end t)
 			(setq file (superman-filename-at-point 'noerror)))
@@ -2229,7 +2236,8 @@ lengthy on some systems."
 			  (superman-status-label
 			   (or (cdr (assoc (file-relative-name file dir)
 					   status-list)) "C"))
-			"Untracked"))
+			(if (file-exists-p file)
+			    "Untracked" "Nonexistent")))
 		     (current-status
 		      (superman-get-property (point) "GitStatus")))
 		(unless (or (string= status "Untracked") (string= status current-status))
@@ -2251,24 +2259,24 @@ lengthy on some systems."
       (insert  (concat "cd " dir ";" superman-cmd-git " push")))))
 
 
-(defun superman-view-git-master-push-pull-and-return (&optional project masterbranch)
-  (interactive)
-  (let* ((dir (get-text-property (point-min) 'git-dir))
-	 (gitsvn (file-exists-p (concat dir "/.git/svn")))
-	 (current (replace-regexp-in-string "* " "" (car (superman-git-branches dir))))
-	 (master (or masterbranch "master"))
-	 (cmd (concat "cd " dir ";" superman-cmd-git " ")))	 
-    (shell-command (concat cmd "checkout " master))
-    (if gitsvn 
-	(shell-command (concat cmd "pull"))
-      (shell-command (concat cmd "svn rebase")))
-    (shell-command (concat cmd "merge " current))
-    (if gitsvn 
-	(shell-command (concat cmd "push"))
-      (shell-command (concat cmd "svn push")))
-    (shell-command (concat cmd "checkout " current))
-    (shell-command (concat cmd "merge " master))
-))
+;; (defun superman-view-git-master-push-pull-and-return (&optional project masterbranch)
+;; (interactive)
+;; (let* ((dir (get-text-property (point-min) 'git-dir))
+;; (gitsvn (file-exists-p (concat dir "/.git/svn")))
+;; (current (replace-regexp-in-string "* " "" (car (superman-git-branches dir))))
+;; (master (or masterbranch "master"))
+;; (cmd (concat "cd " dir ";" superman-cmd-git " ")))	 
+;; (shell-command (concat cmd "checkout " master))
+;; (if gitsvn 
+;; (shell-command (concat cmd "pull"))
+;; (shell-command (concat cmd "svn rebase")))
+;; (shell-command (concat cmd "merge " current))
+;; (if gitsvn 
+;; (shell-command (concat cmd "push"))
+;; (shell-command (concat cmd "svn push")))
+;; (shell-command (concat cmd "checkout " current))
+;; (shell-command (concat cmd "merge " master))
+;; ))
 
 (defun superman-view-git-commit (&optional dont-redo)
   "Add and commit the file given by the filename property
@@ -2407,7 +2415,7 @@ for git and other actions like commit, history search and pretty log-view."
 
 ;; Git control
 (define-key superman-view-mode-map "GA" 'superman-capture-git-section)
-(define-key superman-view-mode-map "GM" 'superman-view-git-master-push-pull-and-return)
+;; (define-key superman-view-mode-map "GM" 'superman-view-git-master-push-pull-and-return)
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
 (define-key superman-view-mode-map "GC" 'superman-view-git-commit-all)
@@ -2454,25 +2462,32 @@ not in a section prompt for section first.
 		  (superman-select-project)))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (cat (or (superman-current-cat)
-		   (completing-read
-			(concat "Choose category for new item in project " (car  pro) ": ")
-			(append
-			 superman-capture-alist
-			 (superman-parse-cats
-			 (get-file-buffer
-			  (superman-get-index pro)) 1)))))
+		  (completing-read
+		   (concat "Choose category for new item in project " (car  pro) ": ")
+		   (append
+		    superman-capture-alist
+		    (superman-parse-cats
+		     (get-file-buffer
+		      (superman-get-index pro)) 1)))))
 	 (fun (assoc cat superman-capture-alist)))
     (unless superman-view-mode
       (superman-view-project pro)
       (goto-char (point-min))
       (re-search-forward cat nil t))
     (if fun (funcall (cadr fun) pro)
-      (let* ((props (superman-view-property-keys)))
+      (let* ((props (mapcar #'(lambda (x) (list x nil))
+			    (superman-view-property-keys)))
+	     (file (if (assoc "FileName" props)
+		       (let ((dir (expand-file-name (concat (superman-get-location pro) (car pro)))))
+			 (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))))
+	(when file
+	  (setq props (delete (assoc "FileName" props) props))
+	  (setq props (append `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]")))
+			      props)))
 	(superman-capture-internal
 	 pro
 	 (or marker cat)
-	 `("Item"
-	   ,(mapcar #'(lambda (p) (list p nil)) props)))))))
+	 `("Item" ,props))))))
 
 ;;}}}
 ;;{{{ easy menu
@@ -2496,9 +2511,8 @@ not in a section prompt for section first.
     ["Dired" superman-view-dired t]
     ["File list" superman-view-file-list t]
     ("Git"
-     ["Git master pull-push and return" superman-view-git-master-push-pull-and-return t]
-     ["Git quick update" superman-view-git-update-status t]
-     ["Git update with date" superman-view-git-update-status-with-date t]
+     ["Git update" superman-view-git-update-status t]
+     ["Git update last commit date" superman-view-git-update-status-with-date t]
      ["Git commit" superman-view-git-commit t]
      ["Git commit all" superman-view-git-commit-all t]
      ["Git log" superman-view-git-log t]

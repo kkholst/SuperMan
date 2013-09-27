@@ -124,7 +124,7 @@ If LEVEL is given it this is the level of the new heading (default is 3).
 If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
-(let* ((what (car plist))
+  (let* ((what (car plist))
 	 (level (or level 3))
 	 (props (cadr plist))
 	 (kill-whole-line t)
@@ -182,12 +182,12 @@ Default is to set the old window configuration.
 			 (req (nth 2 el)))
 		    (cond ((stringp key)
 			   (ignore-errors
-		   (insert "\n:" key ": ")
-		   ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-		   (put-text-property (- (point) 1) (point) 'prop-marker (point))
-		   (if req 
-		       (put-text-property (- (point) 1) (point) 'required "required-field"))
-		   (when val (insert (superman-make-value val)))))
+			     (insert "\n:" key ": ")
+			     ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+			     (put-text-property (- (point) 1) (point) 'prop-marker (point))
+			     (if req 
+				 (put-text-property (- (point) 1) (point) 'required "required-field"))
+			     (when val (insert (superman-make-value val)))))
 			  ((eq key 'fun) (ignore-errors (funcall (cdr el))))
 			  ((eq key 'hdr) (ignore-errors
 					   (save-excursion
@@ -730,25 +730,24 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 	(progn
 	  (forward-line -1)
 	  (org-cut-subtree)
-	  (delete-blank-lines))
-      ) (superman-goto-project pro "GitFiles" 'create nil nil nil)
-
+	  (delete-blank-lines)))
+    (superman-goto-project pro "GitFiles" 'create nil nil nil)
     (find-file (superman-get-index pro))
     (widen)
     (show-all)
     (goto-char (point-max))  
     (maphash (lambda (keys vv) 	       
 	       (insert (concat "** " keys "\n\n"))
-	       ;;(message (concat "adding " el))
 	       (while vv
-		 (insert (make-string level (string-to-char "*"))
-			 " "
-			 (car vv)
-			 "\n:PROPERTIES:"
-			 "\n:FileName: [[" (abbreviate-file-name (expand-file-name (concat (if (string= keys "/") "." keys) "/" (car vv)) gittop)) "]]"
-			 "\n:GitStatus: Unknown"
-			 ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
-			 "\n:END:\n\n")
+		 (let ((filename (abbreviate-file-name (expand-file-name (concat (if (string= keys "/") "." keys) "/" (car vv)) gittop))))
+		   (insert (make-string level (string-to-char "*"))
+			   " "
+			   (car vv)
+			   "\n:PROPERTIES:"
+			   "\n:FileName: [[" filename "]]"
+			   "\n:GitStatus: " (if (file-exists-p filename) "Unknown" "Removed")
+			   ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
+			   "\n:END:\n\n"))
 		 (setq vv (cdr vv)))) file-hash)
     (superman-view-project pro)
     (superman-redo)))

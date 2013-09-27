@@ -258,7 +258,7 @@ file FILE in directory DIR where n is determined by ARG."
 	       (concat  "cd " dir ";" superman-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- "
 			file "  | head -1")
 	     (concat "cd " dir ";" superman-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file))))
-         (date (if (string= date-string "") "" (superman-read-git-date date-string)))
+         (date (if (or (string= date-string "") (string-match "^fatal:" date-string)) "" (superman-read-git-date date-string)))
 	 (mess (shell-command-to-string
 		(if (string= arg "first")
 		    (concat "cd " dir ";" superman-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
