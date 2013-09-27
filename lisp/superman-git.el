@@ -559,9 +559,11 @@ or if the file is not inside the location."
 
 (defun superman-git-comment-at-point ()
   (interactive)
-  (let* ((pom (org-get-at-bol 'org-hd-marker))
-	 (path (superman-get-property pom (superman-property 'gitpath) t))
-	 (hash (superman-get-property pom (superman-property 'hash) nil)))
+  (let* ((hash (org-get-at-bol 'org-hd-marker))
+	 (path (get-text-property (point-min) 'dir))
+	 ;;(path (superman-get-property pom (superman-property 'gitpath) t))
+	 ;;(hash (superman-get-property pom (superman-property 'hash) nil))))
+	 )
     (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
 
 (defun superman-git-tag ()
@@ -596,15 +598,20 @@ or if the file is not inside the location."
          (path (get-text-property (point-min) 'dir))
 	 (hash (get-text-property (point-at-bol) 'org-hd-marker))
 	 (fileabs (concat path file))
-	 (filehash (concat hash "_" file))
+	 (ext (file-name-extension file))
+	 (filehash (concat (file-name-sans-extension (file-name-nondirectory file)) "_" hash (if ext (concat "." ext))))
 	 (str (shell-command-to-string 
 	       (concat "cd " path ";" superman-cmd-git " show " hash ":" file))))
     (if diff (find-file fileabs))
     (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
+    (setq buffer-file-name filehash)
+    (normal-mode) ;; Get default major-mode 
     (erase-buffer)  
     (insert str)
-    (normal-mode) ;; Get default major-mode 
+    (setq buffer-file-name nil)
+    (goto-char (point-min))
     (if diff (ediff-buffers (file-name-nondirectory file) filehash))))
+
 
 ;;}}}
 

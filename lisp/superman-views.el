@@ -1715,11 +1715,11 @@ current section."
 	   prop))
 	(setq balls (cdr balls)))
       (set-buffer (marker-buffer marker))
+      (goto-char marker)
       (widen)
       (show-all)
       (switch-to-buffer
        (make-indirect-buffer (marker-buffer marker) E-buf))
-      (goto-char marker)
       ;; narrow to section
       (org-narrow-to-subtree)
       ;; narrow to item
