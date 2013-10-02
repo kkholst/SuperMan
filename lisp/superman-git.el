@@ -319,7 +319,9 @@ buffer is in org-agenda-mode."
 	 "Modified")
 	((string= status "C")
 	 "Committed")
-	(t "Unknown")))
+	((string= status "D")
+	 "Deleted")
+	(t status)))
 
 ;;}}}
 ;;{{{ set and update status

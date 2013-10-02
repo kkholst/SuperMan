@@ -723,9 +723,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 		      (mapconcat 'identity direl "/" )
 		    "/")))
       (puthash dir (push filename (gethash dir file-hash)) file-hash)
-      (setq file-list (cdr file-list)))
-      )
-
+      (setq file-list (cdr file-list))))
     (if headingfound
 	(progn
 	  (forward-line -1)
