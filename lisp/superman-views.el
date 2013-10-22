@@ -2053,10 +2053,11 @@ If point is before the first category do nothing."
 	 (file
 	  ;; (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
 	  (or (if m (org-link-display-format (superman-get-property m "filename")))
-	      (get-text-property (point-min) 'git-dir)))
+	      (get-text-property (point-min) 'git-dir)
+	      (buffer-file-name)))
 	 (dir (if m (file-name-directory file) (file-name-as-directory file)))
 	 (curdir default-directory)
-	 (bufn (concat "*history: " dir "*"))
+	 (bufn (concat "*history: " file "*"))
 	)
     (when dir
       ;; (vc-print-log-internal
@@ -2538,6 +2539,7 @@ not in a section prompt for section first.
     ["Dired" superman-view-dired t]
     ["File list" superman-view-file-list t]
     ("Git"
+     ["Git history" superman-view-git-history t]
      ["Git update" superman-view-git-update-status t]
      ["Git update last commit date" superman-view-git-update-status-with-date t]
      ["Git commit" superman-view-git-commit t]
