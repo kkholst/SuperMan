@@ -151,7 +151,7 @@ the `superman-home'.")
 
 (setq superman-config-action-alist '(("INDEX" . superman-find-index)
 				    ("TODO" . superman-project-todo)
-				    ("TIMELINE" . superman-timeline)
+				    ("TIMELINE" . superman-project-timeline)
 				    ("LOCATION" . superman-location)
 				    ("DOCUMENTS" . superman-view-documents)
 				    ("FILELIST" . superman-file-list)
@@ -614,15 +614,14 @@ and others."
 ;;}}}
 ;;{{{ setting project properties
 
-(defun superman-project-agenda ()
-    "Show an agenda of all the projects. Useful, e.g. for toggling
-the active status of projects."
-    (interactive)
-    (find-file superman-home)
-    (push ?t unread-command-events)
-    (push ?< unread-command-events)
-    (call-interactively 'org-agenda))  
-
+;; (defun superman-project-agenda ()
+    ;; "Show an agenda of all the projects. Useful, e.g. for toggling
+;; the active status of projects."
+    ;; (interactive)
+    ;; (find-file superman-home)
+    ;; (push ?t unread-command-events)
+    ;; (push ?< unread-command-events)
+    ;; (call-interactively 'org-agenda))  
 
 (defun superman-set-nickname ()
   (interactive)

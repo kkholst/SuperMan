@@ -235,17 +235,19 @@ given in superman notation."
   (let ((loc (concat (superman-get-location project) (car project))))
     (find-file loc)))
 
-(defun superman-timeline (project)
+(defun superman-project-timeline (&optional project)
   "Display a project specific timeline based on the index file."
   (interactive)
-  (let* ((index (superman-get-index project))
+  (let* ((project (or project superman-current-project (superman-select-project)))
+	 (index (superman-get-index project))
 	 (org-agenda-window-setup 'current-window)
 	 (org-agenda-sticky nil)
+	 (org-agenda-redo-command 'superman-project-timeline)
 	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
     (if (file-exists-p index)
 	(progn
-	  ;; to be 100% sure that the agenda is not accidentally written
-	  ;; to the index file
+	  ;; we need to be 100% sure that the agenda is not accidentally 
+	  ;; written to the index file, but how?
 	  (switch-to-buffer
 	   (get-buffer-create org-agenda-buffer-name))
 	  (find-file index)
@@ -273,10 +275,12 @@ given in superman notation."
 (defun superman-project-todo (&optional project)
   "Display a project specific todo-list based on all org files."
   (interactive)
-  (let ((loc (superman-project-home superman-current-project)))
+  (let* ((project (or project superman-current-project (superman-select-project)))
+	(loc (superman-project-home project)))
     (if (file-exists-p loc)
 	(let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
 	       (org-agenda-sticky nil)
+	       (org-agenda-redo-command 'superman-project-todo)
 	       (org-agenda-custom-commands
 		(when (file-exists-p loc)
 		  `(("T" "Projects-TODO"
@@ -293,7 +297,7 @@ given in superman notation."
 		       (lambda ()
 			 (superman-format-agenda
 			  superman-project-todolist-balls
-			  'superman-todo
+			  '(superman-project-todo)
 			  "Project ToDo list")))))))))
 	  ;; to be 100% sure that the agenda is not accidentally written
 	  ;; to the index file
