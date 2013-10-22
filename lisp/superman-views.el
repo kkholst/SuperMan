@@ -2041,8 +2041,9 @@ If point is before the first category do nothing."
       ;; (message dir)
       (save-window-excursion
 	;;(superman-view-index)
+	(setq dir (concat dir "/"))
 	(setq default-directory dir)
-	(vc-git-print-log (concat dir ")") bufn t)
+	(vc-git-print-log dir bufn t)
 	)
       (setq default-directory curdir)
       (switch-to-buffer bufn)
