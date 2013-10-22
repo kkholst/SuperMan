@@ -125,7 +125,11 @@
 				   (concat superman-google-cmd " calendar add --cal \"" g-cal "\" \"" text " on " g-date g-time "\""))))
 		;; (g-doit (y-or-n-p (concat "Add to google calendar?: " g-command))))
 		;; (when g-doit
-		(shell-command g-command))))))))
+		(superman-run-cmd g-command
+				  "*Superman-google-calendar*"
+				  (concat "Running\n" g-command " returned:\n\n"))
+		(sit-for 5))))))))
+;; (shell-command-to-string g-command))))))))
 
 (provide 'superman-google)
 ;;; superman-google.el ends here

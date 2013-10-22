@@ -207,7 +207,7 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     (insert "\n")
-    (superman-view-insert-capture-buttons '("New project"))
+    (superman-view-insert-capture-buttons '(("New project" . superman-capture-project)))
     (insert "\n")
     ;; loop over categories
     (while cat-alist
@@ -476,7 +476,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (defun superman-format-agenda (&optional balls redo title buttons)
   (let ((balls (or balls superman-agenda-balls))
-	(redo-cmd org-agenda-redo-command)
+	;; (redo-cmd org-agenda-redo-command)
 	(count 0)
 	agenda-buffers)
     (save-excursion
@@ -491,7 +491,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       (insert (or title "* SupermanAgenda"))
       (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
-      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
+      ;; (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
