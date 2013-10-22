@@ -207,7 +207,7 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     (insert "\n")
-    (superman-view-insert-capture-buttons '("New project"))
+    (superman-view-insert-capture-buttons '(("New project" . superman-capture-project)))
     (insert "\n")
     ;; loop over categories
     (while cat-alist

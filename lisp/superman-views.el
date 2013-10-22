@@ -326,7 +326,10 @@ and the keybinding to initialize git control otherwise."
 	  (goto-char (point-min))
 	  (while (outline-next-heading)
 	    (let ((config (or (superman-get-property (point) "Config")
-			      (cdr (assoc (downcase (org-get-heading t t)) superman-config-alist))))
+			      (cdr (assoc
+				    (downcase
+				     (or (org-get-heading t t) "Untitled"))
+				     superman-config-alist))))
 		  (hdr (or (org-get-heading t t) "NoHeading")))
 	      (when config 
 		(setq
@@ -368,21 +371,38 @@ and the keybinding to initialize git control otherwise."
 	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
     (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
-(defun superman-view-insert-capture-buttons (prey)
-  "Insert capture buttons. PREY is a list of names n for 
-which there is a function superman-capture-n."
+(defun superman-view-insert-capture-buttons (&optional button-list)
+  "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
+which there is a function `superman-capture-n'. If omitted, it is set to
+  '((\"Document\" 'superman-capture-document)
+    (\"Task\" 'superman-capture-task)
+    (\"Note\" 'superman-capture-note)
+    (\"Bookmark\" 'superman-capture-bookmark)
+    (\"Meeting\" 'superman-capture-meeting))
+"
   (let* ((title "")
 	 ;; (capture-alist superman-capture-alist)
-	 (cat-list
-	  (or prey 
-	      '("Document" "Task" "Note" "Bookmark" "Meeting")))
+	 (b-list
+	  (or button-list
+	      '(("Document" 'superman-capture-document)
+		("Task" 'superman-capture-task)
+		("Note" 'superman-capture-note)
+		("Bookmark" 'superman-capture-bookmark)
+		("Meeting" 'superman-capture-meeting))))
 	 (i 1))
-    (while cat-list
-      (let* ((cat (car cat-list))
-	     ;; (cat-name (substring cat 0 1))
-	     (cat-name cat)
-	     (cmd (intern (concat "superman-capture-" (downcase cat))))
+    (while b-list
+      (let* ((b (car b-list))
+	     ;; (b-name (substring b 0 1))
+	     (b-name (car b))
+	     (fun (cdr b))
+	     (cmd (if fun
+		      (if (consp fun)
+			  (cdr fun)
+			  (cadr (intern fun)))
+		    (intern (concat "superman-capture-" (downcase b-name)))))
 	     (map (make-sparse-keymap)))
+	(unless (functionp cmd)
+	  (setq cmd 'superman-capture-item))
 	(define-key map [mouse-2] `(lambda () (interactive) (,cmd)))
 	(define-key map [return]  `(lambda () (interactive) (,cmd)))
 	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
@@ -392,19 +412,19 @@ which there is a function superman-capture-n."
 	  (insert title " "))
 	(put-text-property
 	 0 1
-	 'superman-header-marker t cat-name)
+	 'superman-header-marker t b-name)
 	(add-text-properties
-	 0 (length cat-name) 
+	 0 (length b-name) 
 	 (list
 	  'button (list t)
 	  'face 'superman-capture-button-face
 	  'keymap map
 	  'mouse-face 'highlight
 	  'follow-link t
-	  'help-echo (concat "capture " (downcase cat)))
-	 cat-name)
-	(insert "" cat-name " "))
-      (setq i (+ i 1) cat-list (cdr cat-list)))))
+	  'help-echo (concat "capture " (downcase b-name)))
+	 b-name)
+	(insert "" b-name " "))
+      (setq i (+ i 1) b-list (cdr b-list)))))
 
 (defun superman-view-insert-config-buttons (project)
   "Insert window configuration buttons"
@@ -454,7 +474,7 @@ which there is a function superman-capture-n."
 	  (org-back-to-heading t)
 	  (let ((hdr (progn 
 		       (looking-at org-complex-heading-regexp)
-		       (match-string-no-properties 4)))
+		       (or (match-string-no-properties 4) "Untitled")))
 		(unison-cmd (superman-get-property (point) "UNISON")))
 	    (when (string= unison-cmd "superman-unison-cmd")
 	      (setq unison-cmd superman-unison-cmd))
@@ -1076,19 +1096,24 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (cats (delete-if
 		#'(lambda (cat) (string= "Configuration" (car cat)))
 		(superman-parse-cats ibuf 1)))
-	 (prey (save-excursion
-		 (switch-to-buffer ibuf)
-		 (goto-char (point-min))
-		 ;; FIXME this could streamlined
-		 (let ((c-list
-			(when (re-search-forward ":CaptureButtons:" nil t)
-			  (superman-get-property (point) "CaptureButtons" nil))))
-		   (when c-list
-		     (setq c-list
-			   (split-string
-			    (replace-regexp-in-string
-			     "[ \t]*" ""
-			     c-list) "|" t))))))
+	 ;; identify appropriate buttons
+	 (b-list)
+	 (buttons (save-excursion
+		    (switch-to-buffer ibuf)
+		    (goto-char (point-min))
+		    ;; FIXME this could streamlined
+		    (let ((b-string
+			   (when (re-search-forward ":CaptureButtons:" nil t)
+			     (superman-get-property (point) "CaptureButtons" nil))))
+		      (when b-string
+			(setq b-list
+			      (mapcar
+			       #'(lambda (x)
+				  (split-string x "|"))
+			       (split-string
+				(replace-regexp-in-string
+				 "[ \t]*" ""
+				 b-string) "," t)))))))
 	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
     ;; update git status
@@ -1122,7 +1147,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
     (superman-view-insert-unison-buttons pro)
     ;; capture buttons
     (insert "\n")
-    (superman-view-insert-capture-buttons prey)
+    (superman-view-insert-capture-buttons buttons)
     ;; link to previously selected projects
     (goto-char (point-max))
     (insert "\n")
@@ -2480,6 +2505,8 @@ not in a section prompt for section first.
 	     (file (if (assoc "FileName" props)
 		       (let ((dir (expand-file-name (concat (superman-get-location pro) (car pro)))))
 			 (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))))
+	(unless props
+	  (setq props `(("CaptureDate" ,(format-time-string "<%Y-%m-%d %a %R>")))))
 	(when file
 	  (setq props (delete (assoc "FileName" props) props))
 	  (setq props (append `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]")))

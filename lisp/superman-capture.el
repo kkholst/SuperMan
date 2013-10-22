@@ -138,71 +138,77 @@ Default is to set the old window configuration.
 	       (superman-goto-project project heading 'create nil nil nil))
 	      ((markerp heading)
 	       (progn (switch-to-buffer (marker-buffer heading))
-		      (goto-char heading))))
-      (find-file (superman-get-index project))
-      (widen)
-      (show-all)
-      (goto-char (point-max)))
-    (switch-to-buffer
-     (make-indirect-buffer (current-buffer) S-buf))
-    (delete-other-windows)
-    (unless (= level 0) (progn
-			  (insert "\n"
-				  (make-string level (string-to-char "*"))
-				  " NIX \n")
-			  (forward-line -1)))
-    (org-narrow-to-subtree)
-    (unless (= level 0) (progn 
-			  (skip-chars-forward "[* ]")
-			  (kill-line)))
-    (goto-char (point-min))
-    (insert title)
-    (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
-    (put-text-property (point-at-bol) (point-at-eol) 'type 'capture)
-    (insert "\n#"
-	    (make-string (length title) (string-to-char "-"))
-	    "\n# C-c C-c to save "
-	    "\n# C-c C-q to quit without saving"
-	    "\n# ---yeah #%*^#@!--------------")
-    (insert "\n\n")
-    (put-text-property (point-min) (point) 'face font-lock-string-face)
-    (org-mode)
+		      (goto-char heading)
+		      (org-narrow-to-subtree)
+		      (end-of-line)
+		      (if (outline-next-heading)
+			  (beginning-of-line)
+			(goto-char (point-max)))
+	       (widen))))
+    (find-file (superman-get-index project))
+    (widen)
     (show-all)
-    (if (= level 0)
-	(goto-char (point-max))
-      (end-of-line))
-    (setq head-point (point))    
-    (if plist (progn
-		(insert "\n:PROPERTIES:")
-		;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-		(while props
-		  (let* ((el (car props))
-			 (key (car el))
-			 (val (ignore-errors (nth 1 el)))
-			 (req (nth 2 el)))
-		    (cond ((stringp key)
-			   (ignore-errors
-			     (insert "\n:" key ": ")
-			     ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-			     (put-text-property (- (point) 1) (point) 'prop-marker (point))
-			     (if req 
-				 (put-text-property (- (point) 1) (point) 'required "required-field"))
-			     (when val (insert (superman-make-value val)))))
-			  ((eq key 'fun) (ignore-errors (funcall (cdr el))))
-			  ((eq key 'hdr) (ignore-errors
-					   (save-excursion
-					     (org-back-to-heading)
-					     (end-of-line)
-					     (insert (superman-make-value val)))))
-			  ((eq key 'body) (setq body (concat body (superman-make-value val)))))
-		    (setq props (cdr props))))
-		(insert "\n:END:\n")))
-    (insert body)
-    ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-    (unless (= level 0) (insert "\n"))
-    (goto-char head-point)
-    (superman-capture-mode)
-    (run-hooks 'superman-setup-scene-hook)))
+    (goto-char (point-max)))
+  (switch-to-buffer
+   (make-indirect-buffer (current-buffer) S-buf))
+  (delete-other-windows)
+  (unless (= level 0) (progn
+			(insert "\n"
+				(make-string level (string-to-char "*"))
+				" NIX \n")
+			(forward-line -1)))
+  (org-narrow-to-subtree)
+  (unless (= level 0) (progn 
+			(skip-chars-forward "[* ]")
+			(kill-line)))
+  (goto-char (point-min))
+  (insert title)
+  (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
+  (put-text-property (point-at-bol) (point-at-eol) 'type 'capture)
+  (insert "\n#"
+	  (make-string (length title) (string-to-char "-"))
+	  "\n# C-c C-c to save "
+	  "\n# C-c C-q to quit without saving"
+	  "\n# ---yeah #%*^#@!--------------")
+  (insert "\n\n")
+  (put-text-property (point-min) (point) 'face font-lock-string-face)
+  (org-mode)
+  (show-all)
+  (if (= level 0)
+      (goto-char (point-max))
+    (end-of-line))
+  (setq head-point (point))    
+  (if plist (progn
+	      (insert "\n:PROPERTIES:")
+	      ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+	      (while props
+		(let* ((el (car props))
+		       (key (car el))
+		       (val (ignore-errors (nth 1 el)))
+		       (req (nth 2 el)))
+		  (cond ((stringp key)
+			 (ignore-errors
+			   (insert "\n:" key ": ")
+			   ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
+			   (put-text-property (- (point) 1) (point) 'prop-marker (point))
+			   (if req 
+			       (put-text-property (- (point) 1) (point) 'required "required-field"))
+			   (when val (insert (superman-make-value val)))))
+			((eq key 'fun) (ignore-errors (funcall (cadr el))))
+			((eq key 'hdr) (ignore-errors
+					 (save-excursion
+					   (org-back-to-heading)
+					   (end-of-line)
+					   (insert (superman-make-value val)))))
+			((eq key 'body) (setq body (concat body (superman-make-value val)))))
+		  (setq props (cdr props))))
+	      (insert "\n:END:\n")))
+  (insert body)
+  ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
+  (unless (= level 0) (insert "\n"))
+  (goto-char head-point)
+  (superman-capture-mode)
+  (run-hooks 'superman-setup-scene-hook)))
 
 (define-minor-mode superman-capture-mode
 "Toggle superman capture mode.
@@ -494,6 +500,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		      `("Bookmark" (("BookmarkDate"  ,(format-time-string "<%Y-%m-%d %a>"))
 				    ("Link" nil))))))
 
+(fset 'superman-capture-todo 'superman-capture-task)
 (defun superman-capture-task (&optional project marker)
   (interactive)
   (let ((pro (or project
@@ -504,7 +511,13 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
      pro
      (or marker "Tasks")
      `("Task" (("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
-	       (fun 'org-todo))))))
+	       (fun
+		(lambda ()
+		  (save-excursion
+		    (org-todo)
+		    (org-back-to-heading)
+		    (org-shiftup)))))))))
+
 
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
@@ -544,6 +557,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
      pro
      "Configuration"
      `("Unison" (("UNISON" "superman-unison-cmd")
+		 ;; (hdr "CHANGEME")
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))

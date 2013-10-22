@@ -127,7 +127,9 @@ Returns the corresponding buffer."
 	  (while (outline-next-heading)
 	    (let* ((this-config
 		    (or (superman-get-property (point) "Config")
-			(cdr (assoc (downcase (org-get-heading t t)) superman-config-alist)))))
+			(cdr (assoc (downcase
+				     (or
+				      (org-get-heading t t) "Untitled")) superman-config-alist)))))
 	      (when this-config
 		(if config
 		    (setq
