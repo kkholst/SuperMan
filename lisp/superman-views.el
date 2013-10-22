@@ -2042,7 +2042,7 @@ If point is before the first category do nothing."
       (save-window-excursion
 	;;(superman-view-index)
 	(setq default-directory dir)
-	(vc-git-print-log dir bufn t)
+	(vc-git-print-log (concat dir ")") bufn t)
 	)
       (setq default-directory curdir)
       (switch-to-buffer bufn)
