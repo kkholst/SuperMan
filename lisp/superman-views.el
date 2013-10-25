@@ -2026,7 +2026,28 @@ If point is before the first category do nothing."
     (vc-ediff file "HEAD")))
 
 
+(defun superman-annotate-version (&optional version)
+  (interactive)
+  (font-lock-mode -1)
+  (save-excursion
+    (let ((version (or version (buffer-substring (point-at-bol)
+						 (progn (goto-char (point-at-bol))
+							(forward-word)
+							(point)))))
+	  (buffer-read-only nil))
+      (goto-char (point-min))
+      (while (re-search-forward version nil t)
+	(put-text-property (point-at-bol) (+ (point-at-bol) (length version))
+			   'face 'font-lock-warning-face)
+	(put-text-property
+	 (progn (skip-chars-forward "^\\)")
+		(+ (point) 1))
+	 (point-at-eol)
+	 'face 'font-lock-warning-face)))))
+
+
 (defun superman-view-git-annotate (&optional arg)
+  "Annotate file"
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
 	 (bufn)
@@ -2034,10 +2055,8 @@ If point is before the first category do nothing."
     (save-window-excursion
       (find-file file)
     (vc-annotate (org-link-display-format file) "HEAD")
-    (setq bufn (buffer-name))
-    )
-    (switch-to-buffer bufn)
-  ))
+    (setq bufn (buffer-name)))
+    (switch-to-buffer bufn)))
 
 (defun superman-view-git-grep (&optional arg)
   (interactive)

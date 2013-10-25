@@ -415,24 +415,6 @@ or if the file is not inside the location."
 (define-key superman-git-log-mode-map [(up)] 'previous-line)
 (define-key superman-git-log-mode-map " " (lambda () (interactive) (funcall superman-help-fun (superman-git-comment-at-point))))
 
-(defun superman-git-show-help ()
-  (interactive)
-  (let ((msg
-	(concat 
-	 "------------------\n"
-	"[return]:\t\t Open revision at point\n"
-	"[l]:     \t\t Show git log ([L] tags only. Prefix-arg: limit)\n"
-	"[S]:    \t\t Search for revision introducing change (Prefix-arg: limit)\n"
-	"[v]:    \t\t View annotated file\n"
-	"[g]:    \t\t Grep in git controlled files (Prefix-arg: fine-tune)\n"
-	"[d]:    \t\t Show difference between revisions ([D] ediff)\n"
-	"[space]:\t\t Show full commit message\n"
-	"[t]:    \t\t Alter tag (empty string to remove)\n"
-	"[!]:     \t\t Shell\n"
-	 "------------------\n")))
-    (funcall superman-help-fun msg)))
-
-
 (define-minor-mode superman-git-log-mode 
   "Toggle org projectmanager document view mode.
                         With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
