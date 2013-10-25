@@ -371,6 +371,12 @@ and the keybinding to initialize git control otherwise."
 	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
     (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
+(defvar superman-default-capture-buttons '(("Document" . superman-capture-document)
+		("Task" . superman-capture-task)
+		("Note" . superman-capture-note)
+		("Bookmark" . superman-capture-bookmark)
+		("Meeting" . superman-capture-meeting)))
+
 (defun superman-view-insert-capture-buttons (&optional button-list)
   "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
 which there is a function `superman-capture-n'. If omitted, it is set to
@@ -383,12 +389,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
   (let* ((title "")
 	 ;; (capture-alist superman-capture-alist)
 	 (b-list
-	  (or button-list
-	      '(("Document" . superman-capture-document)
-		("Task" . superman-capture-task)
-		("Note" . superman-capture-note)
-		("Bookmark" . superman-capture-bookmark)
-		("Meeting" . superman-capture-meeting))))
+	  (or button-list superman-default-capture-buttons))
 	 (i 1))
     (while b-list
       (let* ((b (car b-list))
