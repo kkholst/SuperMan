@@ -290,7 +290,10 @@
 ;; (defalias 'S-todo-B 'superman-todo-B)
 (defalias 'S-agenda 'superman-agenda)
 
+
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
+
+(defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
 
 (defun superman-todo (&optional project)
   (interactive)
@@ -298,17 +301,21 @@
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands
 	 `(("P" "Projects-TODO"
-	    ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
-	    ;; ((todo 
-	    ((alltodo ""
-		      ((org-agenda-files
-			(reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
+	    ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
+	      ,(if superman-todo-tags superman-todo-tags "")
+	      ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
+	      ;; ((tags-todo "PRIORITY<>\"C\""
+	      ;; ((tags-todo ""
+	      ;; ((alltodo ""
+	      ((org-agenda-files
+		(reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
 	      (lambda ()
 		(superman-format-agenda
 		 superman-todolist-balls
-		 'superman-todo "* SupermanTodoList"
+		 '(superman-todo)
+		 "* SupermanTodoList"
 		 (concat "\t"
 			 (superman-make-button "Agenda"
 					       'superman-agenda
