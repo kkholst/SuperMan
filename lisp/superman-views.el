@@ -2047,26 +2047,28 @@ If point is before the first category do nothing."
 	(vc-git-grep (read-string "Grep: "))
 	(vc-git-grep (read-string "Grep: ") "*" dir)))))
 
-(defun superman-view-git-history ()
+(defun superman-view-git-history (&optional arg)
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (dir 
-	  (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
-	  (get-text-property (point-min) 'git-dir)))
+	 (file
+	  ;; (or (if m (file-name-directory (org-link-display-format (superman-get-property m "filename"))))
+	  (or (if m (org-link-display-format (superman-get-property m "filename")))
+	      (get-text-property (point-min) 'git-dir)
+	      (buffer-file-name)))
+	 (dir (if m (file-name-directory file) (file-name-as-directory file)))
 	 (curdir default-directory)
-	 (bufn (concat "*history: " dir "*"))
+	 (bufn (concat "*history: " file "*"))
 	)
     (when dir
-    ;; (vc-print-log-internal
-    ;;  'Git
-    ;;  (list dir)
+      ;; (vc-print-log-internal
+      ;;  'Git
+      ;;  (list dir)
       ;;  nil nil 2000)      
       ;; (message dir)
       (save-window-excursion
 	;;(superman-view-index)
-	(setq dir (concat dir "/"))
 	(setq default-directory dir)
-	(vc-git-print-log dir bufn t)
+	(vc-git-print-log file bufn t nil (or arg superman-git-log-limit))
 	)
       (setq default-directory curdir)
       (switch-to-buffer bufn)
@@ -2537,6 +2539,7 @@ not in a section prompt for section first.
     ["Dired" superman-view-dired t]
     ["File list" superman-view-file-list t]
     ("Git"
+     ["Git history" superman-view-git-history t]
      ["Git update" superman-view-git-update-status t]
      ["Git update last commit date" superman-view-git-update-status-with-date t]
      ["Git commit" superman-view-git-commit t]
