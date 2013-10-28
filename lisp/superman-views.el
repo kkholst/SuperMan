@@ -1197,7 +1197,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 			 (put-text-property 0 (length line) 'face 'org-level-3 line)
 			 ;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
+;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
+			 (put-text-property 0 (length line) 'face 'superman-subheader-face line)
 			 (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
 			 (with-current-buffer vbuf (insert line " \n" ))
 			 (end-of-line)))
@@ -2589,5 +2591,3 @@ not in a section prompt for section first.
 (provide 'superman-views)
 
 ;;; superman-views.el ends here
-
-
