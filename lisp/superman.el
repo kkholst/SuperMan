@@ -57,7 +57,11 @@
 
 (defun superman-set-property ()
   (interactive)
-  (let* ((prop-list '(((superman-property 'location) . nil) ((superman-property 'index) . nil) ((superman-property 'category) . nil) ((superman-property 'others) . nil) ((superman-property 'publishdirectory) . nil)))
+  (let* ((prop-list '(((superman-property 'location) . nil)
+		      ((superman-property 'index) . nil)
+		      ((superman-property 'category) . nil)
+		      ((superman-property 'others) . nil)
+		      ((superman-property 'publishdirectory) . nil)))
 	 (prop (completing-read "Set property: " prop-list))
 	 (pom (org-get-at-bol 'org-hd-marker))
 	 (curval (ouperrg-entry-get pom prop))
