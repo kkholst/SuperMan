@@ -2761,5 +2761,3 @@ not in a section prompt for section first.
 (provide 'superman-views)
 
 ;;; superman-views.el ends here
-
-

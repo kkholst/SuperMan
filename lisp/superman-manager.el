@@ -197,6 +197,11 @@ the `superman-home'.")
 ;;}}}
 ;;{{{ faces
 
+(defface superman-subheader-face
+  '((t (:inherit font-lock-string-face)))
+    "Face used for the selected tab."
+    :group 'superman)
+
 (defface superman-default-button-face
   '((t (:box (:line-width 1 :color "gray88" :style released-button))))
   "Default face used for superman-buttons."
@@ -370,7 +375,6 @@ the `superman-home'.")
   (interactive)
   (re-search-backward
    (format "^\\*\\{%d\\} " superman-project-level) nil t))
-
 
 ;;}}}
 ;;{{{ parsing dynamically updating lists
