@@ -1186,7 +1186,7 @@ to VIEW-BUF."
 	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
 	 (index-cat-point (cadr (assoc "point" props)))
 	 (buttons (cadr (assoc "buttons" props)))
-	 (git (cadr (assoc "git" props)))
+	 (git (assoc "git-cycle" props))
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freeText" props))
 	 (count 0)
@@ -1194,6 +1194,7 @@ to VIEW-BUF."
     ;; mark head of this category in view-buf
     (set-buffer view-buf)
     (setq view-cat-head (point))
+    (when git (setq git (get-text-property (point-min) 'git-dir)))
     (cond
      ;; free text sections are put as they are
      (free
@@ -1316,7 +1317,7 @@ to VIEW-BUF."
 	 ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Version"))
 	  ("Author" ("width" 10) ("face" superman-get-git-status-face))
 	  ("Date" ("width" 13) ("fun" superman-trim-date) ("face" font-lock-string-face))
-	  ("Message" ("width" 23))))
+	  ("Message" ("width" 63))))
 	("files"
 	 "ls-files --full-name -t -m -s"
 	 ((hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
@@ -1343,7 +1344,7 @@ to VIEW-BUF."
 (defun superman-view-git-cycle (value)
   (org-with-point-at
       (get-text-property (point-at-bol) 'org-hd-marker)
-    (org-set-property "cycle" value))
+    (org-set-property "git-cycle" value))
   (superman-redo))
 
 (defun superman-view-git-clean-git-ls-files ()
@@ -1359,7 +1360,7 @@ to VIEW-BUF."
 						   ((string= status "M") "Unmerged")
 						   ((string= status "R") "Removed")
 						   (t "Unknown"))
-		 "\n:FILE: [[" long-fname "]]\n:END:\n\n"))))))
+		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n"))))))
 
 (defun superman-view-git-clean-git-ls-files-1 ()
   (let ((git-dir (get-text-property (point-min) 'git-dir)))
@@ -1375,7 +1376,7 @@ to VIEW-BUF."
 						   ((string= status "M") "Unmerged")
 						   ((string= status "R") "Removed")
 						   (t "Unknown"))
-		 "\n:FILE: [[" long-fname "]]\n:END:\n\n"))))))
+		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n"))))))
 
 (defun superman-view-git-clean-git-status ()
   (let ((git-dir (get-text-property (point-min) 'git-dir)))
@@ -1388,7 +1389,7 @@ to VIEW-BUF."
 	 (concat "** "
 		 fname
 		 "\n:PROPERTIES:\n:STATUS: " (superman-status-label status)
-		 "\n:FILE: [[" long-fname "]]\n:END:\n\n"))))))
+		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n"))))))
 ;; "--numstat "
 ;; "--name-status "
 
