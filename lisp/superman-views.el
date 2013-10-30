@@ -2752,7 +2752,7 @@ not in a section prompt for section first.
      ["Delete column" superman-delete-ball t]
      ["Move column left" superman-one-left t]
      ["Move column right" superman-one-right t])
-    ["Terminal" superman-goto-shell t]
+    ["Shell" superman-goto-shell t]
     ["Unison" superman-unison t]
     ))
 
