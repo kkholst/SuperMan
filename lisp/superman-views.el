@@ -318,6 +318,7 @@ and the keybinding to initialize git control otherwise."
 
 ;;}}}
 ;;{{{ window configuration
+
 (defun superman-view-read-config (project)
   (let (configs
 	(case-fold-search t))
@@ -377,7 +378,7 @@ and the keybinding to initialize git control otherwise."
 		("Bookmark" . superman-capture-bookmark)
 		("Meeting" . superman-capture-meeting)))
 
-(defun superman-view-insert-action-buttons (&optional button-list)
+(defun superman-view-insert-action-buttons (&optional button-list no-newline)
   "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
 which there is a function `superman-capture-n'. If omitted, it is set to
   '((\"Document\" 'superman-capture-document)
@@ -401,7 +402,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	     ;; (b-name (substring b 0 1))
 	     (b-name (car b))
 	     (b-tail (cdr b))
-	     (fun (if (listp b-tail) (car b-tail) b-tail))
+	     (fun (if (and (listp b-tail) (not (functionp b-tail))) (car b-tail) b-tail))
 	     (cmd (cond ((functionp fun) fun)
 			((stringp fun) (intern fun))
 			;; (intern (concat "superman-capture-" (downcase b-name)))))
@@ -411,7 +412,8 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	(define-key map [return]  `(lambda () (interactive) (,cmd)))
 	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
 	(when (= i 1)
-	  (insert "\n")
+	  (unless no-newline
+	    (insert "\n"))
 	  (insert title " "))
 	(put-text-property
 	 0 1
@@ -465,6 +467,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 					  config-cmd)
 		"]  "))
       (setq i (+ i 1) config-list (cdr config-list)))))
+
 ;;}}}
 ;;{{{ unison
 (defun superman-view-read-unison (project)
@@ -1311,7 +1314,8 @@ to VIEW-BUF."
 		  fun
 		  (cadr (assoc name superman-capture-alist))
 		  'superman-capture-item)))
-	(insert (superman-make-button (concat "** " name) fun
+	(insert
+	 (superman-make-button (concat "** " name) fun
 		 'superman-capture-button-face
 		 "Add new item")
 		"\n"))
@@ -1359,6 +1363,17 @@ to VIEW-BUF."
       "List of git-views. Each entry has 4 elements: (key git-switches balls cleanup), where key is a string
 to identify the element, git-switches are the switches passed to git, balls are used to define the columns and
 cleanup is a function which is called before superman plays the balls.")
+
+(defun superman-add-git-cycle ()
+  (interactive)
+  (save-excursion
+    (find-file (get-text-property (point-min) 'index))
+    (goto-char (point-min))
+    (unless (re-search-forward ":git-cycle:" nil t)
+      (goto-char (point-max))
+      (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: log, status, modified, files\n:git-display: modified\n:END:\n")))
+  (superman-redo))
+    
 
 (defvar superman-git-display-cycles nil
   "Keywords to match the elements in superman-view-git-display-command-list")
@@ -2671,7 +2686,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
 ;; Git control
-(define-key superman-view-mode-map "GA" 'superman-capture-git-section)
+(define-key superman-view-mode-map "GA" 'superman-add-git-cycle)
 ;; (define-key superman-view-mode-map "GM" 'superman-view-git-master-push-pull-and-return)
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
