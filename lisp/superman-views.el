@@ -318,6 +318,7 @@ and the keybinding to initialize git control otherwise."
 
 ;;}}}
 ;;{{{ window configuration
+
 (defun superman-view-read-config (project)
   (let (configs
 	(case-fold-search t))
@@ -396,7 +397,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	     ;; (b-name (substring b 0 1))
 	     (b-name (car b))
 	     (b-tail (cdr b))
-	     (fun (if (listp b-tail) (car b-tail) b-tail))
+	     (fun (if (and (listp b-tail) (not (functionp b-tail))) (car b-tail) b-tail))
 	     (cmd (cond ((functionp fun) fun)
 			((stringp fun) (intern fun))
 			;; (intern (concat "superman-capture-" (downcase b-name)))))
@@ -461,6 +462,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 					  config-cmd)
 		"]  "))
       (setq i (+ i 1) config-list (cdr config-list)))))
+
 ;;}}}
 ;;{{{ unison
 (defun superman-view-read-unison (project)
