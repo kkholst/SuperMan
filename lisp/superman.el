@@ -122,6 +122,14 @@
 				     'superman-agenda
 				     'superman-next-project-button-face
 				     "Agenda across all projects") "\t")
+  (insert "\t" (superman-make-button "Calendar"
+				     'superman-calendar
+				     'superman-next-project-button-face
+				     "Project-wide calendar") "\t")
+  (insert (superman-make-button "TodoList"
+				'superman-todo
+				'superman-next-project-button-face
+				"TodoList across all projects"))  
   (insert (superman-make-button "TodoList"
 				'superman-todo
 				'superman-next-project-button-face
@@ -211,7 +219,10 @@
 	  (setcdr (nth m cat-alist) (list pro))))
       (setq projects (cdr projects)))
     (insert "\n")
-    (superman-view-insert-capture-buttons '(("New project" . superman-capture-project)))
+    (superman-view-insert-action-buttons
+     '(("New project" . superman-capture-project)
+       ("Meeting" . superman-capture-meeting)
+       ("Task" . superman-capture-task)))
     (insert "\n")
     ;; loop over categories
     (while cat-alist
@@ -299,6 +310,7 @@
 
 (defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
 
+
 (defun superman-todo (&optional project)
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-TODO*"))
@@ -326,6 +338,11 @@
 					       'superman-next-project-button-face
 					       "Agenda across all projects")
 			 "\t"
+			 (superman-make-button "Calendar"
+					       'superman-calendar
+					       'superman-next-project-button-face
+					       "Project-wide calendar")
+			 "\t"
 			 (superman-make-button "Projects"
 					       'superman
 					       'superman-next-project-button-face
@@ -337,6 +354,48 @@
 (defun superman-make-agenda-title (string face)
   (put-text-property 0 (length string) 'face face string)
   string)
+
+
+(defun superman-calendar (&optional project)
+  (interactive)
+  (let ((org-agenda-buffer-name (concat "*SuperMan-Calendar*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands nil))
+    (add-to-list 'org-agenda-custom-commands
+		 '("C" "Superman calendar"
+		   ((agenda ""
+			    ((org-agenda-files
+			      (superman-index-list)))))
+		   ((org-agenda-compact-blocks nil)
+		    (org-agenda-show-all-dates t)
+		    (org-agenda-span 7)
+		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-overriding-header
+		     (concat (superman-make-agenda-title "Superman calendar" 'org-level-2)
+			     "\t"
+			     (superman-make-button "TodoList"
+						   'superman-todo
+						   'superman-next-project-button-face
+						   "TodoList across all projects")
+			     "\t"
+			     (superman-make-button "Agenda"
+						   'superman-agenda
+						   'superman-next-project-button-face
+						   "Project-wide agenda")
+			     "\t"
+			     (superman-make-button "Projects"
+						   'superman
+						   'superman-next-project-button-face
+						   "List of projects")
+			     "\n"
+			     (superman-make-button "\nClick here to add a Meeting\n"
+						   'superman-capture-meeting
+						   'superman-capture-button-face
+						   "Add a meeting to calendar")
+			     )))))
+    (push ?C unread-command-events)
+    (call-interactively 'org-agenda)))
+
     
 (defun superman-agenda (&optional project)
   (interactive)
@@ -358,6 +417,11 @@
 						   'superman-todo
 						   'superman-next-project-button-face
 						   "TodoList across all projects")
+			     "\t"
+			     (superman-make-button "Calendar"
+						   'superman-calendar
+						   'superman-next-project-button-face
+						   "Project-wide calendar")
 			     "\t"
 			     (superman-make-button "Projects"
 						   'superman
@@ -507,6 +571,11 @@ Enabling superman mode electrifies the superman buffer for project management."
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
       (end-of-line)
+      (insert "\n")
+      (superman-view-insert-action-buttons
+       '(("New project" . superman-capture-project)
+	 ("Meeting" . superman-capture-meeting)
+	 ("Task" . superman-capture-task)))
       (insert "\n\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor
       (while (ignore-errors
