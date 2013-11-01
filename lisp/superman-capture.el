@@ -540,7 +540,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		  ("Participants" nil)
 		  ("Location" nil)
 		  ,(when superman-google-default-calendar
-		       ("GoogleCalendar" ,superman-google-default-calendar))
+		     `("GoogleCalendar" ,superman-google-default-calendar))
 		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
 		  ('fun 'org-todo))))))
 
