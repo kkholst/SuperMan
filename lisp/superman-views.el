@@ -318,6 +318,7 @@ and the keybinding to initialize git control otherwise."
 
 ;;}}}
 ;;{{{ window configuration
+
 (defun superman-view-read-config (project)
   (let (configs
 	(case-fold-search t))
@@ -401,7 +402,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	     ;; (b-name (substring b 0 1))
 	     (b-name (car b))
 	     (b-tail (cdr b))
-	     (fun (if (listp b-tail) (car b-tail) b-tail))
+	     (fun (if (and (listp b-tail) (not (functionp b-tail))) (car b-tail) b-tail))
 	     (cmd (cond ((functionp fun) fun)
 			((stringp fun) (intern fun))
 			;; (intern (concat "superman-capture-" (downcase b-name)))))
@@ -466,6 +467,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 					  config-cmd)
 		"]  "))
       (setq i (+ i 1) config-list (cdr config-list)))))
+
 ;;}}}
 ;;{{{ unison
 (defun superman-view-read-unison (project)
@@ -1257,6 +1259,7 @@ to VIEW-BUF."
 		     (put-text-property 0 (length line) 'subcat subhdr line)
 		     (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 		     (put-text-property 0 (length line) 'face 'org-level-3 line)
+		     (put-text-property 0 (length line) 'face 'superman-subheader-face line)
 		     (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 		     (with-current-buffer view-buf (setq countsub (append countsub (list `(0 ,(point))))))
 		     (with-current-buffer view-buf (insert line " \n" ))
@@ -1502,6 +1505,7 @@ cleanup is a function which is called before superman plays the balls.")
 	     (put-text-property 0 (length line) 'subcat subhdr line)
 	     (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
 	     (put-text-property 0 (length line) 'face 'org-level-3 line)
+	     (put-text-property 0 (length line) 'face 'superman-subheader-face line)
 	     ;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
 	     (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 	     ;; (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
@@ -2801,7 +2805,7 @@ not in a section prompt for section first.
      ["Delete column" superman-delete-ball t]
      ["Move column left" superman-one-left t]
      ["Move column right" superman-one-right t])
-    ["Terminal" superman-goto-shell t]
+    ["Shell" superman-goto-shell t]
     ["Unison" superman-unison t]
     ))
 
