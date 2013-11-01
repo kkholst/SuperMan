@@ -1,59 +1,38 @@
+*** Index of project Kal-El
+:PROPERTIES:
+:ProjectStart: <2013-01-02 Wed 06:18>
+:CaptureButtons: SuperMan-Help | superman-capture-item,  LaTeX-help | superman-capture-item
+:END:
 
-#+TODO: SUBMITTED ACCEPTED REVISION | PUBLISHED
-\bibliographypeer{../../bib/huge}
-\bibliographystylepeer{abbrvnat}
-\bibliographywork{../../bib/huge}
-\bibliographystylework{abbrvnat}
-\bibliographyother{../../bib/huge}
-\bibliographystyleother{abbrvnat}
-\renewcommand{\section}[1]{}
-\renewcommand{\subsection}[1]{}
-\renewcommand{\subsubsection}[1]{}
-
-
-* Documents
+* SuperMan-Help
   :PROPERTIES:
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
-  :Ball2:    GitStatus  :width 10 :face superman-get-git-status-face
-  :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face :width 13
+  :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face
   :Ball4:    FileName  :fun superman-dont-trim
-  :Ball5: 
   :END:
 ** SuperMan
       :PROPERTIES:
       :CATEGORY: start-me-up
       :END:
 
-
-*** Start here
+*** Interview
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
 :GitStatus: Committed
 :GitInit:  <2013-06-11 Tue 18:21> first version
-:LastCommit: <2013-07-15 Mon 10:19> did some more
+:LastCommit: <2013-06-11 Tue 18:21> first version
 :END:
 
 
-*** Supermanual.org
+
+*** Window configurations
 :PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/manager/Supermanual.org]]
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
 :GitStatus: Committed
-:GitInit:  <2013-07-06 Sat 08:52> figlet makes the start
-:LastCommit: <2013-07-15 Mon 10:19> did some more
+:CaptureDate: <2013-01-11 Fri 16:41>
+:GitInit:  <2013-01-11 Fri 20:48> first smash
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
-
-
-
-
-
-*** Projects.org
-:PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/manager/Projects.org]]
-:GitStatus: Committed
-:GitInit:  <2013-03-01 Fri 14:24> first commit
-:LastCommit: <2013-07-16 Tue 09:16> removed obsolete calendar and todo projects
-:END:
-
 
 ** Org-mode
     
@@ -68,8 +47,6 @@
 
 
 ** LaTeX
-
-
 
 
 
@@ -100,47 +77,44 @@
 :END:
 
 
+** Rforge
 
-** Git
 
-
-*** git-svn Rforge
+*** use-git-svn-for-Rforge.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
 :GitStatus: Committed
 :GitInit:  <2013-06-13 Thu 08:35> init
-:LastCommit: <2013-08-17 Sat 08:47> fixed typo
+:LastCommit: <2013-06-13 Thu 08:35> init
 :END:
 
 
-
-*** git-svn WorkFlow
-:PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/GitSvnWorkFlow.org]]
-:GitStatus: Committed
-:GitInit:  <2013-07-06 Sat 08:48> copy-and-paste from net
-:LastCommit: <2013-07-15 Mon 10:44> some progress
-:END:
-
-
-** Admin
+** Git
 
 
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Committed
+:GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-08-17 Sat 08:47> fixed typo
+:LastCommit: <2013-06-13 Thu 08:54> test
 :END:
+
+
+** Admin
 
 * Bookmarks
 
 
 ** Links
-   :PROPERTIES:
-   :CATEGORY: url
-   :END:
+
+
+*** beamertheme: org
+:PROPERTIES:
+:BookmarkDate: <2013-08-18 Sun>
+:Link: https://github.com/mbork/beamerorgtheme
+:END:
+
 
 *** Org-mode
 :PROPERTIES:
@@ -184,9 +158,10 @@
 :TaskDate: <2013-03-07 Thu>
 :END:
 
-* Configuration
 
-** Supermanual
+
+
+* Configuration
 
 * GitFiles
 ** projects/Kal-El
@@ -196,7 +171,7 @@
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
 :GitStatus: Modified
 :GitInit:  <2013-03-07 Thu 12:10> first commit
-:LastCommit: <2013-07-15 Mon 11:10> added todo and calendar projects
+:LastCommit: <2013-06-13 Thu 08:36> test
 :END:
 
 ** projects/Kal-El/docs
@@ -205,8 +180,6 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
 :GitStatus: Committed
-:GitInit:  <2013-05-03 Fri 09:32> first commit
-:LastCommit: <2013-05-03 Fri 09:32> first commit
 :END:
 
 ** projects/Kal-El/help
@@ -214,17 +187,13 @@
 *** smash.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
-:GitStatus: Modified
-:GitInit:  <2013-05-29 Wed 17:46> moved in place
-:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:GitStatus: Committed
 :END:
 
 *** S.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
 :GitStatus: Committed
-:GitInit:  <2013-06-11 Tue 18:21> first version
-:LastCommit: <2013-07-15 Mon 10:19> did some more
 :END:
 
 ** projects/Kal-El/hints
@@ -233,16 +202,12 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
 :GitStatus: Committed
-:GitInit:  <2013-06-12 Wed 10:38> first commit
-:LastCommit: <2013-06-12 Wed 10:44> added link to shell script
 :END:
 
 *** latex-useful-packages.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
 :GitStatus: Committed
-:GitInit:  <2013-05-29 Wed 17:46> moved in place
-:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 ** projects/Kal-El/samples
@@ -251,16 +216,12 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/template-literate.org]]
 :GitStatus: Committed
-:GitInit:  <2013-06-12 Wed 10:55> literate-programming template + new doc
-:LastCommit: <2013-06-12 Wed 10:55> literate-programming template + new doc
 :END:
 
 *** sample-beamer.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
 :GitStatus: Committed
-:GitInit:  <2013-05-29 Wed 17:46> moved in place
-:LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 ** projects/Kal-El/tools
@@ -269,7 +230,6 @@
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
 :GitStatus: Committed
-:GitInit:  <2013-06-12 Wed 10:44> first commit
-:LastCommit: <2013-06-12 Wed 10:44> first commit
+:LastCommit: 
 :END:
 

@@ -1,9 +1,10 @@
-* Getting started with your new SuperMan(er)
+* Interview with your new SuperMan(ager)
 
 - S: :: SuperMan is a project which manages all your other projects.
 - Y: :: This sound useful. But what exactly is considered a project?
-- S: :: A project is an entry in the file defined by the emacs variable
-  `superman-home'. The entry looks like this:
+- S: :: A project is an entry in a file, where the file-name is
+  defined by the emacs variable `superman-home'. 
+  An entry looks like this:
 
 #+BEGIN_EXAMPLE
  **** Extensions of the Hodges-Lehmann estimator for structural equation models
@@ -37,6 +38,14 @@ The properties have the following meaning:
 - Y: :: Ok. How do I register my projects.
 - S: :: That is easy: first open the SuperMan via M-x S RET,
         then type N for superman-new-project. You will be
-        prompted for NICKNAME and CATEGORY. See the 
-- Y: :: I will try ... last question: Does the SuperMan project contain itself?
+        prompted for NICKNAME and CATEGORY. 
+- Y: :: hmm, I will give it a try ... last question: Does the SuperMan project contain itself?
 - S: :: Nice question. Probably the answer is: /Yes! But,.../. To find a better answer please read logicomix (www.logicomix.com).
+
+#+Title: emacs SuperMan: prolog 
+#+Author: TagTeam, KKHolst
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://192.38.117.59/~tag/styles/BiomacsStyle.css" />
+# #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="~/public_html/styles/BiomacsStyle.css" />
+#+OPTIONS: H:3 num:nil toc:nil :nil @:t ::t |:t ^:t -:t f:t *:t <:t
+#+PROPERTY: cache yes
+#+PROPERTY: session *R*

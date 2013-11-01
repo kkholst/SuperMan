@@ -723,10 +723,26 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 	 (gitdir (or git-dir
 		     (read-directory-name (concat "Directory : "))))
 	 (gittop (superman-git-toplevel gitdir))
-	 (headingfound (superman-goto-project pro "GitFiles"))
+	 ;; (headingfound (superman-goto-project pro "GitFiles"))
 	 (level (or level 3))
-	 (file-list (delete "" (split-string (shell-command-to-string (concat "cd " gitdir ";" superman-cmd-git " ls-files --full-name")) "\n")))
-	 (file-hash (make-hash-table :test 'equal)))
+	 (file-list (delete ""
+			    (split-string
+			     (shell-command-to-string
+			      (concat "cd " gitdir ";"
+				      superman-cmd-git
+				      " ls-files --full-name")) "\n")))
+	 (file-hash (make-hash-table :test 'equal))
+	 (probuf (get-buffer-create (concat
+				     "*"
+				     (superman-get-index pro)
+				     (car pro)
+				     "-git-profile*")))
+	 (profile (concat (file-name-directory
+			   (superman-get-index pro))
+			  (car pro)
+			  "-git-profile.org")))
+    (set-buffer probuf)
+    (erase-buffer)
     ;; goto index file
     (while file-list
       (let* ((el (car file-list))
@@ -736,22 +752,26 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 	     (dir (if (> (length elsplit) 1)
 		      (mapconcat 'identity direl "/" )
 		    "/")))
-      (puthash dir (push filename (gethash dir file-hash)) file-hash)
-      (setq file-list (cdr file-list))))
-    (if headingfound
-	(progn
-	  (forward-line -1)
-	  (org-cut-subtree)
-	  (delete-blank-lines)))
-    (superman-goto-project pro "GitFiles" 'create nil nil nil)
-    (find-file (superman-get-index pro))
-    (widen)
-    (show-all)
+	(puthash dir (push filename (gethash dir file-hash)) file-hash)
+	(setq file-list (cdr file-list))))
+    ;; (if headingfound
+    ;; (progn
+    ;; (forward-line -1)
+    ;; (org-cut-subtree)
+    ;; (delete-blank-lines)))
+    ;; (superman-goto-project pro "GitFiles" 'create nil nil nil)
+    ;; (find-file (superman-get-index pro))
+    (find-file profile)
+    (erase-buffer)
+    ;; (widen)
+    ;; (show-all)
     (goto-char (point-max))  
     (maphash (lambda (keys vv) 	       
 	       (insert (concat "** " keys "\n\n"))
 	       (while vv
-		 (let ((filename (abbreviate-file-name (expand-file-name (concat (if (string= keys "/") "." keys) "/" (car vv)) gittop))))
+		 (let ((filename (abbreviate-file-name
+				  (expand-file-name
+				   (concat (if (string= keys "/") "." keys) "/" (car vv)) gittop))))
 		   (insert (make-string level (string-to-char "*"))
 			   " "
 			   (car vv)
@@ -761,8 +781,24 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 			   ;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
 			   "\n:END:\n\n"))
 		 (setq vv (cdr vv)))) file-hash)
-    (superman-view-project pro)
-    (superman-redo)))
+    ;; (superman-view-project pro)
+    ;; (superman-redo)
+    (goto-char (point-min))
+    (superman-format-section superman-document-balls probuf)
+    (switch-to-buffer probuf)
+    (goto-char (point-min))
+    (insert (superman-make-button
+	     (concat "Git repository for project: " (car pro))
+	     `(superman-capture-git-section ,(car pro) ,gitdir)
+	     'superman-project-button-face
+	     "Refresh"))
+    (insert "\n\n")
+    (goto-char (point-min))
+    (put-text-property (point-at-bol) (point-at-eol) 'git-dir gitdir)
+    (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
+    (put-text-property (point-at-bol) (point-at-eol) 'index profile)
+    (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-capture-git-section ,(car pro) ,gitdir))
+    (superman-view-mode)))
 
 
 ;;}}}

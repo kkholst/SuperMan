@@ -6,6 +6,7 @@ E.g. to checkout the subproject riskPlots of the riskscore project do this
 
 #+BEGIN_SRC sh
 git svn clone svn://scm.r-forge.r-project.org/svnroot/riskscore/pkg/riskPlots/
+git svn clone svn+ssh://user@scm.r-forge.r-project.org/svnroot/riskscore/pkg/riskPlots/
 #+END_SRC
 
 or to checkout bubble which provides the packages Publish and Refresh do
