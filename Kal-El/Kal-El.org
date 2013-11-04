@@ -4,56 +4,48 @@
 :CaptureButtons: SuperMan-Help | superman-capture-item,  LaTeX-help | superman-capture-item
 :END:
 
-* SuperMan-Help
+* SuperManual
   :PROPERTIES:
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
   :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face
   :Ball4:    FileName  :fun superman-dont-trim
   :END:
-** SuperMan
-      :PROPERTIES:
-      :CATEGORY: start-me-up
-      :END:
 
 *** Interview
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :GitInit:  <2013-06-11 Tue 18:21> first version
 :LastCommit: <2013-06-11 Tue 18:21> first version
 :END:
 
-
-
 *** Window configurations
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :CaptureDate: <2013-01-11 Fri 16:41>
 :GitInit:  <2013-01-11 Fri 20:48> first smash
 :LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
-** Org-mode
+* Org-mode
     
 *** sample-beamer
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :CaptureDate: <2013-03-07 Thu 12:05>
 :GitInit:  <2013-03-07 Thu 12:05> first commit
 :LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
 
 
-** LaTeX
-
-
+* LaTeX
 
 *** ediff.sh
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :GitInit:  <2013-06-12 Wed 10:44> first commit
 :LastCommit: <2013-06-12 Wed 10:44> first commit
 :END:
@@ -62,7 +54,7 @@
 *** using-ediff-as-git-difftool.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :GitInit:  <2013-06-12 Wed 10:38> first commit
 :LastCommit: <2013-06-12 Wed 10:44> added link to shell script
 :END:
@@ -71,7 +63,7 @@
 *** latex useful packages
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :GitInit:  <2013-05-03 Fri 09:32> first commit
 :LastCommit: <2013-05-29 Wed 17:46> moved in place
 :END:
@@ -83,7 +75,7 @@
 *** use-git-svn-for-Rforge.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :GitInit:  <2013-06-13 Thu 08:35> init
 :LastCommit: <2013-06-13 Thu 08:35> init
 :END:
@@ -95,7 +87,7 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Modified
+:GitStatus: Nonexistent
 :GitInit:  <2013-03-07 Thu 12:10> first commit
 :LastCommit: <2013-06-13 Thu 08:54> test
 :END:
@@ -169,7 +161,7 @@
 *** Kal-El.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
-:GitStatus: Modified
+:GitStatus: Nonexistent
 :GitInit:  <2013-03-07 Thu 12:10> first commit
 :LastCommit: <2013-06-13 Thu 08:36> test
 :END:
@@ -179,7 +171,7 @@
 *** latex-useful-packages.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 ** projects/Kal-El/help
@@ -187,13 +179,13 @@
 *** smash.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 *** S.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 ** projects/Kal-El/hints
@@ -201,13 +193,13 @@
 *** using-ediff-as-git-difftool.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 *** latex-useful-packages.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 ** projects/Kal-El/samples
@@ -215,13 +207,13 @@
 *** template-literate.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/template-literate.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 *** sample-beamer.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :END:
 
 ** projects/Kal-El/tools
@@ -229,7 +221,7 @@
 *** ediff.sh
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
-:GitStatus: Committed
+:GitStatus: Nonexistent
 :LastCommit: 
 :END:
 
