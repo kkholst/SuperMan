@@ -1225,7 +1225,7 @@ to VIEW-BUF."
 	  (with-current-buffer view-buf (insert text)))))
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
-	 (setq index-marker (point-marker)))
+	(setq index-marker (point-marker)))
       (set-buffer (get-buffer-create "*Git output*"))
       (erase-buffer)
       (insert "git-output")
@@ -1297,8 +1297,15 @@ to VIEW-BUF."
 	      ;; insert the section name
 	      (set-buffer view-buf)
 	      (goto-char view-cat-head)
+	      (when (and
+		     superman-empty-line-before-cat
+		     (save-excursion (beginning-of-line 0)
+			    (not (looking-at "^[ \t]*$"))))
+		(insert "\n"))
 	      (superman-view-insert-section-name name count balls index-marker)
 	      ;; insert the column names
+	      (when superman-empty-line-after-cat
+		(insert "\n"))
 	      (insert (superman-column-names balls))
 	      (when buttons
 		(beginning-of-line)
@@ -1482,7 +1489,7 @@ cleanup is a function which is called before superman plays the balls.")
       (while cycle-strings
 	(let ((cstring (car cycle-strings)))
 	  (set-text-properties 0 (length cstring) nil cstring)
-	  (insert " -> ")
+	  (insert " >> ")
 	  (insert (superman-make-button
 		   cstring
 		   `(lambda () (interactive) (superman-view-set-git-cycle ,cstring))
@@ -1492,34 +1499,9 @@ cleanup is a function which is called before superman plays the balls.")
 	  (setq  cycle-strings (cdr cycle-strings)))))
     (forward-line 1)
     ;; insert the column names
+    (when superman-empty-line-after-cat
+      (insert "\n"))
     (insert (superman-column-names balls))))
-
-(defun superman-format-cat-1 (balls vbuf)
-  "Format all items in the visible part of the buffer according to balls
- and write the result to buffer VBUF."
-  (while (outline-next-heading)
-    (cond ((eq (org-current-level) 2)
-	   ;; sub-headings
-	   (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
-	     (setq line (concat "*** " subhdr))
-	     (put-text-property 0 (length line) 'subcat subhdr line)
-	     (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
-	     (put-text-property 0 (length line) 'face 'org-level-3 line)
-	     (put-text-property 0 (length line) 'face 'superman-subheader-face line)
-	     ;;			 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr " [" (int-to-string countsub) "]") line)
-	     (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-	     ;; (with-current-buffer vbuf (setq countsub (append countsub (list `(0 ,(point))))))
-	     (with-current-buffer vbuf (insert line " \n" ))
-	     (end-of-line)))
-	  ;; items
-	  ((eq (org-current-level) 3)		       
-	   ;; (if countsub
-	       ;; (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
-	   ;; (setq count (+ count 1))
-	   (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-	   (with-current-buffer vbuf (insert line "\n"))))))
-
-
 
 (unless org-todo-keyword-faces
 (setq org-todo-keyword-faces

@@ -63,6 +63,12 @@
 
 ;;{{{ variables and user options
 
+(defvar superman-empty-line-before-cat t
+  "Option for superman-view buffers: If non-nil insert an empty line before the category heading.")
+(defvar superman-empty-line-after-cat t
+  "Option for superman-view buffers: If non-nil insert an empty line after the category heading
+before the column names.")
+
 (defvar superman-property-list 
   '((index . "Index")
     (nickname . "NickName")
@@ -314,8 +320,6 @@ the `superman-home'.")
   (add-hook 'after-save-hook 'superman-refresh nil 'local))
 
 (define-key superman-manager-mode-map [(meta return)] 'superman-return)
-;; (define-key superman-manager-mode-map [(meta n)] 'superman-next-project)
-;; (define-key superman-manager-mode-map [(meta p)] 'superman-previous-project)
 (define-key superman-manager-mode-map [f1] 'superman-manager)
 
 (add-hook 'find-file-hooks 
@@ -360,12 +364,6 @@ the `superman-home'.")
 	 (pro (assoc nickname superman-project-alist)))
     pro))
 
-(defun superman-return ()
-  (interactive)
-  (let ((pro (superman-project-at-point)))
-    (if pro
-	(superman-switch-to-project pro nil))))
-
 (defun superman-forward-project ()
   (interactive)
   (re-search-forward
@@ -394,20 +392,35 @@ the `superman-home'.")
 		   (org-entry-get pom property inherit literal-nil)))))))
     (if (stringp prop)
 	(replace-regexp-in-string "[ \t]+$" "" prop))))
-  
+
+(defvar superman-project-kal-el t
+  "If non-nil add the Kal-El project to project alist.
+Kal-El is the planet where superman was born. It is there
+we find the `supermanual' and other helpful materials.")
+
 (defun superman-parse-projects ()
-  "Parse the file `superman-home' and update `superman-project-alist'."
+  "Parse the file `superman-home' and update `superman-project-alist'. If
+`superman-project-kal-el' is non-nil also add the Kal-El project."
   (interactive)
   (save-excursion
-    (setq superman-project-alist nil)
+    (if superman-project-kal-el
+	(let ((superman-loc
+	       (expand-file-name
+		(concat (file-name-directory (locate-library "superman")) ".."))))
+	  (setq superman-project-alist `(("Kal-El"
+					  (("location" . ,superman-loc)
+					   ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
+					   ("category" . "Krypton")
+					   ("others" . "Jor-El, SuperManual")
+					   (hdr . "Kal-El"))))))
+	  (setq superman-project-alist nil))
     (set-buffer (find-file-noselect superman-home))
     (show-all)
     (widen)
     (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
-    (while
-	 (superman-forward-project)
+    (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
 	       (category (or (superman-get-property nil (superman-property 'category) 'inherit) "CatWoman"))
@@ -518,16 +531,8 @@ and others."
     (setq superman-current-project
 	  (assoc (car superman-current-project) superman-project-alist))))
 
-
-
-
-
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
-
-;; (add-to-list 'org-structure-template-alist
-;; '("P" "**** ACTIVE %?:PROPERTIES:\n:NICKNAME:\n:OTHERS:\n:CaptureDate:\n:END:"))
-
 
 
 (defun superman-create-project (project &optional ask)
@@ -617,15 +622,6 @@ and others."
 
 ;;}}}
 ;;{{{ setting project properties
-
-;; (defun superman-project-agenda ()
-    ;; "Show an agenda of all the projects. Useful, e.g. for toggling
-;; the active status of projects."
-    ;; (interactive)
-    ;; (find-file superman-home)
-    ;; (push ?t unread-command-events)
-    ;; (push ?< unread-command-events)
-    ;; (call-interactively 'org-agenda))  
 
 (defun superman-set-nickname ()
   (interactive)
@@ -888,10 +884,6 @@ If NOSELECT is set return the project."
 
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
-(defun superman-visit-home (project)
-  "Open the supermanager and leave point at PROJECT"
-  (S)
-  (re-search-forward (car project) nil t))
 
 (defun superman-go-home (&optional heading)
   "Visit the file superman-home and leave point at PROJECT."

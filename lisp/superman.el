@@ -71,6 +71,7 @@
   (superman-redo))
 
 (defun superman-return ()
+  "Switch to project at point."
   (interactive)
   (let ((pro (assoc
 	      (superman-property-at-point
