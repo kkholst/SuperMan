@@ -1,0 +1,227 @@
+*** Index of project Kal-El
+:PROPERTIES:
+:ProjectStart: <2013-01-02 Wed 06:18>
+:CaptureButtons: SuperMan-Help | superman-capture-item,  LaTeX-help | superman-capture-item
+:END:
+
+* SuperManual
+  :PROPERTIES:
+  :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
+  :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face
+  :Ball4:    FileName  :fun superman-dont-trim
+  :END:
+
+*** Interview
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-06-11 Tue 18:21> first version
+:LastCommit: <2013-06-11 Tue 18:21> first version
+:END:
+
+*** Window configurations
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
+:GitStatus: Nonexistent
+:CaptureDate: <2013-01-11 Fri 16:41>
+:GitInit:  <2013-01-11 Fri 20:48> first smash
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+* Org-mode
+    
+*** sample-beamer
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
+:GitStatus: Nonexistent
+:CaptureDate: <2013-03-07 Thu 12:05>
+:GitInit:  <2013-03-07 Thu 12:05> first commit
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+
+* LaTeX
+
+*** ediff.sh
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-06-12 Wed 10:44> first commit
+:LastCommit: <2013-06-12 Wed 10:44> first commit
+:END:
+
+
+*** using-ediff-as-git-difftool.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-06-12 Wed 10:38> first commit
+:LastCommit: <2013-06-12 Wed 10:44> added link to shell script
+:END:
+
+
+*** latex useful packages
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-05-03 Fri 09:32> first commit
+:LastCommit: <2013-05-29 Wed 17:46> moved in place
+:END:
+
+
+** Rforge
+
+
+*** use-git-svn-for-Rforge.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/use-git-for-Rforge.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-06-13 Thu 08:35> init
+:LastCommit: <2013-06-13 Thu 08:35> init
+:END:
+
+
+** Git
+
+
+*** Kal-El.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-03-07 Thu 12:10> first commit
+:LastCommit: <2013-06-13 Thu 08:54> test
+:END:
+
+
+** Admin
+
+* Bookmarks
+
+
+** Links
+
+
+*** beamertheme: org
+:PROPERTIES:
+:BookmarkDate: <2013-08-18 Sun>
+:Link: https://github.com/mbork/beamerorgtheme
+:END:
+
+
+*** Org-mode
+:PROPERTIES:
+:BookmarkDate: <2013-05-29 Wed>
+:Link: http://orgmode.org/
+:END:
+*** superboy
+   :PROPERTIES:
+   :Bookmark: t
+   :CATEGORY: url
+   :LINK: http://en.wikipedia.org/wiki/Superboy_%28Kal-El%29
+   :END:
+
+* Notes
+
+*** TODO Alias name: Man in Steel
+:PROPERTIES:
+:NoteDate: <2013-03-22 Fri>
+:END:
+
+
+
+* Tasks
+** Save Smallville
+   :PROPERTIES:
+   :CATEGORY: Home
+   :END:
+   
+*** DONE Help Mrs Kent milking the cows
+    CLOSED: [2013-01-15 Tue 16:42]
+:PROPERTIES:
+:CaptureDate: <1958-01-13 Mon>
+:END:
+
+*** TODO Help Mr Kent mow the lawn 
+:PROPERTIES:
+:CaptureDate: <1957-02-16 Sat>
+:END:
+*** TODO Learn org-mode 
+:PROPERTIES:
+:TaskDate: <2013-03-07 Thu>
+:END:
+
+
+
+
+* Configuration
+
+* GitFiles
+** projects/Kal-El
+
+*** Kal-El.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/Kal-El.org]]
+:GitStatus: Nonexistent
+:GitInit:  <2013-03-07 Thu 12:10> first commit
+:LastCommit: <2013-06-13 Thu 08:36> test
+:END:
+
+** projects/Kal-El/docs
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/docs/latex-useful-packages.org]]
+:GitStatus: Nonexistent
+:END:
+
+** projects/Kal-El/help
+
+*** smash.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/smash.org]]
+:GitStatus: Nonexistent
+:END:
+
+*** S.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/help/S.org]]
+:GitStatus: Nonexistent
+:END:
+
+** projects/Kal-El/hints
+
+*** using-ediff-as-git-difftool.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/using-ediff-as-git-difftool.org]]
+:GitStatus: Nonexistent
+:END:
+
+*** latex-useful-packages.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/hints/latex-useful-packages.org]]
+:GitStatus: Nonexistent
+:END:
+
+** projects/Kal-El/samples
+
+*** template-literate.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/template-literate.org]]
+:GitStatus: Nonexistent
+:END:
+
+*** sample-beamer.org
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/samples/sample-beamer.org]]
+:GitStatus: Nonexistent
+:END:
+
+** projects/Kal-El/tools
+
+*** ediff.sh
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/projects/Kal-El/tools/ediff.sh]]
+:GitStatus: Nonexistent
+:LastCommit: 
+:END:
+

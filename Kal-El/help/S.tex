@@ -1,0 +1,71 @@
+% Created 2013-10-22 Tue 07:24
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{color}
+\usepackage{listings}
+\author{TagTeam, KKHolst}
+\date{\today}
+\title{emacs SuperMan: prolog}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 24.3.1 (Org mode 8.0.7)}}
+\begin{document}
+
+\maketitle
+\section*{Getting started with your new SuperMan(er)}
+\label{sec-1}
+
+\begin{description}
+\item[{S:}] SuperMan is a project which manages all your other projects.
+\item[{Y:}] This sound useful. But what exactly is considered a project?
+\item[{S:}] A project is an entry in a file, where the file-name is
+defined by the emacs variable `superman-home'. 
+An entry looks like this:
+\end{description}
+
+\begin{verbatim}
+**** Extensions of the Hodges-Lehmann estimator for structural equation models
+    :PROPERTIES:
+    :NICKNAME: HodgesLehmann
+    :LOCATION: ~/research/Methods/
+    :CATEGORY: Work
+    :OTHERS: Terre Antivirus, Audrey Blanche
+    :LastVisit: <2013-05-31 Fri 19:59>
+    :END:
+\end{verbatim}
+
+The properties have the following meaning:
+
+\begin{verbatim}
+**** Description text
+    :PROPERTIES:
+    :NICKNAME: Short project name which is also used
+               as directory name below LOCATION 
+    :LOCATION: A directory on your computer in which
+               the main project files are saved
+    :CATEGORY: The project category
+    :OTHERS: Names of your collaborators
+             of the project
+    :LastVisit: Automatically updated time-string
+                indicating when you last looked into
+                this project
+    :END:
+\end{verbatim}
+
+\begin{description}
+\item[{Y:}] Ok. How do I register my projects.
+\item[{S:}] That is easy: first open the SuperMan via M-x S RET,
+then type N for superman-new-project. You will be
+prompted for NICKNAME and CATEGORY.
+\item[{Y:}] hmm, I will give it a try \ldots{} last question: Does the SuperMan project contain itself?
+\item[{S:}] Nice question. Probably the answer is: \emph{Yes! But,\ldots{}}. To find a better answer please read logicomix (www.logicomix.com).
+\end{description}
+% Emacs 24.3.1 (Org mode 8.0.7)
+\end{document}

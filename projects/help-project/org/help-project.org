@@ -1,7 +1,0 @@
-* TODO Requirements
-
-* TODO Getting started
-
-* TODO [#B] Creating new projects
-
-
