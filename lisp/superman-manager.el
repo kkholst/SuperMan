@@ -45,6 +45,7 @@
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
 (require 'superman-pub)   ;; publication manager
+(require 'superman-google)   ;; google calendar support
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
