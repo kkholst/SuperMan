@@ -26,3 +26,15 @@ M-x superman-save-config RET
 ** Restore a window configuration
 
 M-x superman-switch-config RET
+
+** Add a configuration to a single project 
+
+** Add a configuration to all projects in a category
+#+BEGIN_EXAMPLE
+*** Courses
+    :PROPERTIES:
+    :CATEGORY: Teaching
+    :Location: ~/public_html/Teaching/
+    :CONFIG:   INDEX / ./lecturenotes | TODO / TIMELINE
+    :END:
+#+END_EXAMPLE

@@ -15,7 +15,7 @@
 *** Supermanual.org
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/supermanual/Supermanual.org]]
-:GitStatus: New file
+:GitStatus: Committed
 :END:
 
 * SuperSamples
