@@ -508,9 +508,7 @@ or if the file is not inside the location."
 	("Hash" ("width" 10) ("face" font-lock-comment-face))
 	("Author" ("width" 20) ("face" font-lock-function-name-face))
 	("Tag" ("width" 10) ("face" font-lock-comment-face))
-	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))
-))
-
+	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
 
 (defun superman-git-log (file gitpath limit &optional search-string decorationonly)
   (let* ((file (or file (superman-filename-at-point)

@@ -1236,7 +1236,8 @@ to VIEW-BUF."
       ;; call git display cycle
       (superman-view-git-display-cycle
        view-buf git props
-       view-cat-head index-buf index-cat-point))
+       view-cat-head index-buf index-cat-point
+       name))
      (balls
       ;; create table view based on balls 
       ;; move to index-buf
@@ -1338,7 +1339,6 @@ to VIEW-BUF."
 
 ;;}}}
 ;;{{{ git-cycle views
-
 (defvar superman-view-git-display-command-list
       '(("log"
 	 "log -n 5 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Author: %an\n:Date: %cd\n:Message: %s\n:END:\n\""
@@ -1395,7 +1395,8 @@ cleanup is a function which is called before superman plays the balls.")
   (superman-redo-cat))
 
 (defun superman-view-cycle-git-display ()
-  "Cycles to the next value in `superman-git-display-cycles'. Should be bound to a button."
+  "Cycles to the next value in `superman-git-display-cycles'.
+This function should be bound to a key or button."
   (interactive)
   (let* ((pom (get-text-property (point-at-bol) 'org-hd-marker))
 	 (cycles (split-string (or (superman-get-property pom "git-cycle")
@@ -1449,12 +1450,11 @@ cleanup is a function which is called before superman plays the balls.")
 	 (concat "** "
 		 fname
 		 "\n:PROPERTIES:\n:STATUS: " (superman-status-label status)
-		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n"))))))
+		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n") 'fixed)))))
 ;; "--numstat "
 ;; "--name-status "
 
-
-(defun superman-view-git-display-cycle (view-buf dir props view-point index-buf index-cat-point)
+(defun superman-view-git-display-cycle (view-buf dir props view-point index-buf index-cat-point name)
   (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
 	 (cycle (or (cadr (assoc "git-display" props)) (car cycles)))
 	 (limit (cadr (assoc "limit" props)))
@@ -1462,12 +1462,15 @@ cleanup is a function which is called before superman plays the balls.")
 	 (balls (or (nth 2 rest) superman-default-balls))
 	 (clean-up (nth 3 rest))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " " (nth 1 rest))))
-    ;; for the first time 
+    ;; for the first time ... 
     (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
+    ;; limit on number of revisions
     (when limit
       (replace-regexp-in-string "-n [0-9]+ " (concat "-n " limit " ")))
+    ;; insert the result of git command
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
+    ;; clean-up if necessary
     (when clean-up (funcall clean-up))
     (goto-char (point-min))
     (while (outline-next-heading)
@@ -1475,10 +1478,16 @@ cleanup is a function which is called before superman plays the balls.")
       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
       (with-current-buffer view-buf (insert line "\n")))
     (set-buffer view-buf)
+    (when superman-empty-line-before-cat (insert "\n"))
     (goto-char view-point)
     ;; section names
+    (when (and
+	   superman-empty-line-before-cat
+	   (save-excursion (beginning-of-line 0)
+			   (not (looking-at "^[ \t]*$"))))
+      (insert "\n"))
     (superman-view-insert-section-name
-     (concat "Git " cycle) count balls
+     name count balls
      ;; FIXME: it must be possible to construct the marker based on buf and point
      (with-current-buffer index-buf
        (widen)
@@ -1499,20 +1508,19 @@ cleanup is a function which is called before superman plays the balls.")
 	  (setq  cycle-strings (cdr cycle-strings)))))
     (forward-line 1)
     ;; insert the column names
-    (when superman-empty-line-after-cat
-      (insert "\n"))
+    (when superman-empty-line-after-cat (insert "\n"))
     (insert (superman-column-names balls))))
 
 (unless org-todo-keyword-faces
-(setq org-todo-keyword-faces
-      (quote (("TODO" :foreground "red" :weight bold)
-	      ("URGENT" :foreground "goldenrod1" :weight bold)
-	      ("IN PROGRESS" :foreground "blue" :weight bold)
-	      ("ACTIVE" :foreground "red" :weight bold)
-	      ("WAITING" :foreground "purple" :weight bold)
-	      ("PERMANENT" :foreground "SkyBlue3" :weight bold)
-	      ("DONE" :foreground "forest green" :weight bold)
-	      ("CANCELED" :foreground "slate grey" :weight bold)))))
+  (setq org-todo-keyword-faces
+	(quote (("TODO" :foreground "red" :weight bold)
+		("URGENT" :foreground "goldenrod1" :weight bold)
+		("IN PROGRESS" :foreground "blue" :weight bold)
+		("ACTIVE" :foreground "red" :weight bold)
+		("WAITING" :foreground "purple" :weight bold)
+		("PERMANENT" :foreground "SkyBlue3" :weight bold)
+		("DONE" :foreground "forest green" :weight bold)
+		("CANCELED" :foreground "slate grey" :weight bold)))))
 
 ;;}}}
 ;;{{{ Formatting items and column names
@@ -2463,7 +2471,6 @@ lengthy on some systems."
     (if (not dir)
 	(message "Argument DIR is required in this case.")
       ;; (shell-command-to-string "cd ~/emacs-genome/; git ls-files | while read file; do git log -n 1 --pretty=\"Filename:  $file, commit: %h, date: %ad\" -- $file; done")
-
       (if with-date
 	  (superman-loop
 	   'superman-view-set-status-at-point nil beg end nil)
