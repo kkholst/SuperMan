@@ -828,7 +828,10 @@ Returns the formatted string with text-properties."
 
 (defun superman-parse-props (&optional pom add-point with-heading)
   "Read properties at point or marker POM and return
-them in a list. If ADD-POINT augment the list by an element
+them in an alist where the key is the name of the property
+in lower case.
+
+If ADD-POINT augment the list by an element
 which holds the point of the heading."
   (org-with-point-at pom
     (save-excursion
@@ -846,7 +849,7 @@ which holds the point of the heading."
 	      (setq props
 		    (append
 		     props
-		     `((,(match-string-no-properties 1) ,(match-string-no-properties 2))))
+		     `((,(downcase (match-string-no-properties 1)) ,(match-string-no-properties 2))))
 		    ))
 	    (setq next (forward-line 1)))
 	  (widen))
@@ -1102,7 +1105,8 @@ which locates the heading in the buffer."
 	 (ibuf (or (get-file-buffer index)
 		   (find-file index)))
 	 (cats (delete-if
-		#'(lambda (cat) (string= "Configuration" (car cat)))
+		#'(lambda (cat)
+		    (string= "Configuration" (car cat)))
 		(superman-parse-cats ibuf 1)))
 	 ;; identify appropriate buttons
 	 (buttons (save-excursion
@@ -1203,7 +1207,7 @@ to VIEW-BUF."
 	 (buttons (cadr (assoc "buttons" props)))
 	 (git (assoc "git-cycle" props))
 	 ;; (folded (cadr (assoc "startfolded") props))
-	 (free (assoc "freeText" props))
+	 (free (assoc "freetext" props))
 	 (count 0)
 	 cat-head)
     ;; mark head of this category in view-buf
@@ -1218,11 +1222,18 @@ to VIEW-BUF."
       (goto-char index-cat-point)
       (save-restriction
 	(org-narrow-to-subtree)
-	(let ((text (buffer-substring
-		     (progn (org-end-of-meta-data-and-drawers)
-			    (point))
-		     (point-max))))
-	  (with-current-buffer view-buf (insert text)))))
+	(let ((text
+	       (concat
+		(buffer-substring
+		 (point-min)
+		 (point-at-eol))
+		"\n"
+		(buffer-substring
+		 (progn (org-end-of-meta-data-and-drawers)
+			(point))
+		 (point-max)))))
+	  (with-current-buffer view-buf
+	    (insert text)))))
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
 	(setq index-marker (point-marker)))
@@ -1301,7 +1312,7 @@ to VIEW-BUF."
 	      (when (and
 		     superman-empty-line-before-cat
 		     (save-excursion (beginning-of-line 0)
-			    (not (looking-at "^[ \t]*$"))))
+				     (not (looking-at "^[ \t]*$"))))
 		(insert "\n"))
 	      (superman-view-insert-section-name name count balls index-marker)
 	      ;; insert the column names
