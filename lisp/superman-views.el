@@ -1209,6 +1209,7 @@ to VIEW-BUF."
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freetext" props))
 	 (count 0)
+	 index-marker
 	 cat-head)
     ;; mark head of this category in view-buf
     (set-buffer view-buf)
@@ -1220,19 +1221,19 @@ to VIEW-BUF."
       (set-buffer index-buf)
       (widen)
       (goto-char index-cat-point)
+      (setq index-marker (point-marker))
       (save-restriction
 	(org-narrow-to-subtree)
 	(let ((text
-	       (concat
-		(buffer-substring
-		 (point-min)
-		 (point-at-eol))
-		"\n"
-		(buffer-substring
-		 (progn (org-end-of-meta-data-and-drawers)
-			(point))
-		 (point-max)))))
+	       (buffer-substring
+		(progn (org-end-of-meta-data-and-drawers)
+		       (point))
+		(point-max))))
 	  (with-current-buffer view-buf
+	    (superman-view-insert-section-name
+	     (car cat)
+	     0 balls
+	     index-marker)
 	    (insert text)))))
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
