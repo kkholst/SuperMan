@@ -217,26 +217,26 @@ the `superman-home'.")
 (defface superman-capture-button-face
   '((((class color) (min-colors 88) (background light))
      :inherit superman-default-button-face
-     :height 0.8
+     :height 1.0
      :foreground "darkblue"
      :background "mintcream")
     (((class color) (min-colors 88) (background dark))
      :inherit superman-default-button-face
-     :height 0.8
+     :height 1.0
      :foreground "mintcream"
      :background "darkblue")
     (((class color) (min-colors 8) (background light))
      :inherit superman-default-button-face
-     :height 0.8
+     :height 1.0
      :foreground "white"
      :background "gray55")
     (((class color) (min-colors 8) (background dark))
      :inherit superman-default-button-face
-     :height 0.8
+     :height 1.0
      :foreground "gray55"
      :background "white")
     (t (:inherit superman-default-button-face
-		 :height 0.8
+		 :height 1.0
 		 :inverse-video t
 		 :bold t)))
   "Face for superman capture buttons."
@@ -245,26 +245,26 @@ the `superman-home'.")
 (defface superman-project-button-face
   '((((class color) (min-colors 88) (background light))
      :inherit superman-default-button-face
-     :height 1.3
+     :height 1.0
      :foreground "yellow"
      :background "red")
     (((class color) (min-colors 88) (background dark))
      :inherit superman-default-button-face
-     :height 1.3
+     :height 1.0
      :foreground "red"
      :background "yellow")
     (((class color) (min-colors 8) (background light))
      :inherit superman-default-button-face
-     :height 1.3
+     :height 1.0
      :foreground "black"
      :background "gray88")
     (((class color) (min-colors 8) (background dark))
      :inherit superman-default-button-face
-     :height 1.3
+     :height 1.0
      :foreground "gray88"
      :background "black")
     (t (:inherit superman-default-button-face
-		 :height 1.3
+		 :height 1.0
 		 :inverse-video t
 		 :bold t)))
   "Face for superman project buttons."
@@ -275,12 +275,12 @@ the `superman-home'.")
      :inherit superman-project-button-face
      :background "LightYellow1"
      :inverse-video t
-     :height 0.8)
+     :height 1.0)
     (t
      :inherit superman-project-button-face
      :foreground "LightYellow1"
      :inverse-video t
-     :height 0.8))
+     :height 1.0))
   "Face for next superman project buttons."
   :group 'superman)
 

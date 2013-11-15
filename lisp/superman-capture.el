@@ -389,7 +389,8 @@ index file as LEVEL headings. Then show the updated project view buffer."
      heading
      `("Document" (("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
 		   (hdr ,(file-name-nondirectory file))
-		   ("GitStatus" ,(nth 1 (ignore-errors (superman-git-get-status file nil)))))))))
+		   ;; ("GitStatus" ,(nth 1 (ignore-errors (superman-git-get-status file nil))))
+		   )))))
 
 
 (defun superman-view-new-project ()
