@@ -158,6 +158,7 @@ Default is to set the old window configuration.
      (make-indirect-buffer (current-buffer) S-buf))
     (delete-other-windows)
     (org-mode)
+    (show-all)
     (unless (= level 0) (progn
 			  (insert "\n"
 				  (make-string level (string-to-char "*"))
