@@ -2715,9 +2715,9 @@ If point is before the first category do nothing."
 	(pom  (org-get-at-bol 'org-hd-marker)))
     (when
 	file
-      (superman-git-set-status pom file check)
-      (when save (superman-view-save-index-buffer))
-      (when redo (superman-redo)))))
+      (superman-git-set-status pom file nil))))
+      ;; (when save (superman-view-save-index-buffer))
+      ;; (when redo (superman-redo)))))
 
 (defun superman-view-save-index-buffer ()
   (save-excursion
@@ -2852,8 +2852,9 @@ If dont-redo the agenda is not reversed."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
+    (superman-git-set-status (org-get-at-bol 'org-hd-marker) file nil)
     (superman-view-redo-line)))
-    ;; (superman-view-git-set-status 'save (not dont-redo) nil)))
+;; (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-marked-files (&optional beg end)
   (delq nil (superman-loop
