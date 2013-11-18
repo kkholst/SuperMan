@@ -31,11 +31,11 @@
 
 ;;{{{
 
-(defvar superman '(("SuperMan" ("location" . (file-name-directory superman-home))
-		   ("index" . superman-home)
-		   ("category" . nil)
-		   ("config" . nil)
-		   ("state" . "ACTIVE"))))
+;; (defvar superman '(("SuperMan" ("location" . (file-name-directory superman-home))
+;; ("index" . superman-home)
+;; ("category" . nil)
+;; ("config" . nil)
+;; ("state" . "ACTIVE"))))
 
 (setq superman-balls
       '((todo ("width" 9) ("face" superman-get-todo-face))
@@ -64,7 +64,7 @@
 		      ((superman-property 'publishdirectory) . nil)))
 	 (prop (completing-read "Set property: " prop-list))
 	 (pom (org-get-at-bol 'org-hd-marker))
-	 (curval (ouperrg-entry-get pom prop))
+	 (curval (org-entry-get pom prop))
 	  ;; (if  (completing-read (concat "Value for " prop ": ")
 	 (val (read-string (concat "Value for " prop ": ") curval)))
     (org-entry-put pom prop val))
@@ -643,5 +643,3 @@ LIST includes the buffers that are related to one of the items."
 ;;}}}  
 (provide 'superman)
 ;;; superman.el ends here
-
-
