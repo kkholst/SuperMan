@@ -155,10 +155,11 @@ Default is to set the old window configuration.
       (show-all)
       (goto-char (point-max)))
     (switch-to-buffer
-     (make-indirect-buffer (current-buffer) S-buf))
+     (make-indirect-buffer (current-buffer) S-buf) 'clone)
     (delete-other-windows)
-    (org-mode)
+    ;; (org-mode)
     (show-all)
+    ;; (if (beginning-of-line) (looking-at "[.*]"
     (unless (= level 0) (progn
 			  (insert "\n"
 				  (make-string level (string-to-char "*"))
