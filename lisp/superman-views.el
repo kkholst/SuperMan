@@ -1,6 +1,6 @@
 ;;; superman-views.el --- Superman views of project contents 
 
-;; Copyright (C) 2012  Klaus Kaehler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2012-2013 Thomas Alexander Gerds, Klaus Kaehler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>
@@ -260,7 +260,8 @@ and sets the variable superman-view-current-project."
 and the keybinding to initialize git control otherwise."
   (let* ((loc (get-text-property (point-min) 'git-dir))
 	 (button (superman-make-button "Contrl:"
-				       'superman-view-git-status
+				       ;; 'superman-view-git-status
+				       'superman-add-git-cycle
 				       'superman-header-button-face
 				       "Show git status"))
 	 (control (if (superman-git-p loc)
@@ -347,8 +348,6 @@ and the keybinding to initialize git control otherwise."
 (defun supermanual (&optional project)
   (interactive)
   (find-file supermanual))
-
-
 
 (defun superman-view-insert-project-buttons ()
   "Insert project buttons"
@@ -545,26 +544,65 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 ;;}}}
 ;;{{{ superman-buttons
 
+;; (defun superman-call-button-function (button)
+  ;; (interactive)
+  ;; (callf (button-get button 'fun)))
+  ;; (let ((win (get-buffer-window (button-get button 'buffer)))
+	;; (cur-win (get-buffer-window (current-buffer))))
+    ;; (select-window cur-win)
+    ;; (if win
+	;; (progn
+	  ;; (select-window win)
+	  ;; (goto-char (button-get button 'point)))))
+  ;; (callf (button-get button 'fun)))
+
+;; (insert (superman-make-button "bla" 'test))
+
+(defun test ()
+  (interactive)
+  (message "hi" ))
+
+
+;; (defun superman-with-point-at-mouse (event)
+  ;; (set-buffer (window-buffer (posn-window event))
+	      ;; (goto-char (posn-point event))
+	      ;; (message (concat (buffer-name) (int-to-string (point))))))
+
 (defun superman-make-button (string &optional fun face help)
   "Create a button with label STRING and FACE.
-If FUN is a function then it is bound to mouse-2 and RETURN events.  
-HELP is shown when the mouse over the button."
+ If FUN is a function then it is bound to mouse-2 and RETURN events.  
+ HELP is shown when the mouse over the button."
   (let ((map (make-sparse-keymap))
+	;; (pfun `(lambda (&rest ignore) (funcall ',fun)))
 	(help (or help "Superman-button")))
     (when (functionp fun)
       (define-key map [return] fun)
-      (define-key map [mouse-2] fun))
+      (define-key map [mouse-2] `(lambda ()
+				   (interactive)
+				   ;; switch to the proper window/buffer
+				   (let* ((pos last-command-event)
+					  (posn (event-start pos)))
+				     (with-current-buffer (window-buffer (posn-window posn))
+				       (goto-char (posn-point posn))
+				       (message (concat (buffer-name) (int-to-string (point))))
+				       (funcall ',fun))))))
     ;; (when keys
-      ;; (while keys
-	;; (define-key map (caar keys) (cdar keys))
-	;; (setq keys (cdr keys))))
+    ;; (while keys
+    ;; (define-key map (caar keys) (cdar keys))
+    ;; (setq keys (cdr keys))))
     ;; (set-text-properties 0 (length string) nil string)
     (add-text-properties
      0 (length string) 
      (list
       'button (list t)
+      ;; 'keymap (mouse-2 . push-button)
+      ;; (13 . push-button))
+      'category 'default-button
       'face (or face 'superman-default-button-face)
       'keymap map
+      'superman-header-marker t
+      ;; 'action fun
+      ;; 'mouse-action pfun
       'mouse-face 'highlight
       'follow-link t
       'help-echo help)
@@ -593,7 +631,7 @@ Translate the branch names into buttons."
 	(setq other-branches (delete-if (lambda (x) (string-match "remotes/" x)) other-branches)))
       (insert "\n")
       (put-text-property 0 (length title) 'face 'org-level-2 title)
-      (put-text-property 0 1 'superman-header-marker t title)
+      (put-text-property 0 (length title) 'superman-header-marker t title)
       (insert
        (superman-make-button
 	title
@@ -1366,14 +1404,22 @@ to VIEW-BUF."
       ("Message" ("width" 63))))
     ("files"
      "ls-files --full-name"
-     (("filename" ("width" 4) ("fun" superman-make-git-diff-button) ("name" "diff"))
+     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("Status" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
+    ("untracked"
+     "ls-files --full-name --others"
+     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
+      ("Directory" ("width" 25) ("face" superman-subheader-face))
+      ("Status" ("width" 9) ("face" superman-get-git-status-face)))
+     superman-view-git-clean-git-ls-files)
     ("modified"
      "ls-files --full-name -m"
-     ((hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
+     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("Status" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
@@ -1388,33 +1434,195 @@ to identify the element, git-switches are the switches passed to git, balls are 
 cleanup is a function which is called before superman plays the balls.")
 
 
-(defun superman-make-git-diff-button (f &rest args)
-  (let ((bname (superman-trim-string "d@1" (car args))))
-    (if (string-match org-bracket-link-regexp f)
-	(superman-make-button bname
-			      'superman-view-git-diff-1
-			      'superman-capture-button-face
-			      "git diff")
-      ;; for the column name
-      (superman-trim-string f (car args)))))
+(defun superman-git-kb-commit ()
+  "Add and commit the file given by the filename property of the item at point."
+  (interactive)
+  (let* ((filename (superman-filename-at-point))
+	 (file (file-name-nondirectory filename))
+	 (dir (if filename (expand-file-name (file-name-directory filename))))
+	 (fbuf (get-file-buffer file)))
+    (when (and fbuf
+	       (with-current-buffer fbuf (buffer-modified-p))
+	       (y-or-n-p (concat "Save buffer " fbuf "?")))
+      (with-current-buffer fbuf (save-buffer)))
+    (superman-git-add (list file) dir 'commit nil)
+    (superman-view-redo-line)))
+
+(defun superman-git-kb-add ()
+  "Add and commit the file given by the filename property of the item at point."
+  (interactive)
+  (let* ((filename (superman-filename-at-point))
+	 (file (file-name-nondirectory filename))
+	 (dir (if filename (expand-file-name (file-name-directory filename))))
+	 ;; (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file))
+	 (fbuf (get-file-buffer file)))
+    (when (and fbuf
+	       (with-current-buffer fbuf (buffer-modified-p))
+	       (y-or-n-p (concat "Save buffer " fbuf "?")))
+      (with-current-buffer fbuf (save-buffer)))
+    (superman-git-add (list file) dir nil nil)
+    (superman-view-redo-line)))
+
+;; (defun superman-git-kb-stash ()
+  ;; "Add and commit the file given by the filename property of the item at point."
+  ;; (interactive)
+  ;; (let* ((filename (superman-filename-at-point))
+	 ;; (file (file-name-nondirectory filename))
+	 ;; (dir (if filename (expand-file-name (file-name-directory filename))))
+	 ;; ;; (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file))
+	 ;; (fbuf (get-file-buffer file)))
+    ;; (when (and fbuf
+	       ;; (with-current-buffer fbuf (buffer-modified-p))
+	       ;; (y-or-n-p (concat "Save buffer " fbuf "?")))
+      ;; (with-current-buffer fbuf (save-buffer)))
+    ;; (superman-view-redo-line)))
+
+(defface superman-git-keyboard-face-d
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :background "orange")))
+  "Face used for git-diff."
+  :group 'superman)
+(defface superman-git-keyboard-face-a
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :background "yellow")))
+  "Face used for git-add."
+  :group 'superman)
+
+(defface superman-git-keyboard-face-c
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :background "green")))
+  "Face used for git-commit."
+  :group 'superman)
+
+(defface superman-git-keyboard-face-x
+  '((t (:inherit superman-default-button-face
+		 :foreground "white"
+		 :background "black")))
+  "Face used for git-rm."
+  :group 'superman)
+
+(defface superman-git-keyboard-face-s
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :background "red")))
+  "Face used for git-stash."
+  :group 'superman)
+
+(defun superman-make-git-keyboard (f &rest args)
+  (if (string-match org-bracket-link-regexp f)
+      (let ((diff (superman-make-button "d"
+					'superman-view-git-diff-1
+					'superman-git-keyboard-face-d
+					"git diff"))
+	    (add (superman-make-button "a"
+				       'superman-git-add-at-point
+				       'superman-git-keyboard-face-a
+				       "git add"))
+	    (commit (superman-make-button "c"
+					  'superman-view-git-commit
+					  'superman-git-keyboard-face-c
+					  "git commit"))
+	    (stash (superman-make-button "s"
+					  'superman-view-git-stash
+					  'superman-git-keyboard-face-s
+					  "git commit"))
+	    (delete (superman-make-button "x"
+					  'superman-view-git-delete
+					  'superman-git-keyboard-face-x
+					  "git rm")))
+	(concat diff " " add  " " delete " " stash  " " commit " " " " " "))
+    ;; for the column name
+    (superman-trim-string f (car args))))
+
+
+
+;; (defun superman-make-git-diff-button (f &rest args)
+  ;; (if (string-match org-bracket-link-regexp f)
+      ;; (let ((bname (superman-trim-string "d@1" (car args))))
+	;; (superman-make-button bname
+			      ;; 'superman-view-git-diff-1
+			      ;; 'superman-capture-button-face
+			      ;; "git diff"))
+    ;; ;; for the column name
+    ;; (superman-trim-string f (car args))))
 
 (defun superman-add-git-cycle ()
   (interactive)
-  (save-excursion
+  (save-window-excursion
     (find-file (get-text-property (point-min) 'index))
     (goto-char (point-min))
     (unless (re-search-forward ":git-cycle:" nil t)
       (goto-char (point-max))
-      (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: log, status, modified, files\n:git-display: modified\n:END:\n")))
-  (superman-redo))
-    
+      (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
+	      (let ((sd (cdr superman-git-default-displays))
+		    (dstring (car superman-git-default-displays)))
+		(while sd
+		  (setq dstring (concat dstring ", " (car sd))
+			sd (cdr sd)))
+		dstring)
+	      "\n:git-display: modified\n:END:\n")
+      (superman-redo)))
+  (let ((ibuf (concat (buffer-name) " :Git-repos"))
+	(git-dir (get-text-property (point-min) 'git-dir)))
+    (if (get-buffer ibuf)
+	(switch-to-buffer ibuf)
+      (make-indirect-buffer (current-buffer) ibuf 'clone)
+      (switch-to-buffer ibuf)
+      (goto-char (next-single-property-change (point-min) 'git-repos))
+      (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (let ((buffer-read-only nil))
+	(insert (superman-make-button
+		 "Back to project (q)"
+		 'superman-view-back)
+		"\n")
+	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
+	(superman-git-mode)
+	))))
+
+
+(defvar superman-git-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-git-mode' commands.")
+   
+(define-minor-mode superman-git-mode
+     "Toggle superman git mode.
+With argument ARG turn superman-git-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-git mode enables the git keyboard to control single files."
+     :lighter " *SG*"
+     :group 'org
+     :keymap 'superman-git-mode-map)
+
+(defun superman-git-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-git-mode t))
+
+(define-key superman-git-mode-map "q" 'superman-view-back)
+(define-key superman-git-mode-map "c" 'superman-view-git-commit)
+(define-key superman-git-mode-map "a" 'superman-view-git-add)
+(define-key superman-git-mode-map "s" 'superman-view-git-stash)
+(define-key superman-git-mode-map "x" 'superman-view-git-delete)
+(define-key superman-git-mode-map "d" 'superman-view-git-diff)
+
+(defun superman-view-back ()
+  "Kill indirect buffer and return to project view."
+  (interactive)
+  (goto-char (point-min))
+  (let ((buffer-read-only nil))
+    (kill-line))
+  (kill-buffer (current-buffer)))
 
 (defvar superman-git-display-cycles nil
   "Keywords to match the elements in superman-view-git-display-command-list")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
 
-(setq superman-git-default-displays '("log" "modified" "files"))
+(setq superman-git-default-displays '("log" "modified" "files" "untracked"))
 
 (defun superman-view-set-git-cycle (value)
   (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
@@ -1435,6 +1643,22 @@ This function should be bound to a key or button."
     ;; (setq superman-git-display-cycles (append (cdr superman-git-display-cycles) (list (car superman-git-display-cycles))))
     (superman-view-set-git-cycle next)))
 
+
+(defun superman-view-git-clean-git-ls-files ()
+  (let* ((git-dir (get-text-property (point-min) 'git-dir)))
+    (goto-char (point-min))
+    (while (re-search-forward "^[^ \t\n]+" nil t)
+      (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
+	     (dname (file-name-directory ff))
+	     (fname (file-name-nondirectory ff))
+	     (fullname (concat git-dir "/" ff))
+	     (status "Untracked"))
+	(replace-match
+	 (concat "** "
+		 fname
+		 "\n:PROPERTIES:\n:STATUS: " status
+		 "\n:Directory: " (cond (dname) (t "."))  
+		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
 
 (defun superman-view-git-clean-git-ls-files+ ()
   (let* ((git-dir (get-text-property (point-min) 'git-dir))
@@ -1466,6 +1690,8 @@ This function should be bound to a key or button."
 			       (XY (concat X Y)))
 			  (cond ((string= " M" XY)
 				 "Modified")
+				((string= "??" XY)
+				 "Untracked")
 				((string= " D" XY)
 				 "Deleted")
 				((string= " R" XY)
@@ -1476,8 +1702,6 @@ This function should be bound to a key or button."
 				 "Added")
 				((string= "UU" XY)
 				 "unmerged, both modified")
-				((string= "??" XY)
-				 "untracked")
 				((string= "DD" XY)
 				 "unmerged, both deleted")
 				((string= "AU" XY)
@@ -1491,7 +1715,7 @@ This function should be bound to a key or button."
 				((string= "AA" XY)
 				 "unmerged, both added")
 				(t "Unknown")))))
-		 "\n:Directory: " (cond (dname) (t "."))  "\n"
+		 "\n:Directory: " (cond (dname) (t "."))  
 		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n"))))))
 
 (defun superman-view-git-clean-git-status ()
@@ -1541,6 +1765,7 @@ This function should be bound to a key or button."
 	   (save-excursion (beginning-of-line 0)
 			   (not (looking-at "^[ \t]*$"))))
       (insert "\n"))
+    (put-text-property 0 (length name) 'git-repos dir name) 
     (superman-view-insert-section-name
      name count balls
      ;; FIXME: it must be possible to construct the marker based on buf and point
@@ -1637,7 +1862,8 @@ a formatted string with faces."
     ;; (unless preserve-props
     ;; (set-text-properties 0 len nil trimmed-string))
     (when sort-key (put-text-property 0 len 'sort-key sort-key trimmed-string))
-    (unless no-face
+    ;; FIXME: this needs documentation, i.e. that a ball ("face" "no-face") will avoid the face
+    (unless (or no-face (stringp face)) 
       (when (and (not (facep face)) (functionp face)) ;; apply function to get face
 	(setq face (funcall
 		    face
@@ -1863,24 +2089,31 @@ current section."
 
 
 (defun superman-tab (&optional arg)
+  "Move to next button in the header and call `org-cycle' in the body of the project view."
   (interactive)
   (cond ((not (previous-single-property-change (point-at-eol) 'cat))
-	 (let ((mark (next-single-property-change (+ 1 (point)) 'superman-header-marker)))
-	   (if mark (goto-char mark)
+	 (let ((current (get-text-property (point) 'superman-header-marker))
+	       (mark (next-single-property-change (point) 'superman-header-marker)))
+	   (if mark (progn (goto-char mark)
+			   (when current
+			     (goto-char (next-single-property-change (point) 'superman-header-marker))))
 	     (goto-char (next-single-property-change (point) 'cat)))))
-	   (t (org-cycle arg))))
+	 (t (org-cycle arg))))
 
 (defun superman-shifttab (&optional arg)
+  "Move to previous button in the header and call `org-shifttab' in the body of the project view."
   (interactive)
   (cond
    ((eq (point) (point-min))
     (org-shifttab arg))
    ((not (previous-single-property-change (point-at-eol) 'cat))
-    (let ((mark (previous-single-property-change
-		 (- (point) 1)
-		 'superman-header-marker)))
+    (let ((current (get-text-property (point) 'superman-header-marker))
+	  (mark (previous-single-property-change
+		 (point) 'superman-header-marker)))
       (if mark
-	  (goto-char (- mark 1))
+	  (progn (goto-char (- mark 1))
+		 (when current (goto-char  (previous-single-property-change
+					    (point) 'superman-header-marker))))
 	(goto-char (point-min)))))
    (t (org-shifttab arg))))
 
@@ -2619,7 +2852,8 @@ If dont-redo the agenda is not reversed."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
-    (superman-view-git-set-status 'save (not dont-redo) nil)))
+    (superman-view-redo-line)))
+    ;; (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-marked-files (&optional beg end)
   (delq nil (superman-loop
@@ -2656,7 +2890,7 @@ If dont-redo the agenda is not reversed."
    
 (define-minor-mode superman-view-mode
      "Toggle superman project view mode.
-With argument ARG turn superman-docview-mode on if ARG is positive, otherwise
+With argument ARG turn superman-view-mode on if ARG is positive, otherwise
 turn it off.
                    
 Enabling superman-view mode electrifies the column view for documents
