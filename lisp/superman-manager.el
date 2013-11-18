@@ -245,26 +245,26 @@ the `superman-home'.")
 (defface superman-project-button-face
   '((((class color) (min-colors 88) (background light))
      :inherit superman-default-button-face
-     :height 1.0
+     :height 1.3
      :foreground "yellow"
      :background "red")
     (((class color) (min-colors 88) (background dark))
      :inherit superman-default-button-face
-     :height 1.0
+     :height 1.3
      :foreground "red"
      :background "yellow")
     (((class color) (min-colors 8) (background light))
      :inherit superman-default-button-face
-     :height 1.0
+     :height 1.3
      :foreground "black"
      :background "gray88")
     (((class color) (min-colors 8) (background dark))
      :inherit superman-default-button-face
-     :height 1.0
+     :height 1.3
      :foreground "gray88"
      :background "black")
     (t (:inherit superman-default-button-face
-		 :height 1.0
+		 :height 1.3
 		 :inverse-video t
 		 :bold t)))
   "Face for superman project buttons."
@@ -272,13 +272,15 @@ the `superman-home'.")
 
 (defface superman-next-project-button-face
   '((((class color) (background dark))
-     :inherit superman-project-button-face
+     :inherit superman-default-button-face
      :background "LightYellow1"
      :inverse-video t
+     :background "red"
      :height 1.0)
     (t
-     :inherit superman-project-button-face
+     :inherit superman-default-button-face
      :foreground "LightYellow1"
+     :background "red"
      :inverse-video t
      :height 1.0))
   "Face for next superman project buttons."
@@ -923,6 +925,9 @@ If NOSELECT is set return the project."
 (defun superman-get-state (project)
   (cdr (assoc 'todo (cadr project))))
 ;;}}}
+
+
+
 
 (provide 'superman-manager)
 ;;; superman-manager.el ends here
