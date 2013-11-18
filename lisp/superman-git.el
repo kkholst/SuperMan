@@ -357,6 +357,7 @@ buffer is in org-agenda-mode."
 ;;}}}
 ;;{{{ git add/commit 
 
+
 (defun superman-git-commit (&optional dir query)
   (let* ((dir (or dir
 		  (let ((pro (assoc (superman-property-at-point "Project" nil) superman-project-alist)))
@@ -366,9 +367,9 @@ buffer is in org-agenda-mode."
     (shell-command-to-string cmd)))
 
 (defun superman-git-add (file-list dir &optional commit message)
-  "Add file FILE to git repository at DIR. If DIR is nil,
+  "Add files in FILE-LIST to git repository at DIR. If DIR is nil,
 prompt for project and use the associated git repository.
-If FILE is nil then read file name below DIR.
+If FILE-LIST is nil then read file name below DIR.
 
 If COMMIT is non-nil prompt for commit message and
 commit the file to the git repository.
