@@ -1660,6 +1660,7 @@ This function should be bound to a key or button."
 		 "\n:Directory: " (cond (dname) (t "."))  
 		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
 
+
 (defun superman-view-git-clean-git-ls-files+ ()
   (let* ((git-dir (get-text-property (point-min) 'git-dir))
 	 (git-status
@@ -1688,35 +1689,10 @@ This function should be bound to a key or button."
 			(let* ((X (or (nth 1 status) " "))
 			       (Y (or (nth 2 status) " "))
 			       (XY (concat X Y)))
-			  (cond ((string= " M" XY)
-				 "Modified")
-				((string= "??" XY)
-				 "Untracked")
-				((string= " D" XY)
-				 "Deleted")
-				((string= " R" XY)
-				 "Renamed")
-				((string= " U" XY)
-				 "Unmerged")
-				((string= "AM" XY)
-				 "Added")
-				((string= "UU" XY)
-				 "unmerged, both modified")
-				((string= "DD" XY)
-				 "unmerged, both deleted")
-				((string= "AU" XY)
-				 "unmerged, added by us")
-				((string= "UD" XY)
-				 "unmerged, deleted by them")
-				((string= "UA" XY)
-				 "unmerged, added by them")
-				((string= "DU" XY)
-				 "unmerged, deleted by us")
-				((string= "AA" XY)
-				 "unmerged, both added")
-				(t "Unknown")))))
+			  (superman-label-status XY))))
 		 "\n:Directory: " (cond (dname) (t "."))  
-		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n"))))))
+		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n")
+	 'fixed)))))
 
 (defun superman-view-git-clean-git-status ()
   (let ((git-dir (get-text-property (point-min) 'git-dir)))
@@ -2512,7 +2488,7 @@ If point is before the first category do nothing."
   (interactive)
   (let ((git-dir
 	 (get-text-property (point-min) 'git-dir)))
-    (superman-git-status git-dir)))
+    (superman-show-git-status git-dir)))
 
 (defun superman-view-git-diff ()
   (interactive)
@@ -2742,9 +2718,9 @@ if it exists and add text-property org-hd-marker."
       filename)))
 
 
-(defun superman-view-git-update-status-with-date (&optional beg end dont-redo)
-  (interactive)
-  (superman-view-git-update-status nil beg end t dont-redo))
+;; (defun superman-view-git-update-status-with-date (&optional beg end dont-redo)
+  ;; (interactive)
+  ;; (superman-view-git-update-status nil beg end t dont-redo))
   
 (defun superman-view-set-status-at-point ()
   (let ((pom (get-text-property (point-at-bol) 'org-hd-marker))
@@ -2753,79 +2729,77 @@ if it exists and add text-property org-hd-marker."
 	;; (ignore-errors
 	  (superman-git-set-status pom file nil))))
 				     
-(defun superman-view-git-update-status (&optional dir beg end with-date dont-redo)
-  "Update git status below DIR for all registered entries within BEG and END.
-
-If WITH-DATE is nil run only the status of files between BEG and END. This works by
-comparing the file-list with the result of git status (called once).
-
-If WITH-DATE is non-nil run uncondionally through all entries between BEG and END that have
-a filename and update both the status and the date of the last change.
-This comes at the cost of separate calls to git status for each file, which can be
-lengthy on some systems."
-  (interactive)
-  (let ((case-fold-search t)
-	(dir (or dir (get-text-property (point-min) 'git-dir))))
-    (if (not dir)
-	(message "Argument DIR is required in this case.")
-      ;; (shell-command-to-string "cd ~/emacs-genome/; git ls-files | while read file; do git log -n 1 --pretty=\"Filename:  $file, commit: %h, date: %ad\" -- $file; done")
-      (if with-date
-	  (superman-loop
-	   'superman-view-set-status-at-point nil beg end nil)
-	;; quickly update by comparing file lists
-	(let* ((git-status-list
-		;; (if with-date
-		;; (delete
-		;; ""
-		;; (split-string
-		;; (shell-command-to-string
-		;; (concat "cd " dir ";" superman-cmd-git " ls-files | while read file; do git log -n 1 --pretty=\"$file,%h,%ad\" -- $file; done"))
-		;; "\n"))
-		(delete
-		 ""
-		 (split-string
-		  (shell-command-to-string
-		   (concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
-	       ;; )
-	       (git-status
-		(shell-command-to-string
-		 (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
-	       (status-list
-		(when (not (string= git-status ""))
-		  (delq nil
-			(mapcar (lambda (x)
-				  (if (string= "" x) nil
-				    (let ((el (split-string x " ")))
-				      (cons (caddr el) (cadr el)))))
-				(split-string git-status "\n")))))
-	       file)
-	  ;; update status for all entries 
-	  ;; by comparing the filename (if any) against git-status-list
-	  (save-excursion
-	    (when superman-view-mode
-	      (set-buffer
-	       (get-file-buffer
-		(get-text-property (point-min) 'index))))
-	    (goto-char (or beg (point-min)))
-	    (while (and (re-search-forward ":filename:" end t)
-			(setq file (superman-filename-at-point 'noerror)))
-	      (let* ((status
-		      (if (member (file-relative-name file dir) git-status-list)
-			  (superman-status-label
-			   (or (cdr (assoc (file-relative-name file dir)
-					   status-list)) "C"))
-			(if (file-exists-p file)
-			    "Untracked" "Nonexistent")))
-		     (current-status
-		      (superman-get-property (point) "GitStatus")))
-		(unless (or (string= status "Untracked") (string= status current-status))
-		  (org-entry-put (point) (superman-property 'gitstatus) status)
-		  (when (or
-			 (string= (downcase status) "modified")
-			 (and (stringp current-status)
-			      (string= (downcase current-status) "modified")))
-		    (superman-git-set-status (point) file nil))))))))
-      (unless dont-redo (superman-redo)))))
+;; (defun superman-view-git-update-status (&optional dir beg end with-date dont-redo)
+;; "Update git status below DIR for all registered entries within BEG and END.
+;; If WITH-DATE is nil run only the status of files between BEG and END. This works by
+;; comparing the file-list with the result of git status (called once).
+;; If WITH-DATE is non-nil run uncondionally through all entries between BEG and END that have
+;; a filename and update both the status and the date of the last change.
+;; This comes at the cost of separate calls to git status for each file, which can be
+;; lengthy on some systems."
+;; (interactive)
+;; (let ((case-fold-search t)
+;; (dir (or dir (get-text-property (point-min) 'git-dir))))
+;; (if (not dir)
+;; (message "Argument DIR is required in this case.")
+;; ;; (shell-command-to-string "cd ~/emacs-genome/; git ls-files | while read file; do git log -n 1 --pretty=\"Filename:  $file, commit: %h, date: %ad\" -- $file; done")
+;; (if with-date
+;; (superman-loop
+;; 'superman-view-set-status-at-point nil beg end nil)
+;; ;; quickly update by comparing file lists
+;; (let* ((git-status-list
+;; ;; (if with-date
+;; ;; (delete
+;; ;; ""
+;; ;; (split-string
+;; ;; (shell-command-to-string
+;; ;; (concat "cd " dir ";" superman-cmd-git " ls-files | while read file; do git log -n 1 --pretty=\"$file,%h,%ad\" -- $file; done"))
+;; ;; "\n"))
+;; (delete
+;; ""
+;; (split-string
+;; (shell-command-to-string
+;; (concat "cd " dir ";" superman-cmd-git " ls-files --full-name")) "\n")))
+;; ;; )
+;; (git-status
+;; (shell-command-to-string
+;; (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+;; (status-list
+;; (when (not (string= git-status ""))
+;; (delq nil
+;; (mapcar (lambda (x)
+;; (if (string= "" x) nil
+;; (let ((el (split-string x " ")))
+;; (cons (caddr el) (cadr el)))))
+;; (split-string git-status "\n")))))
+;; file)
+;; ;; update status for all entries 
+;; ;; by comparing the filename (if any) against git-status-list
+;; (save-excursion
+;; (when superman-view-mode
+;; (set-buffer
+;; (get-file-buffer
+;; (get-text-property (point-min) 'index))))
+;; (goto-char (or beg (point-min)))
+;; (while (and (re-search-forward ":filename:" end t)
+;; (setq file (superman-filename-at-point 'noerror)))
+;; (let* ((status
+;; (if (member (file-relative-name file dir) git-status-list)
+;; (superman-status-label
+;; (or (cdr (assoc (file-relative-name file dir)
+;; status-list)) "C"))
+;; (if (file-exists-p file)
+;; "Untracked" "Nonexistent")))
+;; (current-status
+;; (superman-get-property (point) "GitStatus")))
+;; (unless (or (string= status "Untracked") (string= status current-status))
+;; (org-entry-put (point) (superman-property 'gitstatus) status)
+;; (when (or
+;; (string= (downcase status) "modified")
+;; (and (stringp current-status)
+;; (string= (downcase current-status) "modified")))
+;; (superman-git-set-status (point) file nil))))))))
+;; (unless dont-redo (superman-redo)))))
 
 
 (defun superman-view-git-push (&optional project)
@@ -2880,8 +2854,9 @@ If dont-redo the agenda is not reversed."
        files
        dir
        'commit nil)
-      (superman-view-git-update-status dir nil nil nil)
-      (unless dont-redo (superman-redo)))))
+      (superman-redo-cat))))
+      ;; (superman-view-git-update-status dir nil nil nil)
+      ;; (unless dont-redo (superman-redo)))))
 
 ;;}}}
 ;;{{{ View-mode and hot-keys
@@ -2989,8 +2964,8 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "GP" 'superman-git-push)
 (define-key superman-view-mode-map "Gs" 'superman-view-git-status)
 (define-key superman-view-mode-map "GS" 'superman-view-git-search)
-(define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
-(define-key superman-view-mode-map "GU" 'superman-view-git-update-status-with-date)
+;; (define-key superman-view-mode-map "Gu" 'superman-view-git-update-status)
+;; (define-key superman-view-mode-map "GU" 'superman-view-git-update-status-with-date)
 (define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
 (define-key superman-view-mode-map "GBn" 'superman-git-new-branch)
 (define-key superman-view-mode-map "G=" 'superman-view-git-version-diff)
@@ -3075,8 +3050,8 @@ not in a section prompt for section first.
     ["File list" superman-view-file-list t]
     ("Git"
      ["Git history" superman-view-git-history t]
-     ["Git update" superman-view-git-update-status t]
-     ["Git update last commit date" superman-view-git-update-status-with-date t]
+     ;; ["Git update" superman-view-git-update-status t]
+     ;; ["Git update last commit date" superman-view-git-update-status-with-date t]
      ["Git commit" superman-view-git-commit t]
      ["Git commit all" superman-view-git-commit-all t]
      ["Git log" superman-view-git-log t]

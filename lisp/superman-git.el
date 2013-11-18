@@ -153,7 +153,7 @@ result."
 	(forward-line 2)
 	(recenter 1)))))
 
-(defun superman-git-status (dir)
+(defun superman-show-git-status (dir)
   (superman-run-cmd
    (concat "cd " dir "; " superman-cmd-git " status " "\n")
    "*Superman-returns*"
@@ -245,33 +245,22 @@ Else return FILE as it is."
 ;;}}}
 ;;{{{ get status and commit from git
 
-(defun superman-git-get-commit (arg file &optional dir)
-  "Run git log and report the date and message of the n'th commit of
-file FILE in directory DIR where n is determined by ARG."
-  (let* ((dir (cond (dir)
-		    ((file-name-absolute-p file) (file-name-directory file))
-		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
-	 (file (superman-relative-name file dir))
-	 (date-string
-	  (shell-command-to-string
-	   (if (string= arg "first")
-	       (concat  "cd " dir ";" superman-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- "
-			file "  | head -1")
-	     (concat "cd " dir ";" superman-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file))))
-         (date (if (or (string= date-string "") (string-match "^fatal:" date-string)) "" (superman-read-git-date date-string)))
-	 (mess (shell-command-to-string
-		(if (string= arg "first")
-		    (concat "cd " dir ";" superman-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
-		  (concat "cd " dir ";"  superman-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
-    (concat date " " (replace-regexp-in-string "\n+" "" mess))))
-
-(defun superman-git-get-status-at-point (&optional check)
-  "Report the status of the document-file at point.
-Point is either (point), ie. if the current buffer is in org-mode,
-or the hdmarker associated with the item at point when the current
-buffer is in org-agenda-mode."
-  (interactive)
-  (superman-git-get-status (superman-filename-at-point) check))
+(defun superman-git-XY-status (file)
+  "Finds the git status of file FILE as XY code, see M-x manual-entry RET git-status RET,
+ and returns a list with 3 elements: the file-name relative to the path of the git-repository,
+ the index-status (X) and the work-tree-status (Y)."
+  (let* ((dir (file-name-directory file))
+	 (raw-status (shell-command-to-string
+		      (concat
+		       "cd " dir ";"
+		       superman-cmd-git
+		       " status --ignored --porcelain "
+		       (file-name-nondirectory file))))
+	 (index-status (substring-no-properties raw-status 0 1))
+	 (work-tree-status (substring-no-properties raw-status 1 2))
+	 (fname  (substring-no-properties raw-status 3 (length raw-status))))
+    (list (replace-regexp-in-string "\n" "" fname) index-status work-tree-status)))
+  
 
 (defun superman-git-get-status (file check)
   "Determine the git status of file FILE."
@@ -306,22 +295,82 @@ buffer is in org-agenda-mode."
 	(setq label (superman-status-label git-status))
 	(list git-status label git-last-commit)))))
 
-(defun superman-status-label (status)
-  (cond ((string= status "?")
+(defun superman-label-status (XY)
+  "Replace git status by a human readable label."
+  (cond ((string= " M" XY)
+	 "Modified")
+	((string= "??" XY)
 	 "Untracked")
-	((string= status "E")
-	 "NA")
-	((string= status "M")
-	 "Modified")
-	((string= status "A")
-	 "New file")
-	((string= status " ")
-	 "Modified")
-	((string= status "C")
-	 "Committed")
-	((string= status "D")
+	((string= " D" XY)
 	 "Deleted")
-	(t status)))
+	((string= " R" XY)
+	 "Renamed")
+	((string= " U" XY)
+	 "Unmerged")
+	((string= "AM" XY)
+	 "Added")
+	((string= "UU" XY)
+	 "unmerged, both modified")
+	((string= "DD" XY)
+	 "unmerged, both deleted")
+	((string= "AU" XY)
+	 "unmerged, added by us")
+	((string= "UD" XY)
+	 "unmerged, deleted by them")
+	((string= "UA" XY)
+	 "unmerged, added by them")
+	((string= "DU" XY)
+	 "unmerged, deleted by us")
+	((string= "AA" XY)
+	 "unmerged, both added")
+	(t "Unknown")))
+
+(defun superman-git-get-commit (arg file &optional dir)
+  "Run git log and report the date and message of the n'th commit of
+file FILE in directory DIR where n is determined by ARG."
+  (let* ((dir (cond (dir)
+		    ((file-name-absolute-p file) (file-name-directory file))
+		    (t (read-directory-name (concat "Find the git directory of file " file ": ")))))
+	 (file (superman-relative-name file dir))
+	 (date-string
+	  (shell-command-to-string
+	   (if (string= arg "first")
+	       (concat  "cd " dir ";" superman-cmd-git " log --date=local --pretty=format:\"%ad\" --reverse -- "
+			file "  | head -1")
+	     (concat "cd " dir ";" superman-cmd-git " log --date=local -" arg " --pretty=format:\"%ad\" -- " file))))
+         (date (if (or (string= date-string "") (string-match "^fatal:" date-string)) "" (superman-read-git-date date-string)))
+	 (mess (shell-command-to-string
+		(if (string= arg "first")
+		    (concat "cd " dir ";" superman-cmd-git " log --reverse --pretty=format:\"%s\" -- " file " | head -1")
+		  (concat "cd " dir ";"  superman-cmd-git " log -" arg " --pretty=format:\"%s\" -- " file)))))
+    (concat date " " (replace-regexp-in-string "\n+" "" mess))))
+
+(defun superman-git-get-status-at-point (&optional check)
+  "Report the status of the document-file at point.
+Point is either (point), ie. if the current buffer is in org-mode,
+or the hdmarker associated with the item at point when the current
+buffer is in org-agenda-mode."
+  (interactive)
+  (superman-git-get-status (superman-filename-at-point) check))
+
+
+
+;; (defun superman-status-label (status)
+;; (cond ((string= status "?")
+;; "Untracked")
+;; ((string= status "E")
+;; "NA")
+;; ((string= status "M")
+;; "Modified")
+;; ((string= status "A")
+;; "New file")
+;; ((string= status " ")
+;; "Modified")
+;; ((string= status "C")
+;; "Committed")
+;; ((string= status "D")
+;; "Deleted")
+;; (t status)))
 
 ;;}}}
 ;;{{{ set and update status
