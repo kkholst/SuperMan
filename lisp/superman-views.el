@@ -1426,7 +1426,7 @@ to VIEW-BUF."
       ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
     ("untracked"
-     "ls-files --full-name --others"
+     "ls-files --full-name --exclude-standard --others"
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
@@ -1574,42 +1574,51 @@ cleanup is a function which is called before superman plays the balls.")
 (defun superman-add-git-cycle ()
   (interactive)
   (unless superman-git-mode
-    (save-window-excursion
-      (find-file (get-text-property (point-min) 'index))
-      (goto-char (point-min))
-      (unless (re-search-forward ":git-cycle:" nil t)
-	(goto-char (point-max))
-	(insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
-		(let ((sd (cdr superman-git-default-displays))
-		      (dstring (car superman-git-default-displays)))
-		  (while sd
-		    (setq dstring (concat dstring ", " (car sd))
-			  sd (cdr sd)))
-		  dstring)
-		"\n:git-display: modified\n:END:\n")
-	(superman-redo)))
-    (let ((ibuf (concat (buffer-name) " :Git-repos"))
-	  (git-dir (get-text-property (point-min) 'git-dir)))
-      (if (get-buffer ibuf)
+    (let ((repos-point (next-single-property-change (point-min) 'git-repos)))
+      (if repos-point
+	  (goto-char repos-point)
+	(save-window-excursion
+	  (find-file (get-text-property (point-min) 'index))
+	  (goto-char (point-min))
+	  (unless (re-search-forward ":git-cycle:" nil t)
+	    (goto-char (point-max))
+	    (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
+		    (let ((sd (cdr superman-git-default-displays))
+			  (dstring (car superman-git-default-displays)))
+		      (while sd
+			(setq dstring (concat dstring ", " (car sd))
+			      sd (cdr sd)))
+		      dstring)
+		    "\n:git-display: modified\n:END:\n")
+	    (superman-redo)
+	    (goto-char (next-single-property-change (point-min) 'git-repos))))))
+    ;; open buffer
+    (let* ((ibuf (concat (buffer-name) " :Git-repos"))
+	   (git-dir (get-text-property (point-min) 'git-dir))
+	   (gbuf (get-buffer ibuf))
+	   git-cat)
+      ;; (narrow-to-region
+      (setq git-cat (buffer-substring
+		     (or (previous-single-property-change (point) 'region-start)
+			 (point-at-bol))
+		     ;; need to add one, otherwise tail is not visible
+		     (+ (next-single-property-change (point) 'tail) 1)))
+      (if gbuf
 	  (switch-to-buffer ibuf)
-	(make-indirect-buffer (current-buffer) ibuf 'clone)
+	;; (make-indirect-buffer (current-buffer) ibuf 'clone)
+	(get-buffer-create ibuf)
 	(switch-to-buffer ibuf))
-      (goto-char (next-single-property-change (point-min) 'git-repos))
-      (narrow-to-region
-       (or (previous-single-property-change (point) 'region-start)
-	   (point-at-bol))
-       ;; need to add one, otherwise tail is not visible
-       (+ (next-single-property-change (point) 'tail) 1))
-      ;; (org-narrow-to-subtree)
-      (goto-char (point-min))
-      (unless (next-single-property-change (point) 'region-start)
+      (erase-buffer)
+      ;; (goto-char (point-min))
+      (insert git-cat)
+      (unless gbuf ;; back button is already there
 	(let ((buffer-read-only nil))
 	  (insert (superman-make-button
 		   "Back to project (q)"
 		   'superman-view-back)
 		  "\n\n")
 	  (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
-	  (put-text-property (point-min) (+ (point-min) 1) 'region-start t)
+	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
 	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
 	  (superman-git-mode))))))
 
