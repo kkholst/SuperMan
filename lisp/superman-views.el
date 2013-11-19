@@ -2835,7 +2835,7 @@ If dont-redo the agenda is not reversed."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
-    (superman-git-set-status (org-get-at-bol 'org-hd-marker) file)
+    (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename)
     (superman-view-redo-line)))
 
 (defun superman-view-marked-files (&optional beg end)
