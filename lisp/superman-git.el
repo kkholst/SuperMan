@@ -256,9 +256,16 @@ Else return FILE as it is."
 		       superman-cmd-git
 		       " status --ignored --porcelain "
 		       (file-name-nondirectory file))))
-	 (index-status (substring-no-properties raw-status 0 1))
-	 (work-tree-status (substring-no-properties raw-status 1 2))
-	 (fname  (substring-no-properties raw-status 3 (length raw-status))))
+	 (len  (length raw-status))
+	 (index-status (if (> len 1)
+			   (substring-no-properties raw-status 0 1)
+			 ""))
+	 (work-tree-status (if (> len 2)
+			       (substring-no-properties raw-status 1 2)
+			     ""))
+	 (fname (if (> len 3)
+		    (substring-no-properties raw-status 3 (length raw-status))
+		  (file-name-nondirectory file))))
     (list (replace-regexp-in-string "\n" "" fname) index-status work-tree-status)))
   
 
