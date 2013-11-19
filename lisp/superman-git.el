@@ -304,7 +304,9 @@ Else return FILE as it is."
 
 (defun superman-label-status (XY)
   "Replace git status by a human readable label."
-  (cond ((string= " M" XY)
+  (cond ((string= "" XY)
+	 "Committed")
+	((string= " M" XY)
 	 "Modified")
 	((string= "??" XY)
 	 "Untracked")
@@ -385,7 +387,7 @@ buffer is in org-agenda-mode."
 (defun superman-git-set-status-at-point ()
   (interactive)
   (let ((file (superman-filename-at-point)))
-    (superman-git-set-status (point) file check)))
+    (superman-git-set-status (point) file)))
 
 (defun superman-git-set-status (pom file)
   (interactive)
