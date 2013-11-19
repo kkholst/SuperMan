@@ -375,26 +375,17 @@ buffer is in org-agenda-mode."
 ;;}}}
 ;;{{{ set and update status
 
-(defun superman-git-set-status-at-point (&optional check)
+(defun superman-git-set-status-at-point ()
   (interactive)
   (let ((file (superman-filename-at-point)))
     (superman-git-set-status (point) file check)))
 
-(defun superman-git-set-status (pom file check)
+(defun superman-git-set-status (pom file)
   (interactive)
-  (let* ((statlist (superman-git-get-status file check))
-	 (last-commit (nth 2 statlist))
-	 (git-status (nth 0 statlist))
-	 (git-label (nth 1 statlist)))
-    ;; (supermanperty-changed-functions '(lambda (prop val) (save-buffer))))
-    (org-entry-put pom (superman-property 'gitstatus) git-label)
-    ;; (org-set-property "GitStatus" git-label)
-    (unless (or (string= git-status "A") (string= git-status "E") (string= git-status "?"))
-      (unless (superman-get-property pom "GitInit")
-	(org-entry-put pom "GitInit" (superman-git-get-commit "first" file)))
-      (unless (string= last-commit "")
-	(org-entry-put pom "LastCommit" last-commit)))
-    statlist))
+  (let* ((status (superman-git-XY-status file))
+	 (label (superman-label-status
+		 (concat (nth 1 status) (nth 2 status)))))
+    (org-entry-put pom (superman-property 'gitstatus) label)))
 
 (defun superman-update-git-status ()
   (interactive)
