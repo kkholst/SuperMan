@@ -1244,7 +1244,8 @@ which locates the heading in the buffer."
     (when narrow
       (narrow-to-region
        (- (previous-single-property-change (point) 'region-start) 1)
-       (next-single-property-change (point) 'tail)))))
+       ;; need to add one, otherwise tail is not visible
+       (+ (next-single-property-change (point) 'tail) 1)))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
@@ -1589,7 +1590,8 @@ cleanup is a function which is called before superman plays the balls.")
       (narrow-to-region
        (or (previous-single-property-change (point) 'region-start)
 	   (point-at-bol))
-       (next-single-property-change (point) 'tail))
+       ;; need to add one, otherwise tail is not visible
+       (+ (next-single-property-change (point) 'tail) 1))
       ;; (org-narrow-to-subtree)
       (goto-char (point-min))
       (unless (next-single-property-change (point) 'region-start)
