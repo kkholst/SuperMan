@@ -445,28 +445,36 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	  (save-excursion
 	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
 	    (goto-char (point-min))
-	    (point-marker)))
-	 (i 1))
+	    (point-marker))))
     (put-text-property 0 (length title) 'superman-e-marker title-marker title)
-    (put-text-property 0 1 'superman-header-marker t title)
+    (when (or superman-sticky-displays config-list)
+      (insert "\n")
+      (insert title " "))
+    (when superman-sticky-displays
+      (let ((sd superman-sticky-displays))
+	(while sd 
+	  (insert (apply 'superman-make-button (car sd))
+		  " ")
+	  (setq sd (cdr sd)))))
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
 	     (config-cmd (cdr current-config)))
-	(when (= i 1)
-	  (insert "\n")
-	  (insert title " "))
-	(put-text-property
-	 0 1
-	 'superman-header-marker t config-name)
-	(insert "[" (superman-make-button config-name
-					  `(lambda () (interactive)
-					     (superman-switch-config nil nil ,config-cmd))
-					  'font-lock-warning-face
-					  config-cmd)
+	(insert "[" (superman-make-button
+		     config-name
+		     `(lambda () (interactive)
+			(superman-switch-config nil nil ,config-cmd))
+		     'font-lock-warning-face
+		     config-cmd)
 		"]  "))
-      (setq i (+ i 1) config-list (cdr config-list)))))
+      (setq config-list (cdr config-list)))))
 
+(defvar superman-sticky-displays
+  '(("Timeline" superman-project-timeline superman-capture-button-face)
+    ("Todo" superman-project-todo superman-capture-button-face)
+    ("Help" supermanual superman-capture-button-face))
+  "Alist of displays that are shown as action buttons for all projects.")
+  
 ;;}}}
 ;;{{{ unison
 (defun superman-view-read-unison (project)
@@ -1220,7 +1228,7 @@ which locates the heading in the buffer."
   (superman-view-mode-on)
   (setq buffer-read-only t))
 
-(defun superman-redo-cat ()
+(defun superman-redo-cat (&optional narrow)
   "Redo the current section in a superman view buffer."
   (let ((cat-point (point-at-bol))
 	(cat (superman-parse-props
@@ -1232,7 +1240,11 @@ which locates the heading in the buffer."
 	(buffer-read-only nil))
     (org-cut-subtree)
     (superman-format-cat cat index-buf view-buf loc)
-    (goto-char cat-point)))
+    (goto-char cat-point)
+    (when narrow
+      (narrow-to-region
+       (- (previous-single-property-change (point) 'region-start) 1)
+       (next-single-property-change (point) 'tail)))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
@@ -1277,7 +1289,8 @@ to VIEW-BUF."
 	     (car cat)
 	     0 balls
 	     index-marker)
-	    (insert text)))))
+	    (insert text)
+	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))))
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
 	(setq index-marker (point-marker)))
@@ -1289,7 +1302,7 @@ to VIEW-BUF."
       (insert "\n")
       (org-mode)
       ;; call git display cycle
-      (superman-view-git-display-cycle
+      (superman-view-format-git-display
        view-buf git props
        view-cat-head index-buf index-cat-point
        name))
@@ -1333,9 +1346,9 @@ to VIEW-BUF."
 		  ((and (eq (org-current-level) 4) attac-balls)
 		   (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
 		   (with-current-buffer view-buf (insert line "\n"))))))
-	(put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
 	;; add counts in sub headings
 	(set-buffer view-buf)
+	(put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
 	(save-excursion 
 	  (while countsub
 	    (let ((tempsub (car countsub)))
@@ -1551,37 +1564,43 @@ cleanup is a function which is called before superman plays the balls.")
 
 (defun superman-add-git-cycle ()
   (interactive)
-  (save-window-excursion
-    (find-file (get-text-property (point-min) 'index))
-    (goto-char (point-min))
-    (unless (re-search-forward ":git-cycle:" nil t)
-      (goto-char (point-max))
-      (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
-	      (let ((sd (cdr superman-git-default-displays))
-		    (dstring (car superman-git-default-displays)))
-		(while sd
-		  (setq dstring (concat dstring ", " (car sd))
-			sd (cdr sd)))
-		dstring)
-	      "\n:git-display: modified\n:END:\n")
-      (superman-redo)))
-  (let ((ibuf (concat (buffer-name) " :Git-repos"))
-	(git-dir (get-text-property (point-min) 'git-dir)))
-    (if (get-buffer ibuf)
-	(switch-to-buffer ibuf)
-      (make-indirect-buffer (current-buffer) ibuf 'clone)
-      (switch-to-buffer ibuf)
-      (goto-char (next-single-property-change (point-min) 'git-repos))
-      (org-narrow-to-subtree)
+  (unless superman-git-mode
+    (save-window-excursion
+      (find-file (get-text-property (point-min) 'index))
       (goto-char (point-min))
-      (let ((buffer-read-only nil))
-	(insert (superman-make-button
-		 "Back to project (q)"
-		 'superman-view-back)
-		"\n")
-	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
-	(superman-git-mode)
-	))))
+      (unless (re-search-forward ":git-cycle:" nil t)
+	(goto-char (point-max))
+	(insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
+		(let ((sd (cdr superman-git-default-displays))
+		      (dstring (car superman-git-default-displays)))
+		  (while sd
+		    (setq dstring (concat dstring ", " (car sd))
+			  sd (cdr sd)))
+		  dstring)
+		"\n:git-display: modified\n:END:\n")
+	(superman-redo)))
+    (let ((ibuf (concat (buffer-name) " :Git-repos"))
+	  (git-dir (get-text-property (point-min) 'git-dir)))
+      (if (get-buffer ibuf)
+	  (switch-to-buffer ibuf)
+	(make-indirect-buffer (current-buffer) ibuf 'clone)
+	(switch-to-buffer ibuf))
+      (goto-char (next-single-property-change (point-min) 'git-repos))
+      (narrow-to-region
+       (or (previous-single-property-change (point) 'region-start)
+	   (point-at-bol))
+       (next-single-property-change (point) 'tail))
+      ;; (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (unless (next-single-property-change (point) 'region-start)
+	(let ((buffer-read-only nil))
+	  (insert (superman-make-button
+		   "Back to project (q)"
+		   'superman-view-back)
+		  "\n\n")
+	  (put-text-property (point-min) (+ (point-min) 1) 'region-start t)
+	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
+	  (superman-git-mode))))))
 
 
 (defvar superman-git-mode-map (make-sparse-keymap)
@@ -1614,8 +1633,9 @@ Enabling superman-git mode enables the git keyboard to control single files."
   (interactive)
   (goto-char (point-min))
   (let ((buffer-read-only nil))
-    (kill-line))
-  (kill-buffer (current-buffer)))
+    (when (looking-at "Back to project")
+      (kill-line))
+    (kill-buffer (current-buffer))))
 
 (defvar superman-git-display-cycles nil
   "Keywords to match the elements in superman-view-git-display-command-list")
@@ -1627,7 +1647,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-view-set-git-cycle (value)
   (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
     (org-set-property "git-display" value))
-  (superman-redo-cat))
+  (superman-redo-cat superman-git-mode))
 
 (defun superman-view-cycle-git-display ()
   "Cycles to the next value in `superman-git-display-cycles'.
@@ -1709,7 +1729,7 @@ This function should be bound to a key or button."
 ;; "--numstat "
 ;; "--name-status "
 
-(defun superman-view-git-display-cycle (view-buf dir props view-point index-buf index-cat-point name)
+(defun superman-view-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
 	 (cycle (or (cadr (assoc "git-display" props)) (car cycles)))
 	 (limit (cadr (assoc "limit" props)))
@@ -1733,6 +1753,7 @@ This function should be bound to a key or button."
       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
       (with-current-buffer view-buf (insert line "\n")))
     (set-buffer view-buf)
+    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
     (when superman-empty-line-before-cat (insert "\n"))
     (goto-char view-point)
     ;; section names
@@ -2685,16 +2706,6 @@ If point is before the first category do nothing."
   (interactive "p")
   (superman-git-search-at-point (or arg superman-git-search-limit)))
 
-(defun superman-view-git-set-status (&optional save redo check)
-  (interactive)
-  (let ((file (superman-filename-at-point t))
-	(pom  (org-get-at-bol 'org-hd-marker)))
-    (when
-	file
-      (superman-git-set-status pom file nil))))
-      ;; (when save (superman-view-save-index-buffer))
-      ;; (when redo (superman-redo)))))
-
 (defun superman-view-save-index-buffer ()
   (save-excursion
     (let ((ibuf (get-file-buffer
@@ -2727,7 +2738,7 @@ if it exists and add text-property org-hd-marker."
 	(file (superman-filename-at-point t)))
     (if (and pom file)
 	;; (ignore-errors
-	  (superman-git-set-status pom file nil))))
+	  (superman-git-set-status pom file))))
 				     
 ;; (defun superman-view-git-update-status (&optional dir beg end with-date dont-redo)
 ;; "Update git status below DIR for all registered entries within BEG and END.
@@ -2826,9 +2837,8 @@ If dont-redo the agenda is not reversed."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
-    (superman-git-set-status (org-get-at-bol 'org-hd-marker) file nil)
+    (superman-git-set-status (org-get-at-bol 'org-hd-marker) file)
     (superman-view-redo-line)))
-;; (superman-view-git-set-status 'save (not dont-redo) nil)))
 
 (defun superman-view-marked-files (&optional beg end)
   (delq nil (superman-loop
