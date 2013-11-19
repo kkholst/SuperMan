@@ -2370,8 +2370,6 @@ current section."
 	    (end (next-single-property-change (point) 'org-hd-marker)))
 	(delete-region beg end)
 	(insert newline)
-	;; (if (looking-at ".*")
-	    ;; (replace-match newline))
 	(beginning-of-line)
 	(while (or (org-activate-bracket-links (point-at-eol)) (org-activate-plain-links (point-at-eol)))
 	  (add-text-properties
