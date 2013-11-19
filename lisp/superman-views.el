@@ -1565,7 +1565,7 @@ cleanup is a function which is called before superman plays the balls.")
     ;; ;; for the column name
     ;; (superman-trim-string f (car args))))
 
-(defun superman-redo-git-display
+(defun superman-redo-git-display ()
   (interactive)
   (when superman-git-mode
     (goto-char (next-single-property-change (point-min) 'cat))
