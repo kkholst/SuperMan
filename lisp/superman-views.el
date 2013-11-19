@@ -1230,22 +1230,24 @@ which locates the heading in the buffer."
 
 (defun superman-redo-cat (&optional narrow)
   "Redo the current section in a superman view buffer."
-  (let ((cat-point (point-at-bol))
-	(cat (superman-parse-props
-	      (get-text-property (point-at-bol) 'org-hd-marker)
-	      'p 'h))
-	(view-buf (current-buffer))
-	(index-buf (marker-buffer (get-text-property (point-at-bol) 'org-hd-marker)))
-	(loc (get-text-property (point-min) 'git-dir))
-	(buffer-read-only nil))
-    (org-cut-subtree)
-    (superman-format-cat cat index-buf view-buf loc)
-    (goto-char cat-point)
-    (when narrow
-      (narrow-to-region
-       (- (previous-single-property-change (point) 'region-start) 1)
-       ;; need to add one, otherwise tail is not visible
-       (+ (next-single-property-change (point) 'tail) 1)))))
+  (if (not (get-text-property (point-at-bol) 'cat))
+      (error "Not at category heading")
+    (let ((cat-point (point-at-bol))
+	  (cat (superman-parse-props
+		(get-text-property (point-at-bol) 'org-hd-marker)
+		'p 'h))
+	  (view-buf (current-buffer))
+	  (index-buf (marker-buffer (get-text-property (point-at-bol) 'org-hd-marker)))
+	  (loc (get-text-property (point-min) 'git-dir))
+	  (buffer-read-only nil))
+      (org-cut-subtree)
+      (superman-format-cat cat index-buf view-buf loc)
+      (goto-char cat-point)
+      (when narrow
+	(narrow-to-region
+	 (- (previous-single-property-change (point) 'region-start) 1)
+	 ;; need to add one, otherwise tail is not visible
+	 (+ (next-single-property-change (point) 'tail) 1))))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
@@ -1563,6 +1565,12 @@ cleanup is a function which is called before superman plays the balls.")
     ;; ;; for the column name
     ;; (superman-trim-string f (car args))))
 
+(defun superman-redo-git-display
+  (interactive)
+  (when superman-git-mode
+    (goto-char (next-single-property-change (point-min) 'cat))
+    (superman-redo-cat)))
+
 (defun superman-add-git-cycle ()
   (interactive)
   (unless superman-git-mode
@@ -1600,7 +1608,7 @@ cleanup is a function which is called before superman plays the balls.")
 		   "Back to project (q)"
 		   'superman-view-back)
 		  "\n\n")
-	  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-redo-cat))
+	  (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
 	  (put-text-property (point-min) (+ (point-min) 1) 'region-start t)
 	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
 	  (superman-git-mode))))))
