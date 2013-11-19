@@ -1678,7 +1678,7 @@ This function should be bound to a key or button."
 	(replace-match
 	 (concat "** "
 		 fname
-		 "\n:PROPERTIES:\n:STATUS: " status
+		 "\n:PROPERTIES:\n:GitStatus: " status
 		 "\n:Directory: " (cond (dname) (t "."))  
 		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
 
@@ -1705,7 +1705,7 @@ This function should be bound to a key or button."
 	(replace-match
 	 (concat "** "
 		 fname
-		 "\n:PROPERTIES:\n:STATUS: "
+		 "\n:PROPERTIES:\n:GitStatus: "
 		 (cond ((not status) "Committed")
 		       (t
 			(let* ((X (or (nth 1 status) " "))
@@ -1726,7 +1726,7 @@ This function should be bound to a key or button."
 	(replace-match
 	 (concat "** "
 		 fname
-		 "\n:PROPERTIES:\n:STATUS: " (superman-status-label status)
+		 "\n:PROPERTIES:\n:GitStatus: " (superman-status-label status)
 		 "\n:FILENAME: [[" long-fname "]]\n:END:\n\n") 'fixed)))))
 ;; "--numstat "
 ;; "--name-status "
