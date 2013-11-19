@@ -1421,21 +1421,21 @@ to VIEW-BUF."
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("Status" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
     ("untracked"
      "ls-files --full-name --others"
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("Status" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files)
     ("modified"
      "ls-files --full-name -m"
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("Status" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
     ;; ("date"
     ;; "ls-files | while read file; do git log -n 1 --pretty=\"** $file\n:PROPERTIES:\n:COMMIT: %h\n:DATE: %ad\n:END:\n\" -- $file; done"
@@ -1600,6 +1600,7 @@ cleanup is a function which is called before superman plays the balls.")
 		   "Back to project (q)"
 		   'superman-view-back)
 		  "\n\n")
+	  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-redo-cat))
 	  (put-text-property (point-min) (+ (point-min) 1) 'region-start t)
 	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
 	  (superman-git-mode))))))
