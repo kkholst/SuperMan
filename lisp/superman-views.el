@@ -1774,7 +1774,6 @@ This function should be bound to a key or button."
       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
       (with-current-buffer view-buf (insert line "\n")))
     (set-buffer view-buf)
-    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
     (when superman-empty-line-before-cat (insert "\n"))
     (goto-char view-point)
     ;; section names
@@ -1807,7 +1806,9 @@ This function should be bound to a key or button."
     (forward-line 1)
     ;; insert the column names
     (when superman-empty-line-after-cat (insert "\n"))
-    (insert (superman-column-names balls))))
+    (insert (superman-column-names balls))
+    (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
+    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))
 
 (unless org-todo-keyword-faces
   (setq org-todo-keyword-faces
