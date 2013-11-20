@@ -30,6 +30,13 @@
 :END:
 
 
+*** latex: page dimensions
+:PROPERTIES:
+:FileName: [[./supersamples/latex:page-dimensions.pdf]]
+:END:
+
+
+
 * SuperTools
 
 

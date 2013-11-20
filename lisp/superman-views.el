@@ -1228,7 +1228,7 @@ which locates the heading in the buffer."
   (superman-view-mode-on)
   (setq buffer-read-only t))
 
-(defun superman-redo-cat (&optional narrow)
+(defun superman-redo-cat ()
   "Redo the current section in a superman view buffer."
   (if (not (get-text-property (point-at-bol) 'cat))
       (error "Not at category heading")
@@ -1242,12 +1242,7 @@ which locates the heading in the buffer."
 	  (buffer-read-only nil))
       (org-cut-subtree)
       (superman-format-cat cat index-buf view-buf loc)
-      (goto-char cat-point)
-      (when narrow
-	(narrow-to-region
-	 (- (previous-single-property-change (point) 'region-start) 1)
-	 ;; need to add one, otherwise tail is not visible
-	 (+ (next-single-property-change (point) 'tail) 1))))))
+      (goto-char cat-point))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
@@ -1411,6 +1406,8 @@ to VIEW-BUF."
 ;;}}}
 ;;{{{ git-cycle views
 
+
+
 (defvar superman-view-git-display-command-list
   '(("log"
      "log -n 5 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Author: %an\n:Date: %cd\n:Message: %s\n:END:\n\""
@@ -1423,21 +1420,21 @@ to VIEW-BUF."
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
     ("untracked"
      "ls-files --full-name --exclude-standard --others"
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files)
     ("modified"
      "ls-files --full-name -m"
      (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 9) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
      superman-view-git-clean-git-ls-files+)
     ;; ("date"
     ;; "ls-files | while read file; do git log -n 1 --pretty=\"** $file\n:PROPERTIES:\n:COMMIT: %h\n:DATE: %ad\n:END:\n\" -- $file; done"
@@ -1589,7 +1586,8 @@ cleanup is a function which is called before superman plays the balls.")
 			(setq dstring (concat dstring ", " (car sd))
 			      sd (cdr sd)))
 		      dstring)
-		    "\n:git-display: modified\n:END:\n")))
+		    "\n:git-display: modified\n:END:\n")
+	    (save-buffer)))
 	(superman-redo)
 	(goto-char (next-single-property-change (point-min) 'git-repos))))
     ;; open buffer
@@ -1646,7 +1644,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (define-key superman-git-mode-map "q" 'superman-view-back)
 (define-key superman-git-mode-map "c" 'superman-view-git-commit)
-(define-key superman-git-mode-map "a" 'superman-view-git-add)
+(define-key superman-git-mode-map "a" 'superman-git-kb-add)
 (define-key superman-git-mode-map "s" 'superman-view-git-stash)
 (define-key superman-git-mode-map "x" 'superman-view-git-delete)
 (define-key superman-git-mode-map "d" 'superman-view-git-diff)
@@ -1669,7 +1667,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-view-set-git-cycle (value)
   (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
     (org-set-property "git-display" value))
-  (superman-redo-cat superman-git-mode))
+  (superman-redo-cat))
 
 (defun superman-view-cycle-git-display ()
   "Cycles to the next value in `superman-git-display-cycles'.
@@ -1707,14 +1705,15 @@ This function should be bound to a key or button."
   (let* ((git-dir (get-text-property (point-min) 'git-dir))
 	 (git-status
 	  (shell-command-to-string
-	   (concat "cd " dir ";" superman-cmd-git " status --porcelain ")))
+	   (concat "cd " dir ";" superman-cmd-git " status --porcelain -uno")))
 	 (status-list
 	  (mapcar (lambda (x)
 		    (let ((index-status (substring-no-properties x 0 1))
 			  (work-tree-status (substring-no-properties x 1 2))
 			  (fname  (substring-no-properties x 3 (length x))))
 		      (list fname index-status work-tree-status)))
-		  (delete-if (lambda (x) (string= x "")) (split-string git-status "\n")))))
+		  (delete-if (lambda (x) (string= x ""))
+			     (split-string git-status "\n")))))
     (goto-char (point-min))
     (while (re-search-forward "^[^ \t\n]+" nil t)
       (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
@@ -2885,6 +2884,7 @@ If dont-redo the agenda is not reversed."
        files
        dir
        'commit nil)
+      (goto-char (previous-single-property-change (point) 'cat))
       (superman-redo-cat))))
       ;; (superman-view-git-update-status dir nil nil nil)
       ;; (unless dont-redo (superman-redo)))))
