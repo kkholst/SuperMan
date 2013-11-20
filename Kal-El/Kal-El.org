@@ -14,7 +14,7 @@
 
 *** Supermanual.org
 :PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/supermanual/Supermanual.org]]
+:FileName: [[./supermanual/Supermanual.org]]
 :GitStatus: Committed
 :END:
 
@@ -22,7 +22,7 @@
     
 *** sample-beamer
 :PROPERTIES:
-:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/supersamples/sample-beamer.org]]
+:FileName: [[./supersamples/sample-beamer.org]]
 :GitStatus: Nonexistent
 :CaptureDate: <2013-03-07 Thu 12:05>
 :GitInit:  <2013-03-07 Thu 12:05> first commit
