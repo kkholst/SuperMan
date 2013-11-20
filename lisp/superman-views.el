@@ -2981,7 +2981,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
 ;; Git control
-(define-key superman-view-mode-map "GA" 'superman-add-git-cycle)
+(define-key superman-view-mode-map "gg" 'superman-add-git-cycle)
 ;; (define-key superman-view-mode-map "GM" 'superman-view-git-master-push-pull-and-return)
 (define-key superman-view-mode-map "Ga" 'superman-view-git-annotate)
 (define-key superman-view-mode-map "Gc" 'superman-view-git-commit)
