@@ -1228,7 +1228,7 @@ which locates the heading in the buffer."
   (superman-view-mode-on)
   (setq buffer-read-only t))
 
-(defun superman-redo-cat (&optional narrow)
+(defun superman-redo-cat ()
   "Redo the current section in a superman view buffer."
   (if (not (get-text-property (point-at-bol) 'cat))
       (error "Not at category heading")
@@ -1242,12 +1242,7 @@ which locates the heading in the buffer."
 	  (buffer-read-only nil))
       (org-cut-subtree)
       (superman-format-cat cat index-buf view-buf loc)
-      (goto-char cat-point)
-      (when narrow
-	(narrow-to-region
-	 (- (previous-single-property-change (point) 'region-start) 1)
-	 ;; need to add one, otherwise tail is not visible
-	 (+ (next-single-property-change (point) 'tail) 1))))))
+      (goto-char cat-point))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
@@ -1672,7 +1667,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-view-set-git-cycle (value)
   (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
     (org-set-property "git-display" value))
-  (superman-redo-cat superman-git-mode))
+  (superman-redo-cat))
 
 (defun superman-view-cycle-git-display ()
   "Cycles to the next value in `superman-git-display-cycles'.
