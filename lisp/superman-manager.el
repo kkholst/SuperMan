@@ -472,14 +472,18 @@ we find the `supermanual' and other helpful materials.")
 (defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)
-  (set-buffer (find-file-noselect superman-home))
-  (unless (superman-manager-mode 1))
-  (save-restriction
-    (widen)
-    (show-all)
-    (save-excursion
-      (reverse
-       (superman-property-values "category")))))
+  (let ((cats
+	 (progn
+	   (set-buffer (find-file-noselect superman-home))
+	   (unless (superman-manager-mode 1))
+	   (save-restriction
+	     (widen)
+	     (show-all)
+	     (save-excursion
+	       (reverse
+		(superman-property-values "category")))))))
+      (when superman-project-kal-el (add-to-list 'cats "Krypton" 'append))
+      cats))
 
 (defun superman-property-values (key)
   "Return a list of all values of property KEY in the current buffer or region. This
