@@ -157,7 +157,8 @@ Default is to set the old window configuration.
     (switch-to-buffer
      (make-indirect-buffer (current-buffer) S-buf) 'clone)
     (delete-other-windows)
-    ;; (org-mode)
+    (org-mode)
+    (font-lock-mode -1) 
     (show-all)
     ;; (if (beginning-of-line) (looking-at "[.*]"
     (unless (= level 0) (progn

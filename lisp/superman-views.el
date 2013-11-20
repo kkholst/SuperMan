@@ -1609,18 +1609,19 @@ cleanup is a function which is called before superman plays the balls.")
 	(get-buffer-create ibuf)
 	(switch-to-buffer ibuf))
       (erase-buffer)
-      ;; (goto-char (point-min))
       (insert git-cat)
-      (unless gbuf ;; back button is already there
-	(let ((buffer-read-only nil))
-	  (insert (superman-make-button
-		   "Back to project (q)"
-		   'superman-view-back)
-		  "\n\n")
-	  (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
-	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
-	  (put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
-	  (superman-git-mode))))))
+      (goto-char (point-min))
+      ;; (unless gbuf ;; back button is already there
+      (let ((buffer-read-only nil))
+	(insert (superman-make-button
+		 "Back to project (q)"
+		 'superman-view-back)
+		"\n\n")
+	(put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
+	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
+	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir)
+	(superman-view-mode)
+	(superman-git-mode)))))
 
 
 (defvar superman-git-mode-map (make-sparse-keymap)
