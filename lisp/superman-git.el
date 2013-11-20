@@ -303,11 +303,15 @@ Else return FILE as it is."
 	(list git-status label git-last-commit)))))
 
 (defun superman-label-status (XY)
-  "Replace git status by a human readable label."
+  "Replace git status --  index-status (X) and the work-tree-status (Y) -- by a human readable label."
   (cond ((string= "" XY)
 	 "Committed")
 	((string= " M" XY)
-	 "Modified")
+	 "Modified ")
+	((string= " M" XY)
+	 "Modified ")
+	((string= "MM" XY)
+	 "Added to index, modified in Worktree")
 	((string= "??" XY)
 	 "Untracked")
 	((string= " D" XY)
@@ -317,7 +321,7 @@ Else return FILE as it is."
 	((string= " U" XY)
 	 "Unmerged")
 	((string= "AM" XY)
-	 "Added")
+	 "New in git-index, modified in Worktree")
 	((string= "UU" XY)
 	 "unmerged, both modified")
 	((string= "DD" XY)
