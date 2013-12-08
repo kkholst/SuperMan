@@ -34,7 +34,7 @@
 (require 'winner) 
 (require 'ido)
 ;; (require 'org-colview)
-(require 'org-publish)
+(require 'ox-publish)
 (require 'vc)
 (require 'cl)
 
@@ -70,6 +70,8 @@
   "Option for superman-view buffers: If non-nil insert an empty line after the category heading
 before the column names.")
 
+(defvar superman-default-cat nil "Category for otherwise uncategorized projects.
+ If this variable is nil, then uncategorized projects are filed under \"CatWoman\".")
 (defvar superman-property-list 
   '((index . "Index")
     (nickname . "NickName")
@@ -472,7 +474,7 @@ we find the `supermanual' and other helpful materials.")
 (defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)
-  (let ((cats
+  (let ((cats 
 	 (progn
 	   (set-buffer (find-file-noselect superman-home))
 	   (unless (superman-manager-mode 1))
@@ -483,6 +485,7 @@ we find the `supermanual' and other helpful materials.")
 	       (reverse
 		(superman-property-values "category")))))))
       (when superman-project-kal-el (add-to-list 'cats "Krypton" 'append))
+      (add-to-list 'cats (or superman-default-cat "CatWoman") 'append)
       cats))
 
 (defun superman-property-values (key)

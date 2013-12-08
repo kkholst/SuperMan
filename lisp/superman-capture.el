@@ -171,7 +171,7 @@ Default is to set the old window configuration.
 			  (skip-chars-forward "[* ]")
 			  (kill-line)))
     (font-lock-mode -1)
-    (font-lock-default-function nil)
+;;    (font-lock-default-function nil)
     (goto-char (point-min))
     (insert title)
     (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
