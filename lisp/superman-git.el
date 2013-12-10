@@ -43,23 +43,27 @@ that never should get git controlled.")
 result in buffer BUF. Optional INTRO is shown before the
 result."
   (let ((intro (or intro "Superman returns:\n\n"))
-	(msg (shell-command-to-string cmd)))
+	(msg (shell-command-to-string cmd))
+	(cbuf (current-buffer)))
     (if redo-buf
 	(with-current-buffer redo-buf
 	  (superman-redo))
-      (when superman-view-mode (superman-redo))) 
-    (set-buffer (get-buffer-create buf))
+      (when superman-view-mode (superman-redo)))
+    (delete-other-windows)
+    (split-window-vertically)
+    (other-window 1)
+    (switch-to-buffer (get-buffer-create buf))
+    (setq buffer-read-only t)
     (let ((buffer-read-only nil))
-      ;; (erase-buffer))
-      (with-help-window buf
-	(insert (concat
-		 (concat "\n*** " (format-time-string "<%Y-%m-%d %a %H:%M>") " "
-			 intro msg))))
-      (with-current-buffer buf
-	(goto-char (point-max))
-	(re-search-backward "^***" nil t)
-	(forward-line 2)
-	(recenter 1)))))
+      (goto-char (point-max))
+      (put-text-property 0 1 'scroll-position 1 intro)
+      (insert (concat "\n*** " (format-time-string "<%Y-%m-%d %a %H:%M>") " "
+		      intro msg))
+      (goto-char (previous-single-property-change (point) 'scroll-position))
+      (let ((this-scroll-margin
+	     (min (max 0 scroll-margin)
+		  (truncate (/ (window-body-height) 4.0)))))
+	(recenter this-scroll-margin)))))
 
 ;;}}}
 ;;

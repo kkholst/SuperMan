@@ -117,10 +117,12 @@ If JABBER is non-nil message about non-existing headings.
 (defun superman-capture-internal (project heading plist &optional level scene)
   "Superman captures entries, i.e. outline-heading, to be added to the index file of a
 PROJECT at a given HEADING. A special case is where a new projects is captured
-for the supermanager. The PLIST is a list of properties for the new entry possibly with
+for the supermanager.
+
+Argument PLIST is a list of properties for the new entry possibly with
 pre-specified default values.
 
-If LEVEL is given it this is the level of the new heading (default is 3).
+If LEVEL is given it is the level of the new heading (default is 3).
 If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
@@ -170,8 +172,8 @@ Default is to set the old window configuration.
     (unless (= level 0) (progn 
 			  (skip-chars-forward "[* ]")
 			  (kill-line)))
-    (font-lock-mode -1)
-;;    (font-lock-default-function nil)
+    ;; (font-lock-mode -1)
+    ;; (font-lock-default-function nil)
     (goto-char (point-min))
     (insert title)
     (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
@@ -186,7 +188,7 @@ Default is to set the old window configuration.
 	    )
     (insert "\n\n")
     ;; (put-text-property (point-min) (point) 'face font-lock-string-face)
-    (show-all)
+    ;; (show-all)
     (if (= level 0)
 	(goto-char (point-max))
       (end-of-line))
@@ -288,11 +290,13 @@ turn it off."
   (interactive)
   (let ((scene (get-text-property (point-min) 'scene))
 	(type (get-text-property (point-min) 'type)))
-    (if (eq type 'capture)
-	(delete-region (point-min) (point-max))
-      (goto-char (point-min))
-      (outline-next-heading)
-      (delete-region (point-min) (point)))
+    (cond ((eq type 'capture)
+	   (delete-region (point-min) (point-max)))
+	  ((eq type 'edit)
+	   (delete-region (point-min) (next-single-property-change (point-min) 'edit-point)))
+	  (t (goto-char (point-min))
+	     (outline-next-heading)
+	     (delete-region (point-min) (point))))
     (save-buffer)
     (kill-buffer (current-buffer))
     (when (window-configuration-p scene)
