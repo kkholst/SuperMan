@@ -879,14 +879,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (superman-trim-string f (car args))))
 
 (defun superman-make-git-marked-keyboard ()
-  (let ((diff (superman-make-button "Diff marked"
-				    'superman-git-diff-marked
+  (let ((diff (superman-make-button "Diff project"
+				    'superman-git-diff
 				    'superman-git-keyboard-face-d
 				    "git diff"))
-	(add (superman-make-button "Add marked"
-				   'superman-git-add-marked
-				   'superman-git-keyboard-face-a
-				   "git add"))
 	(commit (superman-make-button "Commit marked"
 				      'superman-git-commit-marked
 				      'superman-git-keyboard-face-c
@@ -899,7 +895,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 				      'superman-view-delete-marked
 				      'superman-git-keyboard-face-x
 				      "Delete marked files")))
-    (concat diff  " " add  " " delete " " status  " " commit " " " " " ")))
+    (concat diff  " " delete " " status  " " commit " ")))
 
 ;;}}}
 ;;
