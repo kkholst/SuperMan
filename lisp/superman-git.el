@@ -560,26 +560,26 @@ or if the file is not inside the location."
     ("files"
      "ls-files --full-name"
      (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-clean-git-ls-files+)
     ("untracked"
      "ls-files --full-name --exclude-standard --others"
      (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-clean-git-ls-files)
     ("modified"
      "ls-files --full-name -m"
      (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-clean-git-ls-files+)
     ;; ("date"
-    ;; "ls-files | while read file; do git log -n 1 --pretty=\"** $file\n:PROPERTIES:\n:COMMIT: %h\n:DATE: %ad\n:END:\n\" -- $file; done"
+    ;; "ls-files | while read file; do git log -n1 --pretty=\"** $file\n:PROPERTIES:\n:COMMIT: %h\n:DATE: %ad\n:END:\n\" -- $file; done"
     ;; ((hdr ("width" 12) ("face" font-lock-function-name-face) ("name" "Filename"))
     ;; ("DATE" ("fun" superman-trim-date))
     ;; ("COMMIT" ("width" 18))))
@@ -834,12 +834,14 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-d
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
+		 :height 0.8
 		 :background "orange")))
   "Face used for git-diff."
   :group 'superman)
 (defface superman-git-keyboard-face-a
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
+		 :height 0.8
 		 :background "yellow")))
   "Face used for git-add."
   :group 'superman)
@@ -854,6 +856,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-c
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
+		 :height 0.8
 		 :background "green")))
   "Face used for git-commit."
   :group 'superman)
@@ -861,6 +864,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-x
   '((t (:inherit superman-default-button-face
 		 :foreground "white"
+		 :height 0.8
 		 :background "black")))
   "Face used for git-rm."
   :group 'superman)
@@ -868,6 +872,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-r
   '((t (:inherit superman-default-button-face
 		 :foreground "white"
+		 :height 0.8
 		 :background "violet")))
   "Face used for git-stash."
   :group 'superman)
@@ -875,6 +880,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-s
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
+		 :height 0.8
 		 :background "red")))
   "Face used for git-stash."
   :group 'superman)
@@ -956,7 +962,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
       (setq default-directory curdir)
       (switch-to-buffer bufn)
       (vc-git-log-view-mode))))
-
 
 ;;}}}
 ;;{{{ git log-view
@@ -1075,7 +1080,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		   (superman-get-property nil (superman-property 'filename) t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (get-text-property (point-min) 'git-dir))
-	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
+	 (gitcmd (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
     (superman-git-setup-log-buffer file gitpath gitcmd decoration-only (list limit search-string decoration-only) )))
