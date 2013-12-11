@@ -110,21 +110,31 @@ result."
 	      superman-cmd-git " rev-parse --is-inside-work-tree ")))))
 
 (defun superman-git-action (action &optional dir)
-  "Run a git command ACTION in directory DIR."
+  "Run a git command ACTION in directory DIR and display result."
   (let ((dir (or dir (if superman-view-mode
 			 (get-text-property (point-min) 'git-dir)
 		       (if superman-current-project
 			   (superman-get-location superman-current-project)
 			 (read-directory-name "Path to git repository: "))))))
-    (superman-run-cmd
-     (concat "cd " dir "; " superman-cmd-git " " action "\n")
-     "*Superman-returns*"
-     (concat "git " action " '" dir "' returns:\n\n"))))
+    (save-excursion
+      (superman-run-cmd
+       (concat "cd " dir "; " superman-cmd-git " " action "\n")
+       "*Superman-returns*"
+       (concat "git " action " '" dir "' returns:\n\n")))))
 
-(defun superman-git-status (&optional dir)
-  "Show git status."
+(defun superman-git-diff ()
+  "Run \"git diff\" on current project."
   (interactive)
-  (superman-git-action dir "status"))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-action "diff" dir))))
+
+(defun superman-git-status ()
+  "Run \"git status\" on current project."
+  (interactive)
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-action "status" dir))))
 
 (defun superman-git-diff (&optional dir)
   "Run git diff."
@@ -276,10 +286,10 @@ Else return FILE as it is."
   "Replace git status --  index-status (X) and the work-tree-status (Y) -- by a human readable label."
   (cond ((string= "" XY)
 	 "Committed")
+	((string= "M " XY)
+	 "Modified (staged)")
 	((string= " M" XY)
-	 "Modified ")
-	((string= " M" XY)
-	 "Modified ")
+	 "Modified (unstaged)")
 	((string= "MM" XY)
 	 "Added to index, modified in Worktree")
 	((string= "??" XY)
@@ -362,6 +372,23 @@ of the item at point."
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
     (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename)
+    (superman-view-redo-line)))
+
+(defun superman-git-reset-file ()
+  "Reset (unstaged) changes via \"git checkout HEAD file\" of the file
+given by the filename property of the item at point."
+  (interactive)
+  (let* ((filename (superman-filename-at-point))
+	 (file (file-name-nondirectory filename))
+	 (dir (if filename (expand-file-name (file-name-directory filename))))
+	 (fbuf (get-file-buffer file)))
+    (when (and fbuf
+	       (with-current-buffer fbuf (buffer-modified-p))
+	       (y-or-n-p (concat "Save buffer " fbuf "?")))
+      (with-current-buffer fbuf (save-buffer)))
+    (save-excursion
+      (superman-run-cmd (concat "cd " dir ";" superman-cmd-git " checkout HEAD " file)
+			"*Superman-returns*"))
     (superman-view-redo-line)))
 
 (defun superman-git-delete-file ()
@@ -502,21 +529,21 @@ or if the file is not inside the location."
       ("Message" ("width" 63))))
     ("files"
      "ls-files --full-name"
-     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
      superman-git-clean-git-ls-files+)
     ("untracked"
      "ls-files --full-name --exclude-standard --others"
-     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
      superman-git-clean-git-ls-files)
     ("modified"
      "ls-files --full-name -m"
-     (("filename" ("width" 12) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 39) ("face" superman-get-git-status-face)))
@@ -595,15 +622,15 @@ This function should be bound to a key or button."
 	;; (make-indirect-buffer (current-buffer) ibuf 'clone)
 	(get-buffer-create ibuf)
 	(switch-to-buffer ibuf))
-      (erase-buffer)
-      (insert git-cat)
-      (goto-char (point-min))
-      ;; (unless gbuf ;; back button is already there
       (let ((buffer-read-only nil))
+	(erase-buffer)
+	(insert git-cat)
+	(goto-char (point-min))
 	(insert (superman-make-button
 		 "Back to project (q)"
 		 'superman-view-back)
 		"\n\n")
+	(insert (superman-make-git-marked-keyboard) "\n\n")
 	(put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'project-buffer pbuf)
@@ -768,6 +795,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "s" 'superman-git-status-file)
 (define-key superman-git-mode-map "x" 'superman-git-delete-file)
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
+(define-key superman-git-mode-map "r" 'superman-git-reset-file)
 
 ;;}}}
 ;;{{{ superman-git-keyboard
@@ -785,6 +813,13 @@ Enabling superman-git mode enables the git keyboard to control single files."
   "Face used for git-add."
   :group 'superman)
 
+(defface superman-git-keyboard-face-l
+  '((t (:inherit superman-default-button-face
+		 :foreground "white"
+		 :background "blue")))
+  "Face used for git-log."
+  :group 'superman)
+
 (defface superman-git-keyboard-face-c
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
@@ -799,6 +834,13 @@ Enabling superman-git mode enables the git keyboard to control single files."
   "Face used for git-rm."
   :group 'superman)
 
+(defface superman-git-keyboard-face-r
+  '((t (:inherit superman-default-button-face
+		 :foreground "white"
+		 :background "violet")))
+  "Face used for git-stash."
+  :group 'superman)
+
 (defface superman-git-keyboard-face-s
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
@@ -811,26 +853,53 @@ Enabling superman-git mode enables the git keyboard to control single files."
       (let ((diff (superman-make-button "d"
 					'superman-git-diff-file
 					'superman-git-keyboard-face-d
-					"git diff"))
+					"git diff file"))
+	    (log (superman-make-button "l"
+				       'superman-git-log-at-point
+				       'superman-git-keyboard-face-l
+				       "git log file"))
 	    (add (superman-make-button "a"
 				       'superman-git-add-file
 				       'superman-git-keyboard-face-a
-				       "git add"))
+				       "git add file"))
 	    (commit (superman-make-button "c"
 					  'superman-git-commit-file
 					  'superman-git-keyboard-face-c
-					  "git commit"))
-	    (status (superman-make-button "s"
-					  'superman-git-status-file
-					  'superman-git-keyboard-face-s
-					  "git commit"))
+					  "git commit file"))
+	    (reset (superman-make-button "r"
+					 'superman-git-reset-file
+					 'superman-git-keyboard-face-r
+					 "git checkout (reset) file"))
 	    (delete (superman-make-button "x"
 					  'superman-git-delete-file
 					  'superman-git-keyboard-face-x
-					  "git rm")))
-	(concat diff " " add  " " delete " " status  " " commit " " " " " "))
+					  "git rm file")))
+	(concat diff " " log  " " add  " " delete " " reset " " commit " " " " " "))
     ;; for the column name
     (superman-trim-string f (car args))))
+
+(defun superman-make-git-marked-keyboard ()
+  (let ((diff (superman-make-button "Diff marked"
+				    'superman-git-diff-marked
+				    'superman-git-keyboard-face-d
+				    "git diff"))
+	(add (superman-make-button "Add marked"
+				   'superman-git-add-marked
+				   'superman-git-keyboard-face-a
+				   "git add"))
+	(commit (superman-make-button "Commit marked"
+				      'superman-git-commit-marked
+				      'superman-git-keyboard-face-c
+				      "git commit"))
+	(status (superman-make-button "Status (project)"
+				      'superman-git-status-project
+				      'superman-git-keyboard-face-s
+				      "git commit"))
+	(delete (superman-make-button "Delete marked"
+				      'superman-view-delete-marked
+				      'superman-git-keyboard-face-x
+				      "Delete marked files")))
+    (concat diff  " " add  " " delete " " status  " " commit " " " " " ")))
 
 ;;}}}
 ;;

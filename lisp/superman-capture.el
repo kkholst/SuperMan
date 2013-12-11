@@ -292,9 +292,9 @@ turn it off."
 	(type (get-text-property (point-min) 'type)))
     (cond ((eq type 'capture)
 	   (delete-region (point-min) (point-max)))
-	  ((eq type 'edit)
-	   (delete-region (point-min) (next-single-property-change (point-min) 'edit-point)))
-	  (t (goto-char (point-min))
+	  ;; ((eq type 'edit)
+	   ;; (delete-region (point-min) (
+	   (t (goto-char (point-min))
 	     (outline-next-heading)
 	     (delete-region (point-min) (point))))
     (save-buffer)
