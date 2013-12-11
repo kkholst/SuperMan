@@ -457,7 +457,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 		     config-name
 		     `(lambda () (interactive)
 			(superman-switch-config nil nil ,config-cmd))
-		     'font-lock-warning-face
+		     'superman-warning-face
 		     config-cmd)
 		"]  "))
       (setq config-list (cdr config-list)))))
@@ -467,9 +467,10 @@ which there is a function `superman-capture-n'. If omitted, it is set to
     ("Todo" superman-project-todo superman-capture-button-face)
     ("Help" supermanual superman-capture-button-face))
   "Alist of displays that are shown as action buttons for all projects.")
-  
+
 ;;}}}
 ;;{{{ unison
+
 (defun superman-view-read-unison (project)
   (let (unisons)
     (save-window-excursion
@@ -538,7 +539,7 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 		 unison-name 
 		 `(lambda () (interactive)
 		    (async-shell-command ,unison-cmd))
-		 'font-lock-warning-face
+		 'superman-warning-face
 		unison-name) "] "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
@@ -646,7 +647,7 @@ Translate the branch names into buttons."
       (superman-make-button
        current-branch
        'superman-git-status
-       'font-lock-warning-face
+       'superman-warning-face
        "View git status")
       (insert "[" current-branch "]  ")
       (while other-branches

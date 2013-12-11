@@ -266,7 +266,7 @@ turn it off."
       (if (looking-at "[ \t]*\n")
 	  (if (setq req (get-text-property (point) 'required))
 	      (progn
-		(put-text-property (point-at-bol) (point-at-eol) 'face 'font-lock-warning-face)
+		(put-text-property (point-at-bol) (point-at-eol) 'face 'superman-warning-face)
 		(error (concat (or req "This is a required field"))))
 	    (beginning-of-line)
 	    (let ((kill-whole-line t))

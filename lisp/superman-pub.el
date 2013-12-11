@@ -152,7 +152,7 @@
 	 0 (length name) 
 	 (list
 	  'button (list t)
-	  'face 'font-lock-warning-face
+	  'face 'superman-warning-face
 	  'keymap map
 	  'mouse-face 'highlight
 	  'follow-link t
