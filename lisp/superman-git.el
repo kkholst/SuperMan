@@ -44,7 +44,7 @@ result in buffer BUF. Optional INTRO is shown before the
 result."
   (let ((intro (or intro "Superman returns:\n\n"))
 	(msg (shell-command-to-string cmd))
-	(cbuf (current-buffer)))
+	(cur-point (point)))
     (if redo-buf
 	(with-current-buffer redo-buf
 	  (superman-redo))
@@ -65,7 +65,9 @@ result."
       (let ((this-scroll-margin
 	     (min (max 0 scroll-margin)
 		  (truncate (/ (window-body-height) 4.0)))))
-	(recenter this-scroll-margin)))))
+	(recenter this-scroll-margin)))
+    (other-window 1)
+    (goto-char cur-point)))
 
 ;;}}}
 ;;
@@ -184,16 +186,17 @@ result."
 
 (defun superman-git-merge-branches (dir)
   (let* ((branch-list (superman-git-branches dir))
-	(current-branch (car branch-list))
-	(other-branches (cdr branch-list))
-	(m-branch (completing-read
-		   (concat "Merge current branch (" current-branch ") with: ")
-		   (mapcar* 'cons other-branches
-			    (make-list (length other-branches) `())))))
-    (superman-run-cmd
-     (concat "cd " dir ";" superman-cmd-git " merge " m-branch  "\n")
-     "*Superman-returns*"
-     (concat "git merge returns:\n\n"))))
+	 (current-branch (car branch-list))
+	 (other-branches (cdr branch-list))
+	 (m-branch (completing-read
+		    (concat "Merge current branch (" current-branch ") with: ")
+		    (mapcar* 'cons other-branches
+			     (make-list (length other-branches) `())))))
+    (save-excursion
+      (superman-run-cmd
+       (concat "cd " dir ";" superman-cmd-git " merge " m-branch  "\n")
+       "*Superman-returns*"
+       (concat "git merge returns:\n\n")))))
 
 
 (defun superman-git-new-branch (&optional dir)
@@ -220,10 +223,11 @@ use the location of the current project, if no project is current prompt for pro
 		       (completing-read "Choose branch to checkout: "
 					(mapcar* 'cons branches (make-list (length branches) `()))
 					nil t)))))
-    (superman-run-cmd 
-     (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")
-     "*Superman-returns*"
-     (concat "Superman git checkout branch '" branch "' returns:\n\n"))
+    (save-excursion
+      (superman-run-cmd 
+       (concat "cd " dir "; " superman-cmd-git " checkout " branch "\n")
+       "*Superman-returns*"
+       (concat "Superman git checkout branch '" branch "' returns:\n\n")))
     (when superman-view-mode (superman-redo))))
 
 
@@ -253,11 +257,12 @@ Else return FILE as it is."
   (interactive)
   (let* ((file (superman-filename-at-point))
 	 (dir (file-name-directory file)))
-  (superman-run-cmd
-   (concat "cd " dir "; " superman-cmd-git " status "
-	   (file-name-nondirectory file) "\n")
-   "*Superman-returns*"
-   (concat "git status '" file "' returns:\n\n"))))
+    (save-excursion
+      (superman-run-cmd
+       (concat "cd " dir "; " superman-cmd-git " status "
+	       (file-name-nondirectory file) "\n")
+       "*Superman-returns*"
+       (concat "git status '" file "' returns:\n\n")))))
 
 
 (defun superman-git-set-status (pom file)
@@ -417,7 +422,7 @@ given by the filename property of the item at point."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (save-excursion
-      (superman-run-cmd (concat "cd " dir ";" superman-cmd-git " checkout HEAD " file)
+      (superman-run-cmd (concat "cd " dir ";" superman-cmd-git " checkout HEAD -- " file)
 			"*Superman-returns*"))
     (superman-view-redo-line)))
 
@@ -480,22 +485,20 @@ or if the file is not inside the location."
 
 (defun superman-git-diff-file (&optional arg)
   (interactive "p")
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (file (org-link-display-format (superman-get-property m "filename"))))
+  (let ((file (superman-filename-at-point)))
     (if (= arg 4)
 	(progn (find-file file)
 	       (vc-diff file "HEAD"))
-      (superman-run-cmd (concat "cd " (file-name-directory file)
-				";" superman-cmd-git " diff HEAD "
-				file  "\n")
-			"*Superman-returns*"
-			"Superman returns the result of git diff HEAD:"
-			nil))))
+	(superman-run-cmd (concat "cd " (file-name-directory file)
+				  ";" superman-cmd-git " diff HEAD "
+				  file  "\n")
+			  "*Superman-returns*"
+			  "Superman returns the result of git diff HEAD:"
+			  nil))))
 
 (defun superman-git-difftool-file ()
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (file (org-link-display-format (superman-get-property m "filename"))))
+  (let ((file (superman-filename-at-point)))
     (async-shell-command (concat
 			  "cd " (file-name-directory file) "; "
 			  superman-cmd-git " difftool "
@@ -503,8 +506,7 @@ or if the file is not inside the location."
 
 (defun superman-git-ediff-file ()
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-    (file (org-link-display-format (superman-get-property m "filename"))))
+  (let ((file (superman-filename-at-point)))
     (find-file file)
     (vc-ediff file "HEAD")))
 
@@ -512,10 +514,13 @@ or if the file is not inside the location."
   (interactive)
   (font-lock-mode -1)
   (save-excursion
-    (let ((version (or version (buffer-substring (point-at-bol)
-						 (progn (goto-char (point-at-bol))
-							(forward-word)
-							(point)))))
+    (let ((version
+	   (or version
+	       (buffer-substring
+		(point-at-bol)
+		(progn (goto-char (point-at-bol))
+		       (forward-word)
+		       (point)))))
 	  (buffer-read-only nil))
       (goto-char (point-min))
       (while (re-search-forward version nil t)
@@ -531,9 +536,7 @@ or if the file is not inside the location."
 (defun superman-git-annotate (&optional arg)
   "Annotate file"
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (bufn)
-	 (file (org-link-display-format (superman-get-property m "filename"))))
+  (let ((file (superman-filename-at-point)) (bufn))
     (save-window-excursion
       (find-file file)
       (vc-annotate (org-link-display-format file) "HEAD")
@@ -940,25 +943,21 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (defun superman-git-search (&optional arg)
   (interactive "p")
-  (superman-git-search-at-point (or arg superman-git-search-limit)))
+  (superman-git-search-file (or arg superman-git-search-limit)))
 
 
 (defun superman-git-history (&optional arg)
   (interactive)
-  (let* ((m (org-get-at-bol 'org-hd-marker))
-	 (file
-	  (or (if m (org-link-display-format (superman-get-property m "filename")))
+  (let ((file (or (superman-filename-at-point))
 	      (get-text-property (point-min) 'git-dir)
-	      (buffer-file-name)))
-	 (dir (if m (file-name-directory file) (file-name-as-directory file)))
-	 (curdir default-directory)
-	 (bufn (concat "*history: " file "*"))
-	 )
+	      (buffer-file-name))
+	(dir (if file-directory-p file (file-name-as-directory file) (file-name-directory file)))
+	(curdir default-directory)
+	(bufn (concat "*history: " file "*")))
     (when dir
       (save-window-excursion
 	(setq default-directory dir)
-	(vc-git-print-log file bufn t nil (or arg superman-git-log-limit))
-	)
+	(vc-git-print-log file bufn t nil (or arg superman-git-log-limit)))
       (setq default-directory curdir)
       (switch-to-buffer bufn)
       (vc-git-log-view-mode))))
@@ -1021,24 +1020,24 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 
 (defun superman-git-setup-log-buffer (file dir git-switches decoration-only arglist)
-  (let* ((file (superman-relative-name file dir))
+  (let* ((rel-file (superman-relative-name file dir))
 	 (dir dir)
 	 (cmd (concat
-		   "cd " dir "; " superman-cmd-git git-switches " -- " file))
+		   "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
 	 (gitlog (shell-command-to-string cmd))
 	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	 log-strings)
     (when (string= gitlog "")
-      (error (concat "No search results in file history or file " file " not (not yet) git controlled.")))
+      (error (concat "No search results in file history or file " rel-file " not (not yet) git controlled.")))
     (switch-to-buffer log-buf)
     (setq buffer-read-only nil)
     (erase-buffer)
     (font-lock-mode -1)
-    (insert "* Git Log of " file)
+    (insert "* Git Log of " (file-name-nondirectory file))
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (put-text-property (point-at-bol) (point-at-eol) 'filename file)
-    (put-text-property (point-at-bol) (point-at-eol) 'dir dir)
-    ;;    (put-text-property (point-at-bol) (point-at-eol) 'command cmd)
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'dir dir)
+    ;; (put-text-property (point-at-bol) (point-at-eol) 'command cmd)
     (put-text-property (point-at-bol) (point-at-eol) 'arglist arglist)
     (insert "\n\n")
     ;; column names
@@ -1052,11 +1051,11 @@ Enabling superman-git mode enables the git keyboard to control single files."
 			  (list 
 			   (cons "Comment" (nth 1 log))
 			   (cons "Hash" (nth 0 log))
-			   (cons "marker" (nth 0 log))
 			   (cons "Tag" deco)
 			   (cons "Date" (nth 2 log))
 			   (cons "Author"  (nth 3 log))))
 		    superman-log-balls)))
+	(put-text-property 0 (length item) 'hash (nth 0 log) item)
 	(if (or (not decoration-only) (not (string= deco "")))
 	    (progn
 	      (put-text-property 0 (length item) 'decoration (nth 4 log) item)
@@ -1099,8 +1098,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
   "Set git tag"
   (interactive)
   (let* ((oldtag (get-text-property (point-at-bol) 'decoration))
-         (path (get-text-property (point-min) 'dir))
-	 (hash (get-text-property (point-at-bol) 'org-hd-marker))
+	 (hash (get-text-property (point-at-bol) 'hash))
 	 (file (get-text-property (point-min) 'filename))
 	 (arglist (get-text-property (point-min) 'arglist)) ;; limit search decoration-only
 	 (tag (read-string "Tag (empty to clear): "))
@@ -1110,29 +1108,27 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	  (if oldtag
 	      (progn
 		(setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
-		(shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -d " oldtag)))))
-      (shell-command-to-string (concat "cd " path ";" superman-cmd-git " tag -a " tag " " hash " -m \"\"")))
-    (superman-git-log file path (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
+		(shell-command-to-string (concat "cd " (file-name-directory file) ";" superman-cmd-git " tag -d " oldtag)))))
+      (shell-command-to-string (concat "cd " (file-name-directory file) ";" superman-cmd-git " tag -a " tag " " hash " -m \"\"")))
+    (superman-git-log file (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
     (goto-char (point-min))
     (forward-line (1- linenum))))
 
 (defun superman-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
   (interactive)
-  (superman-git-revision (org-get-at-bol 'org-hd-marker) diff))
+  (superman-git-revision (get-text-property (point-at-bol) 'hash) diff))
 
 (defun superman-git-revision (pom &optional diff)
   "Shows version of the document at point "
   (let* ((file (get-text-property (point-min) 'filename))
-         (path (get-text-property (point-min) 'dir))
-	 (hash (get-text-property (point-at-bol) 'org-hd-marker))
-	 (fileabs (concat path file))
+	 (hash (get-text-property (point-at-bol) 'hash))
 	 (ext (file-name-extension file))
 	 (filehash (concat (file-name-sans-extension (file-name-nondirectory file)) "_" hash (if ext (concat "." ext))))
 	 (str (shell-command-to-string 
-	       (concat "cd " path ";" superman-cmd-git " show " hash ":" file))))
-    (if diff (find-file fileabs))
-    (switch-to-buffer-other-window filehash) ;;set-buffer find-file-noselect fileabs
+	       (concat "cd " (file-name-directory file) ";" superman-cmd-git " show " hash ":" (file-name-nondirectory file)))))
+    (if diff (find-file file))
+    (switch-to-buffer-other-window filehash) 
     (setq buffer-file-name filehash)
     (normal-mode) ;; Get default major-mode 
     (erase-buffer)  
