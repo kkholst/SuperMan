@@ -53,6 +53,8 @@ result."
     (split-window-vertically)
     (other-window 1)
     (switch-to-buffer (get-buffer-create buf))
+    (unless (eq major-mode 'diff-mode)
+      (diff-mode))
     (setq buffer-read-only t)
     (let ((buffer-read-only nil))
       (goto-char (point-max))
@@ -136,20 +138,26 @@ result."
     (when dir
       (superman-git-action "status" dir))))
 
-(defun superman-git-diff (&optional dir)
+(defun superman-git-diff ()
   "Run git diff."
   (interactive)
-  (superman-git-action dir "diff"))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-action "diff" dir))))
 
 (defun superman-git-push (&optional dir)
   "Pull to remote at DIR."
   (interactive)
-  (superman-git-action dir "push"))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-action "push"  dir))))
 
 (defun superman-git-pull (&optional dir)
   "Pull from remote at DIR."
   (interactive)
-  (superman-git-action dir "pull"))
+  (let ((dir (get-text-property (point-min) 'git-dir)))
+    (when dir
+      (superman-git-action "pull" dir))))
 
 (defun superman-git-toplevel (file)
   "Find the toplevel directory DIR is under git control."
@@ -341,7 +349,29 @@ Else return FILE as it is."
     ;; (concat date " " (replace-regexp-in-string "\n+" "" mess))))
 
 ;;}}}
-;;{{{ actions add/commit/delete on file-at-point
+;;{{{ actions log/search/add/commit/delete on file-at-point
+
+
+(defun superman-git-log-decoration-file (&optional arg)
+  (interactive "p")
+  (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
+	 (file (superman-filename-at-point)))
+    (superman-git-log file limit nil t)))
+
+(defun superman-git-search-log-of-file (&optional arg)
+  (interactive "p")
+  (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
+	 (file (superman-filename-at-point)))
+    (superman-git-log file limit (read-string "Search string: ")) nil))
+
+(defun superman-git-log-file (&optional arg)
+  (interactive "p")
+  (let* ((limit (if (= arg 1)
+		    superman-git-log-limit
+		  (or arg superman-git-log-limit)))
+	 (file (superman-filename-at-point)))
+    (superman-git-log file limit nil nil)))
+
 
 (defun superman-git-add-file ()
   "Add the file at point to the git repository."
@@ -796,6 +826,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "x" 'superman-git-delete-file)
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
 (define-key superman-git-mode-map "r" 'superman-git-reset-file)
+(define-key superman-git-mode-map "l" 'superman-git-log-file)
 
 ;;}}}
 ;;{{{ superman-git-keyboard
@@ -855,7 +886,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 					'superman-git-keyboard-face-d
 					"git diff file"))
 	    (log (superman-make-button "l"
-				       'superman-git-log-at-point
+				       'superman-git-log-file
 				       'superman-git-keyboard-face-l
 				       "git log file"))
 	    (add (superman-make-button "a"
@@ -888,9 +919,9 @@ Enabling superman-git mode enables the git keyboard to control single files."
 				      'superman-git-keyboard-face-c
 				      "git commit"))
 	(status (superman-make-button "Status (project)"
-				      'superman-git-status-project
+				      'superman-git-status
 				      'superman-git-keyboard-face-s
-				      "git commit"))
+				      "git status"))
 	(delete (superman-make-button "Delete marked"
 				      'superman-view-delete-marked
 				      'superman-git-keyboard-face-x
@@ -1039,45 +1070,25 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	("Tag" ("width" 10) ("face" font-lock-comment-face))
 	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
 
-(defun superman-git-log (file gitpath limit &optional search-string decoration-only)
+(defun superman-git-log (file limit &optional search-string decoration-only)
   (let* ((file (or file (superman-filename-at-point)
 		   (superman-get-property nil (superman-property 'filename) t)))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (or gitpath (or (superman-property-at-point (superman-property 'gitpath) t)
-				  (superman-git-toplevel file))))
+	 (gitpath (get-text-property (point-min) 'git-dir))
 	 (gitcmd (concat " --no-pager log --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
     (superman-git-setup-log-buffer file gitpath gitcmd decoration-only (list limit search-string decoration-only) )))
 
 
-(defun superman-git-log-at-point (&optional arg)
-  (interactive "p")
-  (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
-	 (file (superman-filename-at-point)))
-    (superman-git-log file nil limit nil nil)))
-
-
-(defun superman-git-log-decoration-only-at-point (arg)
-  (interactive "p")
-  (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
-	 (file (superman-filename-at-point)))
-    (superman-git-log file nil limit nil t)))
-
-(defun superman-git-search-at-point (arg)
-  (interactive "p")
-  (let* ((limit (if (= arg 1) superman-git-log-limit (or arg superman-git-log-limit)))
-	 (file (superman-filename-at-point)))
-    (superman-git-log file nil limit (read-string "Search string: ")) nil))
-
-(defun superman-git-comment-at-point ()
-  (interactive)
-  (let* ((hash (org-get-at-bol 'org-hd-marker))
-	 (path (get-text-property (point-min) 'dir))
-	 ;;(path (superman-get-property pom (superman-property 'gitpath) t))
-	 ;;(hash (superman-get-property pom (superman-property 'hash) nil))))
-	 )
-    (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
+;; (defun superman-git-comment-file ()
+  ;; (interactive)
+  ;; (let* ((hash (org-get-at-bol 'org-hd-marker))
+	 ;; (path (get-text-property (point-min) 'dir))
+	 ;; ;;(path (superman-get-property pom (superman-property 'gitpath) t))
+	 ;; ;;(hash (superman-get-property pom (superman-property 'hash) nil))))
+	 ;; )
+    ;; (shell-command-to-string (concat "cd " path ";" superman-cmd-git " log -1 " hash))))
 
 (defun superman-git-tag ()
   "Set git tag"

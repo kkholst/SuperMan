@@ -2395,11 +2395,11 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Gg" 'superman-git-grep)
 (define-key superman-view-mode-map "Gh" 'superman-git-history)
 (define-key superman-view-mode-map "GI" 'superman-git-init)
-(define-key superman-view-mode-map "Gl" 'superman-git-log-at-point)
-(define-key superman-view-mode-map "GL" 'superman-git-log-decoration-only-at-point)
+(define-key superman-view-mode-map "Gl" 'superman-git-log-file)
+(define-key superman-view-mode-map "GL" 'superman-git-log-decoration-only-file)
 (define-key superman-view-mode-map "GP" 'superman-git-push)
 (define-key superman-view-mode-map "Gs" 'superman-git-status)
-(define-key superman-view-mode-map "GS" 'superman-git-search)
+(define-key superman-view-mode-map "GS" 'superman-git-search-log-of-file)
 (define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
 (define-key superman-view-mode-map "GBn" 'superman-git-new-branch)
 (define-key superman-view-mode-map "G=" 'superman-git-difftool-file)
@@ -2487,11 +2487,11 @@ not in a section prompt for section first.
      ["Git commit file" superman-git-commit-file t]
      ["Git commit marked" superman-git-commit-marked t]
      ["Git delete file" superman-git-delete-file t]
-     ["Git log" superman-git-log-at-point t]
-     ["Git log (tagged versions)" superman-git-log-decoration-only-at-point t]
+     ["Git log" superman-git-log-file t]
+     ["Git log (tagged versions)" superman-git-log-decoration-file t]
      ["Git grep" superman-git-grep t]
      ["Git annotate" superman-git-annotate t]
-     ["Git search (only in log mode)" superman-git-search t]
+     ["Git search (only in log mode)" superman-git-search-log-of-file t]
      ["Git file-list" superman-capture-git-section t]
      ["Git push" superman-git-push t]
      ["Git pull" superman-git-pull t]
