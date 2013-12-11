@@ -1126,7 +1126,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	 (ext (file-name-extension file))
 	 (filehash (concat (file-name-sans-extension (file-name-nondirectory file)) "_" hash (if ext (concat "." ext))))
 	 (str (shell-command-to-string 
-	       (concat "cd " (file-name-directory file) ";" superman-cmd-git " show " hash ":" (file-name-nondirectory file)))))
+	       (concat "cd " (file-name-directory file) ";" superman-cmd-git " show " hash ":./" (file-name-nondirectory file)))))
     (if diff (find-file file))
     (switch-to-buffer-other-window filehash) 
     (setq buffer-file-name filehash)

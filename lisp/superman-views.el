@@ -2270,8 +2270,10 @@ the user if this should be removed as well."
 (defun superman-filename-at-point (&optional noerror)
   "If property FileName exists at point return its value."
   (let* ((file-or-link
-	  (superman-property-at-point
-	   (superman-property 'filename) noerror)))
+	  (cond ((superman-property-at-point
+		  (superman-property 'filename) noerror))
+		;; e.g. for superman-git-log-mode
+		((get-text-property (point-min) 'filename)))))
     (if (not (stringp file-or-link))
 	(unless noerror
 	  (error "No proper(ty) FileName at point."))
