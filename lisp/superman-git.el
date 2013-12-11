@@ -141,7 +141,7 @@ result."
       (superman-git-action "status" dir))))
 
 (defun superman-git-diff ()
-  "Run git diff."
+  "Run git diff. "
   (interactive)
   (let ((dir (get-text-property (point-min) 'git-dir)))
     (when dir
@@ -485,16 +485,19 @@ or if the file is not inside the location."
 
 (defun superman-git-diff-file (&optional arg)
   (interactive "p")
-  (let ((file (superman-filename-at-point)))
+  (let ((file (superman-filename-at-point))
+	(hash (get-text-property (point-at-bol) 'hash)))
     (if (= arg 4)
 	(progn (find-file file)
 	       (vc-diff file "HEAD"))
-	(superman-run-cmd (concat "cd " (file-name-directory file)
-				  ";" superman-cmd-git " diff HEAD "
-				  file  "\n")
-			  "*Superman-returns*"
-			  "Superman returns the result of git diff HEAD:"
-			  nil))))
+	(superman-run-cmd 
+	 (concat "cd " (file-name-directory file)
+		 ";" superman-cmd-git " diff "
+		 (if hash (concat hash " " hash "^ "))
+		 "./" (file-name-nondirectory file) "\n")
+	 "*Superman-returns*"
+	 (concat "diff " (if hash (concat hash " " hash "^ ") "HEAD") "\n")
+	 nil))))
 
 (defun superman-git-difftool-file ()
   (interactive)
@@ -525,12 +528,12 @@ or if the file is not inside the location."
       (goto-char (point-min))
       (while (re-search-forward version nil t)
 	(put-text-property (point-at-bol) (+ (point-at-bol) (length version))
-			   'face 'font-lock-warning-face)
+			   'face 'superman-warning-face)
 	(put-text-property
 	 (progn (skip-chars-forward "^\\)")
 		(+ (point) 1))
 	 (point-at-eol)
-	 'face 'font-lock-warning-face)))))
+	 'face 'superman-warning-face)))))
 
 
 (defun superman-git-annotate (&optional arg)
@@ -685,7 +688,7 @@ This function should be bound to a key or button."
 
 (defun superman-get-git-status-face (str)
   (cond ((string-match "Committed" str ) 'font-lock-type-face)
-	((string-match  "Modified" str) 'font-lock-warning-face)
+	((string-match  "Modified" str) 'superman-warning-face)
 	(t 'font-lock-comment-face)))
 
 (defun superman-git-clean-git-ls-files ()
@@ -838,9 +841,11 @@ Enabling superman-git mode enables the git keyboard to control single files."
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
 		 :height 0.8
-		 :background "orange")))
+		 :background "orange"
+		 )))
   "Face used for git-diff."
   :group 'superman)
+
 (defface superman-git-keyboard-face-a
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
@@ -852,6 +857,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defface superman-git-keyboard-face-l
   '((t (:inherit superman-default-button-face
 		 :foreground "white"
+		 :height 0.8
 		 :background "blue")))
   "Face used for git-log."
   :group 'superman)
