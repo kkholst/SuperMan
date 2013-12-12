@@ -264,7 +264,6 @@ Else return FILE as it is."
        "*Superman-returns*"
        (concat "git status '" file "' returns:\n\n")))))
 
-
 (defun superman-git-set-status (pom file)
   (interactive)
   (let* ((status (superman-git-XY-status file))
@@ -355,7 +354,6 @@ Else return FILE as it is."
 
 ;;}}}
 ;;{{{ actions log/search/add/commit/delete on file-at-point
-
 
 (defun superman-git-log-decoration-file (&optional arg)
   (interactive "p")
@@ -845,6 +843,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 )))
   "Face used for git-diff."
   :group 'superman)
+(defface superman-git-keyboard-face-D
+  '((t (:inherit superman-git-keyboard-face-d :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-diff (larger box)."
+  :group 'superman)
 
 (defface superman-git-keyboard-face-a
   '((t (:inherit superman-default-button-face
@@ -852,6 +854,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :height 0.8
 		 :background "yellow")))
   "Face used for git-add."
+  :group 'superman)
+(defface superman-git-keyboard-face-A
+  '((t (:inherit superman-git-keyboard-face-a :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-add (larger box)."
   :group 'superman)
 
 (defface superman-git-keyboard-face-l
@@ -861,6 +867,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :background "blue")))
   "Face used for git-log."
   :group 'superman)
+(defface superman-git-keyboard-face-L
+  '((t (:inherit superman-git-keyboard-face-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-log (larger box)."
+  :group 'superman)
 
 (defface superman-git-keyboard-face-c
   '((t (:inherit superman-default-button-face
@@ -868,6 +878,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :height 0.8
 		 :background "green")))
   "Face used for git-commit."
+  :group 'superman)
+(defface superman-git-keyboard-face-C
+  '((t (:inherit superman-git-keyboard-face-c :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-commit (larger box)."
   :group 'superman)
 
 (defface superman-git-keyboard-face-x
@@ -877,6 +891,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :background "black")))
   "Face used for git-rm."
   :group 'superman)
+(defface superman-git-keyboard-face-X
+  '((t (:inherit superman-git-keyboard-face-x :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-rm (larger box)."
+  :group 'superman)
 
 (defface superman-git-keyboard-face-r
   '((t (:inherit superman-default-button-face
@@ -885,13 +903,21 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :background "violet")))
   "Face used for git-stash."
   :group 'superman)
+(defface superman-git-keyboard-face-R
+  '((t (:inherit superman-git-keyboard-facr-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-stash (larger box)."
+  :group 'superman)
 
 (defface superman-git-keyboard-face-s
   '((t (:inherit superman-default-button-face
 		 :foreground "black"
 		 :height 0.8
 		 :background "red")))
-  "Face used for git-stash."
+  "Face used for git-status."
+  :group 'superman)
+(defface superman-git-keyboard-face-S
+  '((t (:inherit superman-git-keyboard-face-s :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-status (larger box)."
   :group 'superman)
 
 (defun superman-make-git-keyboard (f &rest args)
@@ -927,19 +953,19 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-make-git-marked-keyboard ()
   (let ((diff (superman-make-button "Diff project"
 				    'superman-git-diff
-				    'superman-git-keyboard-face-d
+				    'superman-git-keyboard-face-D
 				    "git diff"))
 	(commit (superman-make-button "Commit marked"
 				      'superman-git-commit-marked
-				      'superman-git-keyboard-face-c
+				      'superman-git-keyboard-face-C
 				      "git commit"))
 	(status (superman-make-button "Status (project)"
 				      'superman-git-status
-				      'superman-git-keyboard-face-s
+				      'superman-git-keyboard-face-S
 				      "git status"))
 	(delete (superman-make-button "Delete marked"
 				      'superman-view-delete-marked
-				      'superman-git-keyboard-face-x
+				      'superman-git-keyboard-face-X
 				      "Delete marked files")))
     (concat diff  " " delete " " status  " " commit " ")))
 
