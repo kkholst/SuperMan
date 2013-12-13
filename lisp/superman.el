@@ -479,7 +479,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       '((index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(todo ("width" 7) ("face" superman-get-todo-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
-	("DEADLINE" ("fun" superman-trim-date) ("face" font-lock-warning-face))
+	("DEADLINE" ("fun" superman-trim-date) ("face" superman-warning-face))
 	("CaptureDate" ("fun" superman-trim-date) ("face" font-lock-string-face))
 	("FileName" ("fun" superman-dont-trim))))
 
@@ -543,7 +543,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
-	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-warning-face))
+	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" superman-warning-face))
 	("CaptureDate" ("fun" superman-trim-date) ("width" 12) ("face" font-lock-string-face))
 	("FileName" ("fun" superman-dont-trim))))
 
@@ -638,7 +638,6 @@ LIST includes the buffers that are related to one of the items."
 (define-key superman-mode-map "V" 'superman-change-view)
 (define-key superman-mode-map "N" 'superman-new-project)
 (define-key superman-mode-map "?" 'supermanual)
-
 
 ;;}}}  
 (provide 'superman)
