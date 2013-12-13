@@ -490,8 +490,8 @@ or if the file is not inside the location."
 	(progn (find-file file)
 	       (vc-diff file "HEAD"))
 	(superman-run-cmd (concat "cd " (file-name-directory file)
-				  ";" superman-cmd-git " diff HEAD "
-				  file  "\n")
+				  ";" superman-cmd-git " diff HEAD -- ./"
+				  (file-name-nondirectory file)  "\n")
 			  "*Superman-returns*"
 			  "Superman returns the result of git diff HEAD:"
 			  nil))))
