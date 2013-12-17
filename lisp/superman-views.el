@@ -2187,6 +2187,14 @@ the user if this should be removed as well."
     (other-window 1)
     (superman-file-list pro)))
 
+
+(defun superman-view-filter ()
+  (interactive)
+  (if (fboundp 'helm-occur)
+      (helm-occur)
+    (occur)))
+  
+
 (defun superman-view-dired ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -2369,6 +2377,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
 (define-key superman-view-mode-map "f" 'superman-view-dired)
+(define-key superman-view-mode-map "/" 'superman-view-filter)
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
@@ -2474,6 +2483,7 @@ not in a section prompt for section first.
     ["New project" superman-new-project t]
     ["New item" superman-new-item t]
     ["Edit item" superman-view-edit-item t]
+    ["Filter view (occur)" superman-view-filter t]
     ["Toggle todo" superman-view-toggle-todo t]
     ["Mark item" superman-toggle-mark t]
     ["Mark all" superman-view-mark-all t]
