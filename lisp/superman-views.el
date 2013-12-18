@@ -107,9 +107,11 @@ Column showing the todo-state
 	("FileName" ("fun" superman-dont-trim))))
 
 (setq superman-default-balls
-      '((todo ("width" 6) ("face" superman-get-todo-face))
-	(hdr ("width" 23) ("face" font-lock-function-name-face))
-	("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))))
+      '((todo ("width" 6) ("face" superman-get-todo-face))	
+	("Date" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
+	(hdr ("width" full) ("face" font-lock-function-name-face))
+	(attac ("" ("fun" superman-dont-trim) ("width" 20)))
+))
 
 (setq superman-meeting-balls
       '((hdr ("width" 23) ("face" font-lock-function-name-face))
@@ -126,7 +128,7 @@ Column showing the todo-state
 (setq superman-task-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("TaskDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("width" 49) ("face" font-lock-function-name-face))))
+	(hdr ("width" full) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
@@ -1376,7 +1378,24 @@ to VIEW-BUF."
 	      (insert (superman-column-names balls))
 	      (when buttons
 		(beginning-of-line)
-		(funcall (intern buttons))
+		(funcall (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+intern buttons))
 		(insert "\n")))
 	  (delete-region (point) (point-max))))))
     (goto-char (point-max))
