@@ -131,10 +131,6 @@
 				'superman-todo
 				'superman-next-project-button-face
 				"TodoList across all projects"))  
-  (insert (superman-make-button "TodoList"
-				'superman-todo
-				'superman-next-project-button-face
-				"TodoList across all projects"))
   (insert "\n"))
 
   ;; (insert "\n\nKeys: \n")
