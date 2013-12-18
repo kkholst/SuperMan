@@ -478,7 +478,8 @@ or if the file is not inside the location."
 	 (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file-list-string))
 	 (message (if commit (or message (read-string (concat "Commit message for " file-list-string ": "))))))
     (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file-list-string)))
-    (shell-command-to-string cmd)))
+    ;; (shell-command-to-string cmd)))
+    (superman-run-cmd cmd "*Superman-returns*")))
 
 ;;}}}
 ;;{{{ git diff and annotate

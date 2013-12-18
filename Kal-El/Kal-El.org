@@ -38,6 +38,20 @@
 
 
 * SuperTools
+  :PROPERTIES:
+  :Ball1:    FileName  :width 44 :fun superman-trim-bracketed-filename
+  :Ball2:    todo  :width 6 :face superman-get-todo-face
+  :Ball3:    hdr  :width 23 :face font-lock-function-name-face
+  :Ball4:    Date  :fun superman-trim-date :face font-lock-string-face
+  :END:
+
+
+*** use git to checkout rforge
+:PROPERTIES:
+:CaptureDate: <2013-12-13 Fri 08:10>
+:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/supertools/use-git-for-Rforge.org]]
+:END:
+
 
 
 * SuperBookmarks
