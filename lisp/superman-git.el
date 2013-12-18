@@ -1176,9 +1176,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
   (interactive)
   (let ((dir (get-text-property (point-min) 'git-dir)))
     (when dir
-      (if arg
-	(vc-git-grep (read-string "Grep: "))
-	(vc-git-grep (read-string "Grep: ") "*" dir)))))
+;;      (if arg
+      (compilation-start (concat "cd " dir "; git grep -n -e " (read-string "Grep: ") " -- *") 'grep-mode))))
+;;	(vc-git-grep (read-string "Grep: "))
+;;	(vc-git-grep (read-string "Grep: ") "*" dir)))))
 ;;}}}
 
 (provide 'superman-git)
