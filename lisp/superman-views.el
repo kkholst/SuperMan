@@ -130,7 +130,7 @@ Column showing the todo-state
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
-	("Link" ("fun" superman-trim-link) ("width" 48) ("name" "Bookmark"))))
+	("Link" ("fun" superman-trim-link) ("width" full) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("EmailDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
