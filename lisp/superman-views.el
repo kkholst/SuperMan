@@ -120,7 +120,7 @@ Column showing the todo-state
 (setq superman-note-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("NoteDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("width" 49) ("face" font-lock-function-name-face))))
+	(hdr ("width" full) ("face" font-lock-function-name-face))))
 (setq superman-data-balls
       '(("CaptureDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
