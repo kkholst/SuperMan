@@ -109,9 +109,7 @@ Column showing the todo-state
 (setq superman-default-balls
       '((todo ("width" 6) ("face" superman-get-todo-face))	
 	("Date" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("width" full) ("face" font-lock-function-name-face))
-	(attac ("" ("fun" superman-dont-trim) ("width" 20)))
-))
+	(hdr ("width" full) ("face" font-lock-function-name-face))))
 
 (setq superman-meeting-balls
       '((hdr ("width" 23) ("face" font-lock-function-name-face))
@@ -1291,6 +1289,7 @@ to VIEW-BUF."
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
 	    (insert text)
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))))
+     ;; git control section
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
 	(setq index-marker (point-marker)))
@@ -1306,6 +1305,7 @@ to VIEW-BUF."
        view-buf git props
        view-cat-head index-buf index-cat-point
        name))
+     ;; regular sections
      (balls
       ;; create table view based on balls 
       ;; move to index-buf
@@ -1313,7 +1313,10 @@ to VIEW-BUF."
 	(set-buffer index-buf)
 	(widen)
 	(goto-char index-cat-point)
-	(let* ((attac-balls (cdr (assoc 'attac balls))))
+	(let* ((item-level (or (superman-get-property (point) 'item-level) 3))
+	       (sub-level (or (superman-get-property (point) 'sub-level) 2))
+	       (attac-level (or (superman-get-property (point) 'attac-level) 4))
+	       (attac-balls (cdr (assoc 'attac balls))))
 	  (org-narrow-to-subtree)
 	  (goto-char (point-min))
 	  (setq index-marker (point-marker))
@@ -1321,7 +1324,7 @@ to VIEW-BUF."
 	  ;; format elements (if any and if wanted)
 	  ;; region is narrowed to section
 	  (while (outline-next-heading)
-	    (cond ((eq (org-current-level) 2)
+	    (cond ((eq (org-current-level) sub-level)
 		   ;; sub-headings
 		   (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
 		     (setq line (concat "*** " subhdr))
@@ -1334,7 +1337,7 @@ to VIEW-BUF."
 		     (with-current-buffer view-buf (insert line " \n" ))
 		     (end-of-line)))
 		  ;; items
-		  ((eq (org-current-level) 3)		       
+		  ((eq (org-current-level) item-level)		       
 		   (if countsub
 		       (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
 		   (setq count (+ count 1))
@@ -1343,7 +1346,7 @@ to VIEW-BUF."
 		     ;; (goto-char (point-max))
 		     (insert line "\n")))
 		  ;; attachments
-		  ((and (eq (org-current-level) 4) attac-balls)
+		  ((and (eq (org-current-level) attac-level) attac-balls)
 		   (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
 		   (with-current-buffer view-buf (insert line "\n"))))))
 	;; add counts in sub headings
