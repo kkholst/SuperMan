@@ -107,9 +107,11 @@ Column showing the todo-state
 	("FileName" ("fun" superman-dont-trim))))
 
 (setq superman-default-balls
-      '((todo ("width" 6) ("face" superman-get-todo-face))
-	(hdr ("width" 23) ("face" font-lock-function-name-face))
-	("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))))
+      '((todo ("width" 6) ("face" superman-get-todo-face))	
+	("Date" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
+	(hdr ("width" full) ("face" font-lock-function-name-face))
+	(attac ("" ("fun" superman-dont-trim) ("width" 20)))
+))
 
 (setq superman-meeting-balls
       '((hdr ("width" 23) ("face" font-lock-function-name-face))
@@ -126,11 +128,11 @@ Column showing the todo-state
 (setq superman-task-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("TaskDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("width" 49) ("face" font-lock-function-name-face))))
+	(hdr ("width" full) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
-	("Link" ("fun" superman-trim-link) ("width" 48) ("name" "Bookmark"))))
+	("Link" ("fun" superman-trim-link) ("width" full) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("EmailDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
@@ -1376,7 +1378,24 @@ to VIEW-BUF."
 	      (insert (superman-column-names balls))
 	      (when buttons
 		(beginning-of-line)
-		(funcall (intern buttons))
+		(funcall (
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+intern buttons))
 		(insert "\n")))
 	  (delete-region (point) (point-max))))))
     (goto-char (point-max))
@@ -2187,6 +2206,14 @@ the user if this should be removed as well."
     (other-window 1)
     (superman-file-list pro)))
 
+
+(defun superman-view-filter ()
+  (interactive)
+  (if (fboundp 'helm-occur)
+      (helm-occur)
+    (occur)))
+  
+
 (defun superman-view-dired ()
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
@@ -2369,6 +2396,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "I" 'superman-view-invert-marks)
 (define-key superman-view-mode-map "e" 'superman-view-edit-item)
 (define-key superman-view-mode-map "f" 'superman-view-dired)
+(define-key superman-view-mode-map "/" 'superman-view-filter)
 (define-key superman-view-mode-map "F" 'superman-view-file-list)
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
@@ -2474,6 +2502,7 @@ not in a section prompt for section first.
     ["New project" superman-new-project t]
     ["New item" superman-new-item t]
     ["Edit item" superman-view-edit-item t]
+    ["Filter view (occur)" superman-view-filter t]
     ["Toggle todo" superman-view-toggle-todo t]
     ["Mark item" superman-toggle-mark t]
     ["Mark all" superman-view-mark-all t]
