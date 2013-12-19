@@ -155,8 +155,9 @@ to an integer then do not trim the string STR."
 		  ((integerp len) len)
 		  ((eq len 'full) "full")
 		  ((stringp len)
-		     (setq len (string-to-number len))
-		     (if (< len 1) 13 len))
+		   (if (string= len "full") slen
+		       (setq len (string-to-number len))
+		     (if (< len 1) 13 len)))
 		  (t 13)))
 	 (diff (unless (eq len 'full) (- numlen slen))))
     (if diff
