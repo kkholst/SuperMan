@@ -1451,7 +1451,9 @@ a formatted string with faces."
 	  (cond ((markerp thing)
 		 ;; thing is marker
 		 (cond ((stringp (car ball)) ;; properties
-			(superman-get-property thing (car ball) t))
+			(if (assoc "regexp" ball)
+			    (superman-get-matching-property thing (car ball) t)
+			  (superman-get-property thing (car ball) t)))
 		       ;; important:
 		       ;; when introducing new special things 
 		       ;; also adapt superman-distangle-ball
@@ -1651,41 +1653,46 @@ beginning of the list."
   (if (get-text-property (point-at-bol) 'columns)
       (let* ((current (nth 2 (superman-ball-dimensions)))
 	     (colstart (superman-compute-columns-start))
-	     (j (max 0 (min (- (length colstart) 1)
-			    (+ current arg)))))
+	     (j (+ current arg)))
+	;; (min (- (length colstart) 1)
+	;; (+ current arg))))
+	(when (> j (- (length colstart) 1)) (setq j 0))
+	(when (< j 0) (setq j (- (length colstart) 1)))
 	(beginning-of-line)
 	(forward-char (+ superman-column-separator ;; offset for whole line
 			 (nth j colstart))))
-     (right-char 1)))
+    (forward-char 1)))
 
 (defun superman-previous-ball ()
   "Move to previous column."
   (interactive)
   (if (get-text-property (point-at-bol) 'columns)
       (superman-next-ball -1)
-    (left-char 1)))
+	(backward-char 1)))
     
 (defun superman-one-right (&optional left)
   "Move column to the right."
   (interactive "P")
   (if (get-text-property (point-at-bol) 'column-names)
       ;; swap columns
-      (let* ((dim (superman-ball-dimensions))
-	 (balls (get-text-property (superman-cat-point) 'balls))
-	 (buffer-read-only nil)
-	 (new-balls (superman-swap-balls balls
-					 (if left (- (nth 2 dim) 1)
-					   (nth 2 dim))))
-	 (beg (previous-single-property-change (point-at-bol) 'cat))
-	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
+      (let* ((curcol (nth 2 (superman-ball-dimensions)))
+	     (balls (get-text-property (superman-cat-point) 'balls))
+	     (buffer-read-only nil)
+	     (new-balls
+	      (superman-swap-balls
+	       balls (if left (- curcol 1) curcol)))
+	     (beg (previous-single-property-change (point-at-bol) 'cat))
+	     (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
 	;; (message (concat "Len!: " (int-to-string (length superman-document-balls))))
-    (save-excursion
-      (superman-change-balls new-balls)
-      (superman-refresh-cat new-balls)))
+	(save-excursion
+	  (superman-change-balls new-balls)
+	  (superman-refresh-cat new-balls))
+	(if left (superman-next-ball (- curcol 1))
+	  (superman-next-ball (+ curcol 1))))
     ;; swap projects
-      (if left
-	  (superman-previous-project)
-	(superman-next-project))))
+    (if left
+	(superman-previous-project)
+      (superman-next-project))))
     
 (defun superman-one-left ()
   "Move column to the left."

@@ -35,6 +35,57 @@
 :FileName: [[./supersamples/latex:page-dimensions.pdf]]
 :END:
 
+* SuperHints
+
+
+
+*** R: Imports vs Depends
+:PROPERTIES:
+:CaptureDate: <2013-12-21 Sat 09:53>
+:END:
+
+
+ 33 down vote favorite
+19
+	
+
+The "Writing R Extensions" manual provides the following guidance on when to use Imports or Depends:
+
+    The general rules are
+
+        Packages whose namespace only is needed to load the package using library(pkgname) must be listed in the ‘Imports’ field and not in the ‘Depends’ field.
+        Packages that need to be attached to successfully load the package using library(pkgname) must be listed in the ‘Depends’ field, only.
+
+Can someone provide a bit more clairty on this? How do I know when my package only needs namespaces loaded versus when I need a package to be attached? What are examples of both? I think the typical package is just a collection of functions that sometimes call functions in other packages (where some bit of work has already been coded-up). Is this scenario 1 or 2 above?
+
+Edit
+
+I wrote a blog post with a section on this specific topic (search for 'Imports v Depends'). The visuals make it a lot easier to understand.
+
+"Imports" is safer than "Depends" (and also makes a package using it a 'better citizen' with respect to other packages that do use "Depends").
+
+A "Depends" directive attempts to ensure that a function from another package is available by attaching the other package to the main search path (i.e. the list of environments returned by search()). This strategy can, however, be thwarted if another package, loaded later, places an identically named function earlier on the search path. Chambers (in SoDA) uses the example of the function "gam", which is found in both the gam and mgcv packages. If two other packages were loaded, one of them depending on gam and one depending on mgcv, the function found by calls to gam() would depend on the order in which they those two packages were attached. Not good.
+An "Imports" directive places the imported package in <imports:packageName> (searched immediately after <namespace:packageName>), instead of on the regular search path. If either one of the packages in the example above used the "Imports" mechanism, matters would be improved in two ways. (1) The package would itself gain control over which mgcv function is used. (2) By keeping the main search path clear of the imported objects, it would not even potentially break the other package's dependency on the other mgcv function.
+This is why using namespaces is such a good practice, why it is now enforced by CRAN, and (in particular) why using "Imports" is safer than using "Depends".
+
+Edited to add an important caveat:
+
+There is one unfortunately common exception to the advice above: if your package relies on a package A which itself "Depends" on another package B, your package will likely need to attach A with a "Depends directive.
+
+This is because the functions in package A were written with the expectation that package B and its functions would be attached to the search() path.
+
+A "Depends" directive will load and attach package A, at which point package A's own "Depends" directive will, in a chain reaction, cause package B to be loaded and attached as well. Functions in package A will then be able to find the functions in package B on which they rely.
+
+An "Imports" directive will load but not attach package A and will neither load nor attach package B. ("Imports", after all, expects that package writers are using the namespace mechanism, and that package A will be using "Imports" to point to any functions in B that it need access to.) Calls by your functions to any functions in package A which rely on functions in package B will consequently fail.
+
+The only two solutions are to either:
+
+  - Have your package attach package A using a "Depends" directive.
+  - Better in the long run, contact the maintainer of package A and
+    ask them to do a more careful job of constructing their namespace
+    (in the words of Martin Morgan in this related answer).
+
+
 
 
 * SuperTools
@@ -86,7 +137,7 @@
 
 * SuperTasks
 
-*** TODO Learn org-mode 
+*** TODO [#C] Learn org-mode 
 :PROPERTIES:
 :TaskDate: <2013-03-07 Thu>
 :END:
@@ -102,7 +153,7 @@
 :CaptureDate: <1958-01-13 Mon>
 :END:
 
-*** TODO Help Mr Kent mow the lawn 
+*** TODO [#C] Help Mr Kent mow the lawn 
 :PROPERTIES:
 :CaptureDate: <1957-02-16 Sat>
 :END:

@@ -392,6 +392,15 @@ the `superman-home'.")
 ;;}}}
 ;;{{{ parsing dynamically updating lists
 
+(defun superman-get-matching-property (pom regexp &optional nth)
+  "Return properties at point that match REGEXP."
+  (org-with-point-at pom
+    (let* ((case-fold-search t)
+	   (proplist (org-entry-properties nil nil nil))
+	   (prop (cdr (assoc-if #'(lambda (x) (string-match regexp x)) proplist))))
+      (if (stringp prop)
+	  (replace-regexp-in-string "[ \t]+$" "" prop)))))
+
 (defun superman-get-property  (pom property &optional inherit literal-nil)
   "Read property and remove leading and trailing whitespace."
   (let* ((case-fold-search t)
