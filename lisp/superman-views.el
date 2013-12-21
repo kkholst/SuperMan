@@ -118,7 +118,7 @@ Column showing the todo-state
 (setq superman-note-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("NoteDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
-	(hdr ("width" 49) ("face" font-lock-function-name-face))))
+	(hdr ("width" full) ("face" font-lock-function-name-face))))
 (setq superman-data-balls
       '(("CaptureDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
@@ -155,8 +155,9 @@ to an integer then do not trim the string STR."
 		  ((integerp len) len)
 		  ((eq len 'full) "full")
 		  ((stringp len)
-		     (setq len (string-to-number len))
-		     (if (< len 1) 13 len))
+		   (if (string= len "full") slen
+		       (setq len (string-to-number len))
+		     (if (< len 1) 13 len)))
 		  (t 13)))
 	 (diff (unless (eq len 'full) (- numlen slen))))
     (if diff

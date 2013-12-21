@@ -55,6 +55,7 @@ result."
     (switch-to-buffer (get-buffer-create buf))
     (unless (eq major-mode 'diff-mode)
       (diff-mode))
+    (font-lock-mode 1)
     (setq buffer-read-only t)
     (let ((buffer-read-only nil))
       (goto-char (point-max))
