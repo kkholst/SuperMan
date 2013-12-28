@@ -1808,7 +1808,7 @@ current section."
 	    (progn
 	      (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
 	      (dotimes (i n)
-		(if (not (superman-goto-sup-outline nil t prev-level (min 1 (- prev-level) 1)))
+		(if (not (superman-goto-sup-outline nil t prev-level (min 1 (- prev-level 1))))
 		    (error "Cannot move item outside category")))
 	      (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
 	      (goto-char (previous-single-property-change (point) 'current-item))
@@ -1834,7 +1834,7 @@ current section."
 	    ;;; Up:
 	  (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
 	  (dotimes (i n)
-	    (if (not (superman-goto-sup-outline t t prev-level (min 1 (- prev-level) 1)))
+	    (if (not (superman-goto-sup-outline t t prev-level (min 1 (- prev-level 1))))
 		(error "Cannot move item outside category")))
 	  (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
 	  (goto-char (next-single-property-change (point) 'current-item))
