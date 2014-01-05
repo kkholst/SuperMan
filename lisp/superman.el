@@ -535,12 +535,12 @@ Enabling superman mode electrifies the superman buffer for project management."
 		       ("fun" superman-trim-project-nickname))
 	(todo ("width" 7) ("face" superman-get-todo-face))
 	(priority ("width" 8) ("face" superman-get-priority-face))
+	(hdr ("width" 53) ("face" font-lock-function-name-face) ("name" "Description"))
 	("DEADLINE" ("fun" superman-trim-date) ("width" 12) ("face" superman-warning-face))
 	(".*Date" ("fun" superman-trim-date) ("width" 12) ("regexp" t) ("face" font-lock-string-face) ("name" "Date"))
 	(org-hd-marker ("width" 23) ("name" "Others") ("fun" superman-trim-project-others))
 	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
-	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
 	("FileName" ("fun" superman-dont-trim))))
 
 (defun superman-format-todolist ()
