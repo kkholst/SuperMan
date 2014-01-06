@@ -305,6 +305,8 @@ and the keybinding to initialize git control otherwise."
        (if subp 'subcat 'cat)))))
 
 (defun superman-current-subcat-pos ()
+  "Compare the positions of the current category and
+the current sub-category and return the minimum."
   (let* ((cat-pos (superman-cat-point))
 	 (subcat-pos (superman-subcat-point))
 	 (subp (and subcat-pos (> subcat-pos cat-pos))))
@@ -371,7 +373,7 @@ and the keybinding to initialize git control otherwise."
 		("Bookmark" . superman-capture-bookmark)
 		("Meeting" . superman-capture-meeting)))
 
-(defun superman-view-insert-action-buttons (&optional button-list no-newline)
+(defun superman-view-insert-action-buttons (&optional button-list no-newline title-string)
   "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
 which there is a function `superman-capture-n'. If omitted, it is set to
   '((\"Document\" 'superman-capture-document)
@@ -379,11 +381,13 @@ which there is a function `superman-capture-n'. If omitted, it is set to
     (\"Note\" 'superman-capture-note)
     (\"Bookmark\" 'superman-capture-bookmark)
     (\"Meeting\" 'superman-capture-meeting))
+If NO-NEWLINE is non-nil no new line is inserted.
+TITLE-STRING is the label of the first button and defaults to \"Action\".
 "
   (let* ((title
 	  (superman-make-button
-	   "Action:"
-	   'superman-capture-unison
+	   (or title-string "Action:")
+	   'superman-define-action
 	   'superman-header-button-face
 	   "Action buttons"))
 	 ;; (capture-alist superman-capture-alist)
@@ -399,7 +403,8 @@ which there is a function `superman-capture-n'. If omitted, it is set to
 	     (cmd (cond ((functionp fun) fun)
 			((stringp fun) (intern fun))
 			;; (intern (concat "superman-capture-" (downcase b-name)))))
-			(t 'superman-capture-item)))
+			(t `(lambda () (interactive) (message (concat "Function " ,(if (stringp fun) fun (symbol-name fun)) " is not defined"))))))
+	     ;; 'superman-capture-item)))
 	     (map (make-sparse-keymap)))
 	(define-key map [mouse-2] `(lambda () (interactive) (,cmd)))
 	(define-key map [return]  `(lambda () (interactive) (,cmd)))
@@ -798,8 +803,7 @@ If MARKED is non-nil run only on marked items."
 	(goto-char (point-min))
 	(while (next-single-property-change
 		(point-at-eol) 'org-marker)
-	  (goto-char (next-single-property-change
-		      (point-at-eol) 'org-marker))
+	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
 	  ;; (when (or (not marked)
 	  ;; (eq (get-text-property (point) (car marked)) (cadr marked)))
 	  (setq count (+ 1 count)))
@@ -822,7 +826,7 @@ If MARKED is non-nil run only on marked items."
 (defun superman-column-names (balls)
   (let ((cols (superman-format-column-names balls)))
     (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
-    (put-text-property 0 (length cols) 'column-names t cols)
+    ;; (put-text-property 0 (length cols) 'column-names t cols)
     (put-text-property 0 (length cols) 'names (length cols) cols)
     cols))
 
@@ -832,6 +836,7 @@ If MARKED is non-nil run only on marked items."
 `superman-format-thing'.
 Returns the formatted string with text-properties."
   (let ((column-names "")
+	names
 	(column-widths (list 0))
 	(copy-balls balls)
 	(map (make-sparse-keymap)))
@@ -849,12 +854,14 @@ Returns the formatted string with text-properties."
 			     ((eq (car b) 'org-hd-marker))
 			     (t (symbol-name (cadr (assoc "fun" (cdr b)))))))
 	     name
+	     c-name
 	     sort-cmd)
 	(setq name (superman-play-ball col-name
 				       b
 				       ;; (remq (assoc "fun" b) b)
 				       'no-face))
 	(setq sort-cmd (concat "sort-by-" name))
+	(setq names (append names (list col-name)))
 	;; make this name a button 
 	(add-text-properties
 	 superman-column-separator
@@ -870,8 +877,9 @@ Returns the formatted string with text-properties."
 	(setq column-widths (append column-widths (list (length name))))
 	(setq column-names (concat column-names name))
 	(setq copy-balls (cdr copy-balls))))
-    ;; text property: columns
+    ;; add text properties: columns and column-names
     (put-text-property 0 (length column-names) 'columns column-widths column-names)
+    (put-text-property 0 (length column-names) 'column-names names column-names)
     column-names))
 
 
@@ -1017,7 +1025,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 
 (defun superman-ball-dimensions ()
   "Return column start, width and nth at (point)."
-  (let* ((cols (cdr (get-text-property (point-at-bol) 'columns)))
+  (let* ((cols (cdr (get-text-property
+		     (point-at-bol) 'columns)))
 	 (start 0)
 	 width
 	 (n 0)
@@ -1030,7 +1039,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (setq width (- (car cols) 1))
       (list start width n))))
 
-;; (defun superman-get-ball-name ()
+
+
 
 (defun superman-sort-section (&optional reverse)
   (interactive "P")
@@ -1290,7 +1300,8 @@ to VIEW-BUF."
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
 	(setq index-marker (point-marker)))
-      (set-buffer (get-buffer-create "*Git control*"))
+      (set-buffer (get-buffer-create
+		   (concat "*Git control[" (get-text-property (point-min) 'nickname) "]*")))
       (erase-buffer)
       (insert "git-output")
       (put-text-property (point-at-bol) (point-at-eol) 'git-dir
@@ -1380,29 +1391,46 @@ to VIEW-BUF."
 	      (insert (superman-column-names balls))
 	      (when buttons
 		(beginning-of-line)
-		(funcall (
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-intern buttons))
+		(funcall (intern buttons))
 		(insert "\n")))
 	  (delete-region (point) (point-max))))))
     (goto-char (point-max))
     (widen)))
 ;; (when folded (hide-subtree))
+
+(defun superman-split-cat (&optional column)
+  (interactive)
+  (goto-char (next-single-property-change  (superman-cat-point) 'columns))
+  (let* ((col-info (get-text-property (point-at-bol) 'columns))
+	 (col-start (superman-compute-columns-start col-info))
+	 ;; (balls (get-text-property (superman-cat-point) 'balls))
+	 (i 0)
+	 (colnames (get-text-property (point-at-bol) 'column-names))
+	 (col (or column (completing-read "Split column: "
+					  (mapcar* 'cons colnames (make-list (length colnames) `())))))
+	 (cc (- (length colnames) (length (member col colnames))))
+	 (c-start (+ (nth cc col-start) superman-column-separator))
+	 (c-end (nth (1+ cc) col-info))
+	 (buffer-read-only nil)
+	 (cat-head (point))
+	 (cat-tail (next-single-property-change (point) 'tail))
+	 last-el
+	 cur-el
+	 next)
+    (save-restriction
+      (narrow-to-region cat-head cat-tail)
+      (goto-char (point-min))
+      (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
+	(goto-char next)
+	(let ((cur-el (buffer-substring-no-properties (+ (point) c-start) (+ (point) c-end c-start))))
+	  (delete-region (+ (point) c-start) (+ (point) c-end c-start))
+	  (unless (string= last-el cur-el)
+	    (insert "** " col ": " cur-el "\n")
+	    (forward-line -1)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	    (forward-line 1)
+	    (setq last-el cur-el)))))))
+    
 
 (defun superman-view-insert-section-name (name count balls index-marker &optional fun)
       (let ((fun (or
@@ -1634,7 +1662,10 @@ beginning of the list."
 	(put-text-property (point-at-bol) (point-at-eol) 'balls new-balls))
     (message "Point is not inside a section"))))
 
-(defun superman-compute-columns-start ()
+(defun superman-compute-columns-start (&optional col-width)
+  "Compute column start points from a given list of column widths COL-WIDTH.
+If COL-WIDTH is nil use text-property columns at the beginning of the
+current line."
   (let* ((cols (get-text-property (point-at-bol) 'columns))
 	 (n (- (length cols) 1))
 	 (cumcols (list 0))
@@ -2198,33 +2229,47 @@ current section."
  (interactive)
   (forward-line -1))
 
-(defun superman-view-delete-entry (&optional dont-prompt dont-redo)
-  "Delete entry at point. Prompt user unless DONT-PROMT is non-nil. Redo the
-line of the view-buffer unless DONT-REDO is non-nil.
+(defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
+  "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
+
+If the entry is found in a buffer which is not associated with a
+file-name, e.g., a temporary *Git control* buffer, then the entry is
+removed without prompt, no matter the value of DONT-PROMT.
+
+Kill the line of the view-buffer unless DONT-KILL-LINE is non-nil.
 
 If there is a file-name property at the entry, prompt
-the user if this should be removed as well."
+the user if this should be removed as well.
+
+The value is non-nil unless the user regretted and the entry is not deleted.
+"
   (interactive)
   (when (or (previous-single-property-change (point-at-bol) 'cat)
 	    (get-text-property (point) 'cat))
     (let* ((marker (org-get-at-bol 'org-hd-marker))
 	   (scene (current-window-configuration))
 	   (file (superman-filename-at-point t))
-	   (git-p (when file (superman-git-p (file-name-directory file))))
+	   (git-p
+	    (when file
+	      (let* ((status (superman-git-XY-status file))
+		     (xy (concat (nth 1 status) (nth 2 status))))
+		(if (or (string= xy "") (string= xy "??")) nil t))))
 	   (regret nil))
       (unless dont-prompt
 	(superman-view-index)
-	(org-narrow-to-subtree)
-	(setq regret (not (yes-or-no-p "Delete this entry? "))))
+	(when (buffer-file-name)
+	  (org-narrow-to-subtree)
+	  (setq regret (not (yes-or-no-p "Delete this entry? ")))))
       (set-window-configuration scene)
       (unless regret
 	(when marker
 	  (save-excursion
 	    (org-with-point-at marker (org-cut-subtree))))
 	(when file
-	  (when (yes-or-no-p
-		 (concat (if git-p "Call git rm " "Delete file ")
-			 (file-name-nondirectory file) "? "))
+	  (unless (setq regret
+			(not (yes-or-no-p
+			      (concat (if git-p "Call git rm " "Delete file ")
+				      (file-name-nondirectory file) "? "))))
 	    (if git-p
 		(superman-run-cmd (concat
 				   "cd "
@@ -2234,8 +2279,13 @@ the user if this should be removed as well."
 				   (file-name-nondirectory file))
 				  "*Superman-returns*")
 	      (when (file-exists-p file)
-		(delete-file file)))))))
-    (unless dont-redo (superman-view-redo-line))))
+		(delete-file file))))))
+      (unless dont-kill-line
+	(let ((buffer-read-only nil))
+	  (beginning-of-line)
+	  (kill-line)))
+	;; (superman-view-redo-line))
+      (not regret))))
 
 (defun superman-view-delete-marked (&optional dont-prompt)
   (interactive)

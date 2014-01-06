@@ -461,7 +461,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (fset 'superman-new-project 'superman-capture-project)
 
-
 (defun superman-clean-up ()
   (save-excursion
     (goto-char (point-min))
@@ -527,9 +526,39 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-trim-project-cat  (marker attribute &optional args)
   (superman-trim-project-attribute marker "category" args))
 
-(setq superman-todolist-balls
+(defun superman-todo-show-more-todo-features ()
+  (interactive)
+  (setq superman-todolist-balls superman-more-todolist-balls)
+  (superman-todo))
+
+(defun superman-todo-show-less-todo-features ()
+  (interactive)
+  (setq superman-todolist-balls superman-less-todolist-balls)
+  (superman-todo))
+
+(defun superman-todo-show-priority-A ()
+  (interactive)
+  (setq superman-todo-tags "PRIORITY<>\"C\"+PRIORITY<>\"B\"")
+  (superman-todo))
+
+(defun superman-todo-show-priority-B ()
+  (interactive)
+  (setq superman-todo-tags "PRIORITY=\"B\"")
+  (superman-todo))
+
+(defun superman-todo-show-priority-C ()
+  (interactive)
+  (setq superman-todo-tags "PRIORITY=\"C\"")
+  (superman-todo))
+
+(defun superman-todo-show-priority-all ()
+  (interactive)
+  (setq superman-todo-tags nil)
+  (superman-todo))
+
+(setq superman-more-todolist-balls
       '((org-hd-marker ("width" 33)
-		       ("name" "Nick")
+		       ("name" "Project")
 		       ;; ("face" superman-next-project-button-face)
 		       ("face" superman-next-project-button-face)
 		       ("fun" superman-trim-project-nickname))
@@ -543,10 +572,20 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
 	("FileName" ("fun" superman-dont-trim))))
 
+(setq superman-todolist-balls superman-more-todolist-balls)
+
+(setq superman-less-todolist-balls 
+      '((org-hd-marker ("width" 33)
+		       ("name" "Project")
+		       ("face" superman-next-project-button-face)
+		       ("fun" superman-trim-project-nickname))
+	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
+	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))))
+
 (defun superman-format-todolist ()
   (superman-format-agenda superman-todolist-balls))
 
-(defun superman-format-agenda (&optional balls redo title buttons)
+(defun superman-format-agenda (&optional balls redo title buttons by)
   (let ((balls (or balls superman-agenda-balls))
 	;; (redo-cmd org-agenda-redo-command)
 	(count 0)
@@ -573,8 +612,18 @@ Enabling superman mode electrifies the superman buffer for project management."
        '(("New project" . superman-capture-project)
 	 ("Meeting" . superman-capture-meeting)
 	 ("Task" . superman-capture-task)))
+      (insert "\n")      
+      (superman-view-insert-action-buttons
+       '(("More columns" . superman-todo-show-more-todo-features)
+	 ("Less columns" . superman-todo-show-less-todo-features)
+	 ("[#A]" . superman-todo-show-priority-A)
+	 ("[#B]" . superman-todo-show-priority-B)
+	 ("[#C]" . superman-todo-show-priority-C)
+	 ("All" . superman-todo-show-priority-all))
+       t
+       "View-S:")
       (insert "\n\n" (superman-column-names balls))
-      (superman-view-mode-on) ;; minor
+      (superman-view-mode-on) ;; minor mode
       (while (ignore-errors
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	(setq count (+ count 1))
@@ -589,18 +638,18 @@ Enabling superman mode electrifies the superman buffer for project management."
 	  (kill-line)
 	  (insert line "\n")))
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
-      ;; (goto-char (point-min))
       (goto-char (next-single-property-change (point-min) 'face))
       (insert " [" (int-to-string count) "]"))))
+
 ;; (superman-clean-buffer-list agenda-buffers)))
 
-;; FIXME: this still does not make sense,
-;;        because different agendas use different
-;;        project buffers
 (defun superman-clean-buffer-list (list)
   "Kill all project buffers except for those in LIST. This
 function is called at the end of `superman-format-agenda' where
 LIST includes the buffers that are related to one of the items."
+;; FIXME: this still does not make sense,
+;;        because different agendas use different
+;;        project buffers
   (let* ((org-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))
 	 obuf)
     (while org-files

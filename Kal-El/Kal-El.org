@@ -136,17 +136,20 @@ The only two solutions are to either:
 
 
 * SuperTasks
+    
 
 *** TODO [#C] Learn org-mode 
 :PROPERTIES:
 :TaskDate: <2013-03-07 Thu>
 :END:
-  
-** Save Smallville
+
+
+
+** Smallville
    :PROPERTIES:
    :CATEGORY: Home
    :END:
-   
+
 *** DONE Help Mrs Kent milking the cows
     CLOSED: [2013-01-15 Tue 16:42]
 :PROPERTIES:
@@ -164,5 +167,5 @@ The only two solutions are to either:
 * Git repository
 :PROPERTIES:
 :git-cycle: log, status, modified, files
-:git-display: status
+:git-display: modified
 :END:

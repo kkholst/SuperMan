@@ -430,8 +430,10 @@ given by the filename property of the item at point."
 (defun superman-git-delete-file ()
   "Delete the file at point by calling `git rm'."
   (interactive)
-  (superman-view-delete-entry 'dont 'dont)
-  (superman-view-redo-line))
+  (when (superman-view-delete-entry 'dont 'dont)
+  (let ((buffer-read-only nil))
+    (beginning-of-line)
+    (kill-line))))
 
 ;;}}}
 ;;{{{ actions add/commit/delete on all marked files
@@ -452,6 +454,9 @@ given by the filename property of the item at point."
        files
        dir
        'commit nil)
+      ;; move point inside cat to the first marked entry
+      ;; FIXME: it would be safer to have a property 'marked
+      (goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
       (goto-char (previous-single-property-change (point) 'cat))
       (superman-redo-cat))))
 
@@ -645,6 +650,7 @@ This function should be bound to a key or button."
 	(goto-char (next-single-property-change (point-min) 'git-repos))))
     ;; open buffer
     (let* ((pbuf (buffer-name))
+	   (nickname (get-text-property (point-min) 'nickname))
 	   (ibuf (concat (buffer-name) " :Git-repos"))
 	   (git-dir (get-text-property (point-min) 'git-dir))
 	   (gbuf (get-buffer ibuf))
@@ -672,6 +678,7 @@ This function should be bound to a key or button."
 	(put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'project-buffer pbuf)
+	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'nickname nickname)
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir))
       (superman-view-mode-on)
       (superman-git-mode-on)
