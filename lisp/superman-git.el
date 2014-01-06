@@ -370,6 +370,19 @@ Else return FILE as it is."
 	 (file (superman-filename-at-point)))
     (superman-git-log file limit (read-string "Search string: ")) nil))
 
+
+(defun superman-git-last-log-file (&optional arg)
+  "Retrieves last commit message(s) of file"
+  (interactive "p")
+  (let*
+      ((filename (superman-filename-at-point))
+       (file (file-name-nondirectory filename))
+       (dir (if filename (expand-file-name (file-name-directory filename))))
+       (n (or arg 1))
+       (cmd (concat superman-cmd-git " log -n" (number-to-string n) " -- " filename)))
+    (superman-run-cmd (concat "cd " dir ";" cmd) 
+		      "*Superman-returns*" (concat "log -- " file "\n"))))
+
 (defun superman-git-log-file (&optional arg)
   (interactive "p")
   (let* ((limit (if (= arg 1)
@@ -501,9 +514,9 @@ or if the file is not inside the location."
 	 (concat "cd " (file-name-directory file)
 		 ";" superman-cmd-git " diff "
 		 (if hash (concat hash " " hash "^ "))
-		 "./" (file-name-nondirectory file) "\n")
+		 "./" (file-name-nondirectory file) "\n")	 
 	 "*Superman-returns*"
-	 (concat "diff " (if hash (concat hash " " hash "^ ") "HEAD") "\n")
+	 (concat "diff " (if hash (concat hash " " hash "^ ") "HEAD") " "  (file-name-nondirectory file) "\n")
 	 nil))))
 
 (defun superman-git-difftool-file ()
@@ -842,6 +855,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
 (define-key superman-git-mode-map "r" 'superman-git-reset-file)
 (define-key superman-git-mode-map "l" 'superman-git-log-file)
+(define-key superman-git-mode-map " " 'superman-git-last-log-file)
 
 ;;}}}
 ;;{{{ superman-git-keyboard
