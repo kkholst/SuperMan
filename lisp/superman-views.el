@@ -721,7 +721,6 @@ Translate the branch names into buttons."
 		   'font-lock-type-face
 		   "Push changes to remote repository")))))))
 
-
 ;;}}}
 ;;{{{ Marking elements
 
@@ -1800,6 +1799,7 @@ current section."
 
 
 (defun superman-goto-sup-outline (&optional backward goto leq greater)
+  "Goto next outline level less than or equal to 'leq' and greater than 'greater'"
   (let* ((found-flag nil) (result nil)
 	 (gr (or greater 0))
 	 ;;	 (le (or leq (+ (nth 0 (org-heading-components)) 1) 3))
@@ -1822,7 +1822,6 @@ current section."
   (interactive "p")
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (catp (org-get-at-bol 'cat))
-	 (org-support-shift-select t)
 	 (cur-level)
 	 (prev-level)
 	 (n (or arg 1))
@@ -2527,6 +2526,7 @@ for git and other actions like commit, history search and pretty log-view."
 
 ;; Git control
 (define-key superman-view-mode-map "gg" 'superman-display-git-cycle)
+(define-key superman-view-mode-map "G " 'superman-git-last-log-file)
 (define-key superman-view-mode-map "Ga" 'superman-git-annotate)
 (define-key superman-view-mode-map "Gx" 'superman-git-delete-file)
 (define-key superman-view-mode-map "Gc" 'superman-git-commit-file)
