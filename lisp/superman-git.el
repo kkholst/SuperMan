@@ -47,8 +47,8 @@ result."
 	(cur-point (point)))
     (if redo-buf
 	(with-current-buffer redo-buf
-	  (superman-redo))
-      (when superman-view-mode (superman-redo)))
+	  (superman-redo)))
+    ;; (when superman-view-mode (superman-redo)))
     (delete-other-windows)
     (split-window-vertically)
     (other-window 1)
@@ -401,10 +401,10 @@ of the item at point."
   (let* ((filename (superman-filename-at-point))
 	 (file (file-name-nondirectory filename))
 	 (dir (if filename (expand-file-name (file-name-directory filename))))
-	 (fbuf (get-file-buffer file)))
+	 (fbuf (get-file-buffer filename)))
     (when (and fbuf
 	       (with-current-buffer fbuf (buffer-modified-p))
-	       (y-or-n-p (concat "Save buffer " fbuf "?")))
+	       (y-or-n-p (concat "Save buffer " (buffer-name fbuf) "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir 'commit nil)
     (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename)
@@ -495,8 +495,8 @@ or if the file is not inside the location."
 (defun superman-git-diff-file (&optional arg hash ref)
   (interactive "p")
   (let* ((file (superman-filename-at-point))
-	(hash (or hash (get-text-property (point-at-bol) 'hash)))
-	(ref (or ref (concat hash "^"))))
+	 (hash (or hash (get-text-property (point-at-bol) 'hash)))
+	 (ref (or ref (concat hash "^"))))
     (if (= arg 4)
 	(progn (find-file file)
 	       (vc-diff file "HEAD"))
@@ -506,7 +506,7 @@ or if the file is not inside the location."
 	       (if hash (concat hash " " hash "^ "))
 	       "./" (file-name-nondirectory file) "\n")
        "*Superman-returns*"
-       (concat "diff " (if hash (concat hash " " ref " ") "HEAD") "\n")
+       (concat "diff " (if hash (concat hash " " ref " ") "HEAD") (file-relative-name file (superman-git-toplevel file)) "\n")
        nil))))
 
 (defun superman-git-difftool-file ()
@@ -687,7 +687,8 @@ This function should be bound to a key or button."
 		 "Back to project (q)"
 		 'superman-view-back)
 		"\n\n")
-	(insert (superman-make-git-marked-keyboard) "\n\n")
+	(superman-view-insert-git-branches git-dir)
+	(insert "\n" (superman-make-git-marked-keyboard) "\n\n")
 	(put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'project-buffer pbuf)
@@ -791,6 +792,7 @@ This function should be bound to a key or button."
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
     (insert "git-output\n")
+    (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
     ;; prepare buffer if necessary
     (funcall 'superman-git-diff-prepare-display-hook)
     (goto-char (point-min))
@@ -828,12 +830,12 @@ This function should be bound to a key or button."
     (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
     (put-text-property (point-min) (+ (point-min) (length header)) 'nickname nickname)
     (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
-    (delete-other-windows)
-    (switch-to-buffer log-buf)
-    (split-window-vertically)
-    (split-window-horizontally)
-    (other-window 1)
-    ;; prepare the per file diffs
+    ;; (delete-other-windows)
+    ;; (switch-to-buffer log-buf)
+    ;; (split-window-vertically)
+    ;; (split-window-horizontally)
+    ;; (other-window 1)
+    ;; now prepare the per file diffs
     (switch-to-buffer view-buf)
     (goto-char (point-min))
     (let (next)
@@ -844,7 +846,8 @@ This function should be bound to a key or button."
     (goto-char (next-single-property-change (point-min) 'org-marker))
     (previous-line)
     (superman-next-entry)
-    (other-window 1)))
+    (superman-switch-config nil 0 (concat (buffer-name log-buf) " / " (buffer-name view-buf) " | *Superman-returns*"))))
+;; (other-window 1)))
 
 (defun superman-view-back ()
   "Kill current buffer and return to project view."
