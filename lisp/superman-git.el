@@ -26,6 +26,7 @@
 ;;{{{ variables
 
 (defvar superman-cmd-git "git")
+(setq superman-git-ignore "*")
 (defvar superman-git-ignore "*" "Decides about which files to include and which to exclude.
 See M-x manual-entry RET gitignore.
 By default we set this to '*' which means that all files are ignored.
@@ -46,8 +47,8 @@ result."
 	(cur-point (point)))
     (if redo-buf
 	(with-current-buffer redo-buf
-	  (superman-redo)))
-    ;;      (when superman-view-mode (superman-redo)))
+	  (superman-redo))
+      (when superman-view-mode (superman-redo)))
     (delete-other-windows)
     (split-window-vertically)
     (other-window 1)
@@ -369,19 +370,6 @@ Else return FILE as it is."
 	 (file (superman-filename-at-point)))
     (superman-git-log file limit (read-string "Search string: ")) nil))
 
-
-(defun superman-git-last-log-file (&optional arg)
-  "Retrieves last commit message(s) of file"
-  (interactive "p")
-  (let*
-      ((filename (superman-filename-at-point))
-       (file (file-name-nondirectory filename))
-       (dir (if filename (expand-file-name (file-name-directory filename))))
-       (n (or arg 1))
-       (cmd (concat superman-cmd-git " log -n" (number-to-string n) " -- " filename)))
-    (superman-run-cmd (concat "cd " dir ";" cmd) 
-		      "*Superman-returns*" (concat "log -- " file "\n"))))
-
 (defun superman-git-log-file (&optional arg)
   (interactive "p")
   (let* ((limit (if (= arg 1)
@@ -451,7 +439,8 @@ given by the filename property of the item at point."
 ;;{{{ actions add/commit/delete on all marked files
 
 (defun superman-check-if-saved-needed ()
-  (member (expand-file-name (buffer-file-name)) (superman-view-marked-files)))
+  (member (expand-file-name (buffer-file-name))
+	  (superman-view-marked-files)))
 
 (defun superman-git-commit-marked (&optional commit dont-redo)
   (interactive)
@@ -460,7 +449,8 @@ given by the filename property of the item at point."
 	  (mapcar 'expand-file-name 
 		  (superman-view-marked-files))))
     ;; prevent committing unsaved buffers
-    (save-some-buffers nil 'superman-check-if-saved-needed)
+    ;; (save-some-buffers nil 'superman-check-if-saved-needed)
+    (save-some-buffers nil)
     (when dir
       (superman-git-add
        files
@@ -502,21 +492,22 @@ or if the file is not inside the location."
 ;;}}}
 ;;{{{ git diff and annotate
 
-(defun superman-git-diff-file (&optional arg)
+(defun superman-git-diff-file (&optional arg hash ref)
   (interactive "p")
-  (let ((file (superman-filename-at-point))
-	(hash (get-text-property (point-at-bol) 'hash)))
+  (let* ((file (superman-filename-at-point))
+	(hash (or hash (get-text-property (point-at-bol) 'hash)))
+	(ref (or ref (concat hash "^"))))
     (if (= arg 4)
 	(progn (find-file file)
 	       (vc-diff file "HEAD"))
-	(superman-run-cmd 
-	 (concat "cd " (file-name-directory file)
-		 ";" superman-cmd-git " diff "
-		 (if hash (concat hash " " hash "^ "))
-		 "./" (file-name-nondirectory file) "\n")	 
-	 "*Superman-returns*"
-	 (concat "diff " (if hash (concat hash " " hash "^ ") "HEAD") " "  (file-name-nondirectory file) "\n")
-	 nil))))
+      (superman-run-cmd 
+       (concat "cd " (file-name-directory file)
+	       ";" superman-cmd-git " diff "
+	       (if hash (concat hash " " hash "^ "))
+	       "./" (file-name-nondirectory file) "\n")
+       "*Superman-returns*"
+       (concat "diff " (if hash (concat hash " " ref " ") "HEAD") "\n")
+       nil))))
 
 (defun superman-git-difftool-file ()
   (interactive)
@@ -839,9 +830,20 @@ This function should be bound to a key or button."
     (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
     (delete-other-windows)
     (switch-to-buffer log-buf)
+    (split-window-vertically)
     (split-window-horizontally)
     (other-window 1)
+    ;; prepare the per file diffs
     (switch-to-buffer view-buf)
+    (goto-char (point-min))
+    (let (next)
+      (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
+	(goto-char next)
+	(let* ((cmd `(lambda () (superman-git-diff-file 0 ,commit ,ref))))
+	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
+    (goto-char (next-single-property-change (point-min) 'org-marker))
+    (previous-line)
+    (superman-next-entry)
     (other-window 1)))
 
 (defun superman-view-back ()
@@ -987,7 +989,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
 (define-key superman-git-mode-map "r" 'superman-git-reset-file)
 (define-key superman-git-mode-map "l" 'superman-git-log-file)
-(define-key superman-git-mode-map " " 'superman-git-last-log-file)
 
 ;;}}}
 ;;{{{ superman-git-keyboard
@@ -1137,12 +1138,12 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (defun superman-git-history (&optional arg)
   (interactive)
-  (let* ((file (or (ignore-errors (superman-filename-at-point))
-		   (get-text-property (point-min) 'git-dir)
-		   (buffer-file-name)))
-	 (dir (if (file-directory-p file) (file-name-as-directory file) (file-name-directory file)))
-	 (curdir default-directory)
-	 (bufn (concat "*history: " file "*")))
+  (let ((file (or (superman-filename-at-point))
+	      (get-text-property (point-min) 'git-dir)
+	      (buffer-file-name))
+	(dir (if file-directory-p file (file-name-as-directory file) (file-name-directory file)))
+	(curdir default-directory)
+	(bufn (concat "*history: " file "*")))
     (when dir
       (save-window-excursion
 	(setq default-directory dir)
