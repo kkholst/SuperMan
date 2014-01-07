@@ -1005,12 +1005,12 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (defun superman-git-history (&optional arg)
   (interactive)
-  (let ((file (or (superman-filename-at-point))
-	      (get-text-property (point-min) 'git-dir)
-	      (buffer-file-name))
-	(dir (if file-directory-p file (file-name-as-directory file) (file-name-directory file)))
-	(curdir default-directory)
-	(bufn (concat "*history: " file "*")))
+  (let* ((file (or (ignore-errors (superman-filename-at-point))
+		   (get-text-property (point-min) 'git-dir)
+		   (buffer-file-name)))
+	 (dir (if (file-directory-p file) (file-name-as-directory file) (file-name-directory file)))
+	 (curdir default-directory)
+	 (bufn (concat "*history: " file "*")))
     (when dir
       (save-window-excursion
 	(setq default-directory dir)
