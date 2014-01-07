@@ -1,6 +1,6 @@
 ;;; superman-git.el --- Summary of project contents and adding information to projects
 
-;; Copyright (C) 2012  Klaus Kähler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2012-2013  Klaus Kähler Holst, Thomas Alexander Gerds
 
 ;; Authors: Klaus Kähler Holst <kkho@biostat.ku.dk>
 ;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -565,41 +565,51 @@ or if the file is not inside the location."
 
 (defvar superman-git-display-command-list
   '(("log"
-     "log -n 5 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Author: %an\n:Date: %cd\n:Message: %s\n:END:\n\""
-     ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Version"))
+     "log -n 5 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Date: %cd\n:Message: %s\n:END:\n\""
+     ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit"))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
       ("Date" ("width" 13) ("fun" superman-trim-date) ("face" font-lock-string-face))
-      ("Message" ("width" 63))))
+      ("Message" ("width" 63)))
+     nil
+     superman-git-log-post-display-hook)
     ("files"
      "ls-files --full-name"
-     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-clean-git-ls-files+)
+     superman-git-files-prepare-display-hook)
     ("untracked"
      "ls-files --full-name --exclude-standard --others"
-     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-clean-git-ls-files)
+     superman-git-untracked-prepare-display-hook)
     ("modified"
      "ls-files --full-name -m"
-     (("filename" ("width" 15) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-clean-git-ls-files+)
-    ;; ("date"
-    ;; "ls-files | while read file; do git log -n1 --pretty=\"** $file\n:PROPERTIES:\n:COMMIT: %h\n:DATE: %ad\n:END:\n\" -- $file; done"
-    ;; ((hdr ("width" 12) ("face" font-lock-function-name-face) ("name" "Filename"))
-    ;; ("DATE" ("fun" superman-trim-date))
-    ;; ("COMMIT" ("width" 18))))
-    )
+     superman-git-files-prepare-display-hook)
+    ("diff"
+     "diff --name-status"
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+      ("Directory" ("width" 25) ("face" superman-subheader-face)))
+     superman-git-diff-prepare-display-hook))
   "List of git-views. Each entry has 4 elements: (key git-switches balls cleanup), where key is a string
 to identify the element, git-switches are the switches passed to git, balls are used to define the columns and
 cleanup is a function which is called before superman plays the balls.")
+
+(defvar superman-git-display-diff-balls
+  '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+    ("GitStatus" ("width" 20) ("face" superman-get-git-status-face))
+    (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+    ("Directory" ("width" 25) ("face" superman-subheader-face)))
+  "Balls to format git diff views.")
 
 (defun superman-set-git-cycle (value)
   (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
@@ -651,7 +661,7 @@ This function should be bound to a key or button."
     ;; open buffer
     (let* ((pbuf (buffer-name))
 	   (nickname (get-text-property (point-min) 'nickname))
-	   (ibuf (concat (buffer-name) " :Git-repos"))
+	   (ibuf (concat (buffer-name) " :Git-repository"))
 	   (git-dir (get-text-property (point-min) 'git-dir))
 	   (gbuf (get-buffer ibuf))
 	   git-cat)
@@ -684,81 +694,15 @@ This function should be bound to a key or button."
       (superman-git-mode-on)
       (setq buffer-read-only t))))
 
-(defun superman-view-back ()
-  "Kill current buffer and return to project view."
-  (interactive)
-  (let ((pbuf (get-text-property (point-min) 'project-buffer)))
-    (kill-buffer (current-buffer))
-    (switch-to-buffer pbuf)
-    (superman-redo)))
-
-;;}}}
-;;{{{ formatting git displays
-
-(defun superman-get-git-status-face (str)
-  (cond ((string-match "Committed" str ) 'font-lock-type-face)
-	((string-match  "Modified" str) 'superman-warning-face)
-	(t 'font-lock-comment-face)))
-
-(defun superman-git-clean-git-ls-files ()
-  (let* ((git-dir (get-text-property (point-min) 'git-dir)))
-    (goto-char (point-min))
-    (while (re-search-forward "^[^ \t\n]+" nil t)
-      (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
-	     (dname (file-name-directory ff))
-	     (fname (file-name-nondirectory ff))
-	     (fullname (concat git-dir "/" ff))
-	     (status "Untracked"))
-	(replace-match
-	 (concat "** "
-		 fname
-		 "\n:PROPERTIES:\n:GitStatus: " status
-		 "\n:Directory: " (cond (dname) (t "."))  
-		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
-
-
-(defun superman-git-clean-git-ls-files+ ()
-  (let* ((git-dir (get-text-property (point-min) 'git-dir))
-	 (git-status
-	  (shell-command-to-string
-	   (concat "cd " git-dir ";" superman-cmd-git " status --porcelain -uno")))
-	 (status-list
-	  (mapcar (lambda (x)
-		    (let ((index-status (substring-no-properties x 0 1))
-			  (work-tree-status (substring-no-properties x 1 2))
-			  (fname  (substring-no-properties x 3 (length x))))
-		      (list fname index-status work-tree-status)))
-		  (delete-if (lambda (x) (string= x ""))
-			     (split-string git-status "\n")))))
-    (goto-char (point-min))
-    (while (re-search-forward "^[^ \t\n]+" nil t)
-      (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
-	     (dname (file-name-directory ff))
-	     (fname (file-name-nondirectory ff))
-	     (fullname (concat git-dir "/" ff))
-	     (status (assoc ff status-list)))
-	(replace-match
-	 (concat "** "
-		 fname
-		 "\n:PROPERTIES:\n:GitStatus: "
-		 (cond ((not status) "Committed")
-		       (t
-			(let* ((X (or (nth 1 status) " "))
-			       (Y (or (nth 2 status) " "))
-			       (XY (concat X Y)))
-			  (superman-label-status XY))))
-		 "\n:Directory: " (cond (dname) (t "."))  
-		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n")
-	 'fixed)))))
-
-
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
+  "Called by `superman-format-cat' to format git displays."
   (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
 	 (cycle (or (cadr (assoc "git-display" props)) (car cycles)))
 	 (limit (cadr (assoc "limit" props)))
 	 (rest (assoc cycle superman-git-display-command-list))
 	 (balls (or (nth 2 rest) superman-default-balls))
-	 (clean-up (nth 3 rest))
+	 (pre-hook (nth 3 rest))
+	 (post-hook (nth 4 rest))
 	 (count 0)
 	 (cmd (concat "cd " dir ";" superman-cmd-git " " (nth 1 rest))))
     ;; for the first time ... 
@@ -769,8 +713,8 @@ This function should be bound to a key or button."
     ;; insert the result of git command
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
-    ;; clean-up if necessary
-    (when clean-up (funcall clean-up))
+    ;; prepare buffer if necessary
+    (when pre-hook (funcall pre-hook))
     (goto-char (point-min))
     (while (outline-next-heading)
       (setq count (+ count 1))
@@ -811,9 +755,198 @@ This function should be bound to a key or button."
     (when superman-empty-line-after-cat (insert "\n"))
     (insert (superman-column-names balls))
     (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
-    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))
+    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+    (goto-char (previous-single-property-change (point) 'cat))
+    (beginning-of-line)
+    (put-text-property (point) (+ (point) 1) 'git-cycle cycle)
+    (when post-hook 
+      (goto-char (point-max))
+      (funcall post-hook))))
+
+(defun superman-git-display-diff (commit ref dir project)
+  (let* ((balls superman-git-display-diff-balls)
+	 (count 0)
+	 (name "Git-diff")
+	 (nickname (get-text-property (point-min) 'nickname))
+	 (git-dir (get-text-property (point-min) 'git-dir))
+	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
+	 (log-buf (current-buffer))
+	 (diff-string (concat commit " <- " ref))
+	 (header (concat "Changes in " commit " since " ref))
+	 (index-buf (get-buffer-create (concat "*["project ": index " diff-string "]*")))
+	 (view-buf (get-buffer-create (concat "*["project ": diff " diff-string "]*"))))
+    (set-buffer view-buf)
+    (org-mode)
+    (font-lock-mode -1)
+    (superman-view-mode-on)
+    (superman-git-mode-on)
+    (erase-buffer)
+    ;; insert the result of git command
+    (set-buffer index-buf)
+    (org-mode)
+    (erase-buffer)
+    (insert (shell-command-to-string cmd))
+    (goto-char (point-min))
+    (insert "git-output\n")
+    ;; prepare buffer if necessary
+    (funcall 'superman-git-diff-prepare-display-hook)
+    (goto-char (point-min))
+    (while (outline-next-heading)
+      (setq count (+ count 1))
+      (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+      (with-current-buffer view-buf (insert line "\n")))
+    (set-buffer view-buf)
+    (when superman-empty-line-before-cat (insert "\n"))
+    (goto-char (point-min))
+    ;; section names
+    (when (and
+	   superman-empty-line-before-cat
+	   (save-excursion (beginning-of-line 0)
+			   (not (looking-at "^[ \t]*$"))))
+      (insert "\n"))
+    (put-text-property 0 (length name) 'git-repos dir name) 
+    (superman-view-insert-section-name
+     name count balls
+     nil
+     nil)
+    (end-of-line 0)
+    ;; insert the column names
+    (when superman-empty-line-after-cat (insert "\n"))
+    (insert (superman-column-names balls))
+    (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
+    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+    ;; (goto-char (previous-single-property-change (point) 'cat))
+    (goto-char (point-min))
+    (insert (superman-make-button
+	     header
+	     'superman-git-change-commits)
+	    "\n\n")
+    (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
+    (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
+    (put-text-property (point-min) (+ (point-min) (length header)) 'nickname nickname)
+    (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
+    (delete-other-windows)
+    (switch-to-buffer log-buf)
+    (split-window-horizontally)
+    (other-window 1)
+    (switch-to-buffer view-buf)
+    (other-window 1)))
+
+(defun superman-view-back ()
+  "Kill current buffer and return to project view."
+  (interactive)
+  (let ((pbuf (get-text-property (point-min) 'project-buffer)))
+    (kill-buffer (current-buffer))
+    (switch-to-buffer pbuf)
+    (superman-redo)))
 
 ;;}}}
+;;{{{ preparing git displays
+
+(defun superman-get-git-status-face (str)
+  (cond ((string-match "Committed" str ) 'font-lock-type-face)
+	((string-match  "Modified" str) 'superman-warning-face)
+	(t 'font-lock-comment-face)))
+
+(defun superman-git-untracked-prepare-display-hook ()
+  (let* ((git-dir (get-text-property (point-min) 'git-dir)))
+    (goto-char (point-min))
+    (while (re-search-forward "^[^ \t\n]+" nil t)
+      (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
+	     (dname (file-name-directory ff))
+	     (fname (file-name-nondirectory ff))
+	     (fullname (concat git-dir "/" ff))
+	     (status "Untracked"))
+	(replace-match
+	 (concat "** "
+		 fname
+		 "\n:PROPERTIES:\n:GitStatus: " status
+		 "\n:Directory: " (cond (dname) (t "."))  
+		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
+
+
+(defun superman-git-files-prepare-display-hook ()
+  (let* ((git-dir (get-text-property (point-min) 'git-dir))
+	 (git-status
+	  (shell-command-to-string
+	   (concat "cd " git-dir ";" superman-cmd-git " status --porcelain -uno")))
+	 (status-list
+	  (mapcar (lambda (x)
+		    (let ((index-status (substring-no-properties x 0 1))
+			  (work-tree-status (substring-no-properties x 1 2))
+			  (fname  (substring-no-properties x 3 (length x))))
+		      (list fname index-status work-tree-status)))
+		  (delete-if (lambda (x) (string= x ""))
+			     (split-string git-status "\n")))))
+    (goto-char (point-min))
+    (while (re-search-forward "^[^ \t\n]+" nil t)
+      (let* ((ff (buffer-substring (point-at-bol) (point-at-eol)))
+	     (dname (file-name-directory ff))
+	     (fname (file-name-nondirectory ff))
+	     (fullname (concat git-dir "/" ff))
+	     (status (assoc ff status-list)))
+	(replace-match
+	 (concat "** "
+		 fname
+		 "\n:PROPERTIES:\n:GitStatus: "
+		 (cond ((not status) "Committed")
+		       (t
+			(let* ((X (or (nth 1 status) " "))
+			       (Y (or (nth 2 status) " "))
+			       (XY (concat X Y)))
+			  (superman-label-status XY))))
+		 "\n:Directory: " (cond (dname) (t "."))  
+		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n")
+	 'fixed)))))
+
+(defvar superman-git-diff-status-letters
+  '(("A" "addition" "addition of a file")
+    ("C" "copy" "copy of a file into a new one")
+    ("D" "deletion" "deletion of a file")
+    ("M" "modification" "modification of the contents or mode of a file")
+    ("R" "renaming" "renaming of a file")
+    ("T" "type-change" "change in the type of the file")
+    ("U" "unmerged" "file is unmerged (you must complete the merge before it can be committed)")
+    ("X" "unknown" "unknown change type (most probably a bug, please report it)"))
+  "Explanation of status letters copied from man page, see M-x manual-entry RET git-diff RET.")
+
+(defun superman-git-diff-prepare-display-hook ()
+  (let* ((git-dir (get-text-property (point-min) 'git-dir)))
+    (goto-char (point-min))
+    (while (re-search-forward "^\\([ACDMRTUX]\\)[ \t\n]+\\(.*\\)\n" nil t)
+      (let* ((status (match-string-no-properties 1))
+	     (ff (match-string-no-properties 2))
+	     (dname (file-name-directory ff))
+	     (fname (file-name-nondirectory ff))
+	     (fullname (concat git-dir "/" ff)))
+	(replace-match
+	 (concat "** "
+		 fname
+		 "\n:PROPERTIES:\n:GitStatus: "
+		 (cadr (assoc status superman-git-diff-status-letters))
+		 "\n:Directory: " (cond (dname) (t "."))  
+		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n")
+	 'fixed)))))
+
+;;}}}
+;;{{{ git display post-hooks
+
+(defun superman-git-log-post-display-hook ()
+  (let* ((tail (point))
+	 (cat-point (superman-cat-point))
+	 (column-point (previous-single-property-change cat-point 'column-names))
+	 (dir (get-text-property (point-min) 'git-dir))
+	 (nickname (get-text-property (point-min) 'nickname))
+	 next)
+    (goto-char cat-point)
+    (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
+      (goto-char next)
+      (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'org-marker) "commit"))
+	     (ref (concat commit "^"))
+	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
+	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))
+;;}}}
+;;
 ;;{{{ superman-git-mode
 
 (defvar superman-git-mode-map (make-sparse-keymap)

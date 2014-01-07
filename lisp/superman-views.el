@@ -1255,9 +1255,12 @@ to VIEW-BUF."
 	 (name (car cat))
 	 (props (cadr cat))
 	 (cat-balls (if props
-			(delete nil
-				(mapcar #'(lambda (x) (when (string-match "^Ball[0-9]+$" (car x))
-							(superman-distangle-ball (cadr x)))) props))))
+			(delete
+			 nil
+			 (mapcar
+			  #'(lambda (x)
+			      (when (string-match "^Ball[0-9]+$" (car x))
+				(superman-distangle-ball (cadr x)))) props))))
 	 (gear (cdr (assoc name superman-finalize-cat-alist)))
 	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
 	 (index-cat-point (cadr (assoc "point" props)))
@@ -1324,7 +1327,7 @@ to VIEW-BUF."
 	(let* ((item-prop (superman-get-property (point) "item-level"))
 	       (item-level (if item-prop (string-to-number item-prop) 3))
 	       (sub-level (- item-level 1))
-		;; (or (superman-get-property (point) 'sub-level) 2))
+	       ;; (or (superman-get-property (point) 'sub-level) 2))
 	       (attac-level (+ item-level 1))
 	       (attac-balls (cdr (assoc 'attac balls))))
 	  (org-narrow-to-subtree)
@@ -2223,11 +2226,17 @@ current section."
 
 (defun superman-next-entry ()
   (interactive)
-  (forward-line 1))
-
+  (forward-line 1)
+  (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
+    (when choice
+      (cond ((functionp choice) (funcall choice))))))
+	      
 (defun superman-previous-entry ()
  (interactive)
-  (forward-line -1))
+  (forward-line -1)
+  (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
+    (when choice
+      (cond ((functionp choice) (funcall choice))))))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
   "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
