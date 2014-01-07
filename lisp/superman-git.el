@@ -26,7 +26,6 @@
 ;;{{{ variables
 
 (defvar superman-cmd-git "git")
-(setq superman-git-ignore "*")
 (defvar superman-git-ignore "*" "Decides about which files to include and which to exclude.
 See M-x manual-entry RET gitignore.
 By default we set this to '*' which means that all files are ignored.
@@ -47,8 +46,8 @@ result."
 	(cur-point (point)))
     (if redo-buf
 	(with-current-buffer redo-buf
-	  (superman-redo))
-      (when superman-view-mode (superman-redo)))
+	  (superman-redo)))
+    ;;      (when superman-view-mode (superman-redo)))
     (delete-other-windows)
     (split-window-vertically)
     (other-window 1)
