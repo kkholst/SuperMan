@@ -217,9 +217,9 @@
       (setq projects (cdr projects)))
     (insert "\n")
     (superman-view-insert-action-buttons
-     '(("New project" . superman-capture-project)
-       ("Meeting" . superman-capture-meeting)
-       ("Task" . superman-capture-task)))
+     '(("New project" superman-capture-project)
+       ("Meeting" superman-capture-meeting)
+       ("Task" superman-capture-task)))
     (insert "\n")
     ;; loop over categories
     (while cat-alist
@@ -609,17 +609,17 @@ Enabling superman mode electrifies the superman buffer for project management."
       (end-of-line)
       (insert "\n")
       (superman-view-insert-action-buttons
-       '(("New project" . superman-capture-project)
-	 ("Meeting" . superman-capture-meeting)
-	 ("Task" . superman-capture-task)))
+       '(("New project" superman-capture-project)
+	 ("Meeting" superman-capture-meeting)
+	 ("Task" superman-capture-task)))
       (insert "\n")      
       (superman-view-insert-action-buttons
-       '(("More columns" . superman-todo-show-more-todo-features)
-	 ("Less columns" . superman-todo-show-less-todo-features)
-	 ("[#A]" . superman-todo-show-priority-A)
-	 ("[#B]" . superman-todo-show-priority-B)
-	 ("[#C]" . superman-todo-show-priority-C)
-	 ("All" . superman-todo-show-priority-all))
+       '(("More columns" superman-todo-show-more-todo-features nil "Show more columns")
+	 ("Less columns" superman-todo-show-less-todo-features nil "Show less columns")
+	 ("[#A]" superman-todo-show-priority-A nil "Limit to priority A and no-priority tasks")
+	 ("[#B]" superman-todo-show-priority-B nil "Limit to priority B tasks")
+	 ("[#C]" superman-todo-show-priority-C nil  "Limit to priority B tasks")
+	 ("All" superman-todo-show-priority-all nil "Show all priorities"))
        t
        "View-S:")
       (insert "\n\n" (superman-column-names balls))
