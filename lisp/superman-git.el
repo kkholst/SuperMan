@@ -177,6 +177,7 @@ passed to `superman-run-cmd'."
   "Pull from remote at DIR."
   (interactive)
   (let ((dir (get-text-property (point-min) 'git-dir)))
+    (save-some-buffers nil)
     (when dir
       (superman-git-action "pull" dir))))
 
@@ -1158,7 +1159,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (defun superman-git-history (&optional arg)
   (interactive)
-  (let* ((file (or (ignore-errors (superman-filename-at-point))
+  (let* ((file (or (superman-filename-at-point t)
 		   (get-text-property (point-min) 'git-dir)
 		   (buffer-file-name)))
 	 (dir (if (file-directory-p file) (file-name-as-directory file) (file-name-directory file)))
