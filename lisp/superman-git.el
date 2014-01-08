@@ -26,7 +26,6 @@
 ;;{{{ variables
 
 (defvar superman-cmd-git "git")
-(setq superman-git-ignore "*")
 (defvar superman-git-ignore "*" "Decides about which files to include and which to exclude.
 See M-x manual-entry RET gitignore.
 By default we set this to '*' which means that all files are ignored.
@@ -395,6 +394,17 @@ Else return FILE as it is."
 	 (file (superman-filename-at-point)))
     (superman-git-log file limit nil nil)))
 
+(defun superman-git-last-log-file (&optional arg)
+  "Retrieves last commit message(s) of file"
+  (interactive "p")
+  (let*
+      ((filename (superman-filename-at-point))
+       (file (file-name-nondirectory filename))
+       (dir (if filename (expand-file-name (file-name-directory filename))))
+       (n (or arg 1))
+       (cmd (concat superman-cmd-git " log -n" (number-to-string n) " -- " filename)))
+    (superman-run-cmd (concat "cd " dir ";" cmd) 
+		      "*Superman-returns*" (concat "log -- " file "\n"))))
 
 (defun superman-git-add-file ()
   "Add the file at point to the git repository."
@@ -1017,6 +1027,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
 (define-key superman-git-mode-map "r" 'superman-git-reset-file)
 (define-key superman-git-mode-map "l" 'superman-git-log-file)
+(define-key superman-git-mode-map " " 'superman-git-last-log-file) 
 
 ;;}}}
 ;;{{{ superman-git-keyboard
@@ -1147,12 +1158,12 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 (defun superman-git-history (&optional arg)
   (interactive)
-  (let ((file (or (superman-filename-at-point))
-	      (get-text-property (point-min) 'git-dir)
-	      (buffer-file-name))
-	(dir (if file-directory-p file (file-name-as-directory file) (file-name-directory file)))
-	(curdir default-directory)
-	(bufn (concat "*history: " file "*")))
+  (let* ((file (or (ignore-errors (superman-filename-at-point))
+		   (get-text-property (point-min) 'git-dir)
+		   (buffer-file-name)))
+	 (dir (if (file-directory-p file) (file-name-as-directory file) (file-name-directory file)))
+	 (curdir default-directory)
+	 (bufn (concat "*history: " file "*")))
     (when dir
       (save-window-excursion
 	(setq default-directory dir)
