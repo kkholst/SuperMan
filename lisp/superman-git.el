@@ -696,6 +696,7 @@ This function should be bound to a key or button."
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir))
       (superman-view-mode-on)
       (superman-git-mode-on)
+      (toggle-truncate-lines 1)
       (setq buffer-read-only t))))
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
