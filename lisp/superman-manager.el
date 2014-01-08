@@ -117,16 +117,26 @@ category: Name of the category property
 ;;(defvar superman-home (concat (file-name-as-directory org-directory) "projects.org") ;
 ;;  "File for managing projects. See the manual
 ;;    for structure and syntax.")
-(defvar superman-home (concat (file-name-directory (locate-library "superman")) "../manager/" "Projects.org")
+(defvar superman-home (concat
+		       (file-name-directory (locate-library "superman"))
+		       "../manager/" "Projects.org")
   "File for managing projects. See the manual
     for structure and syntax.")
 (defvar supermanual
-  (expand-file-name (concat (file-name-directory (locate-library "superman")) "../../Kal-El/supermanual/" "Supermanual.org"))
+  (expand-file-name
+   (concat
+    (file-name-directory (locate-library "superman"))
+    "../Kal-El/supermanual/" "Supermanual.org"))
   "File with instructions for using superman.")
 
 (defvar superman-gitworkflow
-  (expand-file-name (concat (file-name-directory (locate-library "superman")) "../../Kal-El/supermanual/" "git-workflow.png")
-		    "File with instructions for using superman."))
+  (expand-file-name
+   (concat (file-name-directory
+	    (locate-library "superman")) "../Kal-El/supermanual/" "git-workflow.png")
+   "File with instructions for using superman."))
+(defun superman-gitworkflow ()
+  (interactive)
+  (find-file superman-gitworkflow))
 
 (defvar superman-default-content "" "Initial contents of org project index file.")
 (defvar superman-project-subdirectories nil)

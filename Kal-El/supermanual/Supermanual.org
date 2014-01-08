@@ -14,9 +14,19 @@ cursor is in the section Documents.
 
 ** Git control
 
-SuperMan provides a limited set of commands to git control a project. 
+SuperMan provides an interface to git control a project.
+
+*** Initialization
+
+In the project view buffer press "GI" for git initialize.
+
+*** Adding files to the repository
+
+
+
    
 * Window configurations
+
 Superman implements a simple approach to save and restore project specific window-configurations.
 
 ** Save the current configuration

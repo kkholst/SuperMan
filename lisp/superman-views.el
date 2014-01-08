@@ -250,15 +250,18 @@ and sets the variable superman-view-current-project."
       (unless no-error
 	(error "Malformed header of project view buffer: cannot identify project")))))
 
-(defun superman-view-control (project)
+(defun superman-view-control (project &optional git-dir)
   "Insert the git repository if project is git controlled
-and the keybinding to initialize git control otherwise."
-  (let* ((loc (get-text-property (point-min) 'git-dir))
+and the keybinding to initialize git control otherwise. If GIT-DIR is
+a non-nil then it is assumed to be the path to a git directory,
+otherwise it is tested if the path provided by a text-property 'git-dir
+at (point-min) is git controlled."
+  (let* ((loc (or git-dir (get-text-property (point-min) 'git-dir)))
 	 (button (superman-make-button "Contrl:"
 				       'superman-display-git-cycle
 				       'superman-header-button-face
 				       "Show git status"))
-	 (control (if (superman-git-p loc)
+	 (control (if (or git-dir (superman-git-p loc))
 		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
 			(put-text-property 0 1 'superman-header-marker t git-dir-link)
 			(concat "Git repository at "
@@ -338,9 +341,6 @@ the current sub-category and return the minimum."
 	  (widen)))
       configs))
 
-;; (defun supermanual ()
-;;   (interactive)
-;;   (find-file superman-manual))
 (defun supermanual (&optional project)
   (interactive)
   (find-file supermanual))
@@ -367,11 +367,13 @@ the current sub-category and return the minimum."
 	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
     (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
-(defvar superman-default-action-buttons '(("Document" . superman-capture-document)
-		("Task" . superman-capture-task)
-		("Note" . superman-capture-note)
-		("Bookmark" . superman-capture-bookmark)
-		("Meeting" . superman-capture-meeting)))
+(defvar superman-default-action-buttons '(("Document" superman-capture-document)
+		("Task" superman-capture-task)
+		("Note"  superman-capture-note)
+		("Bookmark" superman-capture-bookmark)
+		("Meeting" superman-capture-meeting))
+  "Default action buttons as used by `superman-view-insert-action-buttons'
+for project views.")
 
 (defun superman-view-insert-action-buttons (&optional button-list no-newline title-string)
   "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
@@ -387,45 +389,38 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
   (let* ((title
 	  (superman-make-button
 	   (or title-string "Action:")
-	   'superman-define-action
+	   'superman-edit-action-buttons
 	   'superman-header-button-face
-	   "Action buttons"))
-	 ;; (capture-alist superman-capture-alist)
+	   "Edit action buttons"))
 	 (b-list
 	  (or button-list superman-default-action-buttons))
 	 (i 1))
     (while b-list
       (let* ((b (car b-list))
-	     ;; (b-name (substring b 0 1))
-	     (b-name (car b))
-	     (b-tail (cdr b))
-	     (fun (if (and (listp b-tail) (not (functionp b-tail))) (car b-tail) b-tail))
-	     (cmd (cond ((functionp fun) fun)
-			((stringp fun) (intern fun))
-			;; (intern (concat "superman-capture-" (downcase b-name)))))
-			(t `(lambda () (interactive) (message (concat "Function " ,(if (stringp fun) fun (symbol-name fun)) " is not defined"))))))
-	     ;; 'superman-capture-item)))
-	     (map (make-sparse-keymap)))
-	(define-key map [mouse-2] `(lambda () (interactive) (,cmd)))
-	(define-key map [return]  `(lambda () (interactive) (,cmd)))
-	(define-key map [follow-link]  `(lambda () (interactive) (,cmd)))
+	     (b-name (nth 0 b))
+	     ;; (b-tail (nth 1 b))
+	     (b-fun (nth 1 b))
+	     ;; (if (and (listp b-tail) (not (functionp b-tail)))
+	     ;; (if (eq (car b-tail) quote) (nth 1 b-tail)
+	     ;; (car b-tail) b-tail)))
+	     (cmd (cond ((functionp b-fun) b-fun)
+			((stringp b-fun) (intern b-fun))
+			(t `(lambda () (interactive)
+			      (message
+			       (concat "Function " ,(if (stringp b-fun) b-fun
+						      (if (symbolp b-fun)
+							(symbol-name b-fun) ""))
+				       " is not defined"))))))
+	     (b-face (or (nth 2 b) 'superman-capture-button-face))
+	     (b-help (or (nth 3 b)  (concat "capture " (downcase b-name)))))
 	(when (= i 1)
 	  (unless no-newline
 	    (insert "\n"))
 	  (insert title " "))
+	(setq b-name (superman-make-button b-name cmd b-face b-help))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t b-name)
-	(add-text-properties
-	 0 (length b-name) 
-	 (list
-	  'button (list t)
-	  'face 'superman-capture-button-face
-	  'keymap map
-	  'mouse-face 'highlight
-	  'follow-link t
-	  'help-echo (concat "capture " (downcase b-name)))
-	 b-name)
 	(insert "" b-name " "))
       (setq i (+ i 1) b-list (cdr b-list)))))
 
@@ -575,38 +570,32 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 (defun superman-make-button (string &optional fun face help)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
- HELP is shown when the mouse over the button."
+ HELP is a string which is shown when the mouse over the button."
   (let ((map (make-sparse-keymap))
-	;; (pfun `(lambda (&rest ignore) (funcall ',fun)))
 	(help (or help "Superman-button")))
-    (when (functionp fun)
-      (define-key map [return] fun)
-      (define-key map [mouse-2] `(lambda ()
-				   (interactive)
-				   ;; switch to the proper window/buffer
-				   (let* ((pos last-command-event)
-					  (posn (event-start pos)))
-				     (with-current-buffer (window-buffer (posn-window posn))
-				       (goto-char (posn-point posn))
-				       (message (concat (buffer-name) (int-to-string (point))))
-				       (funcall ',fun))))))
-    ;; (when keys
-    ;; (while keys
-    ;; (define-key map (caar keys) (cdar keys))
-    ;; (setq keys (cdr keys))))
-    ;; (set-text-properties 0 (length string) nil string)
+    (unless (functionp fun)
+      (setq fun #'(lambda () (interactive)
+		    (message
+		     "Not bound to a command"))))
+    (define-key map [return] fun)
+    (define-key map [mouse-2]
+      `(lambda ()
+	 (interactive)
+	 ;; switch to the current window/buffer
+	 (let* ((pos last-command-event)
+		(posn (event-start pos)))
+	   (with-current-buffer (window-buffer (posn-window posn))
+	     (goto-char (posn-point posn))
+	     (message (concat (buffer-name) (int-to-string (point))))
+	     (funcall ',fun)))))
     (add-text-properties
      0 (length string) 
      (list
       'button (list t)
-      ;; 'keymap (mouse-2 . push-button)
-      ;; (13 . push-button))
       'category 'default-button
       'face (or face 'superman-default-button-face)
       'keymap map
       'superman-header-marker t
-      ;; 'action fun
-      ;; 'mouse-action pfun
       'mouse-face 'highlight
       'follow-link t
       'help-echo help)
@@ -1168,14 +1157,17 @@ which locates the heading in the buffer."
 		    (string= "Configuration" (car cat)))
 		(superman-parse-cats ibuf 1)))
 	 ;; identify appropriate buttons
-	 (buttons (save-excursion
-		    (switch-to-buffer ibuf)
-		    (goto-char (point-min))
-		    (let ((b-string))
-		      (when (re-search-forward ":CaptureButtons:" nil t)
-			(setq b-string (superman-get-property (point) "CaptureButtons" nil))
-			(if b-string (mapcar #'(lambda (x) (split-string x "|"))
-					     (split-string (replace-regexp-in-string "[ \t]*" "" b-string) "," t)) "nil")))))
+	 (buttons
+	  (save-excursion
+	    (switch-to-buffer ibuf)
+	    (goto-char (point-min))
+	    (let ((b-string))
+	      (when (re-search-forward ":CaptureButtons:" nil t)
+		(setq b-string (superman-get-property (point) "CaptureButtons" nil))
+		(if b-string
+		    (mapcar #'(lambda (x) (split-string x "|"))
+			    (split-string (replace-regexp-in-string
+					   "[ \t]*" "" b-string) "," t)) "nil")))))
 	 (font-lock-global-modes nil)
 	 (org-startup-folded nil))
     (switch-to-buffer vbuf)
@@ -2227,16 +2219,19 @@ current section."
 (defun superman-next-entry ()
   (interactive)
   (forward-line 1)
+  (superman-choose-entry))
+
+
+(defun superman-choose-entry ()
+  (interactive)
   (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
     (when choice
-      (cond ((functionp choice) (funcall choice))))))
+      (cond ((functionp choice) (funcall choice))))))  
 	      
 (defun superman-previous-entry ()
- (interactive)
+  (interactive)
   (forward-line -1)
-  (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
-    (when choice
-      (cond ((functionp choice) (funcall choice))))))
+  (superman-choose-entry))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
   "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
@@ -2542,7 +2537,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "GS" 'superman-git-search-log-of-file)
 (define-key superman-view-mode-map "GBs" 'superman-git-checkout-branch)
 (define-key superman-view-mode-map "GBn" 'superman-git-new-branch)
-(define-key superman-view-mode-map "G=" 'superman-git-difftool-file)
+;; (define-key superman-view-mode-map "G=" 'superman-git-difftool-file)
 
 
 
