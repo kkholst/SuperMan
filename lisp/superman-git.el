@@ -802,8 +802,9 @@ This function should be bound to a key or button."
 	 (name "Git-diff")
 	 (nickname (get-text-property (point-min) 'nickname))
 	 (git-dir (get-text-property (point-min) 'git-dir))
-	 (commit (cond ((string= commit "Workspace") "") (t commit)))
+	 (newpos)
 	 (ref (cond ((string= commit "Workspace") "HEAD") (t ref)))
+	 (commit (cond ((string= commit "Workspace") "") (t commit)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
 	 (log-buf (current-buffer))
 ;;	 (diff-string (concat commit " <- " ref))
@@ -871,8 +872,10 @@ This function should be bound to a key or button."
 	(goto-char next)
 	(let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
 	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
-    (goto-char (next-single-property-change (point-min) 'org-marker))
-    (previous-line)
+    (setq newpos (next-single-property-change (point-min) 'org-marker))
+    (if newpos (progn  ;; might be nil in case nothing changed between workspace and HEAD
+		 (goto-char newpos)
+		 (previous-line)))
     (superman-git-diff git-dir commit ref)
     (superman-switch-config nil 0 config)))
 
