@@ -1244,7 +1244,8 @@ which locates the heading in the buffer."
 	  (buffer-read-only nil))
       (org-cut-subtree)
       (superman-format-cat cat index-buf view-buf loc)
-      (goto-char cat-point))))
+      (if cat-point
+	  (goto-char cat-point)))))
 
 (defun superman-format-cat (cat index-buf view-buf loc)
   "Format category CAT based on information in INDEX-BUF and write the result
