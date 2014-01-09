@@ -387,11 +387,13 @@ If NO-NEWLINE is non-nil no new line is inserted.
 TITLE-STRING is the label of the first button and defaults to \"Action\".
 "
   (let* ((title
-	  (superman-make-button
-	   (or title-string "Action:")
-	   'superman-edit-action-buttons
-	   'superman-header-button-face
-	   "Edit action buttons"))
+	  (if (and title-string (get-text-property 0 'button title-string))
+	      title-string
+	    (superman-make-button
+	     (or title-string "Action:")
+	     'superman-edit-action-buttons
+	     'superman-header-button-face
+	     "Edit action buttons")))
 	 (b-list
 	  (or button-list superman-default-action-buttons))
 	 (i 1))
@@ -400,6 +402,10 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 	     (b-name (nth 0 b))
 	     ;; (b-tail (nth 1 b))
 	     (b-fun (nth 1 b))
+	     (b-fun (if (and (listp b-fun)
+			     (symbolp (car b-fun))
+			     (string= (symbol-name (car b-fun)) "quote"))
+			(nth 1 b-fun) b-fun))
 	     ;; (if (and (listp b-tail) (not (functionp b-tail)))
 	     ;; (if (eq (car b-tail) quote) (nth 1 b-tail)
 	     ;; (car b-tail) b-tail)))
@@ -409,7 +415,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 			      (message
 			       (concat "Function " ,(if (stringp b-fun) b-fun
 						      (if (symbolp b-fun)
-							(symbol-name b-fun) ""))
+							  (symbol-name b-fun) ""))
 				       " is not defined"))))))
 	     (b-face (or (nth 2 b) 'superman-capture-button-face))
 	     (b-help (or (nth 3 b)  (concat "capture " (downcase b-name)))))
@@ -719,7 +725,7 @@ Translate the branch names into buttons."
 If ON is non-nil keep mark for already marked items.
 If DONT-MOVE is non-nil stay at item."
   (interactive)
-  (when (get-text-property (point-at-bol) 'org-marker)
+  (when (get-text-property (point-at-bol) 'superman-item-marker)
     (if (org-agenda-bulk-marked-p)
 	(unless on (org-agenda-bulk-unmark))
       (org-agenda-bulk-mark))))
@@ -765,7 +771,7 @@ If MARKED is non-nil run only on marked items."
       (save-excursion
 	(goto-char (point-min))
 	(while (setq next (next-single-property-change
-			   (point-at-eol) 'org-marker))
+			   (point-at-eol) 'superman-item-marker))
 	  (goto-char next)
 	  (when (or (not marked)
 		    (superman-marked-p))
@@ -791,8 +797,8 @@ If MARKED is non-nil run only on marked items."
       (save-excursion
 	(goto-char (point-min))
 	(while (next-single-property-change
-		(point-at-eol) 'org-marker)
-	  (goto-char (next-single-property-change (point-at-eol) 'org-marker))
+		(point-at-eol) 'superman-item-marker)
+	  (goto-char (next-single-property-change (point-at-eol) 'superman-item-marker))
 	  ;; (when (or (not marked)
 	  ;; (eq (get-text-property (point) (car marked)) (cadr marked)))
 	  (setq count (+ 1 count)))
@@ -951,21 +957,21 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 (args
 	  (mapcar
 	   #'(lambda (x)
-	      (let* ((pos (string-match "[ \t]" x))
-		     (key (downcase (substring x 0 pos)))
-		     (value (substring x (+ pos 1) (length x))))
-		(cond ((string= (downcase key) "args")
-		       `(,key ,(mapcar 'superman-string-to-thing (split-string value ","))))
-		      ((string-match "^fun\\|face$" (downcase key))
-		       ;; prefer symbol
-		       `(,key ,(superman-string-to-thing value nil t)))
-		      (t
-		       ;; prefer string
-		       `(,key ,(superman-string-to-thing value t nil))))))
-	      (cdr plist))))
-	 (when (string-match "^todo\\|hdr\\|index\\|org-hd-marker" prop)
-	   (setq prop (intern prop)))
-	 (append (list prop) args)))
+	       (let* ((pos (string-match "[ \t]" x))
+		      (key (downcase (substring x 0 pos)))
+		      (value (substring x (+ pos 1) (length x))))
+		 (cond ((string= (downcase key) "args")
+			`(,key ,(mapcar 'superman-string-to-thing (split-string value ","))))
+		       ((string-match "^fun\\|face$" (downcase key))
+			;; prefer symbol
+			`(,key ,(superman-string-to-thing value nil t)))
+		       (t
+			;; prefer string
+			`(,key ,(superman-string-to-thing value t nil))))))
+	   (cdr plist))))
+    (when (string-match "^todo\\|hdr\\|index\\|org-hd-marker" prop)
+      (setq prop (intern prop)))
+    (append (list prop) args)))
 
 (defun superman-save-balls ()
   "Save the columns (balls) in current category for future sessions."
@@ -1055,12 +1061,12 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (setq col-start (+ superman-column-separator col-start))
       (setq col-width (- (car cols) superman-column-separator))
       (goto-char pos)
-      (goto-char (next-single-property-change (point-at-eol) 'org-marker))
+      (goto-char (next-single-property-change (point-at-eol) 'superman-item-marker))
       (setq beg (point))
       ;; move to end of section
       (or (outline-next-heading)
 	  (goto-char (point-max)))
-      (goto-char (previous-single-property-change (point-at-eol) 'org-marker))
+      (goto-char (previous-single-property-change (point-at-eol) 'superman-item-marker))
       (setq end (point))
       (narrow-to-region beg end)
       (goto-char (point-min))
@@ -1415,7 +1421,7 @@ to VIEW-BUF."
     (save-restriction
       (narrow-to-region cat-head cat-tail)
       (goto-char (point-min))
-      (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
+      (while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
 	(goto-char next)
 	(let ((cur-el (buffer-substring-no-properties (+ (point) c-start) (+ (point) c-end c-start))))
 	  (delete-region (+ (point) c-start) (+ (point) c-end c-start))
@@ -1559,7 +1565,7 @@ Returns the formatted string with text-properties."
     ;; marker in index file
     (when marker
       (put-text-property 0 ilen 'org-hd-marker marker item)
-      (put-text-property 0 ilen 'org-marker marker item))
+      (put-text-property 0 ilen 'superman-item-marker marker item))
     ;; add balls for redo
     ;; not done (balls are saved in category instead)
     ;; (put-text-property 0 ilen 'balls balls item)
@@ -2331,7 +2337,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
 	 (b (superman-current-cat))
-	 f)
+	 f pos)
     (if (not m)
 	(save-excursion
 	  (beginning-of-line)
@@ -2341,6 +2347,12 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 			 superman-project-alist))
 		 (superman-redo))
 		(t (error "Nothing to do here"))))
+      (when (and (not (marker-buffer m))
+		 (setq f (get-text-property (point-at-bol) 'superman-project-file)
+		       pos (get-text-property (point-at-bol) 'superman-project-file-marker)))
+	(find-file f)
+	(goto-char pos)
+	(setq m (point-marker)))
       (org-with-point-at m
 	(cond (superman-mode
 	       (superman-return))

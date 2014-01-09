@@ -119,14 +119,14 @@
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
-  (insert "\t" (superman-make-button "Agenda"
+  (insert "  " (superman-make-button "Agenda"
 				     'superman-agenda
 				     'superman-next-project-button-face
-				     "Agenda across all projects") "\t")
-  (insert "\t" (superman-make-button "Calendar"
+				     "Agenda across all projects") "  ")
+  (insert "  " (superman-make-button "Calendar"
 				     'superman-calendar
 				     'superman-next-project-button-face
-				     "Project-wide calendar") "\t")
+				     "Project-wide calendar") "  ")
   (insert (superman-make-button "TodoList"
 				'superman-todo
 				'superman-next-project-button-face
@@ -172,7 +172,7 @@
 	(set-text-properties 0 (length hdr) nil hdr)
 	;; (add-text-properties
 	;; 0 (length hdr)
-	;; (list 'org-marker marker 'org-hd-marker marker) hdr)
+	;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
 	(unless (file-name-absolute-p index)
 	  (setq index
 		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
@@ -247,7 +247,7 @@
 	;; column names
 	(org-back-to-heading)
 	(end-of-line)
-	(let ((first-item (next-single-property-change (point-at-eol) 'org-marker)))
+	(let ((first-item (next-single-property-change (point-at-eol) 'superman-item-marker)))
 	  (when first-item
 	    (goto-char first-item)
 	    (forward-line -1)
@@ -255,7 +255,7 @@
 	    (insert "\n")
 	    (insert (superman-column-names superman-balls))
 	    ;; sorting
-	    (goto-char (next-single-property-change (point) 'org-marker))
+	    (goto-char (next-single-property-change (point) 'superman-item-marker))
 	    (when (next-single-property-change (point-at-bol) 'sort-key)
 	      (goto-char (+ 2 (next-single-property-change (point-at-bol) 'sort-key)))
 	      (superman-sort-section))))
@@ -318,8 +318,6 @@
 	      ,(if superman-todo-tags superman-todo-tags "")
 	      ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 	      ;; ((tags-todo "PRIORITY<>\"C\""
-	      ;; ((tags-todo ""
-	      ;; ((alltodo ""
 	      ((org-agenda-files
 		(reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
@@ -329,17 +327,17 @@
 		 superman-todolist-balls
 		 '(superman-todo)
 		 "* SupermanTodoList"
-		 (concat "\t"
+		 (concat "  "
 			 (superman-make-button "Agenda"
 					       'superman-agenda
 					       'superman-next-project-button-face
 					       "Agenda across all projects")
-			 "\t"
+			 "  "
 			 (superman-make-button "Calendar"
 					       'superman-calendar
 					       'superman-next-project-button-face
 					       "Project-wide calendar")
-			 "\t"
+			 "  "
 			 (superman-make-button "Projects"
 					       'superman
 					       'superman-next-project-button-face
@@ -369,17 +367,17 @@
 		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "Superman calendar" 'org-level-2)
-			     "\t"
+			     "  "
 			     (superman-make-button "TodoList"
 						   'superman-todo
 						   'superman-next-project-button-face
 						   "TodoList across all projects")
-			     "\t"
+			     "  "
 			     (superman-make-button "Agenda"
 						   'superman-agenda
 						   'superman-next-project-button-face
 						   "Project-wide agenda")
-			     "\t"
+			     "  "
 			     (superman-make-button "Projects"
 						   'superman
 						   'superman-next-project-button-face
@@ -398,35 +396,35 @@
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
-	(org-agenda-custom-commands nil))
+	(org-agenda-custom-commands nil)
+	(S-index-list (superman-index-list)))
     (add-to-list 'org-agenda-custom-commands
 		 '("A" "Superman agenda"
-		   ((agenda ""
-			    ((org-agenda-files
-			      (superman-index-list)))))
+		   ((agenda "" ((org-agenda-files S-index-list))))
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
 		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
-			     "\t"
+			     "  "
 			     (superman-make-button "TodoList"
 						   'superman-todo
 						   'superman-next-project-button-face
 						   "TodoList across all projects")
-			     "\t"
+			     "  "
 			     (superman-make-button "Calendar"
 						   'superman-calendar
 						   'superman-next-project-button-face
 						   "Project-wide calendar")
-			     "\t"
+			     "  "
 			     (superman-make-button "Projects"
 						   'superman
 						   'superman-next-project-button-face
 						   "List of projects")
 			     "\n")))))
     (push ?A unread-command-events)
-    (call-interactively 'org-agenda)))
+    (call-interactively 'org-agenda)
+    (superman-clean-buffer-list S-index-list)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -609,6 +607,10 @@ Enabling superman mode electrifies the superman buffer for project management."
       (end-of-line)
       (insert "\n")
       (superman-view-insert-action-buttons
+       `((,(concat "Last update: " (format-time-string "%r")) 'superman-redo))
+       nil
+       (superman-make-button "Refresh" 'superman-redo))
+      (superman-view-insert-action-buttons
        '(("New project" superman-capture-project)
 	 ("Meeting" superman-capture-meeting)
 	 ("Task" superman-capture-task)))
@@ -625,6 +627,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       (insert "\n\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor mode
       (while (ignore-errors
+	       ;; (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	(setq count (+ count 1))
 	(let* ((buffer-read-only nil)
@@ -636,31 +639,41 @@ Enabling superman mode electrifies the superman buffer for project management."
 	  (setq agenda-buffers (append (list (marker-buffer pom)) agenda-buffers))
 	  (beginning-of-line)
 	  (kill-line)
-	  (insert line "\n")))
+	  (insert line)
+	  (put-text-property
+	   (point-at-bol) (1+ (point-at-bol))
+	   'superman-project-file
+	   (org-with-point-at pom (buffer-file-name)))
+	  (put-text-property
+	   (point-at-bol) (1+ (point-at-bol))
+	   'superman-project-file-marker
+	   (marker-position pom))
+	  (insert "\n")))
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
       (goto-char (next-single-property-change (point-min) 'face))
-      (insert " [" (int-to-string count) "]"))))
-
-;; (superman-clean-buffer-list agenda-buffers)))
+      (insert " [" (int-to-string count) "]"))
+    (superman-clean-buffer-list agenda-buffers)))
 
 (defun superman-clean-buffer-list (list)
-  "Kill all project buffers except for those in LIST. This
-function is called at the end of `superman-format-agenda' where
-LIST includes the buffers that are related to one of the items."
-;; FIXME: this still does not make sense,
-;;        because different agendas use different
-;;        project buffers
+  "Kill all buffers associated in LIST. This
+function is called at the end of `superman-format-agenda'."
+  ;; (while list
+  ;; (kill-buffer (car list))
+  ;; (setq list (cdr list))))
+  ;; FIXME: this still does not make sense,
+  ;;        because different agendas use different
+  ;;        project buffers
   (let* ((org-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))
 	 obuf)
     (while org-files
-      (when (and (setq obuf (get-file-buffer (car org-files)))
-		 (not (member obuf list)))
+      (when (and (setq obuf (get-file-buffer (car org-files))))
+					; (not (member obuf list)))
 	(kill-buffer obuf))
       (setq org-files (cdr org-files)))))
 
 (defun superman-visit-project ()
   (interactive)
-  (let* ((pom (get-text-property (point-at-bol) 'org-marker))
+  (let* ((pom (get-text-property (point-at-bol) 'superman-item-marker))
 	(home superman-home)
 	(ibuf (if pom (marker-buffer pom)
 		(get-file-buffer home)))

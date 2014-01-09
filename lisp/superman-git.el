@@ -586,7 +586,7 @@ see M-x manual-entry RET git-diff RET.")
 (setq superman-git-default-displays '("log" "modified" "files" "untracked"))
 
 (defun superman-trim-hash (hash &rest args)
-  (superman-make-button hash 'superman-choose-entry nil "Run git diff"))
+ (superman-make-button hash 'superman-choose-entry nil "Run git diff"))
 
 (defvar superman-git-display-command-list
   '(("log"
@@ -663,7 +663,7 @@ This function should be bound to a key or button."
 
 (defun superman-display-git-cycle ()
   (interactive)
-  (unless superman-git-mode
+  (unless (or superman-git-mode (not (get-text-property (point-min) 'git-dir)))
     (let ((repos-point (next-single-property-change (point-min) 'git-repos)))
       (if repos-point
 	  (goto-char repos-point)
@@ -797,6 +797,8 @@ This function should be bound to a key or button."
       (funcall post-hook))))
 
 (defun superman-git-display-diff (commit ref dir project)
+  "Display differences between the versions COMMIT and REF of the git
+repository of PROJECT which is located at DIR."
   (let* ((balls superman-git-display-diff-balls)
 	 (count 0)
 	 (name "Git-diff")
@@ -806,12 +808,17 @@ This function should be bound to a key or button."
 	 (ref (cond ((string= commit "Workspace") "HEAD") (t ref)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
 	 (log-buf (current-buffer))
-;;	 (diff-string (concat commit " <- " ref))
-	 (commit-string (superman-make-button (if (string= commit "") "Workspace" commit) 'superman-git-diff-switch-commit 'superman-capture-button-face "Change active version."))
-	 (ref-string (superman-make-button ref 'superman-git-diff-switch-ref 'superman-capture-button-face "Change reference version."))
+	 ;; (diff-string (concat commit " <- " ref))
+	 (commit-string (superman-make-button
+			 (if (string= commit "") "Workspace" commit)
+			 'superman-git-diff-switch-commit 'superman-capture-button-face "Change active version."))
+	 ;; (commit-string (if (string= commit "") "Workspace" commit))
+	 ;; (ref-string ref)
+	 (ref-string (superman-make-button
+		      ref
+		      'superman-git-diff-switch-ref
+		      'superman-capture-button-face "Change reference version."))
 	 (header (concat "Changes in " commit-string " since " ref-string))
-	 ;; (index-buf (get-buffer-create (concat "*["project ": index " diff-string "]*")))
-	 ;; (view-buf (get-buffer-create (concat "*["project ": diff " diff-string "]*")))
 	 (index-buf (get-buffer-create (concat "*["project ": index" "]*")))
 	 (view-buf (get-buffer-create (concat "*["project ": diff" "]*")))
 	 (config (concat (buffer-name log-buf) " / " (buffer-name view-buf) " | *Superman:Git-diff*")))
@@ -820,61 +827,82 @@ This function should be bound to a key or button."
     (font-lock-mode -1)
     (superman-view-mode-on)
     (superman-git-mode-on)
-    (erase-buffer)
-    ;; insert the result of git command
-    (set-buffer index-buf)
-    (org-mode)
-    (erase-buffer)
-    (insert (shell-command-to-string cmd))
-    (goto-char (point-min))
-    (insert "git-output\n")
-    (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
-    ;; prepare buffer if necessary
-    (funcall 'superman-git-diff-pre-display-hook)
-    (goto-char (point-min))
-    (while (outline-next-heading)
-      (setq count (+ count 1))
-      (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-      (with-current-buffer view-buf (insert line "\n")))
-    (set-buffer view-buf)
-    (when superman-empty-line-before-cat (insert "\n"))
-    (goto-char (point-min))
-    ;; section names
-    (when (and
-	   superman-empty-line-before-cat
-	   (save-excursion (beginning-of-line 0)
-			   (not (looking-at "^[ \t]*$"))))
-      (insert "\n"))
-    (put-text-property 0 (length name) 'git-repos dir name) 
-    (superman-view-insert-section-name
-     name count balls
-     nil
-     nil)
-    (end-of-line 0)
-    ;; insert the column names
-    (when superman-empty-line-after-cat (insert "\n"))
-    (insert (superman-column-names balls))
-    (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
-    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
-    ;; (goto-char (previous-single-property-change (point) 'cat))
-    (goto-char (point-min))
-    (insert header "\n\n")
-    (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
-    (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
-    (put-text-property (point-min) (+ (point-min) (length header)) 'nickname nickname)
-    (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
-    ;; now prepare the per file diffs
-    (switch-to-buffer view-buf)
-    (goto-char (point-min))
-    (let (next)
-      (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
-	(goto-char next)
-	(let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
-	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
-    (goto-char (next-single-property-change (point-min) 'org-marker))
-    (previous-line)
-    (superman-git-diff git-dir commit ref)
-    (superman-switch-config nil 0 config)))
+    (let ((buffer-read-only nil))
+      (erase-buffer)
+      ;; insert the result of git command
+      (set-buffer index-buf)
+      (org-mode)
+      (erase-buffer)
+      (insert (shell-command-to-string cmd))
+      (goto-char (point-min))
+      (insert "git-output\n")
+      (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
+      ;; prepare buffer if necessary
+      (funcall 'superman-git-diff-pre-display-hook)
+      (goto-char (point-min))
+      (while (outline-next-heading)
+	(setq count (+ count 1))
+	(setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+	(with-current-buffer view-buf (insert line "\n")))
+      (set-buffer view-buf)
+      (when superman-empty-line-before-cat (insert "\n"))
+      (goto-char (point-min))
+      ;; section names
+      (when (and
+	     superman-empty-line-before-cat
+	     (save-excursion (beginning-of-line 0)
+			     (not (looking-at "^[ \t]*$"))))
+	(insert "\n"))
+      (put-text-property 0 (length name) 'git-repos dir name) 
+      (superman-view-insert-section-name
+       name count balls
+       nil
+       nil)
+      (end-of-line 0)
+      ;; insert the column names
+      (when superman-empty-line-after-cat (insert "\n"))
+      (insert (superman-column-names balls))
+      (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
+      (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+      ;; (goto-char (previous-single-property-change (point) 'cat))
+      (goto-char (point-min))
+      (insert header "\n\n")
+      (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd
+			 `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,project)))
+      (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
+      (put-text-property (point-min) (+ (point-min) (length header)) 'nickname nickname)
+      (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
+      ;; now prepare the per file diffs
+      (switch-to-buffer view-buf)
+      (goto-char (point-min))
+      (set-text-properties 0 (length commit) nil commit)
+      (set-text-properties 0 (length ref) nil ref)
+      (let (next)
+	(while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
+	  (goto-char next)
+	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
+      (setq buffer-read-only t)
+      (superman-git-diff git-dir commit ref)
+      (superman-switch-config nil 0 config))))
+
+(defun superman-list-to-alist (list)
+  (mapcar* 'cons list (make-list (length list) `())))
+
+(defun superman-git-diff-switch-commit ()
+  (interactive)
+  (let* ((redo-cmd (get-text-property (point-min) 'redo-cmd))
+	 (dir (nth 3 (caddr redo-cmd)))
+	 ;; (commit (nth 1 (caddr redo-cmd)))
+	 (hash-list (split-string
+		     (shell-command-to-string
+		      (concat "cd " dir ";" superman-cmd-git " --no-pager log --full-history --pretty=\"%h\""))
+		     "\n" t))
+	 (hash-alist (superman-list-to-alist hash-list))
+	 (commit (completing-read "Choose commit" hast-alist))
+	 (ref (nth 2 (caddr redo-cmd)))
+	 (nick (nth 4 (caddr redo-cmd))))
+    (superman-git-display-diff commit ref dir nick)))
 
 (defun superman-view-back ()
   "Kill current buffer and return to project view."
@@ -992,9 +1020,9 @@ This function should be bound to a key or button."
 	 (nickname (get-text-property (point-min) 'nickname))
 	 next)
     (goto-char cat-point)
-    (while (setq next (next-single-property-change (point-at-eol) 'org-marker))
+    (while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
       (goto-char next)
-      (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'org-marker) "commit"))
+      (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit"))
 	     (ref (if (string= commit "Workspace") "HEAD" (concat commit "^")))
 	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))

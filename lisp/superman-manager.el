@@ -477,7 +477,7 @@ we find the `supermanual' and other helpful materials.")
 	  (set-text-properties 0 (length hdr) nil hdr)
 	  ;; (add-text-properties
 	  ;; 0 (length hdr)
-	  ;; (list 'org-marker marker 'org-hd-marker marker) hdr)
+	  ;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
 	  (unless (file-name-absolute-p index)
 	    (setq index
 		  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
