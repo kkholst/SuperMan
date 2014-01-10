@@ -495,6 +495,26 @@ we find the `supermanual' and other helpful materials.")
 				   (cons "publish-directory" publish-dir))))))
       superman-project-alist))) 
 
+(defun superman-create-temporary-project ()
+  (interactive)
+  (let* ((dir (read-directory-name "Create temporary project for directory: "))
+	 (name (file-name-nondirectory (substring-no-properties dir 0 (- (length dir) 1))))
+	 (index-file (concat "/tmp/tmp-" name ".org")))
+    (add-to-list 'superman-project-alist
+		 (list name
+		       (list (cons "location"  dir)
+			     (cons "index" index-file)
+			     (cons "category" "Temp")
+			     (cons "others" nil)
+			     (cons 'hdr nil)
+			     (cons "marker" nil)				 
+			     (cons "lastvisit" nil)
+			     (cons "config" nil)
+			     (cons 'todo nil)
+			     (cons "publish-directory" nil))))
+    (superman-view-project (assoc name superman-project-alist))))
+	 
+
 (defun superman-parse-project-categories ()
   "Parse the file `superman-home' and update `superman-project-categories'."
   (interactive)

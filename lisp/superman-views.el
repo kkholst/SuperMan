@@ -907,9 +907,10 @@ which holds the point of the heading."
 	  (widen))
 	(if (not with-heading)
 	    props
-	    (org-back-to-heading)
+	  (if (not (ignore-errors (org-back-to-heading)))
+	      `("No header" ,props)
 	    (looking-at org-complex-heading-regexp)
-	    `(,(match-string-no-properties 4) ,props))))))
+	    `(,(match-string-no-properties 4) ,props)))))))
 
 
 (defun superman-delete-balls (&optional pom)

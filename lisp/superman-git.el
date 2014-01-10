@@ -26,13 +26,9 @@
 ;;{{{ variables
 
 (defvar superman-cmd-git "git")
-(defvar superman-git-ignore "*" "Decides about which files to include and which to exclude.
+(defvar superman-git-ignore "" "Decides about which files to include and which to exclude.
 See M-x manual-entry RET gitignore.
-By default we set this to '*' which means that all files are ignored.
-You think this sounds like a stupid idea? Hehe, we can still add files via
-the -f (force) command line switch. And we get not bothered by
-having to filter all the unpredictable names one can give to files
-that never should get git controlled.")
+By default we set this to '' which means that no files are ignored.")
 
 ;;}}}
 ;;{{{ superman run cmd
@@ -812,6 +808,7 @@ This function should be bound to a key or button."
     (when post-hook 
       (goto-char (point-max))
       (funcall post-hook))))
+
 
 (defun superman-git-display-diff (commit ref dir project)
   "Display differences between the versions COMMIT and REF of the git
