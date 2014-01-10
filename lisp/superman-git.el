@@ -719,7 +719,7 @@ This function should be bound to a key or button."
 	(insert git-cat)
 	(goto-char (point-min))
 	(insert (superman-make-button
-		 "Back to project (q)"
+		 "* Back to project (q)"
 		 'superman-view-back)
 		"\n\n")
 	(insert (superman-view-control nickname git-dir))
