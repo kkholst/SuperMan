@@ -146,12 +146,12 @@ passed to `superman-run-cmd'."
 	 (dir (or dir (get-text-property (point-min) 'git-dir)))
 	 (cmd (concat "cd " dir
 		      ";" superman-cmd-git " diff "
-		      (unless (string= hash "") (concat hash " " hash "^ "))
+		      (unless (string= hash "") (concat hash "^ " hash " "))
 		      (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
 		      "\n"))
 	 (msg (concat
 	       "diff "
-	       (if hash (concat hash " " ref " ") "HEAD")"\n")))
+	       (if hash (concat ref " " hash " ") "HEAD")"\n")))
     (superman-run-cmd cmd "*Superman:Git-diff*" msg nil 'erase-buffer 'superman-prepare-git-diff-buffer)
     (when config (superman-switch-config nil 0 config))))
 
@@ -456,6 +456,19 @@ given by the filename property of the item at point."
 			  "*Superman-returns*"))
       (superman-view-redo-line))))
 
+
+(defun superman-git-ignore-file ()
+  "Add the file at point to .gitignore."
+  (interactive)
+  (let* 
+      ((dir (get-text-property (point-min) 'git-dir))
+       (filename (expand-file-name (superman-filename-at-point)))
+       (file (replace-regexp-in-string (concat dir "/") "" filename)))
+    (append-to-file (concat file "\n") nil (concat dir "/.gitignore")))
+    (let ((buffer-read-only nil))
+      (beginning-of-line)
+      (kill-whole-line)))
+
 (defun superman-git-delete-file ()
   "Delete the file at point by calling `git rm'."
   (interactive)
@@ -532,12 +545,12 @@ see M-x manual-entry RET git-diff RET.")
 	 (ref (or ref (concat hash "^")))
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
-		      (when hash (concat hash " " hash "^ ")
+		      (when hash (concat hash "^ " hash " ")
 			    (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
 			    "./" (file-name-nondirectory file) "\n")))
 	 (msg (concat
 	       "diff "
-	       (if hash (concat hash " " ref " ") "HEAD")
+	       (if hash (concat ref " " hash " ") "HEAD")
 	       (file-relative-name file (superman-git-toplevel file)) "\n")))
     (superman-run-cmd cmd "*Superman:Git-diff*" msg nil 'erase-buffer 'superman-prepare-git-diff-buffer)
     (when config (superman-switch-config nil 0 config))))
@@ -808,8 +821,9 @@ repository of PROJECT which is located at DIR."
 	 (name "Git-diff")
 	 (nickname (get-text-property (point-min) 'nickname))
 	 (git-dir (get-text-property (point-min) 'git-dir))
-	 (commit (cond ((string= commit "Workspace") "") (t commit)))
+	 newpos
 	 (ref (cond ((string= commit "Workspace") "HEAD") (t ref)))
+	 (commit (cond ((string= commit "Workspace") "") (t commit)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
 	 (log-buf (current-buffer))
 	 (commit-string (superman-make-button
@@ -896,6 +910,10 @@ repository of PROJECT which is located at DIR."
 	  (goto-char next)
 	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
+      (setq newpos (next-single-property-change (point-min) 'org-marker))
+      (if newpos (progn  ;; might be nil in case nothing changed between workspace and HEAD
+		   (goto-char newpos)
+		   (previous-line)))
       (superman-git-diff git-dir commit ref)
       (superman-switch-config nil 0 config))))
 
@@ -1069,6 +1087,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "d" 'superman-git-diff-file)
 (define-key superman-git-mode-map "r" 'superman-git-reset-file)
 (define-key superman-git-mode-map "l" 'superman-git-log-file)
+(define-key superman-git-mode-map "#" 'superman-git-ignore-file)
 (define-key superman-git-mode-map " " 'superman-git-last-log-file) 
 
 ;;}}}
@@ -1184,8 +1203,13 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	    (delete (superman-make-button "x"
 					  'superman-git-delete-file
 					  'superman-git-keyboard-face-x
-					  "git rm file")))
-	(concat diff " " log  " " add  " " delete " " reset " " commit " " " " " "))
+					  "git rm file"))
+	    (ignore (superman-make-button "#"
+	     				  'superman-git-ignore-file
+	     				  'superman-git-keyboard-face-i
+	     				  "add to .gitignore"))
+	    )
+	(concat diff " " log  " " add  " " delete " " reset " " commit " " ignore " " " "))
     ;; for the column name
     (superman-trim-string f (car args))))
 
