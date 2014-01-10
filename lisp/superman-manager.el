@@ -411,7 +411,7 @@ the `superman-home'.")
       (if (stringp prop)
 	  (replace-regexp-in-string "[ \t]+$" "" prop)))))
 
-(defun superman-get-property  (pom property &optional inherit literal-nil)
+(defun superman-get-property (pom property &optional inherit literal-nil)
   "Read property and remove trailing whitespace."
   (let* ((case-fold-search t)
 	 (prop
