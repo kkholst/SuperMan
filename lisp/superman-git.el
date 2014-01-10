@@ -450,10 +450,11 @@ given by the filename property of the item at point."
 	       (with-current-buffer fbuf (buffer-modified-p))
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
-    (save-excursion
-      (superman-run-cmd (concat "cd " dir ";" superman-cmd-git " checkout HEAD -- " file)
-			"*Superman-returns*"))
-    (superman-view-redo-line)))
+    (when (y-or-n-p (concat "Really reset file " file "? "))
+      (save-excursion
+	(superman-run-cmd (concat "cd " dir ";" superman-cmd-git " checkout HEAD -- " file)
+			  "*Superman-returns*"))
+      (superman-view-redo-line))))
 
 (defun superman-git-delete-file ()
   "Delete the file at point by calling `git rm'."
@@ -586,7 +587,9 @@ see M-x manual-entry RET git-diff RET.")
 (setq superman-git-default-displays '("log" "modified" "files" "untracked"))
 
 (defun superman-trim-hash (hash &rest args)
- (superman-make-button hash 'superman-choose-entry nil "Run git diff"))
+ (superman-make-button
+  (superman-trim-string hash (car args))
+  'superman-choose-entry nil "Run git diff"))
 
 (defvar superman-git-display-command-list
   '(("log"
@@ -630,7 +633,8 @@ to identify the element, git-switches are the switches passed to git, balls are 
 cleanup is a function which is called before superman plays the balls.")
 
 (defvar superman-git-display-diff-balls
-  '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+  '(
+    ;; ("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
     ("GitStatus" ("width" 20) ("face" superman-get-git-status-face) ("name" "What happened"))
     (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
     ("Directory" ("width" 25) ("face" superman-subheader-face)))
@@ -724,7 +728,7 @@ This function should be bound to a key or button."
 	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir))
       (superman-view-mode-on)
       (superman-git-mode-on)
-      (toggle-truncate-lines 1)
+      ;; (toggle-truncate-lines 1)
       (setq buffer-read-only t))))
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
@@ -808,14 +812,22 @@ repository of PROJECT which is located at DIR."
 	 (ref (cond ((string= commit "Workspace") "HEAD") (t ref)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
 	 (log-buf (current-buffer))
-	 ;; (diff-string (concat commit " <- " ref))
 	 (commit-string (superman-make-button
-			 (if (string= commit "") "Workspace" commit)
-			 'superman-git-diff-switch-commit 'superman-capture-button-face "Change active version."))
-	 ;; (commit-string (if (string= commit "") "Workspace" commit))
-	 ;; (ref-string ref)
+			 (if (string= commit "") "Workspace (now)"
+			   (concat commit
+				   " (" (superman-get-property
+					 (get-text-property (point-at-bol) 'superman-item-marker)
+					 "date") ")"))
+			 'superman-git-diff-switch-commit
+			 'superman-capture-button-face
+			 "Change active version."))
 	 (ref-string (superman-make-button
-		      ref
+		      (concat ref
+			      " (" (save-excursion
+				     (forward-line 1)
+				     (or (superman-get-property
+					  (get-text-property (point-at-bol) 'superman-item-marker)
+					  "date") "unknown")) ")")
 		      'superman-git-diff-switch-ref
 		      'superman-capture-button-face "Change reference version."))
 	 (header (concat "Changes in " commit-string " since " ref-string))
@@ -827,6 +839,7 @@ repository of PROJECT which is located at DIR."
     (font-lock-mode -1)
     (superman-view-mode-on)
     (superman-git-mode-on)
+    (setq buffer-read-only t)
     (let ((buffer-read-only nil))
       (erase-buffer)
       ;; insert the result of git command
@@ -859,6 +872,7 @@ repository of PROJECT which is located at DIR."
        nil
        nil)
       (end-of-line 0)
+      (forward-line 1)
       ;; insert the column names
       (when superman-empty-line-after-cat (insert "\n"))
       (insert (superman-column-names balls))
@@ -882,7 +896,6 @@ repository of PROJECT which is located at DIR."
 	  (goto-char next)
 	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
-      (setq buffer-read-only t)
       (superman-git-diff git-dir commit ref)
       (superman-switch-config nil 0 config))))
 
@@ -1302,7 +1315,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
       (setq log-strings (cdr log-strings))))
   (superman-git-log-mode-on)
   (goto-char (point-min))
-  (toggle-truncate-lines 1)
+  ;; (toggle-truncate-lines 1)
   (superman-next-entry)
   (setq buffer-read-only t)))
 
