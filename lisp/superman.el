@@ -423,8 +423,8 @@
 						   "List of projects")
 			     "\n")))))
     (push ?A unread-command-events)
-    (call-interactively 'org-agenda)
-    (superman-clean-buffer-list S-index-list)))
+    (call-interactively 'org-agenda)))
+    ;; (superman-clean-buffer-list S-index-list)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -473,7 +473,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(todo ("width" 7) ("face" superman-get-todo-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))
 	("DEADLINE" ("fun" superman-trim-date) ("face" superman-warning-face))
-	(".*Date" ("fun" superman-trim-date) ("face" font-lock-string-face))
+	(".*Date" ("fun" superman-trim-date) ("regexp" t) ("face" font-lock-string-face))
 	("FileName" ("fun" superman-dont-trim))))
 
 ;; FIXME: It requires some efforts to associate the project with a given index file ...
@@ -651,25 +651,25 @@ Enabling superman mode electrifies the superman buffer for project management."
 	  (insert "\n")))
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
       (goto-char (next-single-property-change (point-min) 'face))
-      (insert " [" (int-to-string count) "]"))
-    (superman-clean-buffer-list agenda-buffers)))
+      (insert " [" (int-to-string count) "]"))))
+    ;; (superman-clean-buffer-list agenda-buffers)))
 
-(defun superman-clean-buffer-list (list)
-  "Kill all buffers associated in LIST. This
-function is called at the end of `superman-format-agenda'."
+;; (defun superman-clean-buffer-list (list)
+  ;; "Kill all buffers associated in LIST. This
+;; function is called at the end of `superman-format-agenda'."
   ;; (while list
   ;; (kill-buffer (car list))
   ;; (setq list (cdr list))))
   ;; FIXME: this still does not make sense,
   ;;        because different agendas use different
   ;;        project buffers
-  (let* ((org-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))
-	 obuf)
-    (while org-files
-      (when (and (setq obuf (get-file-buffer (car org-files))))
-					; (not (member obuf list)))
-	(kill-buffer obuf))
-      (setq org-files (cdr org-files)))))
+  ;; (let* ((org-files (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))
+	 ;; obuf)
+    ;; (while org-files
+      ;; (when (and (setq obuf (get-file-buffer (car org-files))))
+					;; ; (not (member obuf list)))
+	;; (kill-buffer obuf))
+      ;; (setq org-files (cdr org-files)))))
 
 (defun superman-visit-project ()
   (interactive)

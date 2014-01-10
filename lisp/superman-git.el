@@ -542,12 +542,12 @@ see M-x manual-entry RET git-diff RET.")
   (interactive)
   (let* ((file (superman-filename-at-point))
 	 (hash (or hash (get-text-property (point-at-bol) 'hash)))
-	 (ref (or ref (concat hash "^")))
+	 (ref (if hash (or ref (concat hash "^")) "HEAD"))
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
-		      (when hash (concat hash "^ " hash " ")
-			    (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
-			    "./" (file-name-nondirectory file) "\n")))
+		      ref " " hash " "
+		      (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
+		      "./" (file-name-nondirectory file) "\n"))
 	 (msg (concat
 	       "diff "
 	       (if hash (concat ref " " hash " ") "HEAD")
@@ -821,7 +821,7 @@ repository of PROJECT which is located at DIR."
 	 (name "Git-diff")
 	 (nickname (get-text-property (point-min) 'nickname))
 	 (git-dir (get-text-property (point-min) 'git-dir))
-	 newpos
+	 next-item
 	 (ref (cond ((string= commit "Workspace") "HEAD") (t ref)))
 	 (commit (cond ((string= commit "Workspace") "") (t commit)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " diff " commit " " ref " --name-status"))
@@ -910,10 +910,10 @@ repository of PROJECT which is located at DIR."
 	  (goto-char next)
 	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
-      (setq newpos (next-single-property-change (point-min) 'org-marker))
-      (if newpos (progn  ;; might be nil in case nothing changed between workspace and HEAD
-		   (goto-char newpos)
-		   (previous-line)))
+      (setq next-item (next-single-property-change (point-min) 'superman-item-marker))
+      (when next-item   ;; might be nil in case nothing changed between workspace and HEAD
+	(goto-char next-item)
+	(previous-line))
       (superman-git-diff git-dir commit ref)
       (superman-switch-config nil 0 config))))
 
@@ -1299,7 +1299,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
   (let* ((rel-file (superman-relative-name file dir))
 	 (dir dir)
 	 (cmd (concat
-		   "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
+	       "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
 	 (gitlog (shell-command-to-string cmd))
 	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	 log-strings)
@@ -1336,12 +1336,13 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	    (progn
 	      (put-text-property 0 (length item) 'decoration (nth 4 log) item)
 	      (insert item "\n")))
-      (setq log-strings (cdr log-strings))))
-  (superman-git-log-mode-on)
-  (goto-char (point-min))
-  ;; (toggle-truncate-lines 1)
-  (superman-next-entry)
-  (setq buffer-read-only t)))
+	(setq log-strings (cdr log-strings))))
+    (superman-git-log-mode-on)
+    (goto-char (point-min))
+    ;; (setq truncate-lines t
+    ;; truncate-partial-width-windows nil)
+    (superman-next-entry)
+    (setq buffer-read-only t)))
 
 (setq superman-log-balls
       '(("Date" ("width" 10) ("face" font-lock-string-face))
