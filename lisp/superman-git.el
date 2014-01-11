@@ -124,7 +124,7 @@ passed to `superman-run-cmd'."
     (save-excursion
       (superman-run-cmd
        (concat "cd " dir "; " superman-cmd-git " " action "\n")
-       buf
+       (or buf "*Superman-returns*")
        (concat "git " action " '" dir "' returns:\n\n")))))
 
 
@@ -134,6 +134,19 @@ passed to `superman-run-cmd'."
   (let ((dir (get-text-property (point-min) 'git-dir)))
     (when dir
       (superman-git-action "status" dir))))
+
+(defun superman-git-commit-project ()
+  "Run \"git commit\" on current project."
+  (interactive)
+  (superman-git-status)
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 (message
+	  (read-string 
+	   (concat "Commit message"  ": ")))
+	 (action (concat " commit -m \"" message "\" ")))
+    (when dir
+      (superman-git-action action dir)
+      (superman-redo))))
 
 (defun superman-git-diff (&optional dir hash ref config)
   (interactive)
@@ -297,7 +310,7 @@ Else return FILE as it is."
 		       "cd " dir ";"
 		       superman-cmd-git
 		       " status --ignored --porcelain "
-		       (file-name-nondirectory file))))
+		       "\"" (file-name-nondirectory file) "\"")))
 	 (len  (length raw-status))
 	 (index-status (if (> len 1)
 			   (substring-no-properties raw-status 0 1)
@@ -486,20 +499,21 @@ given by the filename property of the item at point."
 	 (files
 	  (mapcar 'expand-file-name 
 		  (superman-view-marked-files))))
-    ;; prevent committing unsaved buffers
-    ;; (save-some-buffers nil 'superman-check-if-saved-needed)
-    (save-some-buffers nil)
-    (when dir
-      (superman-git-add
-       files
-       dir
-       'commit nil)
-      ;; move point inside cat to the first marked entry
-      ;; FIXME: it would be safer to have a property 'marked
-      (goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
-      (goto-char (previous-single-property-change (point) 'cat))
-      (superman-redo-cat))))
-
+    (if (not files)
+	(message "Apparently, no files are marked.")
+      ;; prevent committing unsaved buffers
+      ;; (save-some-buffers nil 'superman-check-if-saved-needed)
+      (save-some-buffers nil)
+      (when dir
+	(superman-git-add
+	 files
+	 dir
+	 'commit nil)
+	;; move point inside cat to the first marked entry
+	;; FIXME: it would be safer to have a property 'marked
+	(goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
+	(goto-char (previous-single-property-change (point) 'cat))
+	(superman-redo-cat)))))
 
 (defun superman-git-add (file-list dir &optional commit message)
   "Add files in FILE-LIST to git repository at DIR. If DIR is nil,
@@ -525,7 +539,7 @@ or if the file is not inside the location."
 	 (message (if commit (or message (read-string (concat "Commit message for " file-list-string ": "))))))
     (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file-list-string)))
     ;; (shell-command-to-string cmd)))
-    (superman-run-cmd cmd "*Superman-returns*")))
+    (superman-run-cmd cmd "*Superman-returns*" cmd)))
 
 ;;}}}
 ;;{{{ git diff and annotate
@@ -650,23 +664,27 @@ cleanup is a function which is called before superman plays the balls.")
   "Balls to format git diff views.")
 
 (defun superman-set-git-cycle (value)
-  (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
-    (org-set-property "git-display" value))
-  (superman-redo-cat))
+  (let ((buffer-read-only nil))
+    (put-text-property (point-min) (1+ (point-min)) 'git-display value)))
+;; (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
+;; (org-set-property "git-display" value))
 
 (defun superman-cycle-git-display ()
   "Cycles to the next value in `superman-git-display-cycles'.
 This function should be bound to a key or button."
   (interactive)
   (let* ((pom (get-text-property (point-at-bol) 'org-hd-marker))
-	 (cycles (split-string (or (superman-get-property pom "git-cycle")
-				   superman-git-default-displays)
-			       "[ \t]*,[ \t]*"))
-	 (current (superman-get-property pom "git-display"))
+	 (cycles (split-string
+		  (or (and pom (superman-get-property pom "git-cycle"))
+		      superman-git-default-displays)
+		  "[ \t]*,[ \t]*"))
+	 (current (or (get-text-property (point-min) 'git-display)
+		      (car cycles)))
 	 (rest (member current cycles))
 	 (next (if (> (length rest) 1) (cadr rest) (car cycles))))
     ;; (setq superman-git-display-cycles (append (cdr superman-git-display-cycles) (list (car superman-git-display-cycles))))
-    (superman-set-git-cycle next)))
+    (superman-set-git-cycle next)
+    (superman-redo-cat)))
 
 (defun superman-redo-git-display ()
   (interactive)
@@ -677,11 +695,14 @@ This function should be bound to a key or button."
 (defun superman-display-git-cycle ()
   (interactive)
   (unless (or superman-git-mode (not (get-text-property (point-min) 'git-dir)))
-    (let ((repos-point (next-single-property-change (point-min) 'git-repos)))
+    (let* ((repos-point (next-single-property-change (point-min) 'git-repos))
+	  (index (get-text-property (point-min) 'index))
+	  (tempp (bufferp index)))
       (if repos-point
 	  (goto-char repos-point)
 	(save-window-excursion
-	  (find-file (get-text-property (point-min) 'index))
+	  (if tempp (switch-to-buffer index)
+	    (find-file (get-text-property (point-min) 'index)))
 	  (goto-char (point-min))
 	  (unless (re-search-forward ":git-cycle:" nil t)
 	    (goto-char (point-max))
@@ -693,7 +714,8 @@ This function should be bound to a key or button."
 			      sd (cdr sd)))
 		      dstring)
 		    "\n:git-display: modified\n:END:\n")
-	    (save-buffer)))
+	    (unless tempp
+	    (save-buffer))))
 	(superman-redo)
 	(goto-char (next-single-property-change (point-min) 'git-repos))))
     ;; open buffer
@@ -726,6 +748,7 @@ This function should be bound to a key or button."
 	(superman-view-insert-git-branches git-dir)
 	(superman-view-insert-action-buttons
 	 '(("Diff project" superman-git-diff 'superman-git-keyboard-face-D "Git diff")
+	   ("Commit project" superman-git-commit-project 'superman-git-keyboard-face-P "Git all project")
 	   ("Commit marked" superman-git-commit-marked 'superman-git-keyboard-face-C "Git commit marked files")
 	   ("Status" superman-git-status 'superman-git-keyboard-face-S "Git status")
 	   ("Delete marked" superman-view-delete-marked 'superman-git-keyboard-face-X "Delete marked files")))
@@ -743,7 +766,11 @@ This function should be bound to a key or button."
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."
   (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
-	 (cycle (or (cadr (assoc "git-display" props)) (car cycles)))
+	 (cycle (or
+		 (with-current-buffer view-buf
+		   (get-text-property (point-min) 'git-display))
+		 (cadr (assoc "git-display" props))
+		 (car cycles)))
 	 (limit (cadr (assoc "limit" props)))
 	 (rest (assoc cycle superman-git-display-command-list))
 	 (balls (or (nth 2 rest) superman-default-balls))
@@ -751,7 +778,10 @@ This function should be bound to a key or button."
 	 (post-hook (nth 4 rest))
 	 (count 0)
 	 (cmd (concat "cd " dir ";" superman-cmd-git " " (nth 1 rest))))
-    ;; for the first time ... 
+    ;; for the first time ...
+    (with-current-buffer view-buf
+    (unless (get-text-property (point-min) 'git-display)
+      (put-text-property (point-min) (1+ (point-min)) 'git-display cycle)))
     (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
     ;; limit on number of revisions
     (when limit
@@ -791,7 +821,9 @@ This function should be bound to a key or button."
 	  (insert " >> ")
 	  (insert (superman-make-button
 		   cstring
-		   `(lambda () (interactive) (superman-set-git-cycle ,cstring))
+		   `(lambda () (interactive)
+		      (superman-set-git-cycle ,cstring)
+		      (superman-redo-cat))
 		   (if (string= cycle cstring)
 		       'superman-next-project-button-face nil)
 		   (concat "Cycle display to git " cstring)))
@@ -1134,8 +1166,22 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :background "green")))
   "Face used for git-commit."
   :group 'superman)
+
+(defface superman-git-keyboard-face-p
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :height 0.8
+		 :background "#00FFFF")))
+  "Face used for git-commit."
+  :group 'superman)
+
 (defface superman-git-keyboard-face-C
   '((t (:inherit superman-git-keyboard-face-c :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  "Face used for git-commit (larger box)."
+  :group 'superman)
+
+(defface superman-git-keyboard-face-P
+  '((t (:inherit superman-git-keyboard-face-p :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
   "Face used for git-commit (larger box)."
   :group 'superman)
 

@@ -31,8 +31,8 @@
 
 ;;{{{
 
-;; (defvar superman '(("SuperMan" ("location" . (file-name-directory superman-home))
-;; ("index" . superman-home)
+;; (defvar superman '(("SuperMan" ("location" . (file-name-directory superman-profile))
+;; ("index" . superman-profile)
 ;; ("category" . nil)
 ;; ("config" . nil)
 ;; ("state" . "ACTIVE"))))
@@ -82,7 +82,7 @@
 (defun superman-get-priority-face (kwd)
   "Get face for priority symbols"
   (if (< (length kwd) 3)
-      'org-priority
+     'org-priority
     (or (org-face-from-face-or-color
 	 'priority 'org-priority
 	 (cdr (assoc (string-to-char
@@ -117,7 +117,7 @@
   (insert "SuperMan(ager)")
   (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-  (put-text-property (point-at-bol) (point-at-eol) 'index superman-home)
+  (put-text-property (point-at-bol) (point-at-eol) 'index superman-profile)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
   (insert "  " (superman-make-button "Agenda"
 				     'superman-agenda
@@ -142,11 +142,11 @@
 
 
 (defun superman-categorize-projects (&optional cats balls)
-  "Parse the file `superman-home' and return a categorized project-alist."
+  "Parse the file `superman-profile' and return a categorized project-alist."
   (interactive)
   (save-excursion
     (setq superman-project-alist nil)
-    (set-buffer (find-file-noselect superman-home))
+    (set-buffer (find-file-noselect superman-profile))
     (unless (superman-manager-mode 1))
     (save-buffer)
     (goto-char (point-min))
@@ -674,7 +674,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-visit-project ()
   (interactive)
   (let* ((pom (get-text-property (point-at-bol) 'superman-item-marker))
-	(home superman-home)
+	(home superman-profile)
 	(ibuf (if pom (marker-buffer pom)
 		(get-file-buffer home)))
 	(iwin (when ibuf (get-buffer-window ibuf nil))))

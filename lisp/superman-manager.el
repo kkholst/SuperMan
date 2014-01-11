@@ -111,17 +111,18 @@ category: Name of the category property
   (interactive)
   (cdr (assoc label superman-property-list)))
 
-(defvar superman-default-directory
-  (file-name-as-directory org-directory)
-  "A place for new projects.")
-;;(defvar superman-home (concat (file-name-as-directory org-directory) "projects.org") ;
-;;  "File for managing projects. See the manual
-;;    for structure and syntax.")
-(defvar superman-home (concat
-		       (file-name-directory (locate-library "superman"))
-		       "../manager/" "Projects.org")
+(defvar superman-home (expand-file-name "~/metropolis")
   "File for managing projects. See the manual
     for structure and syntax.")
+
+(defvar superman-default-directory
+  (file-name-as-directory superman-home)
+  "A place for new projects.")
+
+(defvar superman-profile
+  (concat (file-name-as-directory superman-home) "Projects.org")
+  "File for managing projects.")
+
 (defvar supermanual
   (expand-file-name
    (concat
@@ -134,6 +135,7 @@ category: Name of the category property
    (concat (file-name-directory
 	    (locate-library "superman")) "../Kal-El/supermanual/" "git-workflow.png")
    "File with instructions for using superman."))
+
 (defun superman-gitworkflow ()
   (interactive)
   (find-file superman-gitworkflow))
@@ -141,7 +143,7 @@ category: Name of the category property
 (defvar superman-default-content "" "Initial contents of org project index file.")
 (defvar superman-project-subdirectories nil)
 (defvar superman-project-level 4
-"Subheading level at which projects are defined in `superman-home'.")
+"Subheading level at which projects are defined in `superman-profile'.")
 (defvar superman-manager-mode-map (make-sparse-keymap)
   "Keymap used for `superman-manager-mode' commands.")
 (defvar superman-project-alist nil
@@ -157,7 +159,7 @@ category: Name of the category property
   'org' then the index file will be placed
   in a subdirectory 'org' of the project directory.
  The project directory is set by a property LOCATION in
-the `superman-home'.")
+the `superman-profile'.")
 (defvar superman-default-category "Unsorted" "Category for new projects.")
 (defvar superman-select-project-summary-format
   "%c/%o/%n"
@@ -350,13 +352,13 @@ the `superman-home'.")
 (add-hook 'find-file-hooks 
         (lambda ()
           (let ((file (buffer-file-name)))
-            (when (and file (equal file (expand-file-name superman-home)))
+            (when (and file (equal file (expand-file-name superman-profile)))
               (superman-manager-mode)))))
 
 
 (defun superman-goto-project-manager ()
   (interactive)
-  (find-file superman-home))
+  (find-file superman-profile))
 
 (defun superman-project-at-point (&optional noerror)
   "Check if point is at project heading and return the project,
@@ -377,7 +379,7 @@ the `superman-home'.")
 
 (defun superman-goto-profile (project)
   (let ((case-fold-search t))
-    (find-file superman-home)
+    (find-file superman-profile)
     (unless (superman-manager-mode 1))
     (goto-char (point-min))
     (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
@@ -433,7 +435,7 @@ Kal-El is the planet where superman was born. It is there
 we find the `supermanual' and other helpful materials.")
 
 (defun superman-parse-projects ()
-  "Parse the file `superman-home' and update `superman-project-alist'. If
+  "Parse the file `superman-profile' and update `superman-project-alist'. If
 `superman-project-kal-el' is non-nil also add the Kal-El project."
   (interactive)
   (save-excursion
@@ -441,14 +443,15 @@ we find the `supermanual' and other helpful materials.")
 	(let ((superman-loc
 	       (expand-file-name
 		(concat (file-name-directory (locate-library "superman")) ".."))))
-	  (setq superman-project-alist `(("Kal-El"
-					  (("location" . ,superman-loc)
-					   ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
-					   ("category" . "Krypton")
-					   ("others" . "Jor-El, SuperManual")
-					   (hdr . "Kal-El"))))))
+	  (setq superman-project-alist
+		`(("Kal-El"
+		   (("location" . ,superman-loc)
+		    ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
+		    ("category" . "Krypton")
+		    ("others" . "Jor-El, SuperManual")
+		    (hdr . "Kal-El"))))))
       (setq superman-project-alist nil))
-    (set-buffer (find-file-noselect superman-home))
+    (set-buffer (find-file-noselect superman-profile))
     (show-all)
     (widen)
     (unless (superman-manager-mode 1))
@@ -499,11 +502,13 @@ we find the `supermanual' and other helpful materials.")
   (interactive)
   (let* ((dir (read-directory-name "Create temporary project for directory: "))
 	 (name (file-name-nondirectory (substring-no-properties dir 0 (- (length dir) 1))))
-	 (index-file (concat "/tmp/tmp-" name ".org")))
+	 (index-buffer (get-buffer-create (concat "*Superman-" name "*.org"))))
+    (set-buffer index-buffer)
+    (org-mode)
     (add-to-list 'superman-project-alist
 		 (list name
 		       (list (cons "location"  dir)
-			     (cons "index" index-file)
+			     (cons "index" index-buffer)
 			     (cons "category" "Temp")
 			     (cons "others" nil)
 			     (cons 'hdr nil)
@@ -516,11 +521,11 @@ we find the `supermanual' and other helpful materials.")
 	 
 
 (defun superman-parse-project-categories ()
-  "Parse the file `superman-home' and update `superman-project-categories'."
+  "Parse the file `superman-profile' and update `superman-project-categories'."
   (interactive)
   (let ((cats 
 	 (progn
-	   (set-buffer (find-file-noselect superman-home))
+	   (set-buffer (find-file-noselect superman-profile))
 	   (unless (superman-manager-mode 1))
 	   (save-restriction
 	     (widen)
@@ -581,7 +586,7 @@ and others."
 
 
 (defun superman-refresh ()
-  "Parses the categories and projects in file `superman-home' and also
+  "Parses the categories and projects in file `superman-profile' and also
              updates the currently selected project."
   (interactive)
   ;; (superman-parse-project-categories)
@@ -618,7 +623,7 @@ and others."
 	  (make-directory dir)
 	  (loop for subdir in superman-project-subdirectories
 		do (unless (file-exists-p subdir) (make-directory (concat path subdir) t))))
-	(find-file superman-home)
+	(find-file superman-profile)
 	(unless (superman-manager-mode 1))
 	(goto-char (point-min))
 	(re-search-forward (concat (make-string superman-project-level (string-to-char "*")) ".*" (car pro)) nil )))))
@@ -702,9 +707,9 @@ and others."
 	  (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
 
 (defun superman-fix-others ()
-  "Update the others property (collaborator names) of all projects in `superman-home'."
+  "Update the others property (collaborator names) of all projects in `superman-profile'."
   (interactive "P")
-  (set-buffer (find-file-noselect superman-home))
+  (set-buffer (find-file-noselect superman-profile))
   (unless (superman-manager-mode 1))
   (goto-char (point-min))
   (while (superman-forward-project)
@@ -793,8 +798,8 @@ is always the first choice."
             Start git, if the project is under git control, and git is not up and running yet."
   (setq superman-current-project project)
   (if superman-frame-title-format (superman-set-frame-title))
-  (with-current-buffer (or (find-buffer-visiting superman-home)
-			   (find-file-noselect superman-home))
+  (with-current-buffer (or (find-buffer-visiting superman-profile)
+			   (find-file-noselect superman-profile))
     (save-excursion
       (goto-char (point-min))
       (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
@@ -945,8 +950,8 @@ If NOSELECT is set return the project."
   (or (cdr (assoc "git" (cadr project))) ""))
 
 (defun superman-go-home (&optional heading)
-  "Visit the file superman-home and leave point at PROJECT."
-  (find-file superman-home)
+  "Visit the file superman-profile and leave point at PROJECT."
+  (find-file superman-profile)
   (goto-char (point-min))
   (re-search-forward
    (format org-complex-heading-regexp-format (regexp-quote heading))

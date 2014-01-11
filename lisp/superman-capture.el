@@ -67,12 +67,14 @@ If JABBER is non-nil message about non-existing headings.
 	 (index (superman-get-index pro))
 	 (head (or heading (read-string "Goto heading: ")))
 	 value)
-    (if index
-      	(progn
-	  (unless (file-exists-p (file-name-directory index))
-	    (make-directory (file-name-directory index) 'with-parents))
-	  (find-file index))
-      (error (concat "Project " pro " does not have an index.")))
+    (cond ((bufferp index)
+	   (switch-to-buffer index))
+	  (index
+	   (progn
+	     (unless (file-exists-p (file-name-directory index))
+	       (make-directory (file-name-directory index) 'with-parents))
+	     (find-file index)))
+	  (t (error (concat "Project " (car pro) " does not have an index."))))
     (widen)
     (show-all)
     (goto-char (point-min))
@@ -83,10 +85,10 @@ If JABBER is non-nil message about non-existing headings.
 		 (goto-char (point-max))
 		 (insert "\n* " head "\n")
 		 (if propertystring (progn 
-			     (insert ":PROPERTIES:\n")
-			     (insert propertystring)
-			     (insert "\n:END:\n\n")
-			     ))
+				      (insert ":PROPERTIES:\n")
+				      (insert propertystring)
+				      (insert "\n:END:\n\n")
+				      ))
 		 ;; (org-set-property "Project" pro)
 		 (forward-line -1)
 		 'create)
@@ -369,7 +371,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
   (interactive)
   (let ((nick (if (stringp project) project (car project))))
     (save-window-excursion
-      (find-file superman-home)
+      (find-file superman-profile)
       (goto-char (point-min))
       (re-search-forward (concat ":nickname:[ \t]*" nick) nil nil)
       (superman-set-others (assoc nick superman-project-alist))
@@ -423,7 +425,7 @@ with completion in existing categories. If NICKNAME is nil prompt for nickname.
 If LOC is given it is the mother directory of the project.  
 
 This function modifies your 'superman-project-alist', it first 
-saves the new entry to the file superman-home, the it creates
+saves the new entry to the file superman-profile, the it creates
 directories and the index file, if these do not exist already, and
 finally it visit the new project is visited.
 
@@ -456,7 +458,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
       (setq nickname
 	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
     (superman-capture-internal
-     `("*S*" (("index" . ,superman-home)))
+     `("*S*" (("index" . ,superman-profile)))
      (or marker category)
      `("Project" (("Nickname" ,nickname)
 		  ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))

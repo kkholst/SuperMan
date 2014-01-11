@@ -1157,8 +1157,9 @@ which locates the heading in the buffer."
 	 (gitp (superman-git-p loc))
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 (index (superman-get-index pro))
-	 (ibuf (or (get-file-buffer index)
-		   (find-file index)))
+	 (ibuf (or (get-buffer index) ;; new since 11.jan.2014
+		(get-file-buffer index)
+		(find-file index)))
 	 (cats (delete-if
 		#'(lambda (cat)
 		    (string= "Configuration" (car cat)))
