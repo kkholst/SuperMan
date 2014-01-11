@@ -509,7 +509,7 @@ given by the filename property of the item at point."
 	(superman-git-add files dir nil nil)
 	;; move point inside cat to the first marked entry
 	;; FIXME: it would be safer to have a property 'marked
-	(goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
+	(goto-char (next-single-property-change (point-min) 'type)) ;; org-marked-entry-overlay
 	(goto-char (previous-single-property-change (point) 'cat))
 	(superman-redo-cat)))))
 
@@ -528,8 +528,8 @@ given by the filename property of the item at point."
       (when dir (superman-git-add files dir 'commit nil)
 	    ;; move point inside cat to the first marked entry
 	    ;; FIXME: it would be safer to have a property 'marked
-	    (goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
-	    (goto-char (previous-single-property-change (point) 'cat))
+	    (goto-char (next-single-property-change (point-min) 'type)) ;; org-marked-entry-overlay
+	    (goto-char (next-single-property-change (point) 'cat))
 	    (superman-redo-cat)))))
 
 (defun superman-git-add (file-list dir &optional commit message)
