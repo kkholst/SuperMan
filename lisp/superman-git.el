@@ -493,7 +493,8 @@ given by the filename property of the item at point."
   (member (expand-file-name (buffer-file-name))
 	  (superman-view-marked-files)))
 
-(defun superman-git-commit-marked (&optional commit dont-redo)
+(defun superman-git-add-marked ()
+  "Call git add on the list of marked files."
   (interactive)
   (let* ((dir (get-text-property (point-min) 'git-dir))
 	 (files
@@ -505,27 +506,39 @@ given by the filename property of the item at point."
       ;; (save-some-buffers nil 'superman-check-if-saved-needed)
       (save-some-buffers nil)
       (when dir
-	(superman-git-add
-	 files
-	 dir
-	 'commit nil)
+	(superman-git-add files dir nil nil)
 	;; move point inside cat to the first marked entry
 	;; FIXME: it would be safer to have a property 'marked
 	(goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
 	(goto-char (previous-single-property-change (point) 'cat))
 	(superman-redo-cat)))))
 
+(defun superman-git-commit-marked (&optional commit)
+  "Call git commit on the list of marked files."
+  (interactive)
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 (files
+	  (mapcar 'expand-file-name 
+		  (superman-view-marked-files))))
+    (if (not files)
+	(message "Apparently, no files are marked.")
+      ;; prevent committing unsaved buffers
+      ;; (save-some-buffers nil 'superman-check-if-saved-needed)
+      (save-some-buffers nil)
+      (when dir (superman-git-add files dir 'commit nil)
+	    ;; move point inside cat to the first marked entry
+	    ;; FIXME: it would be safer to have a property 'marked
+	    (goto-char (next-single-property-change (point) 'type)) ;; org-marked-entry-overlay
+	    (goto-char (previous-single-property-change (point) 'cat))
+	    (superman-redo-cat)))))
+
 (defun superman-git-add (file-list dir &optional commit message)
-  "Add files in FILE-LIST to git repository at DIR. If DIR is nil,
+  "Call git add on the files given by FILE-LIST. If DIR is nil,
 prompt for project and use the associated git repository.
 If FILE-LIST is nil then read file name below DIR.
 
 If COMMIT is non-nil prompt for commit message and
-commit the file to the git repository.
-
-The attempt is made to `git add' the file at the location
-of the project. This fails if location is not a git repository,
-or if the file is not inside the location."
+commit the file to the git repository."
   (interactive)
   (let* ((dir (or dir
 		  (let ((pro (superman-select-project)))
@@ -538,7 +551,6 @@ or if the file is not inside the location."
 	 (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file-list-string))
 	 (message (if commit (or message (read-string (concat "Commit message for " file-list-string ": "))))))
     (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file-list-string)))
-    ;; (shell-command-to-string cmd)))
     (superman-run-cmd cmd "*Superman-returns*" cmd)))
 
 ;;}}}
@@ -695,73 +707,77 @@ This function should be bound to a key or button."
 (defun superman-display-git-cycle ()
   (interactive)
   (unless (or superman-git-mode (not (get-text-property (point-min) 'git-dir)))
-    (let* ((repos-point (next-single-property-change (point-min) 'git-repos))
-	  (index (get-text-property (point-min) 'index))
-	  (tempp (bufferp index)))
-      (if repos-point
-	  (goto-char repos-point)
-	(save-window-excursion
-	  (if tempp (switch-to-buffer index)
-	    (find-file (get-text-property (point-min) 'index)))
-	  (goto-char (point-min))
-	  (unless (re-search-forward ":git-cycle:" nil t)
-	    (goto-char (point-max))
-	    (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
-		    (let ((sd (cdr superman-git-default-displays))
-			  (dstring (car superman-git-default-displays)))
-		      (while sd
-			(setq dstring (concat dstring ", " (car sd))
-			      sd (cdr sd)))
-		      dstring)
-		    "\n:git-display: modified\n:END:\n")
-	    (unless tempp
-	    (save-buffer))))
-	(superman-redo)
-	(goto-char (next-single-property-change (point-min) 'git-repos))))
-    ;; open buffer
-    (let* ((pbuf (buffer-name))
-	   (nickname (get-text-property (point-min) 'nickname))
-	   (ibuf (concat (buffer-name) " :Git-repository"))
-	   (git-dir (get-text-property (point-min) 'git-dir))
-	   (gbuf (get-buffer ibuf))
-	   git-cat)
-      ;; (narrow-to-region
-      (setq git-cat (buffer-substring
-		     (or (previous-single-property-change (point) 'region-start)
-			 (point-at-bol))
-		     ;; need to add one, otherwise tail is not visible
-		     (+ (next-single-property-change (point) 'tail) 1)))
-      (if gbuf
-	  (switch-to-buffer ibuf)
-	;; (make-indirect-buffer (current-buffer) ibuf 'clone)
-	(get-buffer-create ibuf)
-	(switch-to-buffer ibuf))
-      (let ((buffer-read-only nil))
-	(erase-buffer)
-	(insert git-cat)
+    (let* ((index (get-text-property (point-min) 'index))
+	   ;; (repos-point (next-single-property-change (point-min) 'git-repos))
+	   index-marker
+	   ;; props
+	   (tempp (bufferp index)))
+      ;; (if repos-point
+      ;; (goto-char repos-point)
+      (save-window-excursion
+	(if tempp (switch-to-buffer index)
+	  (find-file (get-text-property (point-min) 'index)))
 	(goto-char (point-min))
-	(insert (superman-make-button
-		 "* Back to project (q)"
-		 'superman-view-back)
-		"\n\n")
-	(insert (superman-view-control nickname git-dir))
-	(superman-view-insert-git-branches git-dir)
-	(superman-view-insert-action-buttons
-	 '(("Diff project" superman-git-diff 'superman-git-keyboard-face-D "Git diff")
-	   ("Commit project" superman-git-commit-project 'superman-git-keyboard-face-P "Git all project")
-	   ("Commit marked" superman-git-commit-marked 'superman-git-keyboard-face-C "Git commit marked files")
-	   ("Status" superman-git-status 'superman-git-keyboard-face-S "Git status")
-	   ("Delete marked" superman-view-delete-marked 'superman-git-keyboard-face-X "Delete marked files")))
-	(insert "\n\n")
-	(put-text-property (point-min) (+ (point-min) 1) 'redo-cmd '(superman-redo-git-display))
-	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'region-start t)
-	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'project-buffer pbuf)
-	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'nickname nickname)
-	(put-text-property (point-min) (+ (point-min) (length "Back to project (q)")) 'git-dir git-dir))
-      (superman-view-mode-on)
-      (superman-git-mode-on)
-      ;; (toggle-truncate-lines 1)
-      (setq buffer-read-only t))))
+	(unless (re-search-forward ":git-cycle:" nil t)
+	  (goto-char (point-max))
+	  (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
+		  (let ((sd (cdr superman-git-default-displays))
+			(dstring (car superman-git-default-displays)))
+		    (while sd
+		      (setq dstring (concat dstring ", " (car sd))
+			    sd (cdr sd)))
+		    dstring)
+		  "\n:hidden: superman-git-mode"
+		  "\n:git-display: log\n:END:\n")
+	  (unless tempp (save-buffer)))
+	;; now in index buffer at git repos heading
+	(outline-back-to-heading)
+	;; (setq props (superman-parse-props
+	;; (get-text-property (point-at-bol) 'org-hd-marker)
+	;; 'p 'h))
+	(setq index-marker (point-marker)))
+      ;; open git view buffer
+      (let* ((pbuf (buffer-name))
+	     (nickname (get-text-property (point-min) 'nickname))
+	     (ibuf (concat (buffer-name) " :Git-repository"))
+	     (git-dir (get-text-property (point-min) 'git-dir))
+	     (gbuf (get-buffer ibuf)))
+	(if gbuf (switch-to-buffer ibuf)
+	  (get-buffer-create ibuf)
+	  (switch-to-buffer ibuf))
+	(let ((buffer-read-only nil))
+	  (if (get-text-property (point-min) 'git-display)
+	      nil ;; buffer already showing git-display
+	    (erase-buffer) ;; probably unnecessary
+	    (goto-char (point-min))
+	    (insert (superman-make-button
+		     (concat "* Git: " nickname)
+		     'superman-redo 'superman-project-button-face)
+		    "\n\n")
+	    (insert (superman-view-control nickname git-dir))
+	    (superman-view-insert-git-branches git-dir)
+	    (superman-view-insert-action-buttons
+	     '(("Diff project" superman-git-diff 'superman-git-keyboard-face-D "Git diff")
+	       ("Commit project" superman-git-commit-project 'superman-git-keyboard-face-P "Git all project")
+	       ("Commit marked" superman-git-commit-marked 'superman-git-keyboard-face-C "Git commit marked files")
+	       ("Status" superman-git-status 'superman-git-keyboard-face-S "Git status")
+	       ("Delete marked" superman-view-delete-marked 'superman-git-keyboard-face-X "Delete marked files")))
+	    (insert "\n\n")
+	    (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
+	    (put-text-property (point-min) (1+ (point-min)) 'region-start t)
+	    (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
+	    (put-text-property (point-min) (1+ (point-min)) 'nickname nickname)
+	    (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
+	    (put-text-property (point-min) (1+ (point-min)) 'git-display "log")
+	    (superman-view-mode-on)
+	    (superman-git-mode-on)
+	    (goto-char (point-max))
+	    (insert "** Git")
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'org-hd-marker index-marker)
+	    ;; (superman-redo-cat props)
+	    (superman-redo-cat)
+	    (setq buffer-read-only t)))))))
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."

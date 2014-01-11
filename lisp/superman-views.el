@@ -350,21 +350,26 @@ the current sub-category and return the minimum."
   (if (> (length superman-project-history) 1)
       (let* ((prev (car (reverse superman-project-history)))
 	     (next (cadr superman-project-history))
-	     (all-button (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))
-	     (next-button (superman-make-button
-			   next
-			   `(lambda () (interactive) (superman-switch-to-project ,next))
-			   'superman-next-project-button-face
-			   (concat "Switch to project " next)))
-	     (prev-button (superman-make-button
-			   prev
-			   `(lambda () (interactive) (superman-switch-to-project ,prev))
-			   'superman-next-project-button-face
-			   (concat "Switch to project " prev))))
-	(put-text-property 0 1 'superman-header-marker t prev-button)
-	(put-text-property 0 1 'superman-header-marker t next-button)
+	     (all-button (superman-make-button
+			  "Projects" 'superman
+			  'superman-next-project-button-face "List of projects"))
+	     (next-button (when next (superman-make-button
+				      next
+				      `(lambda () (interactive) (superman-switch-to-project ,next))
+				      'superman-next-project-button-face
+				      (concat "Switch to project " next))))
+	     (prev-button (when prev
+			    (superman-make-button
+			     prev
+			     `(lambda () (interactive) (superman-switch-to-project ,prev))
+			     'superman-next-project-button-face
+			     (concat "Switch to project " prev)))))
+	(when prev
+	  (put-text-property 0 1 'superman-header-marker t prev-button))
+	(when next
+	  (put-text-property 0 1 'superman-header-marker t next-button))
 	(put-text-property 0 1 'superman-header-marker t all-button)
-	(insert "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button))
+	(insert (concat "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button)))
     (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
 (defvar superman-default-action-buttons '(("Document" superman-capture-document)
@@ -1158,8 +1163,8 @@ which locates the heading in the buffer."
 	 (vbuf (concat "*Project[" (car pro) "]*"))
 	 (index (superman-get-index pro))
 	 (ibuf (or (get-buffer index) ;; new since 11.jan.2014
-		(get-file-buffer index)
-		(find-file index)))
+		   (get-file-buffer index)
+		   (find-file index)))
 	 (cats (delete-if
 		#'(lambda (cat)
 		    (string= "Configuration" (car cat)))
@@ -1181,8 +1186,11 @@ which locates the heading in the buffer."
     (switch-to-buffer vbuf)
     (setq buffer-read-only nil)
     (erase-buffer)
+    ;; major-mode
     (org-mode)
     (font-lock-mode -1)
+    ;; minor-mode
+    (superman-view-mode-on)
     ;; (font-lock-default-function nil)
     ;; insert header, set text-properties and highlight
     (insert (superman-make-button
@@ -1228,18 +1236,20 @@ which locates the heading in the buffer."
   (setq default-directory
 	(superman-project-home
 	 (superman-view-current-project)))
-  ;; minor-mode
-  (superman-view-mode-on)
   (setq buffer-read-only t))
 
-(defun superman-redo-cat ()
-  "Redo the current section in a superman view buffer."
+(defun superman-redo-cat (&optional cat)
+  "Redo the current section in a superman view buffer.
+Optional argument CAT is an alist providing formatting 
+properties such as balls for the section.
+"
   (if (not (get-text-property (point-at-bol) 'cat))
       (error "Not at category heading")
     (let ((cat-point (point-at-bol))
-	  (cat (superman-parse-props
-		(get-text-property (point-at-bol) 'org-hd-marker)
-		'p 'h))
+	  (cat (or cat
+		   (superman-parse-props
+		    (get-text-property (point-at-bol) 'org-hd-marker)
+		    'p 'h)))
 	  (view-buf (current-buffer))
 	  (index-buf (marker-buffer (get-text-property (point-at-bol) 'org-hd-marker)))
 	  (loc (get-text-property (point-min) 'git-dir))
@@ -1269,6 +1279,7 @@ to VIEW-BUF."
 	 (git (assoc "git-cycle" props))
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freetext" props))
+	 (hidden (assoc "hidden" props))
 	 (count 0)
 	 index-marker
 	 cat-head)
@@ -1277,6 +1288,12 @@ to VIEW-BUF."
     (setq view-cat-head (point))
     (when git (setq git (get-text-property (point-min) 'git-dir)))
     (cond
+     ;;hidden sections 
+     ((and hidden
+	   (let ((hidden-expr (cadr hidden)))
+	     (if (string-match "not[ \t]*\\(.*\\)$" hidden-expr)
+		 (not (eval (intern (match-string-no-properties 1 hidden-expr))))
+	       (eval (intern hidden-expr))))))
      ;; free text sections are put as they are
      (free
       (set-buffer index-buf)
