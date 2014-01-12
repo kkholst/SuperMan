@@ -27,6 +27,9 @@
 
 ;;; Code:
 
+(defconst superman-version "infinite-earths"
+  "Version number of this package.")
+
 ;; External dependencies
 (require 'org)  
 (require 'deft nil t) ;; http://jblevins.org/git/deft.git
@@ -501,7 +504,10 @@ we find the `supermanual' and other helpful materials.")
 (defun superman-create-temporary-project ()
   (interactive)
   (let* ((dir (read-directory-name "Create temporary project for directory: "))
-	 (name (file-name-nondirectory (substring-no-properties dir 0 (- (length dir) 1))))
+	 (name
+	  (concat "*"
+		  (file-name-nondirectory (substring-no-properties dir 0 (length dir)))
+		  "*"))
 	 (index-buffer (get-buffer-create (concat "*Superman-" name "*.org"))))
     (set-buffer index-buffer)
     (org-mode)
@@ -811,13 +817,17 @@ is always the first choice."
 
 (defun superman-save-project (project)
   (interactive)
-  (save-excursion
-    (let ((pbuf (get-file-buffer (superman-get-index project))))
-      (when pbuf
-	(switch-to-buffer pbuf)
-	(save-buffer))))
-  (when (functionp superman-save-buffers)
-    (funcall superman-save-buffers)))
+  (unless
+      (string=
+       (superman-get-category project) "Temp")
+    (save-excursion
+      (let ((pbuf (get-file-buffer
+		   (superman-get-index project))))
+	(when pbuf
+	  (switch-to-buffer pbuf)
+	  (save-buffer))))
+    (when (functionp superman-save-buffers)
+      (funcall superman-save-buffers))))
 
 ;;}}}
 ;;{{{ switching projects (see also superman-config)

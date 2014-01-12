@@ -643,12 +643,13 @@ see M-x manual-entry RET git-diff RET.")
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-files-pre-display-hook)
     ("untracked"
-     "ls-files --full-name --exclude-standard --others"
+     (concat "ls-files --full-name " (unless superman-git-show-ignored "--exclude-standard") " --others")
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-untracked-pre-display-hook)
+     superman-git-untracked-pre-display-hook
+     superman-git-untracked-post-display-hook)
     ("modified"
      "ls-files --full-name -m"
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
@@ -727,7 +728,7 @@ This function should be bound to a key or button."
 		      (setq dstring (concat dstring ", " (car sd))
 			    sd (cdr sd)))
 		    dstring)
-		  "\n:hidden: superman-git-mode"
+		  "\n:hidden: not superman-git-mode"
 		  "\n:git-display: log\n:END:\n")
 	  (unless tempp (save-buffer)))
 	;; now in index buffer at git repos heading
@@ -793,11 +794,13 @@ This function should be bound to a key or button."
 	 (pre-hook (nth 3 rest))
 	 (post-hook (nth 4 rest))
 	 (count 0)
-	 (cmd (concat "cd " dir ";" superman-cmd-git " " (nth 1 rest))))
+	 (cmd (concat "cd " dir ";" superman-cmd-git " "
+		      (with-current-buffer view-buf
+			(eval (nth 1 rest))))))
     ;; for the first time ...
     (with-current-buffer view-buf
-    (unless (get-text-property (point-min) 'git-display)
-      (put-text-property (point-min) (1+ (point-min)) 'git-display cycle)))
+      (unless (get-text-property (point-min) 'git-display)
+	(put-text-property (point-min) (1+ (point-min)) 'git-display cycle)))
     (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
     ;; limit on number of revisions
     (when limit
@@ -1102,6 +1105,26 @@ repository of PROJECT which is located at DIR."
 	     (ref (if (string= commit "Workspace") "HEAD" (concat commit "^")))
 	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))
+
+(defvar superman-git-show-ignored nil
+  "If non-nil show files that are otherwise ignored by git in list of untracked files.")
+(make-variable-buffer-local 'superman-git-show-ignored)
+
+(defun superman-git-toggle-show-ignored ()
+  (setq superman-git-show-ignored (not superman-git-show-ignored))
+  (superman-redo))
+
+(defun superman-git-untracked-post-display-hook ()
+  (let ((current superman-git-show-ignored))
+  (goto-char (superman-cat-point))
+  (end-of-line)
+  (insert "\n\n" (superman-make-button
+	   (if current "Hide ignored" "Show ignored")
+	   'superman-git-toggle-show-ignored
+	   'superman-capture-button-face
+	   "Toggle show/hide ignored"))))
+	   
+
 ;;}}}
 ;;
 ;;{{{ superman-git-mode
@@ -1180,6 +1203,14 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 :foreground "black"
 		 :height 0.8
 		 :background "green")))
+  "Face used for git-commit."
+  :group 'superman)
+
+(defface superman-git-keyboard-face-i
+  '((t (:inherit superman-default-button-face
+		 :foreground "black"
+		 :height 0.8
+		 :background "white")))
   "Face used for git-commit."
   :group 'superman)
 
