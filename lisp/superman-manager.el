@@ -43,12 +43,13 @@
 
 ;; Loading extensions
 (require 'superman) ;; a project to manage projects
-(require 'superman-views)  ;; project views
+(require 'superman-views)    ;; project views
 (require 'superman-capture)  ;; capture information
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
-(require 'superman-pub)   ;; publication manager
+(require 'superman-pub)      ;; publication manager
 (require 'superman-google)   ;; google calendar support
+(require 'superman-faces)    ;; highlighting
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
@@ -222,110 +223,6 @@ the `superman-profile'.")
 (defvar superman-public-server "" "Place on the web where pages are published.")
 (defvar superman-export-base-extension "html\\|png\\|jpg\\|org\\|pdf\\|R")
 ;; (setq org-agenda-show-inherited-tags (list))
-
-;;}}}
-;;{{{ faces
-
-(defface superman-warning-face
-  '((t (:inherit font-lock-warning-face :underline nil)))
-    "Face used for warnings."
-    :group 'superman)
-
-(defface superman-subheader-face
-  '((t (:inherit font-lock-string-face)))
-    "Face used for the selected tab."
-    :group 'superman)
-
-(defface superman-default-button-face
-  '((t (:box (:line-width 1 :color "gray88" :style released-button))))
-  "Default face used for superman-buttons."
-  :group 'superman)
-
-(defface superman-capture-button-face
-  '((((class color) (min-colors 88) (background light))
-     :inherit superman-default-button-face
-     :height 1.0
-     :foreground "darkblue"
-     :background "mintcream")
-    (((class color) (min-colors 88) (background dark))
-     :inherit superman-default-button-face
-     :height 1.0
-     :foreground "mintcream"
-     :background "darkblue")
-    (((class color) (min-colors 8) (background light))
-     :inherit superman-default-button-face
-     :height 1.0
-     :foreground "white"
-     :background "gray55")
-    (((class color) (min-colors 8) (background dark))
-     :inherit superman-default-button-face
-     :height 1.0
-     :foreground "gray55"
-     :background "white")
-    (t (:inherit superman-default-button-face
-		 :height 1.0
-		 :inverse-video t
-		 :bold t)))
-  "Face for superman capture buttons."
-  :group 'superman)
-
-(defface superman-project-button-face
-  '((((class color) (min-colors 88) (background light))
-     :inherit superman-default-button-face
-     :height 1.3
-     :foreground "yellow"
-     :background "red")
-    (((class color) (min-colors 88) (background dark))
-     :inherit superman-default-button-face
-     :height 1.3
-     :foreground "red"
-     :background "yellow")
-    (((class color) (min-colors 8) (background light))
-     :inherit superman-default-button-face
-     :height 1.3
-     :foreground "black"
-     :background "gray88")
-    (((class color) (min-colors 8) (background dark))
-     :inherit superman-default-button-face
-     :height 1.3
-     :foreground "gray88"
-     :background "black")
-    (t (:inherit superman-default-button-face
-		 :height 1.3
-		 :inverse-video t
-		 :bold t)))
-  "Face for superman project buttons."
-  :group 'superman)
-
-(defface superman-next-project-button-face
-  '((((class color) (background dark))
-     :inherit superman-default-button-face
-     :background "LightYellow1"
-     :inverse-video t
-     :background "red"
-     :height 1.0)
-    (t
-     :inherit superman-default-button-face
-     :foreground "LightYellow1"
-     :background "red"
-     :inverse-video t
-     :height 1.0))
-  "Face for next superman project buttons."
-  :group 'superman)
-
-(defface superman-capture-button-face
-  '((t (:inherit superman-default-button-face
-		 :box (:line-width 1 :color "gray88" :style released-button)
-		 :foreground "seagreen4")))
-  "Face used for the selected tab."
-  :group 'superman)
-
-(defface superman-header-button-face
-  '((t (:inherit superman-default-button-face
-		 :box (:line-width 1 :color "gray88" :style released-button)
-		 :background "lightyellow")))
-  "Face used for the selected tab."
-  :group 'superman)
 
 ;;}}}
 ;;{{{ the pro-file in manager-mode

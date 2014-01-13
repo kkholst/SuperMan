@@ -33,12 +33,10 @@ highlight the current line in superman views.")
 (defvar superman-view-current-project nil "Buffer local project variable" )
 (make-variable-buffer-local 'superman-view-current-project)
 
-(defvar superman-view-marks nil "Marks for items in agenda.")
-(make-variable-buffer-local 'superman-view-marks)
+;; (defvar superman-view-marks nil "Marks for items in agenda.")
+;; (make-variable-buffer-local 'superman-view-marks)
 
-
-
-(defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
+;; (defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
 
 (defvar superman-cats '(("Meetings" . "Date")
 			("Documents" . "FileName")
@@ -1474,20 +1472,7 @@ to VIEW-BUF."
       (insert " [" (int-to-string count) "]\n"))
 
 ;;}}}
-;;{{{ todo keywords
 
-(unless org-todo-keyword-faces
-  (setq org-todo-keyword-faces
-	(quote (("TODO" :foreground "red" :weight bold)
-		("URGENT" :foreground "goldenrod1" :weight bold)
-		("IN PROGRESS" :foreground "blue" :weight bold)
-		("ACTIVE" :foreground "red" :weight bold)
-		("WAITING" :foreground "purple" :weight bold)
-		("PERMANENT" :foreground "SkyBlue3" :weight bold)
-		("DONE" :foreground "forest green" :weight bold)
-		("CANCELED" :foreground "slate grey" :weight bold)))))
-
-;;}}}
 ;;{{{ Formatting items and column names
 
 (defun superman-play-ball (thing ball &optional no-face)

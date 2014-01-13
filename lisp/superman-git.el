@@ -758,11 +758,11 @@ This function should be bound to a key or button."
 	    (insert (superman-view-control nickname git-dir))
 	    (superman-view-insert-git-branches git-dir)
 	    (superman-view-insert-action-buttons
-	     '(("Diff project" superman-git-diff 'superman-git-keyboard-face-D "Git diff")
-	       ("Commit project" superman-git-commit-project 'superman-git-keyboard-face-P "Git all project")
-	       ("Commit marked" superman-git-commit-marked 'superman-git-keyboard-face-C "Git commit marked files")
-	       ("Status" superman-git-status 'superman-git-keyboard-face-S "Git status")
-	       ("Delete marked" superman-view-delete-marked 'superman-git-keyboard-face-X "Delete marked files")))
+	     '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
+	       ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
+	       ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
+	       ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
+	       ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files")))
 	    (insert "\n\n")
 	    (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
 	    (put-text-property (point-min) (1+ (point-min)) 'region-start t)
@@ -1159,115 +1159,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map " " 'superman-git-last-log-file) 
 
 ;;}}}
+
 ;;{{{ superman-git-keyboard
-
-(defface superman-git-keyboard-face-d
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "orange"
-		 )))
-  "Face used for git-diff."
-  :group 'superman)
-(defface superman-git-keyboard-face-D
-  '((t (:inherit superman-git-keyboard-face-d :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-diff (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-a
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "yellow")))
-  "Face used for git-add."
-  :group 'superman)
-(defface superman-git-keyboard-face-A
-  '((t (:inherit superman-git-keyboard-face-a :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-add (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-l
-  '((t (:inherit superman-default-button-face
-		 :foreground "white"
-		 :height 0.8
-		 :background "blue")))
-  "Face used for git-log."
-  :group 'superman)
-(defface superman-git-keyboard-face-L
-  '((t (:inherit superman-git-keyboard-face-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-log (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-c
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "green")))
-  "Face used for git-commit."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-i
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "white")))
-  "Face used for git-commit."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-p
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "#00FFFF")))
-  "Face used for git-commit."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-C
-  '((t (:inherit superman-git-keyboard-face-c :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-commit (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-P
-  '((t (:inherit superman-git-keyboard-face-p :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-commit (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-x
-  '((t (:inherit superman-default-button-face
-		 :foreground "white"
-		 :height 0.8
-		 :background "black")))
-  "Face used for git-rm."
-  :group 'superman)
-(defface superman-git-keyboard-face-X
-  '((t (:inherit superman-git-keyboard-face-x :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-rm (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-r
-  '((t (:inherit superman-default-button-face
-		 :foreground "white"
-		 :height 0.8
-		 :background "violet")))
-  "Face used for git-stash."
-  :group 'superman)
-(defface superman-git-keyboard-face-R
-  '((t (:inherit superman-git-keyboard-facr-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-stash (larger box)."
-  :group 'superman)
-
-(defface superman-git-keyboard-face-s
-  '((t (:inherit superman-default-button-face
-		 :foreground "black"
-		 :height 0.8
-		 :background "red")))
-  "Face used for git-status."
-  :group 'superman)
-(defface superman-git-keyboard-face-S
-  '((t (:inherit superman-git-keyboard-face-s :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
-  "Face used for git-status (larger box)."
-  :group 'superman)
-
 (defun superman-make-git-keyboard (f &rest args)
   (if (string-match org-bracket-link-regexp f)
       (let ((diff (superman-make-button "d"
@@ -1302,7 +1195,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	(concat diff " " log  " " add  " " delete " " reset " " commit " " ignore " " " "))
     ;; for the column name
     (superman-trim-string f (car args))))
-
 ;;}}}
 ;;
 ;;{{{ git search and history
