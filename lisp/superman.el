@@ -352,6 +352,7 @@
 
 
 (defun superman-calendar (&optional project)
+  "Show events from all projects in a calendar view."
   (interactive)
   (let ((org-agenda-buffer-name (concat "*SuperMan-Calendar*"))
 	(org-agenda-sticky nil)
@@ -365,6 +366,8 @@
 		    (org-agenda-show-all-dates t)
 		    (org-agenda-span 7)
 		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-finalize-hook
+		     'superman-add-appointments)
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "Superman calendar" 'org-level-2)
 			     "  "
@@ -393,14 +396,15 @@
 
     
 (defun superman-agenda (&optional project)
+  "Similar to `superman-calendar' but does not show
+all dates."
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-agenda*"))
 	(org-agenda-sticky nil)
-	(org-agenda-custom-commands nil)
-	(S-index-list (superman-index-list)))
+	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
 		 '("A" "Superman agenda"
-		   ((agenda "" ((org-agenda-files S-index-list))))
+		   ((agenda "" ((org-agenda-files (superman-index-list)))))
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
 		    (org-agenda-window-setup 'current-window)
@@ -421,10 +425,15 @@
 						   'superman
 						   'superman-next-project-button-face
 						   "List of projects")
+			     "\n"
+			     (superman-make-button "\nClick here to add a Meeting\n"
+						   'superman-capture-meeting
+						   'superman-capture-button-face
+						   "Add a meeting to calendar")
 			     "\n")))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
-    ;; (superman-clean-buffer-list S-index-list)))
+;; (superman-clean-buffer-list S-index-list)))
 
 ;;}}}
 ;;{{{ superman-mode-map
@@ -582,6 +591,37 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (defun superman-format-todolist ()
   (superman-format-agenda superman-todolist-balls))
+
+(defun superman-add-appointments ()
+  "Go through calendar buffer and add today's appointments."
+  (let* ((key (next-single-property-change (point-min) 'org-today))
+	 (end (when key (next-single-property-change key 'day)))
+	 props
+	 marker)
+    (while key
+      (setq marker (next-single-property-change key 'org-hd-marker nil end))
+      (when marker
+	(setq props (superman-parse-props
+		     (get-text-property marker 'org-hd-marker)
+		     nil
+		     'with))
+	(let* ((case-fold-search t)
+	       (meetingdate (cadr (assoc "meetingdate" (cadr props))))
+	       (time (when meetingdate (org-parse-time-string meetingdate 'no)))
+	       (hour (nth 2 time))
+	       (minutes (nth 1 time))
+	       (msg (car props)))
+	  (when (and hour minutes)
+	    (setq minutes (int-to-string minutes))
+	    (setq hour (int-to-string hour))
+	    (when (= (length hour) 1) (setq hour (concat "0" hour)))
+	    (when (= (length minutes) 1) (setq minutes (concat "0" minutes)))
+	    (appt-add (concat hour ":" minutes) msg 900)))
+	;; move key to end of line
+	(setq key
+	      (if (and marker (< marker end))
+		  (next-single-property-change marker 'org-hd-marker nil end)
+		nil))))))
 
 (defun superman-format-agenda (&optional balls redo title buttons by)
   (let ((balls (or balls superman-agenda-balls))

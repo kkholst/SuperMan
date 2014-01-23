@@ -43,6 +43,7 @@
   '((t (:inherit font-lock-warning-face :underline nil)))
     "Face used for warnings."
     :group 'superman)
+
 (defface superman-subheader-face
   '((t (:inherit font-lock-string-face)))
     "Face used for the selected tab."

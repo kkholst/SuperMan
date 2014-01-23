@@ -286,7 +286,7 @@ at (point-min) is git controlled."
 		"Set names of collaborators")))
 	  ;; (put-text-property 0 (length key) 'face 'org-level-2 key)
 	  (put-text-property 0 1 'superman-header-marker t key)
-	  (concat key " " others "\n"))
+	  (concat key " " others))
       "")))
 
 
@@ -339,9 +339,9 @@ the current sub-category and return the minimum."
 	  (widen)))
       configs))
 
-(defun supermanual (&optional project)
+(defun superman-ual (&optional project)
   (interactive)
-  (find-file supermanual))
+  (find-file superman-ual))
 
 (defun superman-view-insert-project-buttons ()
   "Insert project buttons"
@@ -362,13 +362,18 @@ the current sub-category and return the minimum."
 			     `(lambda () (interactive) (superman-switch-to-project ,prev))
 			     'superman-next-project-button-face
 			     (concat "Switch to project " prev)))))
+	(insert " ")
+	(superman-view-insert-action-buttons
+	 `((,(format-time-string "%r") 'superman-redo nil "Refresh project view (R)"))
+	 t
+	 "")
 	(when prev
 	  (put-text-property 0 1 'superman-header-marker t prev-button))
 	(when next
 	  (put-text-property 0 1 'superman-header-marker t next-button))
 	(put-text-property 0 1 'superman-header-marker t all-button)
-	(insert (concat "\t\tPrev: " prev-button "\tNext: " next-button "\tAll:" all-button)))
-    (insert "\t\t" (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
+	(insert (concat "  Prev: " prev-button " Next: " next-button "\tAll:" all-button)))
+    (insert "  " (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
 (defvar superman-default-action-buttons '(("Document" superman-capture-document)
 		("Task" superman-capture-task)
@@ -475,7 +480,8 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 (defvar superman-sticky-displays
   '(("Timeline" superman-project-timeline superman-capture-button-face)
     ("Todo" superman-project-todo superman-capture-button-face)
-    ("Help" supermanual superman-capture-button-face))
+    ("Git" superman-display-git-cycle superman-capture-button-face)
+    ("Help: h" superman-ual superman-capture-button-face "Open the superman-ual"))
   "Alist of displays that are shown as action buttons for all projects.")
 
 ;;}}}
@@ -548,9 +554,13 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 		(superman-make-button
 		 unison-name 
 		 `(lambda () (interactive)
+		    ;; prevents from synchronizing
+		    ;; unsaved buffers
+		    (save-some-buffers nil t)
 		    (async-shell-command ,unison-cmd))
 		 'superman-warning-face
-		unison-name) "] "))
+		 unison-name
+		 'superman-view-delete-entry) "] "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 ;;}}}
@@ -576,7 +586,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 	      ;; (goto-char (posn-point event))
 	      ;; (message (concat (buffer-name) (int-to-string (point))))))
 
-(defun superman-make-button (string &optional fun face help)
+(defun superman-make-button (string &optional fun face help fun-3)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
  HELP is a string which is shown when the mouse over the button."
@@ -587,6 +597,17 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 		    (message
 		     "Not bound to a command"))))
     (define-key map [return] fun)
+    (when fun-3
+      (define-key map [mouse-3]
+	`(lambda ()
+	   (interactive)
+	   ;; switch to the current window/buffer
+	   (let* ((pos last-command-event)
+		  (posn (event-start pos)))
+	     (with-current-buffer (window-buffer (posn-window posn))
+	       (goto-char (posn-point posn))
+	       (message (concat (buffer-name) (int-to-string (point))))
+	       (funcall ',fun-3))))))
     (define-key map [mouse-2]
       `(lambda ()
 	 (interactive)
@@ -1148,93 +1169,109 @@ which locates the heading in the buffer."
 	  cats)))))
 
 
-(defun superman-view-project (&optional project)
-  "Display the current project in a view buffer."
+(defun superman-view-project (&optional project refresh) 
+  "Display an overview for project in a view buffer. Optional
+argument PROJECT can be the nickname of a project or the
+project element of `superman-project-alist'. If PROJECT is nil
+use `superman-current-project' and prompt if this is not set.
+
+Display an existing view buffer unless REFRESH is non-nil."
   (interactive)
   (let* ((pro (if (stringp project)
 		  (assoc project superman-project-alist)
 		(or project
 		    superman-current-project
 		    (superman-switch-to-project nil t))))
-	 (loc (superman-project-home pro))
-	 (gitp (superman-git-p loc))
-	 (vbuf (concat "*Project[" (car pro) "]*"))
-	 (index (superman-get-index pro))
-	 (ibuf (or (get-buffer index) ;; new since 11.jan.2014
-		   (get-file-buffer index)
-		   (find-file index)))
-	 (cats (delete-if
-		#'(lambda (cat)
-		    (string= "Configuration" (car cat)))
-		(superman-parse-cats ibuf 1)))
-	 ;; identify appropriate buttons
-	 (buttons
-	  (save-excursion
-	    (switch-to-buffer ibuf)
-	    (goto-char (point-min))
-	    (let ((b-string))
-	      (when (re-search-forward ":CaptureButtons:" nil t)
-		(setq b-string (superman-get-property (point) "CaptureButtons" nil))
-		(if b-string
-		    (mapcar #'(lambda (x) (split-string x "|"))
-			    (split-string (replace-regexp-in-string
-					   "[ \t]*" "" b-string) "," t)) "nil")))))
-	 (font-lock-global-modes nil)
-	 (org-startup-folded nil))
-    (switch-to-buffer vbuf)
-    (setq buffer-read-only nil)
-    (erase-buffer)
-    ;; major-mode
-    (org-mode)
-    (font-lock-mode -1)
-    ;; minor-mode
-    (superman-view-mode-on)
-    ;; (font-lock-default-function nil)
-    ;; insert header, set text-properties and highlight
-    (insert (superman-make-button
-	     (concat "Project: " (car pro))
-	     'superman-redo
-	     'superman-project-button-face
-	     "Refresh project view"))
-    ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
-    (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,(car pro)))
-    (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
-    (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
-    (put-text-property (point-at-bol) (point-at-eol) 'nickname (car pro))
-    (put-text-property (point-at-bol) (point-at-eol) 'index index)
-    ;; link to previously selected projects
-    (superman-view-insert-project-buttons)
-    (insert (superman-project-view-header pro))
-    (when gitp
-      (superman-view-insert-git-branches loc))
-    (superman-view-insert-config-buttons pro)
-    (superman-view-insert-unison-buttons pro)
-    ;; action buttons
-    (unless (and (stringp buttons) (string= buttons "nil"))
-      (superman-view-insert-action-buttons buttons))
-    ;; loop over cats
-    (goto-char (point-max))
-    (insert "\n\n")
-    (while cats
-      (superman-format-cat (car cats) ibuf vbuf loc)
-      (setq cats (cdr cats)))
-    ;; leave index buffer widened
-    (set-buffer ibuf)
-    (widen)
-    (show-all)
-    (switch-to-buffer vbuf))
-  (goto-char (point-min))
-  ;; facings
-  (save-excursion
-    (while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
-      (add-text-properties
-       (match-beginning 0) (match-end 0)
-       '(face org-link))))
-  ;; default-dir
-  (setq default-directory
-	(superman-project-home
-	 (superman-view-current-project)))
-  (setq buffer-read-only t))
+	 (vbuf (concat "*Project[" (car pro) "]*")))
+    (if (and (not refresh) (get-buffer vbuf))
+	(progn
+	  (switch-to-buffer vbuf)
+	  (let ((buffer-read-only nil))
+	    (goto-char (next-single-property-change
+			(point-min) 'nickname))
+	    (when (looking-at ".*$")
+	      (replace-match "")
+	      (superman-view-insert-project-buttons))))
+      (let* ((nick (car pro))
+	     (loc (superman-project-home pro))
+	     (gitp (superman-git-p loc))
+	     (index (superman-get-index pro))
+	     (ibuf (or (get-buffer index) ;; new since 11.jan.2014
+		       (get-file-buffer index)
+		       (find-file index)))
+	     (cats (delete-if
+		    #'(lambda (cat)
+			(string= "Configuration" (car cat)))
+		    (superman-parse-cats ibuf 1)))
+	     ;; identify appropriate buttons
+	     (buttons
+	      (save-excursion
+		(switch-to-buffer ibuf)
+		(goto-char (point-min))
+		(let ((b-string))
+		  (when (re-search-forward ":CaptureButtons:" nil t)
+		    (setq b-string (superman-get-property (point) "CaptureButtons" nil))
+		    (if b-string
+			(mapcar #'(lambda (x) (split-string x "|"))
+				(split-string (replace-regexp-in-string
+					       "[ \t]*" "" b-string) "," t)) "nil")))))
+	     (font-lock-global-modes nil)
+	     (org-startup-folded nil))
+	(set-text-properties 0 (length nick) nil nick)
+	(switch-to-buffer vbuf)
+	(setq buffer-read-only nil)
+	(erase-buffer)
+	;; major-mode
+	(org-mode)
+	(font-lock-mode -1)
+	;; minor-mode
+	(superman-view-mode-on)
+	;; (font-lock-default-function nil)
+	;; insert header, set text-properties and highlight
+	(insert (superman-make-button
+		 (concat "Project: " nick)
+		 'superman-redo
+		 'superman-project-button-face
+		 "Refresh project view"))
+	;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
+	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,nick t))
+	(put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
+	(put-text-property (point-at-bol) (point-at-eol) 'dir loc)
+	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+	(put-text-property (point-at-bol) (point-at-eol) 'index index)
+	;; link to previously selected projects
+	(superman-view-insert-project-buttons)
+	(insert (superman-project-view-header pro))
+	;; (when gitp
+	;; (superman-view-insert-git-branches loc))
+	(superman-view-insert-config-buttons pro)
+	(superman-view-insert-unison-buttons pro)
+	;; action buttons
+	(unless (and (stringp buttons) (string= buttons "nil"))
+	  (superman-view-insert-action-buttons buttons))
+	;; loop over cats
+	(goto-char (point-max))
+	(insert "\n\n")
+	(while cats
+	  (superman-format-cat (car cats) ibuf vbuf loc)
+	  (setq cats (cdr cats)))
+	;; leave index buffer widened
+	(set-buffer ibuf)
+	(widen)
+	(show-all)
+	(switch-to-buffer vbuf))
+      (goto-char (point-min))
+      ;; facings
+      (save-excursion
+	(while (or (org-activate-bracket-links (point-max)) (org-activate-plain-links (point-max)))
+	  (add-text-properties
+	   (match-beginning 0) (match-end 0)
+	   '(face org-link))))
+      ;; default-dir
+      (setq default-directory
+	    (superman-project-home
+	     (superman-view-current-project)))
+      (setq buffer-read-only t))))
 
 (defun superman-redo-cat (&optional cat)
   "Redo the current section in a superman view buffer.
@@ -1275,6 +1312,7 @@ to VIEW-BUF."
 	 (index-cat-point (cadr (assoc "point" props)))
 	 (buttons (cadr (assoc "buttons" props)))
 	 (git (assoc "git-cycle" props))
+	 (file-list (assoc "file-list" props))
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freetext" props))
 	 (hidden (assoc "hidden" props))
@@ -1315,6 +1353,24 @@ to VIEW-BUF."
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
 	    (insert text)
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))))
+     ;; file-list
+     (file-list
+      (with-current-buffer index-buf
+	(setq index-marker (point-marker)))
+      (set-buffer
+       (get-buffer-create
+	(concat "*File-list["
+		(get-text-property
+		 (point-min) 'nickname) "]*")))
+      (erase-buffer)
+      (insert "file-list-output:")
+      (insert "\n")
+      (org-mode)
+      ;; call git display cycle
+      (superman-format-file-list-display
+       view-buf file-list props
+       view-cat-head index-buf index-cat-point
+       name))
      ;; git control section
      ((and git (file-exists-p git))
       (with-current-buffer index-buf
@@ -1472,7 +1528,6 @@ to VIEW-BUF."
       (insert " [" (int-to-string count) "]\n"))
 
 ;;}}}
-
 ;;{{{ Formatting items and column names
 
 (defun superman-play-ball (thing ball &optional no-face)
@@ -1523,8 +1578,10 @@ a formatted string with faces."
 	 ;; (preserve-props (assoc "preserve" (cdr ball)))
 	 (trim-args (nconc width args))
 	 (trimmed-string
-	  (concat "  " ;; column sep
-		  (apply fun raw-string trim-args)))
+	  (concat
+	   ;; (make-string superman-column-separator (string-to-char " "))
+	   "  " ;; column sep
+	   (apply fun raw-string trim-args)))
 	 (len (length trimmed-string))
 	 (face (or (cadr (assoc "face" ball))
 		   (unless (markerp raw-string)
@@ -1583,7 +1640,7 @@ Returns the formatted string with text-properties."
   "Construct extra heading lines for project views."
   (let ((hdr  (concat "\n\n"
 		      (superman-view-others pro)
-		      (superman-view-control pro)
+		      ;; (superman-view-control pro)
 		      ;; (superman-view-branches pro)
 		      ;; "\n"
 		      ;; (superman-view-show-hot-keys)
@@ -1928,39 +1985,33 @@ current section."
   (message "can only paste in superman-view-mode")))
 
 ;;}}}
-;;{{{ Edit items
+;;{{{ Edit and delete items
 
-(defun superman-view-property-keys ()
-  "Get a list of all property keys in current section"
-  (let ((cat-point (superman-cat-point)))
-    (when cat-point
-      (save-excursion
-	(org-with-point-at (get-text-property cat-point 'org-hd-marker)
-	  (save-restriction
-	  (widen)
-	  (show-all)
-	  (org-narrow-to-subtree)
-	  ;; do not show properties of the section
-	  ;; heading
-	  (outline-next-heading)
-	  (narrow-to-region (point) (point-max))
-	  (superman-property-keys)))))))
+(defun superman-view-item ()
+  (interactive)
+  (superman-view-edit-item t))
 
-
-(defun superman-view-edit-item ()
+(defun superman-view-edit-item (&optional read-only)
   "Put item at point into capture mode"
   (interactive)
   (let* ((obuf (current-buffer))
-	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (marker
+	  (or 
+	   (get-text-property (point-at-bol) 'org-hd-marker)
+	   (get-text-property (point-at-bol) 'superman-e-marker)))
 	 (catp (get-text-property (point-at-bol) 'cat))
 	 (E-buf (generate-new-buffer-name "*Edit by SuperMan*"))
 	 (scene (current-window-configuration))
 	 (all-props (if (or (not marker) catp) nil (superman-view-property-keys)))
 	 range
-	 (title (superman-make-button (concat "Superman edit mode") nil 'superman-capture-button-face))
+	 (title)
 	 (cat-point (superman-cat-point))
-	 (free (superman-get-property (get-text-property cat-point 'org-hd-marker) "freetext"))
-	 (balls (when cat-point (get-text-property (superman-cat-point) 'balls)))
+	 (free
+	  (when cat-point
+	    (superman-get-property
+	     (get-text-property cat-point 'org-hd-marker) "freetext")))
+	 (balls (when cat-point
+		  (get-text-property (superman-cat-point) 'balls)))
 	 prop
 	 edit-point
 	 used-props)
@@ -1969,20 +2020,29 @@ current section."
     (if (not marker)
 	(if (setq marker (org-get-at-bol 'superman-e-marker))
 	    nil
-	  (message "Nothing to edit here")
-	  ;;(kill-buffer E-buf)
-	  )
+	  (message "Nothing here"))
       ;; add properties defined by balls to all-props
       (while balls
 	(when (stringp (setq prop (caar balls)))
 	  (add-to-list 'all-props prop))
 	(setq balls (cdr balls)))
       (set-buffer (marker-buffer marker))
+      ;; do not edit dynamic buffers
+      (unless (buffer-file-name)
+	(setq read-only t))
+      (setq title
+	    (superman-make-button
+	     (concat "Superman " (if read-only "view item (read-only)"  "edit") " mode")
+	     nil 'superman-capture-button-face))
       (goto-char marker)
       (widen)
       (show-all)
-      (switch-to-buffer
-       (make-indirect-buffer (marker-buffer marker) E-buf))
+      (if (not read-only)
+	  (switch-to-buffer
+	   (make-indirect-buffer (marker-buffer marker) E-buf))
+	(delete-other-windows)
+	(pop-to-buffer
+	 (make-indirect-buffer (marker-buffer marker) E-buf)))
       ;; narrow to section
       (org-narrow-to-subtree)
       ;; narrow to item
@@ -1990,7 +2050,8 @@ current section."
 		 (not catp)
 		 (outline-next-heading))
 	(narrow-to-region (point-min) (point)))
-      (delete-other-windows)
+      (unless read-only
+	(delete-other-windows))
       (org-mode)
       (font-lock-mode -1)
       (show-all)
@@ -1998,9 +2059,18 @@ current section."
       (insert title)
       (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
       (put-text-property (point-at-bol) (point-at-eol) 'type 'edit)
-      (insert "\n"
-	      "\n" (superman-make-button "Save (C-c C-c)" 'superman-clean-scene 'superman-next-project-button-face "Save edit")
-	      "\t" (superman-make-button "Cancel (C-c C-q)" 'superman-quit-scene 'superman-next-project-button-face "Cancel edit"))
+      (if read-only
+	  (insert "\n\n" (superman-make-button
+			  "Back (q)"
+			  'superman-quit-scene
+			  'superman-next-project-button-face "Back"))
+	(insert "\n\n"
+		(superman-make-button "Save (C-c C-c)"
+				      'superman-clean-scene
+				      'superman-next-project-button-face "Save edit")
+		"\t" (superman-make-button
+		      "Cancel (C-c C-q)" 'superman-quit-scene
+		      'superman-next-project-button-face "Cancel edit")))
       (insert "\n\n")
       (put-text-property (point) (point-at-eol) 'edit-point (point))
       (unless catp
@@ -2032,87 +2102,105 @@ current section."
 	(let ((diff (with-current-buffer obuf (- (point) (previous-single-property-change (point-at-eol) 'head)))))
 	  (org-end-of-meta-data-and-drawers)
 	  (forward-char diff)))
-      (superman-capture-mode))))
+      (if read-only
+	  (superman-view-item-mode)
+	(superman-capture-mode)))))
 
-;; (defun superman-view-edit-item ()
-  ;; "Put item at point into capture mode"
-  ;; (interactive)
-  ;; (let* ((marker (org-get-at-bol 'org-hd-marker))
-	 ;; (catp (org-get-at-bol 'cat))
-	 ;; (E-buf (generate-new-buffer-name "*Edit by SuperMan*"))
-	 ;; (scene (current-window-configuration))
-	 ;; (all-props (if (or (not marker) catp) nil (superman-view-property-keys)))
-	 ;; range
-	 ;; (cat-point (superman-cat-point))
-	 ;; (balls (when cat-point
-		  ;; (get-text-property (superman-cat-point) 'balls)))
-	 ;; prop
-	 ;; used-props)
-    ;; (if (not marker)
-	;; (if (setq marker (org-get-at-bol 'superman-e-marker))
-	    ;; nil
-	  ;; (message "Nothing to edit here")))
-    ;; ;; add properties defined by balls to all-props
-    ;; (when marker
-      ;; (while balls
-	;; (when (stringp (setq prop (caar balls)))
-	  ;; (add-to-list
-	   ;; 'all-props
-	   ;; prop))
-	;; (setq balls (cdr balls)))
-      ;; (set-buffer (marker-buffer marker))
-      ;; (goto-char marker)
-      ;; (widen)
-      ;; (show-all)
-      ;; (switch-to-buffer
-       ;; (make-indirect-buffer (marker-buffer marker) E-buf))
-      ;; ;; narrow to section
-      ;; (org-narrow-to-subtree)
-      ;; ;; narrow to item
-      ;; (when (and cat-point
-		 ;; (not catp)
-		 ;; (outline-next-heading))
-	;; (narrow-to-region (point-min) (point)))
-      ;; (org-mode)
-      ;; (show-all)
-      ;; (delete-other-windows)
-      ;; (goto-char (point-min))
-      ;; (put-text-property (point) (point-at-eol) 'edit-point (point))
-      ;; (insert "### Superman edit this " (if catp "section" "item")
-	      ;; "\n# C-c C-c to save "
-	      ;; "\n# C-c C-q to quit without saving"
-	      ;; "\n### ---yeah #%*^#@!--------------"
-	      ;; "\n\n")
-      ;; (goto-char (point-min))
-      ;; (put-text-property (point) (point-at-eol) 'scene scene)
-      ;; (put-text-property (point) (point-at-eol) 'type 'edit)
-      ;; (unless catp
-	;; (if (re-search-forward org-property-start-re nil t)
-	    ;; (progn
-	      ;; (setq range (org-get-property-block))
-	      ;; (goto-char (car range))
-	      ;; (while (re-search-forward
-		      ;; (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
-		      ;; (cdr range) t)
-		;; (put-text-property (point) (+ (point) 1) 'prop-marker (point))
-		;; (add-to-list 'used-props (org-match-string-no-properties 1)))
-	      ;; (goto-char (cdr range))
-	      ;; (forward-line -1)
-	      ;; (end-of-line))
-	  ;; (outline-next-heading)
-	  ;; (end-of-line)
-	  ;; (insert "\n:PROPERTIES:\n:END:\n")
-	  ;; (forward-line -2)
-	  ;; (end-of-line))
-	;; (while all-props
-	  ;; (when (not (member (car all-props) used-props))
-	    ;; (insert "\n:" (car all-props) ": ")
-	    ;; (put-text-property (- (point) 1) (point) 'prop-marker (point)))
-	  ;; (setq all-props (cdr all-props))))
-      ;; (goto-char (next-single-property-change (point-min) 'edit-point))
-      ;; (end-of-line)
-      ;; (superman-capture-mode))))
+(defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
+  "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
 
+If the entry is found in a buffer which is not associated with a
+file-name, e.g., a temporary *Git control* buffer, then the entry is
+removed without prompt, no matter the value of DONT-PROMT.
+
+Kill the line of the view-buffer unless DONT-KILL-LINE is non-nil.
+
+If there is a file-name property at the entry, prompt
+the user if this should be removed as well.
+
+The value is non-nil unless the user regretted and the entry is not deleted.
+"
+  (interactive)
+  (if (or (previous-single-property-change (point-at-bol) 'cat)
+	  (get-text-property (point) 'cat))
+      ;; inside section
+      (let* ((marker (org-get-at-bol 'org-hd-marker))
+	     (scene (current-window-configuration))
+	     (file (superman-filename-at-point t))
+	     (git-p
+	      (when file
+		(let* ((status (superman-git-XY-status file))
+		       (xy (concat (nth 1 status) (nth 2 status))))
+		  (if (or (string= xy "") (string= xy "??")) nil t))))
+	     (regret nil))
+	(unless dont-prompt
+	  (superman-view-index)
+	  (when (buffer-file-name)
+	    (org-narrow-to-subtree)
+	    (setq regret (not (yes-or-no-p "Delete this entry? ")))))
+	(set-window-configuration scene)
+	(unless regret
+	  (when marker
+	    (save-excursion
+	      (org-with-point-at marker (org-cut-subtree))))
+	  (when file
+	    (unless (setq regret
+			  (not (yes-or-no-p
+				(concat (if git-p "Call git rm " "Delete file ")
+					(file-name-nondirectory file) "? "))))
+	      (if git-p
+		  (superman-run-cmd (concat
+				     "cd "
+				     (file-name-directory file)
+				     ";"
+				     superman-cmd-git " rm -f "
+				     (file-name-nondirectory file))
+				    "*Superman-returns*")
+		(when (file-exists-p file)
+		  (delete-file file))))))
+	(unless dont-kill-line
+	  (let ((buffer-read-only nil))
+	    (beginning-of-line)
+	    (kill-line)))
+	;; (superman-view-redo-line))
+	(not regret))
+    ;; inside header
+    (if (get-text-property (point-at-bol) 'superman-e-marker)
+	(superman-view-edit-item))))
+
+(defun superman-view-delete-marked (&optional dont-prompt)
+  (interactive)
+  (let ((beg (previous-single-property-change (point) 'cat))
+	(buffer-read-only nil)
+	(end (or (next-single-property-change (point) 'cat)
+		 (point-max))))
+    (narrow-to-region beg end)
+    (when (yes-or-no-p "Delete all the marked entries in this section? ")
+      (superman-loop 'superman-view-delete-entry '(t t) beg end 'marked)
+      (widen)
+      (superman-redo))))
+
+(defun superman-view-help ()
+  "Raise help window"
+  (interactive)
+  (let ((h-buf (get-buffer "*Superman-view-help*")))
+    (if h-buf (pop-to-buffer h-buf)
+      (pop-to-buffer "*Superman-view-help*")
+      (let ((buffer-read-only nil))
+	(insert "Key-bindings: (q: close this help window)\n\n"
+		"e: edit item; v: view item; g: git repository\n"
+		"t: toggle todo status; RETURN: visit file or item\n"
+		"N: Capture new item"))
+      (setq buffer-read-only t))
+      (other-window 1)))
+
+(defun superman-view-quit-help ()
+  "Close help window."
+  (interactive)
+  (let ((h-win
+	 (get-buffer-window "*Superman-view-help*" (selected-frame))))
+    (when h-win (delete-window h-win))))
+  
 ;;}}}
 ;;{{{ Switch between projects
 
@@ -2144,7 +2232,7 @@ current section."
   (superman-next-project t))
 
 ;;}}}
-;;{{{ View commands including redo 
+;;{{{ Redo and refresh 
 
 (defun superman-redo ()
   "Refresh project view."
@@ -2194,9 +2282,29 @@ current section."
 	(beginning-of-line)))))
 
 
+;;}}}
+;;{{{ helper functions
+
+(defun superman-view-property-keys ()
+  "Get a list of all property keys in current section"
+  (let ((cat-point (superman-cat-point)))
+    (when cat-point
+      (save-excursion
+	(org-with-point-at (get-text-property cat-point 'org-hd-marker)
+	  (save-restriction
+	  (widen)
+	  (show-all)
+	  (org-narrow-to-subtree)
+	  ;; do not show properties of the section
+	  ;; heading
+	  (outline-next-heading)
+	  (narrow-to-region (point) (point-max))
+	  (superman-property-keys)))))))
+
 (defun superman-view-toggle-todo ()
   (interactive)
-  (let ((marker (org-get-at-bol 'org-hd-marker)))
+  (let ((marker (get-text-property (point-at-bol) 'superman-item-marker)))
+	;;(marker (org-get-at-bol 'org-hd-marker)))
     (when marker
       (save-excursion
 	(org-with-point-at marker
@@ -2207,7 +2315,8 @@ current section."
 
 (defun superman-view-priority-up ()
   (interactive)
-  (let ((marker (org-get-at-bol 'org-hd-marker)))
+  (let ((marker (get-text-property (point-at-bol) 'superman-item-marker)))
+	;; (marker (org-get-at-bol 'org-hd-marker)))
     (when marker
       (save-excursion
 	(org-with-point-at marker
@@ -2217,15 +2326,14 @@ current section."
 
 (defun superman-view-priority-down ()
   (interactive)
-  (let ((marker (org-get-at-bol 'org-hd-marker)))
+  (let ((marker (get-text-property (point-at-bol) 'superman-item-marker)))
+	;; (marker (org-get-at-bol 'org-hd-marker)))
     (when marker
       (save-excursion
 	(org-with-point-at marker
 	  (org-priority-down)
 	  (save-buffer)))
       (superman-view-redo-line marker))))
-
-
 
 (defun superman-next-entry ()
   (interactive)
@@ -2244,90 +2352,11 @@ current section."
   (forward-line -1)
   (superman-choose-entry))
 
-(defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
-  "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
-
-If the entry is found in a buffer which is not associated with a
-file-name, e.g., a temporary *Git control* buffer, then the entry is
-removed without prompt, no matter the value of DONT-PROMT.
-
-Kill the line of the view-buffer unless DONT-KILL-LINE is non-nil.
-
-If there is a file-name property at the entry, prompt
-the user if this should be removed as well.
-
-The value is non-nil unless the user regretted and the entry is not deleted.
-"
-  (interactive)
-  (when (or (previous-single-property-change (point-at-bol) 'cat)
-	    (get-text-property (point) 'cat))
-    (let* ((marker (org-get-at-bol 'org-hd-marker))
-	   (scene (current-window-configuration))
-	   (file (superman-filename-at-point t))
-	   (git-p
-	    (when file
-	      (let* ((status (superman-git-XY-status file))
-		     (xy (concat (nth 1 status) (nth 2 status))))
-		(if (or (string= xy "") (string= xy "??")) nil t))))
-	   (regret nil))
-      (unless dont-prompt
-	(superman-view-index)
-	(when (buffer-file-name)
-	  (org-narrow-to-subtree)
-	  (setq regret (not (yes-or-no-p "Delete this entry? ")))))
-      (set-window-configuration scene)
-      (unless regret
-	(when marker
-	  (save-excursion
-	    (org-with-point-at marker (org-cut-subtree))))
-	(when file
-	  (unless (setq regret
-			(not (yes-or-no-p
-			      (concat (if git-p "Call git rm " "Delete file ")
-				      (file-name-nondirectory file) "? "))))
-	    (if git-p
-		(superman-run-cmd (concat
-				   "cd "
-				   (file-name-directory file)
-				   ";"
-				   superman-cmd-git " rm -f "
-				   (file-name-nondirectory file))
-				  "*Superman-returns*")
-	      (when (file-exists-p file)
-		(delete-file file))))))
-      (unless dont-kill-line
-	(let ((buffer-read-only nil))
-	  (beginning-of-line)
-	  (kill-line)))
-	;; (superman-view-redo-line))
-      (not regret))))
-
-(defun superman-view-delete-marked (&optional dont-prompt)
-  (interactive)
-  (let ((beg (previous-single-property-change (point) 'cat))
-	(buffer-read-only nil)
-	(end (or (next-single-property-change (point) 'cat)
-		 (point-max))))
-    (narrow-to-region beg end)
-    (when (yes-or-no-p "Delete all the marked entries in this section? ")
-      (superman-loop 'superman-view-delete-entry '(t t) beg end 'marked)
-      (widen)
-      (superman-redo))))
-
-(defun superman-view-file-list ()
-  (interactive)
-  (let ((pro (superman-view-current-project)))
-    (split-window-vertically)
-    (other-window 1)
-    (superman-file-list pro)))
-
-
 (defun superman-view-filter ()
   (interactive)
   (if (fboundp 'helm-occur)
       (helm-occur)
     (occur)))
-  
 
 (defun superman-view-dired ()
   (interactive)
@@ -2403,7 +2432,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
       (when ibuf (set-buffer ibuf)
 	    (save-buffer)))))
 
-
+;;}}}
 ;;{{{ property and filename at point
 
 (defun superman-property-at-point (prop noerror)
@@ -2443,9 +2472,6 @@ if it exists and add text-property org-hd-marker."
 			 (org-get-at-bol 'org-hd-marker) filename)
       filename)))
 ;;}}}
-
-
-
 ;;{{{ View-mode and hot-keys
 
 (defvar superman-view-mode-map (make-sparse-keymap)
@@ -2522,8 +2548,13 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "m" 'superman-toggle-mark)
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
+(define-key superman-view-mode-map "q" 'superman-view-quit-help)
+(define-key superman-view-mode-map "h" 'superman-view-help)
+(define-key superman-view-mode-map "H" 'superman-ual)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
+(define-key superman-view-mode-map "-" 'superman-view-delete-entry)
+(define-key superman-view-mode-map "+" 'superman-capture-item)
 (define-key superman-view-mode-map "X" 'superman-view-delete-marked)
 (define-key superman-view-mode-map "N" 'superman-new-item)
 (define-key superman-view-mode-map "Q" 'superman-unison)
@@ -2537,8 +2568,11 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "Bx" 'superman-delete-ball)
 (define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
+;; view context
+(define-key superman-view-mode-map "V" 'superman-toggle-context-view)
+(define-key superman-view-mode-map "v" 'superman-view-item)
 ;; Git control
-(define-key superman-view-mode-map "gg" 'superman-display-git-cycle)
+(define-key superman-view-mode-map "g" 'superman-display-git-cycle)
 (define-key superman-view-mode-map "G " 'superman-git-last-log-file)
 (define-key superman-view-mode-map "Ga" 'superman-git-annotate)
 (define-key superman-view-mode-map "Gx" 'superman-git-delete-file)
@@ -2615,6 +2649,80 @@ not in a section prompt for section first.
 	 `("Item" ,props))))))
 
 ;;}}}
+;;{{{ View-item-mode
+
+(defvar superman-view-item-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-view-mode' commands.")
+(define-key superman-view-item-mode-map  "q" 'superman-quit-scene)
+(define-key superman-view-item-mode-map  "\C-c\C-q" 'superman-quit-scene)
+
+(define-minor-mode superman-view-item-mode
+  "Toggle superman view item mode.
+With argument ARG turn superman-view-item-mode on if ARG is positive, otherwise
+turn it off."
+  :lighter " *S*-View-item"
+  :group 'org
+  :keymap 'superman-view-item-mode-map
+  (setq buffer-read-only t))
+
+(defun superman-view-item-mode-on ()
+  (interactive)
+  (superman-view-item-mode t))
+
+(defun superman-view-show-item-context (n)
+  (let ((context
+	 (org-with-point-at (org-get-at-bol 'org-hd-marker)
+	   ;; (org-end-of-meta-data-and-drawers)
+	   (let* ((beg (point))
+		  (end (progn (forward-line n)
+			      (skip-chars-backward "\n\t ")
+			      (point))))
+	     (buffer-substring-no-properties beg end)))))
+  (when (length context)
+    (put-text-property 0 1 'item-head t context)
+    (put-text-property (length context) (- (length context) 1) 'item-tail t context)
+    (end-of-line)
+    (insert "\n" context))))
+
+(defun superman-view-show-context (&optional n-lines)
+  "Show the first N-LINES (default is 5) lines of all items in current section."
+  (interactive "p")
+  (put-text-property (point-min) (1+ (point-min)) 'view-item-heads t)
+  (let* ((start (or (superman-cat-point) (error "Not in category")))
+	 (stop (next-single-property-change start 'tail))
+	 (buffer-read-only nil)
+	 (n-lines (or n-lines 5)))
+    (superman-loop 'superman-view-show-item-context (list n-lines)
+		   start stop nil)))
+
+(defun superman-toggle-context-view (&optional n-lines)
+  "Either insert or remove the context lines
+for the item at point or for all items in the current category."
+  (interactive "p")
+  (let ((buffer-read-only nil))
+    (if (get-text-property (point-min) 'view-item-heads)
+	(superman-view-remove-context)
+      (superman-view-show-context n-lines))))
+
+(defun superman-view-remove-context ()
+  (interactive)
+  "Remove context by refreshing the whole display"
+  (goto-char (or (superman-cat-point) (point-min)))
+  (superman-redo))
+  ;; (goto-char (or (previous-single-property-change (point) 'item-head) (point-min)))
+  ;; (let* ((buffer-read-only nil)
+	 ;; (current-head (- (next-single-property-change (point) 'item-head) 1))
+	 ;; (current-tail (next-single-property-change (point) 'item-tail)))
+    ;; (while (and current-head current-tail)
+      ;; (delete-region current-head current-tail)
+      ;; (setq current-head
+	    ;; (when (next-single-property-change current-head 'item-head) 
+	      ;; (- (next-single-property-change current-head 'item-head) 1)))
+      ;; (setq current-tail
+	    ;; (when current-head
+	      ;; (next-single-property-change current-head 'item-tail))))))
+					
+;;}}}
 ;;{{{ easy menu
 
 (require 'easymenu)
@@ -2658,7 +2766,7 @@ not in a section prompt for section first.
      ["Move column left" superman-one-left t]
      ["Move column right" superman-one-right t])
     ["Shell" superman-goto-shell t]
-    ["Unison" superman-unison t]))
+    ["Unison" superman-run-unison t]))
 
 ;;}}}
 
