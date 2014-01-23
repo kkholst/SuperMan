@@ -746,6 +746,7 @@ This function should be bound to a key or button."
 	(if gbuf (switch-to-buffer ibuf)
 	  (get-buffer-create ibuf)
 	  (switch-to-buffer ibuf))
+	(setq buffer-read-only t)
 	(let ((buffer-read-only nil))
 	  (if (get-text-property (point-min) 'git-display)
 	      nil ;; buffer already showing git-display
@@ -777,8 +778,7 @@ This function should be bound to a key or button."
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'org-hd-marker index-marker)
 	    ;; (superman-redo-cat props)
-	    (superman-redo-cat)
-	    (setq buffer-read-only t)))))))
+	    (superman-redo-cat)))))))
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."

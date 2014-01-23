@@ -215,23 +215,6 @@ given in superman notation."
     (find-file index)))
 
 
-(defun superman-file-list (project &optional ext)
-  "List files in project's location that match extension EXT"
-  (if (featurep 'file-list)
-      (let ((loc (concat (superman-get-location project) (car project))))
-	(cond ((file-list-select-internal nil (or ext ".")
-					  nil nil loc (concat "*File-list-" (car project) "*")))
-	      (t
-	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
-	       (toggle-read-only -1)
-	       (erase-buffer)
-	       (insert "FILE-LIST: No files in project"))))
-    (error "file-list.el not loaded.")))
-
-
-(defun superman-magit (project)
-  (magit-status (concat (superman-get-location project) (car project))))
-
 (defun superman-location (project)
   (let ((loc (concat (superman-get-location project) (car project))))
     (find-file loc)))

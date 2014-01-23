@@ -228,12 +228,12 @@ Default is to set the old window configuration.
     (run-hooks 'superman-setup-scene-hook)))
 
 (define-minor-mode superman-capture-mode
-"Toggle superman capture mode.
-With argument ARG turn superman-doccapture-mode on if ARG is positive, otherwise
+  "Toggle superman capture mode.
+With argument ARG turn superman-capture-mode on if ARG is positive, otherwise
 turn it off."
-:lighter " *S*-Capture"
-:group 'org
-     :keymap 'superman-capture-mode-map)
+  :lighter " *S*-Capture"
+  :group 'org
+  :keymap 'superman-capture-mode-map)
 
 (defun superman-capture-mode-on ()
   (interactive)
@@ -289,22 +289,28 @@ turn it off."
     (when (or superman-view-mode superman-mode) (superman-redo))))
 
 (defun superman-quit-scene ()
+  "Clean indirect buffer used by `superman-capture'
+or `superman-view-edit-item' and restore the
+window-configuration saved in text-property scene at
+point-min.
+
+If a file is associated with the current-buffer save it.
+"
   (interactive)
   (let ((scene (get-text-property (point-min) 'scene))
-	(type (get-text-property (point-min) 'type)))
+	(type (get-text-property (point-min) 'type))
+	(buffer-read-only nil))
     (cond ((eq type 'capture)
 	   (delete-region (point-min) (point-max)))
-	  ;; ((eq type 'edit)
-	   ;; (delete-region (point-min) (
-	   (t (goto-char (point-min))
+	  (t (goto-char (point-min))
 	     (outline-next-heading)
 	     (delete-region (point-min) (point))))
-    (save-buffer)
+    (when (buffer-file-name)
+      (save-buffer))
     (kill-buffer (current-buffer))
     (when (window-configuration-p scene)
       (set-window-configuration scene))))
 
-;; (superman-capture-internal superman-current-project "Notes" '("Note" (("a" "b"))))
 
 ;;}}}
 ;;{{{ capture documents, notes, etc.
@@ -566,7 +572,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		  ("Location" nil)
 		  ,(when superman-google-default-calendar
 		     `("GoogleCalendar" ,superman-google-default-calendar))
-		  ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>"))
+		  ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
 		  ('fun 'org-todo))))))
 
 ;;}}}
@@ -584,44 +590,29 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
      "Configuration"
      `("Unison" (("UNISON" "superman-unison-cmd")
 		 ;; (hdr "CHANGEME")
+		 ("SWITCHES" "-ignore 'Name .git'")
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
 
-(defun superman-unison (&optional project)
+(defun superman-run-unison (&optional project)
   (interactive)
   (save-excursion
     (save-restriction
-      (let ((pro (or project
-		     superman-current-project
-		     (superman-switch-to-project nil t)))
-	    cmd)
+      (let* ((pro (or project
+		      superman-current-project
+		      (superman-switch-to-project nil t)))
+	     (unison-list (superman-view-read-unison pro))
+	     (ulen (length unison-list)))
 	;; prevent synchronizing unsaved buffers
 	(save-some-buffers nil t)
-	(superman-goto-project pro "Configuration" 'create nil nil nil)
-	(org-narrow-to-subtree)
-	(goto-char (point-min))
-	(if (re-search-forward ":UNISON:" nil t)
-	    (progn
-	      (setq cmd
-		    (concat
-		     (superman-get-property (point) "UNISON")
-		     " "
-		     (superman-get-property (point) "ROOT-1")
-		     " "
-		     (superman-get-property (point) "ROOT-2")
-		     " "
-		     (if (string= (superman-get-property (point) "SWITCHES") "default")
-			 superman-unison-switches
-		       (superman-get-property (point) "SWITCHES"))))
-	      (superman-goto-shell)
-	      (insert cmd)
-	      (insert "&")
-	      (comint-send-input))
-	  (when (y-or-n-p (concat "No unison configuration found for project "
-				(car pro)
-				". Create one? "))
-	      (superman-capture-unison pro)))))))
+	(cond ((= ulen 1)
+	       (async-shell-command (cdar unison-list)))
+	      ((> ulen 1)
+	       (let ((u (completing-read
+			 "Choose unison command: " unison-list)))
+		 (when u (async-shell-command
+			  (cdr (assoc u unison-list)))))))))))
 
 ;;}}}
 ;;{{{ capture mails
@@ -644,15 +635,15 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (error "Can only capture mails from either gnus-article or gnus-summary buffers"))
   ;; activate the connection with summary
   (when (eq major-mode 'gnus-article-mode)
-      (gnus-article-show-summary))
+    (gnus-article-show-summary))
   (gnus-summary-select-article-buffer)
   (unless (use-region-p)
     (mark-whole-buffer))
   (let* ((buf (current-buffer))
 	 (link (org-store-link 1))
 	 (entry (or project
-		   superman-view-current-project
-		   (superman-select-project)))
+		    superman-view-current-project
+		    (superman-select-project)))
 	 (pro (car entry))
 	 (loc (superman-get-location entry))
 	 (index (superman-get-index entry))

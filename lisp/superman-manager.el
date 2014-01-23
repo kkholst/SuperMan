@@ -50,6 +50,7 @@
 (require 'superman-pub)      ;; publication manager
 (require 'superman-google)   ;; google calendar support
 (require 'superman-faces)    ;; highlighting
+(require 'superman-file-list)    ;; highlighting
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
@@ -127,7 +128,7 @@ category: Name of the category property
   (concat (file-name-as-directory superman-home) "Projects.org")
   "File for managing projects.")
 
-(defvar supermanual
+(defvar superman-ual
   (expand-file-name
    (concat
     (file-name-directory (locate-library "superman"))
