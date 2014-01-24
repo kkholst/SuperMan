@@ -471,12 +471,16 @@ given by the filename property of the item at point."
   (interactive)
   (let* 
       ((dir (get-text-property (point-min) 'git-dir))
-       (filename (expand-file-name (superman-filename-at-point)))
-       (file (replace-regexp-in-string (concat dir "/") "" filename)))
-    (append-to-file (concat file "\n") nil (concat dir "/.gitignore")))
-    (let ((buffer-read-only nil))
-      (beginning-of-line)
-      (kill-whole-line)))
+       (filename (superman-filename-at-point 'no-error))
+       (gitignore (concat dir "/.gitignore")))
+    (if filename
+	(progn
+	  (append-to-file (concat  (replace-regexp-in-string (concat dir "/") "" (expand-file-name filename)) "\n") nil gitignore)
+	  (let ((buffer-read-only nil))
+	    (beginning-of-line)
+	    (kill-whole-line)))
+      (find-file gitignore)
+      )))
 
 (defun superman-git-delete-file ()
   "Delete the file at point by calling `git rm'."
@@ -1123,7 +1127,6 @@ repository of PROJECT which is located at DIR."
 	   'superman-git-toggle-show-ignored
 	   'superman-capture-button-face
 	   "Toggle show/hide ignored"))))
-	   
 
 ;;}}}
 ;;
@@ -1161,6 +1164,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 ;;}}}
 
 ;;{{{ superman-git-keyboard
+
 (defun superman-make-git-keyboard (f &rest args)
   (if (string-match org-bracket-link-regexp f)
       (let ((diff (superman-make-button "d"
@@ -1195,6 +1199,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	(concat diff " " log  " " add  " " delete " " reset " " commit " " ignore " " " "))
     ;; for the column name
     (superman-trim-string f (car args))))
+
 ;;}}}
 ;;
 ;;{{{ git search and history
