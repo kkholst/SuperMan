@@ -354,7 +354,7 @@
 (defun superman-calendar (&optional project)
   "Show events from all projects in a calendar view."
   (interactive)
-  (let ((org-agenda-buffer-name (concat "*SuperMan-Calendar*"))
+  (let ((org-agenda-buffer-name "*SuperMan-Calendar*")
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
@@ -365,6 +365,8 @@
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates t)
 		    (org-agenda-span 7)
+		    (org-agenda-buffer-name "*SuperMan-Calendar*")
+		    (org-agenda-this-buffer-name "*SuperMan-Calendar*")
 		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-finalize-hook
 		     'superman-add-appointments)
@@ -399,7 +401,7 @@
   "Similar to `superman-calendar' but does not show
 all dates."
   (interactive)
-  (let ((org-agenda-buffer-name (concat "*S-agenda*"))
+  (let ((org-agenda-buffer-name "*SuperMan-Agenda*")
 	(org-agenda-sticky nil)
 	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
@@ -408,6 +410,8 @@ all dates."
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
 		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-buffer-name "*SuperMan-Agenda*")
+		    (org-agenda-this-buffer-name "*SuperMan-Agenda*")
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
 			     "  "
@@ -666,6 +670,7 @@ Enabling superman mode electrifies the superman buffer for project management."
        "View-S:")
       (insert "\n\n" (superman-column-names balls))
       (superman-view-mode-on) ;; minor mode
+      ;; (setq org-agenda-this-buffer-name org-agenda-buffer-name)
       (while (ignore-errors
 	       ;; (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
@@ -692,7 +697,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
       (goto-char (next-single-property-change (point-min) 'face))
       (insert " [" (int-to-string count) "]"))))
-    ;; (superman-clean-buffer-list agenda-buffers)))
+;; (superman-clean-buffer-list agenda-buffers)))
 
 ;; (defun superman-clean-buffer-list (list)
   ;; "Kill all buffers associated in LIST. This

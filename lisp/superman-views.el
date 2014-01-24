@@ -2615,38 +2615,40 @@ If non exists create a new item based on balls and properties in current section
 not in a section prompt for section first.
 "
   (interactive)
-  (let* ((pro (or (superman-view-current-project t)
-		  (superman-select-project)))
-	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
-	 (cat (or (superman-current-cat)
-		  (completing-read
-		   (concat "Choose category for new item in project " (car  pro) ": ")
-		   (append
-		    superman-capture-alist
-		    (superman-parse-cats
-		     (get-file-buffer
-		      (superman-get-index pro)) 1)))))
-	 (fun (assoc cat superman-capture-alist)))
-    (unless superman-view-mode
-      (superman-view-project pro)
+  (if superman-view-mode
+    (let* ((pro (when superman-view-mode (superman-view-current-project t)))
+	   (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	   (cat (or (superman-current-cat)
+		    (completing-read
+		     (concat "Choose category for new item in project " (car  pro) ": ")
+		     (append
+		      superman-capture-alist
+		      (superman-parse-cats
+		       (get-file-buffer
+			(superman-get-index pro)) 1)))))
+	   (fun (if cat (assoc cat superman-capture-alist))))
       (goto-char (point-min))
-      (re-search-forward cat nil t))
-    (if fun (funcall (cadr fun) pro)
-      (let* ((props (mapcar #'(lambda (x) (list x nil))
-			    (superman-view-property-keys)))
-	     (file (if (assoc "FileName" props)
-		       (let ((dir (expand-file-name (concat (superman-get-location pro) (car pro)))))
-			 (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))))
-	(unless props
-	  (setq props `(("CaptureDate" ,(format-time-string "<%Y-%m-%d %a %R>")))))
-	(when file
-	  (setq props (delete (assoc "FileName" props) props))
-	  (setq props (append `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]")))
-			      props)))
-	(superman-capture-internal
-	 pro
-	 (or marker cat)
-	 `("Item" ,props))))))
+      (re-search-forward cat nil t)
+      (if fun (funcall (cadr fun) pro)
+	(let* ((props (mapcar #'(lambda (x) (list x nil))
+			      (superman-view-property-keys)))
+	       (file (if (assoc "FileName" props)
+			 (let ((dir (expand-file-name (concat (superman-get-location pro) (car pro)))))
+			   (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))))
+	  (unless props
+	    (setq props `(("CaptureDate" ,(format-time-string "<%Y-%m-%d %a %R>")))))
+	  (when file
+	    (setq props (delete (assoc "FileName" props) props))
+	    (setq props (append `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]")))
+				props)))
+	  (superman-capture-internal
+	   pro
+	   (or marker cat)
+	   `("Item" ,props)))))
+    (let ((c-buf (get-buffer "*Superman-Capture*")))
+      (if c-buf (pop-to-buffer c-buf)
+	(pop-to-buffer "*Superman-Capture*")
+	(superman-view-insert-action-buttons)))))
 
 ;;}}}
 ;;{{{ View-item-mode
