@@ -606,7 +606,8 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 		  (posn (event-start pos)))
 	     (with-current-buffer (window-buffer (posn-window posn))
 	       (goto-char (posn-point posn))
-	       (message (concat (buffer-name) (int-to-string (point))))
+	       ;; to see where we are:
+	       ;; (message (concat (buffer-name) (int-to-string (point))))
 	       (funcall ',fun-3))))))
     (define-key map [mouse-2]
       `(lambda ()
@@ -616,7 +617,8 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 		(posn (event-start pos)))
 	   (with-current-buffer (window-buffer (posn-window posn))
 	     (goto-char (posn-point posn))
-	     (message (concat (buffer-name) (int-to-string (point))))
+	     ;; to see where we are:
+	     ;; (message (concat (buffer-name) (int-to-string (point))))
 	     (funcall ',fun)))))
     (add-text-properties
      0 (length string) 
@@ -1533,43 +1535,44 @@ to VIEW-BUF."
 (defun superman-play-ball (thing ball &optional no-face)
   "Play BALL at THING which is a marker or an alist and return
 a formatted string with faces."
-  (let* ((raw-string
+  (let* ((object (car ball))
+	 (raw-string
 	  (cond ((markerp thing)
 		 ;; thing is marker
-		 (cond ((stringp (car ball)) ;; properties
+		 (cond ((stringp object) ;; properties
 			(if (assoc "regexp" ball)
-			    (superman-get-matching-property thing (car ball) t)
-			  (superman-get-property thing (car ball) t)))
+			    (superman-get-matching-property thing object t)
+			  (superman-get-property thing object t)))
 		       ;; important:
 		       ;; when introducing new special things 
 		       ;; also adapt superman-distangle-ball
-		       ((eq (car ball) 'org-hd-marker) ;; special: marker
+		       ((eq object 'org-hd-marker) ;; special: marker
 			thing)
-		       ((eq (car ball) 'hdr) ;; special: header
+		       ((eq object 'hdr) ;; special: header
 			(org-with-point-at thing 
 			  (org-back-to-heading t)
 			  (looking-at org-complex-heading-regexp)
 			  (match-string 4)))
-		       ((eq (car ball) 'todo) ;; special: todo state
+		       ((eq object 'todo) ;; special: todo state
 			(org-with-point-at thing 
 			  (org-back-to-heading t)
 			  (and (looking-at org-todo-line-regexp)
 			       (match-end 2) (match-string 2))))
-		       ((eq (car ball) 'priority) ;; special: priority
+		       ((eq object 'priority) ;; special: priority
 			(org-with-point-at thing 
 			  (org-back-to-heading t)
 			  (looking-at org-complex-heading-regexp)
 			  (match-string 3)))
-		       ((eq (car ball) 'attac) ;; special: attachment
+		       ((eq object 'attac) ;; special: attachment
 			nil)
-		       ((eq (car ball) 'index) ;; special: index filename
+		       ((eq object 'index) ;; special: index filename
 			(file-name-sans-extension
 			 (file-name-nondirectory
 			  (buffer-file-name (current-buffer)))))
 		       (t "--")))
 		((stringp thing) thing)
 		;; thing is alist
-		((listp thing) (cdr (assoc (car ball) (cadr thing))))
+		((listp thing) (cdr (assoc object (cadr thing))))
 		(t "--")))
 	 (raw-string (if (or (not raw-string) (eq raw-string "")) "--" raw-string))
 	 (fun (or (cadr (assoc "fun" (cdr ball))) 'superman-trim-string))

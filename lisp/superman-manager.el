@@ -318,7 +318,7 @@ the `superman-profile'.")
   "Read property and remove trailing whitespace."
   (let* ((case-fold-search t)
 	 (prop
-	 (if (not (markerp pom))
+	 (if (not (markerp pom));; pom is a point
 	     (org-entry-get pom property inherit literal-nil)
 	   (if (marker-buffer pom)
 	       ;;FIXME: maybe the following widen is unnecessary?
@@ -399,7 +399,7 @@ we find the `supermanual' and other helpful materials.")
 				   (cons "publish-directory" publish-dir))))))
       superman-project-alist))) 
 
-(defun superman-create-temporary-project ()
+(defun superman-view-directory ()
   (interactive)
   (let* ((dir (read-directory-name "Create temporary project for directory: "))
 	 (name
@@ -421,7 +421,9 @@ we find the `supermanual' and other helpful materials.")
 			     (cons "config" nil)
 			     (cons 'todo nil)
 			     (cons "publish-directory" nil))))
-    (superman-view-project (assoc name superman-project-alist))))
+    (superman-view-project (assoc name superman-project-alist))
+    (if (superman-git-p dir) (superman-display-git-cycle)
+      (superman-display-file-list))))
 	 
 
 (defun superman-parse-project-categories ()
