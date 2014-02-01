@@ -50,7 +50,7 @@
 (require 'superman-pub)      ;; publication manager
 (require 'superman-google)   ;; google calendar support
 (require 'superman-faces)    ;; highlighting
-(require 'superman-file-list)    ;; highlighting
+(require 'superman-file-list)         ;; work with lists of files 
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 

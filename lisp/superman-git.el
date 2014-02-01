@@ -1115,6 +1115,7 @@ repository of PROJECT which is located at DIR."
 (make-variable-buffer-local 'superman-git-show-ignored)
 
 (defun superman-git-toggle-show-ignored ()
+  (interactive)
   (setq superman-git-show-ignored (not superman-git-show-ignored))
   (superman-redo))
 
