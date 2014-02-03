@@ -132,10 +132,10 @@
   :type '(repeat regexp)
   :group 'file-list)
 
-(defcustom file-list-exclude-dirs `(list (cons ,(expand-file-name "~") "\\\.[a-zA-Z]"))
+(defcustom file-list-exclude-dirs (list (cons (expand-file-name "~") "\\\.[a-zA-Z]"))
   "String matching directories that should be excluded below file-list-home-directory"
- :type 'alist
- :group 'file-list)
+  :type 'alist
+  :group 'file-list)
 
 (defcustom file-list-exclude-dir-regexp nil
   "Alist where each car is a regexp to be matched against directory-names
