@@ -770,7 +770,7 @@ Changes the file-list-current-file-list. See also file-list-add."
 	   file-list (or test regexp) filter-name inverse)))
     (unless (stringp sub-file-list)
       (unless dont-display
-	(if file-list-completion-mode
+	(if (or (not file-list-mode) file-list-completion-mode)
 	    (file-list-display-match-list sub-file-list filter-name display-buffer)
 	  (superman-display-file-list
 	   nil
@@ -1316,10 +1316,7 @@ Switches to the corresponding directory of each file."
 
 (defun file-list-attributes (&optional file-list nodisplay)
   (interactive)
-  (let (
-	;; (gc-cons-threshold file-list-gc-cons-threshold)
-;	(file-list-display-level 2)
-	(file-list (file-list-select-existing-files
+  (let ((file-list (file-list-select-existing-files
 		    (or file-list file-list-current-file-list))))
     (setq file-list-current-file-list
 	  (mapcar
@@ -1359,7 +1356,8 @@ Switches to the corresponding directory of each file."
 	   file-list))
     (unless nodisplay
       (setq file-list-display-level 2)
-      (file-list-display-match-list file-list-current-file-list)))
+      (file-list-display-match-list
+       file-list-current-file-list)))
   file-list-current-file-list)
 
 (defun file-list-convert-bytes (int)

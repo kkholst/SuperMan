@@ -34,7 +34,7 @@
 	;; old-style file-list display 
 	(progn
 	  (split-window-vertically)
-	  (other-window 1)
+	  (other-window 1p)
 	  (superman-file-list pro))
       (superman-display-file-list dir))))
 
@@ -319,7 +319,8 @@ Sets the value of file-list-current-file-list in display-buffer."
 (defun file-list-display-match-list (&optional file-list match-info display-buffer)
   "This function shows file-list in display-buffer.
 Sets the value of file-list-current-file-list in display-buffer."
-  (if file-list-mode (superman-display-file-list nil)
+  (if (and file-list-mode (not file-list-completion-mode))
+      (superman-display-file-list nil)
     (let ((file-list (or file-list file-list-current-file-list))
 	  (display-buffer (or display-buffer
 			      (file-list-current-display-buffer)
