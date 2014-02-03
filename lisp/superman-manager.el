@@ -50,7 +50,7 @@
 (require 'superman-pub)      ;; publication manager
 (require 'superman-google)   ;; google calendar support
 (require 'superman-faces)    ;; highlighting
-(require 'superman-file-list)    ;; highlighting
+(require 'superman-file-list)         ;; work with lists of files 
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
@@ -402,11 +402,9 @@ we find the `supermanual' and other helpful materials.")
 (defun superman-view-directory ()
   (interactive)
   (let* ((dir (read-directory-name "Create temporary project for directory: "))
-	 (name
-	  (concat "*"
-		  (file-name-nondirectory (substring-no-properties dir 0 (length dir)))
-		  "*"))
+	 (name (file-name-nondirectory (replace-regexp-in-string "/$" "" dir)))
 	 (index-buffer (get-buffer-create (concat "*Superman-" name "*.org"))))
+    (set-text-properties 0 (length name) nil name)
     (set-buffer index-buffer)
     (org-mode)
     (add-to-list 'superman-project-alist
@@ -423,7 +421,7 @@ we find the `supermanual' and other helpful materials.")
 			     (cons "publish-directory" nil))))
     (superman-view-project (assoc name superman-project-alist))
     (if (superman-git-p dir) (superman-display-git-cycle)
-      (superman-display-file-list))))
+      (superman-display-file-list dir))))
 	 
 
 (defun superman-parse-project-categories ()
@@ -868,7 +866,11 @@ If NOSELECT is set return the project."
    nil t))
 
 (defun superman-project-home (project)
-  (concat (superman-get-location project) (car project)))
+  (let ((loc (superman-get-location project))
+	(nick (car project)))
+    (if (string= (file-name-nondirectory (replace-regexp-in-string "/$" "" loc)) nick)
+	loc
+	(concat loc nick))))
 
 (defun superman-get-location (project)
   "Get the directory associated with PROJECT."
