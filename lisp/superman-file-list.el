@@ -1,4 +1,4 @@
-;;{{{ Header
+ ;;{{{ Header
 
 ;;; superman-file-list.el --- working with alist of filenames
 ;;
@@ -194,6 +194,12 @@ cdr is the corresponding file-(a)list for that directory.")
 
 (defvar file-list-current-file-list nil
   "List of currently selected file-names.")
+
+(make-variable-buffer-local 'file-list-current-file-list)
+
+(defvar file-list-filter nil
+  "List of currently selected file-names.")
+(make-variable-buffer-local 'file-list-filter)
 
 (defvar file-list-excluded-dir-list nil
   "List of directories for which files are excluded.")
@@ -614,6 +620,38 @@ If INCLUDE is non-nil, then SUBDIR is excluded if it does not match REGEXP."
 		regexp-or-test)))
     (delete nil (mapcar test file-list))))
 
+(defun file-list-split-file-list (file-list regexp-or-test filter-name &optional dont-match)
+  (let* (yin
+	 yang
+	 (test (if (stringp regexp-or-test)
+		   (if (string= regexp-or-test ".")
+		       nil
+		     '(lambda (entry)
+			(string-match regexp-or-test (car entry))))
+		 regexp-or-test))
+	 (n (length file-list))
+	 (i 0))
+    (if test
+	(progn
+	  (while (< i n)
+	    (let* ((entry (nth i file-list))
+		   (in (funcall test entry)))
+	      (if in
+		  (setq yin (append `(,entry) yin))
+		(setq yang (append `(,entry) yang))))
+	    (setq i (1+ i)))
+	  (if dont-match
+	      (if yang
+		  (setq 
+		   file-list-filter (append file-list-filter (list (cons filter-name (list yin))))
+		   file-list-current-file-list yang)
+		(message "No files are matched by this criteria." regexp))
+	    (if yin	  
+		(setq 
+		 file-list-filter (append file-list-filter (list (cons filter-name (list yang))))
+		 file-list-current-file-list yin)
+	      (message "No files are matched by this criteria." regexp))))
+      (setq yin file-list))))
 
 ;;mapcar this function on a file-list ...
 (defun file-list-make-file-name (entry)
@@ -674,18 +712,14 @@ Return  the sublist of the existing files. Does not re-display selected list."
   "Returns sublist of filenames in file-list matched by regexp.
 Changes the file-list-current-file-list. See also file-list-add."
   (setq file-list-reference-buffer (current-buffer))
-  (let* (
-	 ;; (gc-cons-threshold file-list-gc-cons-threshold)
-	 (display-buffer (or display-buffer
+  (let* ((display-buffer (or display-buffer
 			     (file-list-current-display-buffer)
 			     file-list-display-buffer))
 	 (file-list (cond (file-list)
 			  (dir (when file-list-update
 				 (file-list-update dir nil))
 			       (file-list-list dir nil nil 'recursive nil))
-			  ((or (eq major-mode 'file-list-completion-mode)
-			       (eq major-mode 'superman-file-list-mode))
-			   file-list-current-file-list)
+			  (file-list-mode file-list-current-file-list)
 			  (t (if file-list-update
 				 (file-list-update dir nil))
 			     ;;FIXME: write function file-list-update-file-list-alist
@@ -705,71 +739,46 @@ Changes the file-list-current-file-list. See also file-list-add."
 			     prompt-string
 			     nil
 			     'file-list-regexp-history)))
-	 (match-info (cond ((string= by "time")
-			    (format "\nage"  "%s '%s' day%s"
-				    (if inverse " no-exceed:" "exceed:") regexp (if (string= regexp "1") "" "s")))
-			   ((string= by "size")
-			    (format "\nsize %s '%s'" (if inverse " no-exceed:" "exceed:") regexp))
-			   ((string= by "path")
-			    (format "\ndirectory-name %s '%s'" (if inverse " no-match:" "match:") regexp))
-			   (t (format "\nfile-name %s '%s'" (if inverse " no-match:" "match:") regexp))))
-	 ;; (match-info (cond ((string= by "time")
-	 ;; (format "whose age exceeds%s '%s' day%s" (if inverse "" " not")
-	 ;; regexp (if (string= regexp "1") "" "s")))
-	 ;; ((string= by "size")
-	 ;; (format "whose size exceeds%s '%s' bytes" (if inverse " not" "") regexp))
-	 ;; ((string= by "path")
-	 ;; (format "whose path match%s '%s'" (if inverse " not" "") regexp))
-	 ;; (t (format "whose filename match%s '%s'" (if inverse " not" "") regexp))))
+	 (filter-name (cond ((string= by "time")
+			     (format "age"  "%s '%s' day%s"
+				     (if inverse " no-exceed:" "exceed:") regexp (if (string= regexp "1") "" "s")))
+			    ((string= by "size")
+			     (format "size %s '%s'" (if inverse " no-exceed:" "exceed:") regexp))
+			    ((string= by "path")
+			     (format "directory-name %s '%s'" (if inverse " no-match:" "match:") regexp))
+			    (t (format "file-name %s '%s'" (if inverse " no-match:" "match:") regexp))))
 	 (test (cond 
 		((not by) nil)
 		((string= by "path")
-		 '(lambda (entry)
-		    (if (not (file-exists-p
-			      (file-list-make-file-name entry)))
-			nil
-		      (let ((keep (string-match regexp (cadr entry))))
-			(cond ((and (not inverse) (not keep)) nil)
-			      ((and inverse keep) nil)
-			      (t entry))))))
+		 '(lambda (entry) (string-match regexp (cadr entry))))
 		((string= by "size")
 		 '(lambda (entry)
-		    (if (not (file-exists-p
-			      (file-list-make-file-name entry)))
-			nil
-		      (let ((keep 
-			     (< (string-to-int regexp)
-				(nth 7  (file-attributes
-					 (file-list-make-file-name entry))))))
-			(cond ((and (not inverse) (not keep)) nil)
-			      ((and inverse keep) nil)
-			      (t entry))))))
+		    (< (string-to-int regexp)
+		       (or (nth 7 (file-attributes
+				   (file-list-make-file-name entry)))
+			   0))))
 		((string= by "time")
 		 '(lambda (entry)
-		    (if (not (file-exists-p
-			      (file-list-make-file-name entry)))
-			nil
-		      (let* ((entry-time (nth 5 (file-attributes (file-list-make-file-name entry))))
-			     (keep (or (not entry-time)
-				       (file-list-time-less-p
-					(subtract-time (current-time) (days-to-time (string-to-int regexp)))
-					entry-time))))
-			(cond ((and (not inverse) (not keep)) nil)
-			      ((and inverse keep) nil)
-			      (t entry))))))
+		    (file-list-time-less-p
+		     (subtract-time (current-time) (days-to-time
+						    (string-to-int regexp)))
+		     (nth 5 (file-attributes (file-list-make-file-name entry))))))
 		(t nil)))
-	 (sub-file-list (file-list-extract-sublist
-			 file-list
-			 (or test regexp)
-			 inverse)))
-    (if (null sub-file-list)
-	(progn
-	  (message "No files are matched by this criteria." regexp)
-	  nil)
+	 (sub-file-list
+	  ;; (file-list-extract-sublist
+	  (file-list-split-file-list
+	   file-list (or test regexp) filter-name inverse)))
+    (unless (stringp sub-file-list)
       (unless dont-display
-	(if (eq major-mode 'superman-file-list-mode)
-	    (superman-display-file-list nil sub-file-list match-info (current-buffer))
-	  (file-list-display-match-list sub-file-list match-info display-buffer))
+	(if file-list-completion-mode
+	    (file-list-display-match-list sub-file-list filter-name display-buffer)
+	  (superman-display-file-list
+	   nil
+	   sub-file-list
+	   nil
+	   nil
+	   (current-buffer)
+	   nil))
 	(setq file-list-current-file-list sub-file-list))
       sub-file-list)))
 
@@ -883,9 +892,11 @@ See also file-list-select."
 ;; next functions stolen from ognus' time-date.el
 (defun file-list-time-less-p (t1 t2)
   "Say whether time value T1 is less than time value T2."
-  (or (< (car t1) (car t2))
-      (and (= (car t1) (car t2))
-	   (< (nth 1 t1) (nth 1 t2)))))
+  (if (or (not t1) (not t2))
+      nil
+    (or (< (car t1) (car t2))
+	(and (= (car t1) (car t2))
+	     (< (nth 1 t1) (nth 1 t2))))))
 
 (defun days-to-time (days)
   "Convert DAYS into a time value."
@@ -1381,25 +1392,17 @@ Switches to the corresponding directory of each file."
 
 (defun file-list-remove (&optional file-list)
   (interactive)
-  (let (
-	;; (gc-cons-threshold file-list-gc-cons-threshold)
-	;; (fdbuf (get-buffer file-list-display-buffer))
-	(file-list (or file-list file-list-current-file-list)))
-    (file-list-display-match-list file-list)
-    (when;;  (and
-	   ;; (equal (current-buffer) fdbuf)
-	   (yes-or-no-p
-	    "Really really move all these files to /dev/null in the sky? ")
-      ;;)
+  (let ((file-list (or file-list file-list-current-file-list)))
+    ;; (file-list-display-match-list file-list)
+    (when (yes-or-no-p
+	   "Really really move all these files to /dev/null in the sky? ")
       (file-list-select-existing-files file-list)
       (dolist (fn file-list)
 	(delete-file (file-list-make-file-name fn)))
       ;; update file-list-current-file-list and file-list-alist
       (setq file-list-current-file-list nil)
-      (file-list-display-match-list)
-;      (file-list-update file-list-home-directory)
-;      (file-list-quit)
-      )))
+      (setq file-list-filter nil)
+      (file-list-display-match-list))))
       
 
 
@@ -1430,6 +1433,7 @@ Switches to the corresponding directory of each file."
 	    (setq grep-hits (list (cons (substring
 					 (match-string 2) 1 -1)
 					(match-string 3))))
+	    ;; collect further hits for the same file 
 	    (while (re-search-forward (concat "\\(" file-name "\\)\\(:[0-9]+:\\)\\(.*$\\)") nil t)
 	      (setq grep-hits
 		    (append grep-hits
@@ -1438,7 +1442,9 @@ Switches to the corresponding directory of each file."
 	      (forward-line 1))
 	    (setq grep-hit-list (append (list (cons file-name grep-hits))
 					grep-hit-list)))
-	  (kill-buffer hits-buf)
+	  (when (get-buffer-window hits-buf)
+	    (delete-window (get-buffer-window hits-buf))
+	    (kill-buffer hits-buf))
 	  (switch-to-buffer file-list-buffer)
 	  (file-list-beginning-of-file-list)
 	  ;; (file-list-switch-to-file-list)
@@ -1448,9 +1454,10 @@ Switches to the corresponding directory of each file."
 	    (setq file-list-current-file-list
 		  (mapcar
 		   (lambda (entry)
-		     (let ((add (cdr (assoc
-				      (file-list-make-file-name entry)
-				      grep-hit-list))))
+		     (let ((add (cdr
+				 (assoc
+				  (file-list-make-file-name entry)
+				  grep-hit-list))))
 		       (if add
 			   (list (car entry) (cadr entry)
 				 (if (> (length entry) 2)

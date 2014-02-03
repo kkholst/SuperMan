@@ -242,7 +242,7 @@ to an integer then do not trim the string STR."
   "Identifies the project associated with the current view buffer
 and sets the variable superman-view-current-project."
   (let* ((nick (get-text-property (point-min) 'nickname))
-	(pro (when nick (assoc nick superman-project-alist))))
+	 (pro (when nick (assoc nick superman-project-alist))))
     (if pro
 	(setq superman-view-current-project pro)
       (unless no-error

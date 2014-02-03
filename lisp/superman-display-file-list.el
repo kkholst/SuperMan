@@ -26,19 +26,22 @@
 
 (defun superman-view-file-list (&optional arg)
   (interactive "p") 
-  (let ((pro (superman-view-current-project)))
+  (let* ((pro (superman-view-current-project))
+	 (dir (if pro (superman-project-home pro)
+		(or (get-text-property (point-min) 'git-dir)
+		    (read-directory-name "View file-list below directory: ")))))
     (if (and arg (> arg 1))
 	;; old-style file-list display 
 	(progn
 	  (split-window-vertically)
 	  (other-window 1)
 	  (superman-file-list pro))
-      (superman-display-file-list pro))))
+      (superman-display-file-list dir))))
 
 (defun superman-file-list (project &optional ext)
   "List files in project's location that match extension EXT"
   (if (featurep 'file-list)
-      (let ((loc (concat (superman-get-location project) (car project))))
+      (let ((loc (superman-project-home project)))
 	(cond ((file-list-select-internal nil (or ext ".")
 					  nil nil loc (concat "*File-list-" (car project) "*")))
 	      (t
@@ -64,26 +67,30 @@
     ("Path" ("fun" superman-dont-trim) ("face" font-lock-keyword-face)))
   "balls used to display file-lists.")
 
-(defun superman-display-file-list (project &optional list balls ext view-buffer refresh)
+(defun superman-display-file-list (dir &optional list balls ext view-buffer refresh)
   "Format file-list displays."
-  (let* ((nick (if project (car project) (get-text-property (point-min) 'nickname)))
-	 (pbuf (buffer-name))
-	 (loc (or (get-text-property (point-min) 'loc)
+  (let* ((project (superman-view-current-project))
+	 (nick (if project (car project) (get-text-property (point-min) 'nickname)))
+	 (pbuf (if file-list-mode
+		   (get-text-property (point-min) 'project-buffer)
+		   (buffer-name)))
+	 (loc (or dir (get-text-property (point-min) 'loc)
 		  (when project
-		    (concat (superman-get-location project) (car project)))
+		    (superman-project-home project))
 		  (error "Missing location")))
 	 (balls (or balls superman-default-balls))
 	 (view-buf (or view-buffer (get-buffer-create (concat "*FileList: " nick "*"))))
-	 (list (if refresh
-		   (file-list-select-internal
-		    nil (or ext ".")
-		    nil nil loc (concat "*File-list-" (or nick "nix") "*"))
-		 (or list
-		     (with-current-buffer view-buf
-		       file-list-current-file-list)
-		     (file-list-select-internal
-		      nil (or ext ".")
-		      nil nil loc (concat "*File-list-" (or nick "nix") "*")))))
+	 (list
+	  (with-current-buffer view-buf
+	    (if refresh
+		(file-list-select-internal
+		 nil (or ext ".")
+		 nil nil loc (concat "*File-list-" (or nick "nix") "*") 'dont)
+	      (or list
+		  file-list-current-file-list
+		  (file-list-select-internal
+		   nil (or ext ".")
+		   nil nil loc (concat "*File-list-" (or nick "nix") "*") 'dont)))))
 	 (balls superman-file-list-balls)
 	 (count 0)
 	 ;; (cycle file-list-display-level)
@@ -91,8 +98,10 @@
 	 cycle)
     (setcdr (assoc "width" (assoc "FileName" superman-file-list-balls)) `(,maxfile))
     (switch-to-buffer view-buf)
-    (org-mode)
-    (font-lock-mode -1)
+    (unless file-list-mode
+      (org-mode)
+      (font-lock-mode -1)
+      (file-list-mode))
     (setq file-list-current-file-list list)
     (setq display-level (get-text-property (point-min) 'file-list-display))
     (if (and (not refresh) display-level)
@@ -106,9 +115,9 @@
       (run-hooks 'superman-file-list-pre-display-hook)
       (goto-char (point-min))
       (insert (superman-make-button
-	       (concat "SuperMan:FileList"
+	       (concat "FileList"
 		       (when nick (concat ": " nick)))
-	       'superman-redo
+	       'file-list-redisplay
 	       'superman-project-button-face
 	       "Refresh project view"))
       (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
@@ -119,23 +128,46 @@
        '(("/name" file-list-by-name)
 	 ("/path" file-list-by-path)
 	 ("/time" file-list-by-time)
-	 ("/size" file-list-by-size)
-	 ("widen" (lambda () (interactive)
-		    (superman-display-file-list
-		     nil nil nil nil nil 'refresh))))
+	 ("/size" file-list-by-size))
        nil "Filter:")
       (superman-view-insert-action-buttons
-       '(("by name" file-list-sort-by-name)
-	 ("by path" file-list-sort-by-path)
-	 ("by time" file-list-sort-by-time)
-	 ("by size" file-list-sort-by-size)) nil "  Sort:")
+       '(("name up" file-list-sort-by-name)
+	 ("name down" (lambda () (interactive) (file-list-sort-by-name 1)))
+	 ("path up" file-list-sort-by-path)
+	 ("path down" (lambda () (interactive) (file-list-sort-by-path 1)))
+	 ("time up" file-list-sort-by-time)
+	 ("time down" (lambda () (interactive) (file-list-sort-by-time 1)))
+	 ("size up" file-list-sort-by-size)
+	 ("size down" (lambda () (interactive) (file-list-sort-by-size 1))))
+       nil "  Sort:")
       (superman-view-insert-action-buttons
        '(("grep" file-list-grep)
-	 ("kill" file-list-remove)
+	 ("delete" file-list-remove)
 	 ("copy" file-list-copy)
 	 ("query-replace" file-list-query-replace)
 	 ("clear display" file-list-clear-display)) nil "Action:")
-      (insert "\n\n* File-list:")
+      (insert "\n\n")
+      (insert (superman-make-button
+	       (concat "* " loc)
+	       'file-list-redisplay
+	       'superman-next-project-button-face
+	       "Redisplay file-list"))
+      (when (= file-list-display-level 2)
+	(insert "\t")
+	(insert (superman-make-button "Clear display"
+				      'file-list-clear-display
+				      'superman-next-project-button-face
+				      "Return to clean file-list")))
+      
+      (when file-list-filter
+	(dolist (x file-list-filter nil)
+	  (insert "\t" (superman-make-button (car x)
+					     `(lambda () (interactive)
+						(file-list-remove-filter ,(car x)))
+					     ;; (superman-display-file-list
+					     ;; nil nil nil nil nil 'refresh))
+					     'superman-next-project-button-face
+					     "Unfilter list"))))
       (put-text-property (point-at-bol) (point-at-eol) 'file-list-start t)
       (insert "\n")
       (while list
@@ -148,10 +180,16 @@
 	  ;; (put-text-property (point-at-bol) (1+ (point-at-bol)) 'path path)
 	  (insert (superman-format-thing `(list (("FileName" . ,file) ("Path" . ,path))) balls))
 	  (while rest
-	    (setq appendix
-		  (concat appendix "\n" (format "%13s" (caar rest))
-			  " : " (cdar rest)))
-	    (setq rest (cdr rest)))
+	    (let ((key (caar rest))
+		  (val (cdar rest)))
+	      (put-text-property 0 (length key) 'face 'font-lock-warning-face key)
+	      ;; (put-text-property 0 (length val) 'face 'custom-state val)
+	      (setq appendix
+		    (concat appendix
+			    "\n"
+			    (format "%13s" (caar rest))
+			    " : " (cdar rest)))
+	      (setq rest (cdr rest))))
 	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'filename (file-list-make-file-name el))
 	  (when appendix (insert appendix))
 	  (insert "\n")
@@ -162,9 +200,17 @@
       ;; insert the column names
       (when superman-empty-line-after-cat (insert "\n"))
       (insert (superman-column-names balls))
-      (file-list-mode)
       (run-hooks 'superman-file-list-pre-display-hook))))
 
+(defun file-list-remove-filter (filter)
+  (let ((ff (cdr (assoc filter file-list-filter))))
+    (setq file-list-current-file-list
+	  (append file-list-current-file-list (car ff)))
+    (setq file-list-filter
+	  (delete-if '(lambda (x) (string= (car x) filter)) file-list-filter))
+    (superman-display-file-list (get-text-property (point-min) 'loc))))
+
+  
 (defun file-list-mode ()
   (interactive)
   (kill-all-local-variables)
@@ -172,6 +218,7 @@
   (setq major-mode 'file-list-mode)
   (setq mode-name "file-list")
   (make-local-variable 'file-list-current-file-list)
+  (make-local-variable 'file-list-filter)
   (make-local-variable 'file-list-mode)
   (make-local-variable 'file-list-match-history)
   (setq file-list-mode t)
@@ -391,6 +438,7 @@ Sets the value of file-list-current-file-list in display-buffer."
   (make-local-variable 'file-list-mode)
   (make-local-variable 'file-list-completion-mode)
   (make-local-variable 'file-list-current-file-list)
+  (make-local-variable 'file-list-filter)
   (make-local-variable 'file-list-match-history)
   (setq font-lock-defaults
 	'(file-list-font-lock-keywords t nil ((?' . ".")))
@@ -499,7 +547,9 @@ Returns the point at the end of the file-name."
 		 (setq fname (buffer-substring-no-properties fbeg fend)))
 	       (setq fname (file-list-replace-in-string fname "\\\\" "")))))
 	  (file-list-mode
-	   (setq fname (get-text-property (point-at-bol) 'filename)))
+	   (let ((pos (previous-single-property-change (point)  'filename)))
+	   (when pos
+	     (setq fname (get-text-property (previous-single-property-change pos 'filename) 'filename)))))
 	  (t (error (format "Works only in %s buffers." file-list-display-buffer))))
     (if (not fname) (error "No absolute filename at point!")
       (if (or (not exists-p)
