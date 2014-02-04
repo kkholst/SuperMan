@@ -132,10 +132,10 @@
   :type '(repeat regexp)
   :group 'file-list)
 
-(defcustom file-list-exclude-dirs  nil
+(defcustom file-list-exclude-dirs (list (cons (expand-file-name "~") "\\\.[a-zA-Z]"))
   "String matching directories that should be excluded below file-list-home-directory"
- :type 'alist
- :group 'file-list)
+  :type 'alist
+  :group 'file-list)
 
 (defcustom file-list-exclude-dir-regexp nil
   "Alist where each car is a regexp to be matched against directory-names
@@ -725,16 +725,16 @@ Changes the file-list-current-file-list. See also file-list-add."
 			     ;;FIXME: write function file-list-update-file-list-alist
 			     (file-list-list
 			      file-list-home-directory nil nil 'recursive nil))))
-	 (prompt-string (format "Select files whose %s %s "
+	 (prompt-string (format "Select files whose %s %s: "
 				(cond ((not by) "filename")
 				      ((string= by "path") "pathname")
 				      ((string= by "time") "age in days")
 				      ((string= by "size") "size in bytes")
 				      (t "filename"))
-				(cond ((not by) (format "is%s matched by regexp " (if inverse " not" "")))
-				      ((string= by "time") (format "exceeds%s " (if (not inverse) " not" "")))
-				      ((string= by "size") (format "exceeds%s " (if inverse " not" "")))
-				      (t (format "is%s matched by regexp " (if inverse " not" ""))))))
+				(cond ((not by) (format "is%s matched by regexp " (if inverse " *not*" "")))
+				      ((string= by "time") (format "exceeds%s " (if (not inverse) " *not*" "")))
+				      ((string= by "size") (format "exceeds%s " (if inverse " *not*" "")))
+				      (t (format "is%s matched by regexp " (if inverse " *not*" ""))))))
 	 (regexp (or regexp (read-string
 			     prompt-string
 			     nil
