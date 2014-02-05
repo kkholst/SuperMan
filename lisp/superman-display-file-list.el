@@ -137,15 +137,14 @@
 	   ("/! size" (lambda () (interactive) (file-list-by-size 1))))
 	 nil "Filter:")
 	(superman-view-insert-action-buttons
-	 '(("< name" file-list-sort-by-name)
-	   ("> name" (lambda () (interactive) (file-list-sort-by-name 1)))
-	   ("< path" file-list-sort-by-path)
-	   ("> path" (lambda () (interactive) (file-list-sort-by-path 1)))
-	   ("< time" file-list-sort-by-time)
-	   ("> time" (lambda () (interactive) (file-list-sort-by-time 1)))
-	   ("< size" file-list-sort-by-size)
-	   ("> size" (lambda () (interactive) (file-list-sort-by-size 1))))
-	 nil "  Sort:")
+	 '(("name" file-list-sort-by-name)
+	   ("name" (lambda () (interactive) (file-list-sort-by-name 1)))
+	   ("path" file-list-sort-by-path)
+	   ("path" (lambda () (interactive) (file-list-sort-by-path 1)))
+	   ("time" file-list-sort-by-time)
+	   ("time" (lambda () (interactive) (file-list-sort-by-time 1)))
+	   ("size" file-list-sort-by-size)
+	   ("size" (lambda () (interactive) (file-list-sort-by-size 1) "  Sort:"))))
 	(superman-view-insert-action-buttons
 	 '(("attributies" file-list-ls)
 	   ("grep" file-list-grep)
@@ -176,6 +175,7 @@
 			      " : " (cdar rest)))
 		(setq rest (cdr rest))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'filename (file-list-make-file-name el))
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-item-marker marker item)
 	    (when appendix (insert appendix))
 	    (insert "\n")
 	    (setq list (cdr list))))
@@ -211,6 +211,7 @@
 	(when superman-empty-line-after-cat (insert "\n"))
 	(insert (superman-column-names balls))
 	(run-hooks 'superman-file-list-pre-display-hook)))))
+
 
 (defun file-list-remove-filter (filter)
   (let ((ff (cdr (assoc filter file-list-filter))))
@@ -655,3 +656,4 @@ With prefix argument arg, move arg items backward."
 
 (provide 'superman-display-file-list)
 ;;; superman-display-file-list.el ends here
+
