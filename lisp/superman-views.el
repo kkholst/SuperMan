@@ -1509,7 +1509,7 @@ to VIEW-BUF."
 	    (setq last-el cur-el)))))))
     
 
-(defun superman-view-insert-section-name (name count balls index-marker &optional fun)
+(defun superman-view-insert-section-name (name count balls index-marker &optional fun help)
       (let ((fun (or
 		  fun
 		  (cadr (assoc name superman-capture-alist))
@@ -1517,7 +1517,7 @@ to VIEW-BUF."
 	(insert
 	 (superman-make-button (concat "** " name) fun
 		 'superman-capture-button-face
-		 "Add new item")
+		 (or help "Add new item"))
 		"\n"))
       (forward-line -1)
       (beginning-of-line)

@@ -703,7 +703,12 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
 				      "\n:EmailDate: " date 
 				      ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
-				      "\n:Link:" " [[file:" file "][" (file-name-nondirectory file) "]]"
+				      "\n:Link:" " [[file:"
+				      (replace-regexp-in-string
+				       (expand-file-name "~")
+				       "~"
+				       file)
+				      "][" (file-name-nondirectory file) "]]"
                                       "\n:END:\n"
                                       mime-line)))))))
     mime-line))
