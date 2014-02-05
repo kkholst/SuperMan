@@ -875,32 +875,22 @@ Returns the formatted string with text-properties."
 			     ((eq (car b) 'org-hd-marker))
 			     (t (symbol-name (cadr (assoc "fun" (cdr b)))))))
 	     name
-	     sort-cmd)
-	(setq name (superman-play-ball
-		    col-name
-		    b
-		    ;; (remq (assoc "fun" b) b)
-		    'no-face))
-	(setq sort-cmd (concat "sort-by-" col-name))
-	(setq names (append names (list col-name)))
+	     (sort-cmd  (concat "sort-by \"" col-name "\"")))
+	;; add sorting symbol
+	;; (char-to-string #x25b3)
 	;; make this name a button
 	(setq name
 	      (superman-make-button
-	       name
+	       col-name
 	       'superman-sort-section
-	       'font-lock-comment-face
+	       'superman-next-project-button-face
 	       sort-cmd))
-	;; (add-text-properties
-	;; superman-column-separator
-	;; (length name) 
-	;; (list
-	;; 'button (list t)
-	;; 'face 'font-lock-comment-face
-	;; 'keymap map
-	;; 'mouse-face 'highlight
-	;; 'follow-link t
-	;; 'help-echo sort-cmd)
-	;; name)
+	(setq name
+	      (superman-play-ball
+	       name
+	       b
+	       'no-face))
+	(setq names (append names (list col-name)))
 	(setq column-widths (append column-widths (list (length name))))
 	(setq column-names (concat column-names name))
 	;; (superman-make-button
@@ -1084,42 +1074,44 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
   (let* ((buffer-read-only nil)
 	 (cc (current-column))
 	 (pp (point-at-bol))
-	 (col-start 0)
-	 col-width
 	 (sort-fold-case t) 
-	 (cols (cdr (get-text-property (point-at-bol) 'columns)))
-	 (nthcol (nth 2 (superman-ball-dimensions)))
+	 (dim (superman-ball-dimensions))
+	 ;; the first x characters of each column are blank, 
+	 ;; where x is defined by superman-column-separator,
+	 ;; thus, we shift by superman-column-separator
+	 (col-start (+ superman-column-separator (nth 0 dim)))
+	 (col-width (nth 1 dim))
+	 (current-col (nth 2 dim))
 	 (n (get-text-property (superman-cat-point) 'n-items))
 	 (pos (superman-current-subcat-pos))
 	 (reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse))
+	 irregular
 	 next
 	 beg
 	 end)
     (put-text-property
      (previous-single-property-change (point) 'button)
      (next-single-property-change (point) 'button) 'reverse (not reverse))
-    (when (and pos cols)
-      (while (> cc (+ col-start (car cols)))
-	(setq col-start (+ col-start (car cols)))
-	(setq cols (cdr cols)))
-      ;; the first x characters of each column are blank, 
-      ;; where x is defined by superman-column-separator,
-      ;; thus, we shift by superman-column-separator
-      (setq col-start (+ superman-column-separator col-start))
-      (setq col-width (- (car cols) superman-column-separator))
+    (when (and pos dim)
       (goto-char pos)
       (goto-char (next-single-property-change
 		  (point-at-eol)
 		  'superman-item-marker))
       (setq beg (point))
       ;; test if column has fixed width
-      ;; FIXME:
-      (unless (eq
-	       colcols
-	       (get-text-property
-		(point-at-bol)
-		'columns))
-	(setq col-width 60))
+      (unless (eq col-width
+		  (1- (nth (1+ current-col)
+			   (get-text-property (point-at-bol) 'columns))))
+	(setq irregular t)
+	(setq col-width
+	      (1- (nth (1+ current-col)
+		       (get-text-property (point-at-bol) 'columns))))
+	(while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
+	  (goto-char next)
+	  (setq col-width
+		(max col-width
+		     (nth (1+ current-col)
+			  (get-text-property (point-at-bol) 'columns))))))
       ;; move to end of section
       (or (outline-next-heading)
 	  (goto-char (point-max)))
@@ -1156,9 +1148,17 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 				(skip-chars-forward "[0-9]")))
 	      (end-of-line)))
 	;; sort using sort-subr
-	(sort-subr reverse 'forward-line 'end-of-line
-		   `(lambda () (forward-char ,col-start))
-		   `(lambda () (forward-char ,col-width))))
+	(if irregular
+	    (sort-subr reverse 'forward-line 'end-of-line
+		       `(lambda () (forward-char ,col-start))
+		       `(lambda ()
+			  (let ((here (point))
+				(there (point-at-eol)))
+			    (forward-char (min (- there here)
+					       ,col-width)))))
+	  (sort-subr reverse 'forward-line 'end-of-line
+		     `(lambda () (forward-char ,col-start))
+		     `(lambda () (forward-char ,col-width)))))
       (widen)
       (goto-char pp)
       (forward-char (+ superman-column-separator col-start)))))
@@ -1221,6 +1221,7 @@ Display an existing view buffer unless REFRESH is non-nil."
 	(progn
 	  (switch-to-buffer vbuf)
 	  (let ((buffer-read-only nil))
+	    (widen)
 	    (goto-char (next-single-property-change
 			(point-min) 'nickname))
 	    (when (looking-at ".*$")
