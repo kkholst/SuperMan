@@ -1383,6 +1383,7 @@ to VIEW-BUF."
 	     (car cat)
 	     0 balls
 	     index-marker)
+	    (insert "\n")
 	    (when superman-empty-line-after-cat (insert "\n"))
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
 	    (insert text)
@@ -1494,6 +1495,7 @@ to VIEW-BUF."
 				     (not (looking-at "^[ \t]*$"))))
 		(insert "\n"))
 	      (superman-view-insert-section-name name count balls index-marker)
+	      (insert "\n")
 	      ;; insert the column names
 	      (when superman-empty-line-after-cat
 		(insert "\n"))

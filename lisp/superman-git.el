@@ -836,6 +836,7 @@ This function should be bound to a key or button."
        (widen)
        (goto-char index-cat-point) (point-marker))
      'superman-cycle-git-display)
+    (insert "\n")
     (end-of-line 0)
     (let ((cycle-strings cycles))
       (while cycle-strings
@@ -937,6 +938,7 @@ repository of PROJECT which is located at DIR."
        name count balls
        nil
        nil)
+      (insert "\n")
       (end-of-line 0)
       (forward-line 1)
       ;; insert the column names
