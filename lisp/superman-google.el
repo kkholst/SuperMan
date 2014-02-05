@@ -142,10 +142,11 @@
 				" --date \"" g-date g-time "\"")))
 		     (g-command
 		      (read-string "Google calendar entry: " pre-command)))
-		(superman-run-cmd g-command
-				  "*Superman-google-calendar*"
-				  (concat "Running\n" g-command " returned:\n\n"))
-		(sit-for 5))))))))
+		(when (> (length g-command) 0)
+		  (superman-run-cmd g-command
+				    "*Superman-google-calendar*"
+				    (concat "Running\n" g-command " returned:\n\n"))
+		  (sit-for 3)))))))))
 ;; (shell-command-to-string g-command))))))))
 
 (provide 'superman-google)

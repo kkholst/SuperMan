@@ -39,11 +39,13 @@
 
 (setq superman-balls
       '((todo ("width" 9) ("face" superman-get-todo-face))
-	(hdr ("width" 27) ("face" font-lock-function-name-face))
-	;; ("Nickname" ("width" 33)
-	 ;; ("name" "Nick")
-	 ;; ("face" superman-next-project-button-face)
-	 ;; ("fun" superman-make-project-button))
+	(hdr ("width" 27) ("face" font-lock-function-name-face)
+	     ("name" Description)
+	     ("fun" superman-trim-project-nickname))
+	("marker" ("width" 33)
+	  ("name" "Project")
+	  ("face" superman-next-project-button-face)
+	  ("fun" superman-make-project-button))
 	("lastvisit" ("fun" superman-trim-date) ("width" 17) ("face" font-lock-type-face) ("sort-key" t))
 	("others" ("width" 66) ("face" font-lock-keyword-face))))
 
@@ -319,7 +321,9 @@
 	      ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
 	      ;; ((tags-todo "PRIORITY<>\"C\""
 	      ((org-agenda-files
-		(reverse (superman-index-list nil nil nil nil nil superman-exclude-from-todo-regexp))))))
+		(reverse (superman-index-list
+			  nil nil nil nil nil
+			  superman-exclude-from-todo-regexp))))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
 	      (lambda ()
@@ -508,13 +512,23 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(superman-trim-string marker args))))
 
 (defun superman-make-project-button (nick &optional args)
-  (let* ((nickname (superman-trim-string nick args))
+  
+  (let* ((ismarker (markerp nick))
+	 (nickname (if ismarker
+		       (superman-get-property nick "nickname")
+		     (superman-trim-string nick args)))
 	 (button (superman-make-button
-		  nickname
-		  `(lambda () (interactive) (superman-switch-to-project ,nick))
+		  (if ismarker
+		      (superman-trim-string nickname args)
+		      nickname)
+		  `(lambda () (interactive)
+		     (superman-switch-to-project ,(if ismarker
+						      nickname
+						    nick)))
 		  nil
 		  ;; font-lock-string-face
-		  (concat "Switch to " nick))))
+		  (concat "Switch to "
+			  (if ismarker nickname nick)))))
     button))
 
 (defun superman-trim-project-nickname  (marker &optional args)
