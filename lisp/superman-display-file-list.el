@@ -175,7 +175,7 @@
 			      " : " (cdar rest)))
 		(setq rest (cdr rest))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'filename (file-list-make-file-name el))
-	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-item-marker marker item)
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-item-marker t)
 	    (when appendix (insert appendix))
 	    (insert "\n")
 	    (setq list (cdr list))))

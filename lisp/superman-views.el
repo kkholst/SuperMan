@@ -875,28 +875,40 @@ Returns the formatted string with text-properties."
 			     ((eq (car b) 'org-hd-marker))
 			     (t (symbol-name (cadr (assoc "fun" (cdr b)))))))
 	     name
-	     c-name
 	     sort-cmd)
-	(setq name (superman-play-ball col-name
-				       b
-				       ;; (remq (assoc "fun" b) b)
-				       'no-face))
-	(setq sort-cmd (concat "sort-by-" name))
+	(setq name (superman-play-ball
+		    col-name
+		    b
+		    ;; (remq (assoc "fun" b) b)
+		    'no-face))
+	(setq sort-cmd (concat "sort-by-" col-name))
 	(setq names (append names (list col-name)))
-	;; make this name a button 
-	(add-text-properties
-	 superman-column-separator
-	 (length name) 
-	 (list
-	  'button (list t)
-	  'face 'font-lock-comment-face
-	  'keymap map
-	  'mouse-face 'highlight
-	  'follow-link t
-	  'help-echo sort-cmd)
-	 name)
+	;; make this name a button
+	(setq name
+	      (superman-make-button
+	       name
+	       'superman-sort-section
+	       'font-lock-comment-face
+	       sort-cmd))
+	;; (add-text-properties
+	;; superman-column-separator
+	;; (length name) 
+	;; (list
+	;; 'button (list t)
+	;; 'face 'font-lock-comment-face
+	;; 'keymap map
+	;; 'mouse-face 'highlight
+	;; 'follow-link t
+	;; 'help-echo sort-cmd)
+	;; name)
 	(setq column-widths (append column-widths (list (length name))))
 	(setq column-names (concat column-names name))
+	;; (superman-make-button
+	;; (char-to-string #x25b3)
+	;; 'superman-sort-section
+	;; nil
+	;; "Sort section")
+	;; name))
 	(setq copy-balls (cdr copy-balls))))
     ;; add text properties: columns and column-names
     (put-text-property 0 (length column-names) 'columns column-widths column-names)
@@ -1063,6 +1075,9 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 
 
 
+(defun superman-sort-section-reverse ()
+  (interactive)
+  (superman-sort-section 1))
 
 (defun superman-sort-section (&optional reverse)
   (interactive "P")
@@ -1073,11 +1088,16 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 col-width
 	 (sort-fold-case t) 
 	 (cols (cdr (get-text-property (point-at-bol) 'columns)))
+	 (nthcol (nth 2 (superman-ball-dimensions)))
 	 (n (get-text-property (superman-cat-point) 'n-items))
 	 (pos (superman-current-subcat-pos))
+	 (reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse))
 	 next
 	 beg
 	 end)
+    (put-text-property
+     (previous-single-property-change (point) 'button)
+     (next-single-property-change (point) 'button) 'reverse (not reverse))
     (when (and pos cols)
       (while (> cc (+ col-start (car cols)))
 	(setq col-start (+ col-start (car cols)))
@@ -1088,12 +1108,24 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
       (setq col-start (+ superman-column-separator col-start))
       (setq col-width (- (car cols) superman-column-separator))
       (goto-char pos)
-      (goto-char (next-single-property-change (point-at-eol) 'superman-item-marker))
+      (goto-char (next-single-property-change
+		  (point-at-eol)
+		  'superman-item-marker))
       (setq beg (point))
+      ;; test if column has fixed width
+      ;; FIXME:
+      (unless (eq
+	       colcols
+	       (get-text-property
+		(point-at-bol)
+		'columns))
+	(setq col-width 60))
       ;; move to end of section
       (or (outline-next-heading)
 	  (goto-char (point-max)))
-      (goto-char (previous-single-property-change (point-at-eol) 'superman-item-marker))
+      (goto-char (previous-single-property-change
+		  (point-at-eol) 'superman-item-marker))
+      (end-of-line)
       (setq end (point))
       (narrow-to-region beg end)
       (goto-char (point-min))
@@ -1527,7 +1559,7 @@ to VIEW-BUF."
       (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker index-marker)
       (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " name))
       (end-of-line)
-      (insert " [" (int-to-string count) "]\n"))
+      (insert " [" (int-to-string count) "]"))
 
 ;;}}}
 ;;{{{ Formatting items and column names
