@@ -397,6 +397,8 @@ index file as LEVEL headings. Then show the updated project view buffer."
 			 marker)
 			(t "Documents")))
 	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
+	 ;; FIXME: to circumvent a bug in ido-read-file-name
+	 (read-file-name-function 'read-file-name-default)
 	 (file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
     (superman-capture-internal
      pro

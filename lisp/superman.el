@@ -444,6 +444,29 @@ all dates."
 ;; (superman-clean-buffer-list S-index-list)))
 
 ;;}}}
+;;{{{ superman-todo-mode-map
+(defvar superman-todo-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-todo-mode' commands.")
+   
+(define-minor-mode superman-todo-mode
+     "Toggle superman project todo mode.
+With argument ARG turn superman-todo-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-todo mode electrifies the column todo for documents
+for git and other actions like commit, history search and pretty log-todo."
+     :lighter " *S-todo*"
+     :group 'org
+     :keymap 'superman-todo-mode-map)
+
+(defun superman-todo-mode-on ()
+  (interactive)
+  (superman-todo-mode t))
+(define-key superman-todo-mode-map "a" 'superman-todo-show-priority-all)
+(define-key superman-todo-mode-map "A" 'superman-todo-show-priority-A)
+(define-key superman-todo-mode-map "B" 'superman-todo-show-priority-B)
+(define-key superman-todo-mode-map "C" 'superman-todo-show-priority-C)
+;;}}}
 ;;{{{ superman-mode-map
 
 (require 'superman-views)
@@ -457,7 +480,7 @@ With argument ARG turn superman-mode on if ARG is positive, otherwise
 turn it off.
 
 Enabling superman mode electrifies the superman buffer for project management."
-     :lighter " S"
+     :lighter " *S*"
      :group 'org
      :keymap 'superman-mode-map)
 
@@ -679,11 +702,12 @@ Enabling superman mode electrifies the superman buffer for project management."
 	 ("[#A]" superman-todo-show-priority-A nil "Limit to priority A and no-priority tasks")
 	 ("[#B]" superman-todo-show-priority-B nil "Limit to priority B tasks")
 	 ("[#C]" superman-todo-show-priority-C nil  "Limit to priority B tasks")
-	 ("All" superman-todo-show-priority-all nil "Show all priorities"))
+	 ("All(a)" superman-todo-show-priority-all nil "Show all priorities"))
        t
        "View-S:")
       (insert "\n\n" (superman-column-names balls))
-      (superman-view-mode-on) ;; minor mode
+      (superman-view-mode-on) ;; minor modes
+      (superman-todo-mode-on)
       ;; (setq org-agenda-this-buffer-name org-agenda-buffer-name)
       (while (ignore-errors
 	       ;; (goto-char (next-single-property-change (point) 'org-hd-marker)))
@@ -757,5 +781,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 (define-key superman-mode-map "?" 'supermanual)
 
 ;;}}}  
+
 (provide 'superman)
 ;;; superman.el ends here

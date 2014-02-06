@@ -1545,24 +1545,24 @@ to VIEW-BUF."
     
 
 (defun superman-view-insert-section-name (name count balls index-marker &optional fun help)
-      (let ((fun (or
-		  fun
-		  (cadr (assoc name superman-capture-alist))
-		  'superman-capture-item)))
-	(insert
-	 (superman-make-button (concat "** " name) fun
-		 'superman-capture-button-face
-		 (or help "Add new item"))
-		"\n"))
-      (forward-line -1)
-      (beginning-of-line)
-      (put-text-property (point-at-bol) (point-at-eol) 'cat name)
-      (put-text-property (point-at-bol) (point-at-eol) 'n-items count)
-      (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
-      (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker index-marker)
-      (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " name))
-      (end-of-line)
-      (insert " [" (int-to-string count) "]"))
+  (let ((fun (or
+	      fun
+	      (cadr (assoc name superman-capture-alist))
+	      'superman-capture-item)))
+    (insert
+     (superman-make-button (concat "** " name) fun
+			   'superman-capture-button-face
+			   (or help "Add new item"))
+     "\n"))
+  (forward-line -1)
+  (beginning-of-line)
+  (put-text-property (point-at-bol) (point-at-eol) 'cat name)
+  (put-text-property (point-at-bol) (point-at-eol) 'n-items count)
+  (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
+  (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker index-marker)
+  (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " name))
+  (end-of-line)
+  (insert " [" (int-to-string count) "]"))
 
 ;;}}}
 ;;{{{ Formatting items and column names
