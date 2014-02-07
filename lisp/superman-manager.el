@@ -656,11 +656,12 @@ Examples:
 		 (mapcar
 		  #'(lambda (x)
 		      (let ((f (superman-get-index x)))
-			(when (and (or not-exist-ok (file-exists-p f))
-				   (or (not exclude-regexp) (not (string-match exclude-regexp f)))
-				   (or (not extension)
-				       (string= extension (file-name-extension f))))
-			  f)))
+			(unless (bufferp f)
+			  (when (and (or  not-exist-ok (file-exists-p f))
+				     (or (not exclude-regexp) (not (string-match exclude-regexp f)))
+				     (or (not extension)
+					 (string= extension (file-name-extension f))))
+			    f))))
 		  palist)))))
     index-list))
 
@@ -904,3 +905,4 @@ If NOSELECT is set return the project."
 
 (provide 'superman-manager)
 ;;; superman-manager.el ends here
+

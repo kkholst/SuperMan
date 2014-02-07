@@ -520,19 +520,24 @@ Enabling superman mode electrifies the superman buffer for project management."
 ;;        Making PROJECT-ALIST a hash table may improve efficiency? 
 (defun superman-trim-project-attribute (marker attribute &optional dont-trim args)
   (if (markerp marker)
-      (let* ((pro-list (mapcar (lambda (p)
-				 (cons (expand-file-name (cdr (assoc "index" (cadr p))))
-				       (if (string= attribute "nickname") (car p)
-					 (cdr (assoc attribute (cadr p))))))
-			       superman-project-alist))
+      (let* ((pro-list (mapcar
+			(lambda (p)
+			  (let ((index (cdr (assoc "index" (cadr p)))))
+			    (if (or (bufferp index)
+				    (not (file-exists-p index)))
+				""
+			      (cons (expand-file-name index)
+				    (if (string= attribute "nickname") (car p)
+				      (cdr (assoc attribute (cadr p))))))))
+			superman-project-alist))
 	     (ifile (buffer-file-name (marker-buffer marker)))
 	     (attr (or (cdr (assoc (expand-file-name ifile) pro-list)) "--")))
 	(if dont-trim
 	    attr
-	    (superman-trim-string attr args)))
+	  (superman-trim-string attr args)))
     (if dont-trim
 	marker
-	(superman-trim-string marker args))))
+      (superman-trim-string marker args))))
 
 (defun superman-make-project-button (nick &optional args)
   
@@ -716,6 +721,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 	(let* ((buffer-read-only nil)
 	       (pom (get-text-property (point-at-bol) 'org-hd-marker))
 	       (kill-whole-line t)
+	       ;; (buffer-live-p (marker-buffer pom))
 	       (line
 		(org-with-point-at pom
 		  (superman-format-thing pom balls))))

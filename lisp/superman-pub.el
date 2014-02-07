@@ -194,12 +194,29 @@ sort the section, and finally play the original balls.
 	(save-excursion
 	  (superman-change-balls temp-balls)
 	  (superman-refresh-cat temp-balls)
-	  (goto-char (previous-single-property-change (point) 'names))
+	  (goto-char (previous-single-property-change (point) 'columns))
 	  (superman-sort-section)
 	  (superman-change-balls balls)
 	  (superman-refresh-cat balls))))))
 				 
   
+(defun superman-find-bibtex (&optional regexp)
+  (interactive)
+  (let ((regexp (or regexp
+		    (read-string "Re-search-forward: " "year.*=.*2013"))))
+    (get-buffer-create "*Superman-bibtex-match*")
+    (with-current-buffer "*Superman-bibtex-match*"
+      (erase-buffer)
+      (unless (eq major-mode 'bibtex-mode)
+	(bibtex-mode)))
+    (goto-char (point-min))
+    (while (re-search-forward regexp nil t)
+      (bibtex-mark-entry)
+      (call-interactively 'copy-region-as-kill)
+      (with-current-buffer "*Superman-bibtex-match*"
+	(yank)
+	(insert "\n\n")))
+    (switch-to-buffer  "*Superman-bibtex-match*")))
 
 (provide 'superman-pub)
 
