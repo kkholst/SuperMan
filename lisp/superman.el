@@ -40,7 +40,7 @@
 (setq superman-balls
       '((todo ("width" 9) ("face" superman-get-todo-face))
 	(hdr ("width" 27) ("face" font-lock-function-name-face)
-	     ("name" Description)
+	     ("name" "Description")
 	     ("fun" superman-trim-project-nickname))
 	("marker" ("width" 33)
 	  ("name" "Project")
@@ -257,7 +257,7 @@
 	    (insert "\n")
 	    (insert (superman-column-names superman-balls))
 	    ;; sorting
-	    (goto-char (next-single-property-change (point) 'superman-item-marker))
+	    ;; (goto-char (next-single-property-change (point-at-bol) 'superman-item-marker))
 	    (when (next-single-property-change (point-at-bol) 'sort-key)
 	      (goto-char (+ 2 (next-single-property-change (point-at-bol) 'sort-key)))
 	      (superman-sort-section))))

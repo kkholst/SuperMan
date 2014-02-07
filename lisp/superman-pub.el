@@ -39,55 +39,71 @@
 
 (defun superman-bibtex-parse-entry (&optional pom)
   (interactive)
-  (org-with-point-at (or pom (point))
-    (let* ((start (bibtex-beginning-of-entry))
-	   (end (bibtex-end-of-entry))
-	   (type (progn
-		   (goto-char start)
-		   (looking-at bibtex-entry-head)
-		   (setq type (match-string-no-properties 1))))
-	   (bibkey (match-string-no-properties 2))
-	   (bib  (buffer-substring start end))
-	   (plain (ignore-errors (superman-bibtex2text bib)))
-	   done
-	   previous
-	   next
-	   fields)
-      (goto-char start)
-      (while (and (not done)
-		  (setq next (bibtex-next-field 1))
-		  (not (string= next previous))
-		  (not (string= next "Entry key")))
-	(let* ((field-info (bibtex-find-text-internal t nil t))
-	       (field-key (when field-info
-			    (downcase
-			     (car field-info))))
-	       (end-of-field (nth 2 field-info))
-	       (field-val (when field-info
-			    (replace-regexp-in-string "[\n}{]*" ""
-						      (buffer-substring-no-properties
-						       (nth 1 field-info)
-						       end-of-field)))))
-	  (setq fields
-		(append fields
-			(list (cons field-key field-val))))
-	  (setq previous next)
-	  (if (> (point) end)
-	      (setq done t))))
-      (goto-char start)
-      (insert "*** " bibkey "\n" ":PROPERTIES:\n")
-      (while fields
-	(let ((prop (caar fields))
-	      (val (cdar fields)))
-	  (insert ":" prop ": ")
-	  (insert val "\n")
-	  (setq fields (cdr fields))))
-      (insert ":END:\n")
-      (when plain
-	(insert "\n**** Plain\n"
-		(replace-regexp-in-string "\\[1\\]" ""
-					  (car (split-string plain "=+")))))
-      (insert "\n**** BibTeX \n"))))
+  (let ((cbuf (current-buffer))
+	(cmode major-mode))
+    (bibtex-mark-entry)
+    (if (eq cmode 'org-mode)
+	(call-interactively 'kill-region)
+      (call-interactively 'copy-region-as-kill))
+    (find-file "/tmp/superman-parse-pub.bib")
+    (erase-buffer)
+    (yank)
+    (org-with-point-at (or pom (point))
+      (let* ((start (bibtex-beginning-of-entry))
+	     (end (bibtex-end-of-entry))
+	     (type (progn
+		     (goto-char start)
+		     (looking-at bibtex-entry-head)
+		     (setq type (match-string-no-properties 1))))
+	     (bibkey (match-string-no-properties 2))
+	     (bib  (buffer-substring start end))
+	     (plain (ignore-errors (superman-bibtex2text bib)))
+	     done
+	     previous
+	     next
+	     fields)
+	(goto-char start)
+	(while (and (not done)
+		    (setq next (bibtex-next-field 1))
+		    (not (string= next previous))
+		    (not (string= next "Entry key")))
+	  (let* ((field-info (bibtex-find-text-internal t nil t))
+		 (field-key (when field-info
+			      (downcase
+			       (car field-info))))
+		 (end-of-field (nth 2 field-info))
+		 (field-val (when field-info
+			      (replace-regexp-in-string "[\n}{]*" ""
+							(buffer-substring-no-properties
+							 (nth 1 field-info)
+							 end-of-field)))))
+	    (setq fields
+		  (append fields
+			  (list (cons field-key field-val))))
+	    (setq previous next)
+	    (if (> (point) end)
+		(setq done t))))
+	(goto-char start)
+	(insert "*** " bibkey "\n" ":PROPERTIES:\n")
+	(while fields
+	  (let ((prop (caar fields))
+		(val (cdar fields)))
+	    (insert ":" prop ": ")
+	    (insert val "\n")
+	    (setq fields (cdr fields))))
+	(insert ":END:\n")
+	(when plain
+	  (insert "\n**** Plain\n"
+		  (replace-regexp-in-string "\\[1\\]" ""
+					    (car (split-string plain "=+")))))
+	(insert "\n**** BibTeX \n")))
+    (if (eq cmode 'org-mode)
+	(let ((parsed-text (buffer-string)))
+	  (switch-to-buffer cbuf)
+	  (insert parsed-text))
+      (copy-region-as-kill (point-min) (point-max))
+      (pop-to-buffer cbuf)
+      (message "Buffer-string copied to kill-ring"))))
       
   
 (defun superman-bibtex2text (bib-string)

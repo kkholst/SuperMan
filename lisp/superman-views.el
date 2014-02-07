@@ -872,7 +872,7 @@ Returns the formatted string with text-properties."
 			     ((eq (car b) 'todo) "Status")
 			     ((eq (car b) 'priority) "Priority")
 			     ((eq (car b) 'attac) " ")
-			     ((eq (car b) 'org-hd-marker))
+			     ((eq (car b) 'org-hd-marker) " ")
 			     (t (symbol-name (cadr (assoc "fun" (cdr b)))))))
 	     name
 	     (sort-cmd  (concat "sort-by \"" col-name "\"")))
@@ -1091,7 +1091,8 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 end)
     (put-text-property
      (previous-single-property-change (point) 'button)
-     (next-single-property-change (point) 'button) 'reverse (not reverse))
+     (next-single-property-change (point) 'button)
+     'reverse (not reverse))
     (when (and pos dim)
       (goto-char pos)
       (goto-char (next-single-property-change
@@ -2227,6 +2228,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
       (let ((buffer-read-only nil))
 	(insert "Key-bindings: (q: close this help window)\n\n"
 		"e: edit item; v: view item; g: git repository\n"
+		"i: visit index file; f: view file-list\n"
 		"t: toggle todo status; RETURN: visit file or item\n"
 		"N: Capture new item"))
       (setq buffer-read-only t))
