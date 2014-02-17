@@ -398,7 +398,7 @@ Else return FILE as it is."
 
 (defun superman-git-log-file (&optional arg)
   (interactive "p")
-  (let* ((limit (if (= arg 1)
+  (let* ((limit (if (or (not arg) (= arg 1))
 		    superman-git-log-limit
 		  (or arg superman-git-log-limit)))
 	 (file (superman-filename-at-point)))
