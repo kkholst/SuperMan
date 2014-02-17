@@ -686,7 +686,6 @@ Enabling superman mode electrifies the superman buffer for project management."
       (insert (or title "* SupermanAgenda"))
       (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
-      ;; (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo-cmd)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
