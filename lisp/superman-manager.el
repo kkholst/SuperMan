@@ -48,9 +48,10 @@
 (require 'superman-git)      ;; git control,
 (require 'superman-config)   ;; saving and setting window configurations
 (require 'superman-pub)      ;; publication manager
+(require 'superman-export)   ;; org export help
 (require 'superman-google)   ;; google calendar support
 (require 'superman-faces)    ;; highlighting
-(require 'superman-file-list)         ;; work with lists of files 
+(require 'superman-file-list);; work with lists of files 
 (if (featurep 'deft)
     (require 'superman-deft))     ;; selecting projects via deft
 
@@ -180,27 +181,41 @@ the `superman-profile'.")
 
 ;; config
 
-(setq superman-config-action-alist '(("INDEX" . superman-find-index)
-				    ("TODO" . superman-project-todo)
-				    ("TIMELINE" . superman-project-timeline)
-				    ("LOCATION" . superman-location)
-				    ("DOCUMENTS" . superman-view-documents)
-				    ("FILELIST" . superman-file-list)
-				    ("PROJECT" . superman-view-project)
-				    ("SUPERMANUAL" . supermanual)
-				    ("magit" . superman-magit)
-				    ("recent.org" . superman-recent-org)
-				    ("*shell*" . superman-start-shell)
-				    ("*S*" . '(lambda (&optional project) superman))
-				    ("*S-todo*" . superman-todo)
-				    ("*S-agenda*" . superman-agenda)
-                                    ("*ielm*" . 
-				     (lambda (project) 
-				       (if (get-buffer "*ielm*") 
-					   (switch-to-buffer "*ielm*") 
-					 (ielm))))
-				    ("*R*" . superman-find-R-function)
-				    ("" . (lambda (project) ))))
+(defvar superman-config-action-alist
+  '(("INDEX" . superman-find-index)
+    ("TODO" . superman-project-todo)
+    ("TIMELINE" . superman-project-timeline)
+    ("LOCATION" . superman-location)
+    ("DOCUMENTS" . superman-view-documents)
+    ("FILELIST" . superman-file-list)
+    ("PROJECT" . superman-view-project)
+    ("SUPERMANUAL" . supermanual)
+    ("magit" . superman-magit)
+    ("recent.org" . superman-recent-org)
+    ("*shell*" . superman-start-shell)
+    ("*S*" . '(lambda (&optional project) superman))
+    ("*S-todo*" . superman-todo)
+    ("*S-agenda*" . superman-agenda)
+    ("*ielm*" . 
+     (lambda (project) 
+       (if (get-buffer "*ielm*") 
+	   (switch-to-buffer "*ielm*") 
+	 (ielm))))
+    ("*R*" . superman-find-R-function)
+    ("" . (lambda (project))))
+  "Alist used by `superman-find-thing' to associate actions with keys
+for setting window configurations.
+
+For example, the element
+
+ (\"TIMELINE\" . superman-project-timeline)
+
+will be chosen when thing is \"TIMELINE\" and then the function
+`superman-project-timeline' will be called with one argument, 
+a project, i.e., an element of `superman-project-alist'.
+
+Generally, a key is a string which must not start or end with a number,
+and an action a one-optional-argument function which must return a buffer.")
 
 ;; TODO Add description
 (defvar superman-default-config "PROJECT" "default window configuration") 
