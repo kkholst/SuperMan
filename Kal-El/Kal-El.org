@@ -7,7 +7,6 @@
 * SuperManual
   :PROPERTIES:
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
-  :Ball3:    LastCommit  :fun superman-trim-date :face font-lock-string-face
   :Ball4:    FileName  :fun superman-dont-trim
   :END:
 
@@ -19,23 +18,37 @@
 :GitStatus: Committed
 :END:
 
+
 * Blog
   :PROPERTIES:
-  :Ball3:    hdr  :width 23 :face font-lock-function-name-face
-  :Ball4:    .*Date  :fun superman-trim-date :face font-lock-string-face :regexp t
+  :Ball1:    hdr  :width 43 :face font-lock-function-name-face
+  :Ball2:    .*Date  :fun superman-trim-date :face font-lock-string-face :regexp t
   :END:
 
-*** use git to checkout rforge
+
+
+*** sample-article
 :PROPERTIES:
-:CaptureDate: <2013-12-13 Fri 08:10>
-:FileName: [[./blog/use-git-for-Rforge.org]]
+:CaptureDate: <2014-02-09 Sun>
+:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/blog/sample-article.org]]
 :END:
+
+
+
+
 
 *** sample-beamer
 :PROPERTIES:
 :CaptureDate: <2013-11-05 Tue 08:48>
 :FileName: [[./blog/sample-beamer.org]]
 :END:
+*** [#B] use git to checkout rforge
+:PROPERTIES:
+:CaptureDate: <2013-12-13 Fri 08:10>
+:FileName: [[./blog/use-git-for-Rforge.org]]
+:END:
+
+
 
 *** latex: page dimensions
 :PROPERTIES:
