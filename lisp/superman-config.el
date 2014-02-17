@@ -46,17 +46,20 @@ Returns the corresponding buffer."
 		    (assoc
 		     (replace-regexp-in-string "^[ \t\n]+\\|[ \t\n]+$" ""  thing)
 		     superman-config-action-alist))))
-      (cond ((functionp action) (funcall action project))
-	    ((and thing (string= (substring thing 0 1) "!"))
-	     (superman-start-shell (substring thing 1 (length thing))))
-	    ((and thing (string-match org-bracket-link-regexp thing))
-	     (find-file (org-match-string-no-properties 1 thing)))
-	    ((and thing (file-name-directory thing))
-	     (find-file
-	      (expand-file-name
-	       thing
-	       (concat (superman-get-location project) (car project)))))
-	    (t (switch-to-buffer thing))))
+      (cond
+       ((not thing) nil)
+       ((functionp action) (funcall action project))
+       ((string= (substring thing 0 1) "!")
+	(superman-start-shell (substring thing 1 (length thing))))
+       ((file-exists-p thing) (find-file thing))
+       ((string-match org-bracket-link-regexp thing)
+	(find-file (org-match-string-no-properties 1 thing)))
+       ((file-name-directory thing)
+	(find-file
+	 (expand-file-name
+	  thing
+	  (concat (superman-get-location project) (car project)))))
+       (t (switch-to-buffer thing))))
     (current-buffer)))
 ;;}}}
 ;;{{{ saving window configs
@@ -101,17 +104,6 @@ Returns the corresponding buffer."
 
 ;;}}}
 ;;{{{ reading window configs
-(defun superman-distangle-config-list (string)
-   ;; return a list of lists with vertical splits 
-  ;; where each element can have horizontal splits
-  (split-string string "[ \t]+:[ \t]+"))
-
-(defun superman-distangle-config (config)
-  ;; return a list with horizontal splits 
-  ;; where each element can have vertical splits
-  (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
-	 (hlist (mapcar #'(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
-    hlist))
 
 (defun superman-read-config (project)
   (let* ((config (superman-get-config project))
@@ -143,6 +135,21 @@ Returns the corresponding buffer."
 ;;}}}
 
 ;;{{{ smashing window configs
+
+(defun superman-distangle-config-list (string)
+   ;; return a list of lists with vertical splits 
+  ;; where each element can have horizontal splits
+  (split-string string "[ \t]+:[ \t]+"))
+
+(defun superman-distangle-config (config)
+  ;; return a list with horizontal splits 
+  ;; where each element can have vertical splits
+  ;;
+  ;; example: (superman-distangle-config "a / b | c | d")
+  (let* ((vlist (split-string config "[ \t]+|[ \t]+"))
+	 (hlist (mapcar #'(lambda (x) (split-string x "[ \t]+/[ \t]+")) vlist)))
+    hlist))
+
 (defun superman-smash-windows (window-config project)
   "Smash windows according to the WINDOW-CONFIG and
 then fill relative to project."
@@ -160,13 +167,41 @@ then fill relative to project."
 	  (select-window (nth c top-windows)) ;; switch to the top-window in this column
 	  (let ((nrow (nth c nrows)));; number of rows in this column
 	    (loop for r from 0 to (- nrow 1) do
-		  (switch-to-buffer
-		   (superman-find-thing (nth r (nth c window-config)) project))
+		  (let ((thing (nth r (nth c window-config)))
+			width height)
+		    (string-match "\\([0-9]*\\)-?\\([0-9]*\\)[ ]*\\(.*\\)" thing)
+		    (setq width (string-to-int (match-string 1 thing))
+			  height (string-to-int (match-string 2 thing))
+			  thing (match-string 3 thing))
+		    (switch-to-buffer
+		     (superman-find-thing thing project))
+		    ;; maybe shrink window
+		    (let ((w-heigth (window-height (selected-window)))
+			  (w-width  (window-width (selected-window))))
+		      ;; The aim to shrink the window can fail, e.g.,
+		      ;; root window cannot be shrunken. We prefer
+		      ;; to do nothing and not to signal an error
+		      (when (and (> height 0) (< height w-heigth))
+			(ignore-errors (shrink-window (- w-heigth height))))
+		      (when (and (> width 0) (< width w-heigth))
+			(ignore-errors (shrink-window (- w-heigth width) 'horizontal)))))
 		  (when (and (< r (- nrow 1)) (> nrow 1 ))
 		    (split-window-vertically)
 		    (other-window 1)))))
     (select-window (nth 0 top-windows))))
-    
+
+(defun superman-set-config (config &optional project)
+  "Distangle and set superman-window-configuration CONFIG.
+Optional PROJECT should be an element of the `superman-project-alist'. It is
+passed to `superman-find-thing'.
+
+See `superman-ual' for the syntax of
+ superman-window-configurations.
+"
+  (superman-smash-windows
+   (superman-distangle-config config)
+   project))
+  
 (defun superman-switch-config (&optional project position config)
   "Switch to the next user defined window configuration of PROJECT.
 
@@ -203,6 +238,8 @@ given in superman notation."
 	      (superman-distangle-config
 	       (nth superman-config-cycle-pos config-list)))
 	(superman-smash-windows window-config pro)))))
+
+
 ;;}}}
 ;;{{{ functions that find things
 
