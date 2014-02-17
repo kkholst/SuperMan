@@ -605,15 +605,37 @@ see M-x manual-entry RET git-diff RET.")
 	 'face 'superman-warning-face)))))
 
 
-(defun superman-git-annotate (&optional arg)
+(defun superman-git-annotate (&optional file)
   "Annotate file"
   (interactive)
-  (let ((file (superman-filename-at-point)) (bufn))
-    (save-window-excursion
-      (find-file file)
-      (vc-annotate (org-link-display-format file) "HEAD")
-      (setq bufn (buffer-name)))
-    (switch-to-buffer bufn)))
+  (let* ((file (or file
+		  (superman-filename-at-point)
+		  (get-text-property (point-min) 'filename)))
+	(nick (get-text-property (point-min) 'nickname))
+	(index (get-text-property (point-min) 'index))
+	(git-dir (get-text-property (point-min) 'git-dir))
+	(bufn (concat "*Superman-annotate:" (file-name-nondirectory file) "*")))
+    ;; (bufn))
+    ;; (save-window-excursion
+    ;; (find-file file)
+    ;; (vc-annotate (org-link-display-format file) "HEAD")
+    ;; (setq bufn (buffer-name)))
+    (switch-to-buffer bufn)
+    (let ((buffer-read-only nil))
+      (erase-buffer)
+      ;; (goto-char (point-min))
+      (insert "* Annotation of " (file-name-nondirectory file))
+      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+      (put-text-property (point-at-bol) (point-at-eol) 'filename file)
+      (put-text-property (point-at-bol) (point-at-eol) 'index index)
+      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+      (put-text-property (point-at-bol) (point-at-eol) 'git-dir git-dir)
+      (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+	      "  " (superman-make-button "Git overview" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+	      ;; "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
+	      "  " (superman-make-button "log" 'superman-git-log 'superman-next-project-button-face "Show git log."))
+      (insert "\n")
+      (insert (shell-command-to-string (concat "cd " git-dir ";" superman-cmd-git " blame " file))))))
 
 ;;}}}
 ;;
@@ -772,6 +794,7 @@ This function should be bound to a key or button."
 	    (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
 	    (put-text-property (point-min) (1+ (point-min)) 'nickname nickname)
 	    (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
+	    (put-text-property (point-min) (1+ (point-min)) 'index index)
 	    (put-text-property (point-min) (1+ (point-min)) 'git-display "log")
 	    (superman-view-mode-on)
 	    (superman-git-mode-on)
@@ -1286,9 +1309,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	    pstring) "    " (superman-trim-string hdr 70)))
 
 
-(defun superman-git-setup-log-buffer (file dir git-switches decoration-only arglist)
-  (let* ((rel-file (superman-relative-name file dir))
-	 (dir dir)
+(defun superman-git-setup-log-buffer (file git-switches decoration-only arglist)
+  (let* ((dir (get-text-property (point-min) 'git-dir))
+	 (rel-file (superman-relative-name file dir))
+	 (index (get-text-property (point-min) 'index))
 	 (cmd (concat
 	       "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
 	 (gitlog (shell-command-to-string cmd))
@@ -1303,9 +1327,15 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (insert "* Git Log of " (file-name-nondirectory file))
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (put-text-property (point-at-bol) (point-at-eol) 'filename file)
+    (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+    (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir dir)
-    ;; (put-text-property (point-at-bol) (point-at-eol) 'command cmd)
     (put-text-property (point-at-bol) (point-at-eol) 'arglist arglist)
+    (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+	    "  " (superman-make-button "Git overview" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+	    "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
+	    ;; "  " (superman-make-button "log" 'superman-git-log 'superman-next-project-button-face "Show git log.")
+	    )
     (insert "\n\n")
     ;; column names
     (insert (superman-column-names superman-log-balls) "\n")
@@ -1342,16 +1372,20 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	("Tag" ("width" 10) ("face" font-lock-comment-face))
 	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
 
-(defun superman-git-log (file limit &optional search-string decoration-only)
-  (let* ((file (or file (superman-filename-at-point)
-		   (superman-get-property nil (superman-property 'filename) t)))
+(defun superman-git-log (&optional file limit search-string decoration-only)
+  (let* ((file (or file
+		   (superman-filename-at-point)
+		   (get-text-property (point-min) 'filename)))
+	 (limit (or limit superman-git-log-limit))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (get-text-property (point-min) 'git-dir))
+	 (nick (get-text-property (point-min) 'nickname))
 	 (gitcmd (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit))))))
-    (superman-git-setup-log-buffer file gitpath gitcmd decoration-only (list limit search-string decoration-only) )))
-
+    (superman-git-setup-log-buffer
+     file gitcmd decoration-only
+     (list limit search-string decoration-only) )))
 
 ;; (defun superman-git-comment-file ()
   ;; (interactive)

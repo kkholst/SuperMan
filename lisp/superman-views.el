@@ -1207,13 +1207,14 @@ which locates the heading in the buffer."
   "Identify project based on OBJECT and current buffer's text-property nickname at point-min.
 Unless optional argument ASK is non-nil use `superman-current-project' if
 neither object nor the current buffer identify a project."
-  (cond ((stringp object)
-	 (assoc object superman-project-alist))
-	((setq object (get-text-property (point-min) 'nickname))
-	 (assoc object superman-project-alist))
-	(object) ;; assume object is a project
-	((not ask) superman-current-project)
-	(t (superman-select-project))))
+  (let (nick)
+    (cond ((stringp object)
+	   (assoc object superman-project-alist))
+	  ((setq nick (get-text-property (point-min) 'nickname))
+	   (assoc nick superman-project-alist))
+	  (object) ;; assume object is a project
+	  ((not ask) superman-current-project)
+	  (t (superman-select-project)))))
 
 (defun superman-view-project (&optional project refresh) 
   "Display an overview for project in a view buffer. Optional
