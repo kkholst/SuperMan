@@ -404,6 +404,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
      pro
      heading
      `("Document" (("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
+		   ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
 		   (hdr ,(file-name-nondirectory file))
 		   ;; ("GitStatus" ,(nth 1 (ignore-errors (superman-git-get-status file nil))))
 		   )))))
@@ -595,7 +596,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 ("SWITCHES" "-ignore 'Name .git'")
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
-		 ("CaptureDate" ,(format-time-string "<%Y-%m-%d %a>")))))))
+		 ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]")))))))
 
 (defun superman-run-unison (&optional project)
   (interactive)
