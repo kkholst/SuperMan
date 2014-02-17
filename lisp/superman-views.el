@@ -1280,6 +1280,7 @@ Display an existing view buffer unless REFRESH is non-nil."
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-view-project ,nick t))
 	(put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
 	(put-text-property (point-at-bol) (point-at-eol) 'dir loc)
+	(put-text-property (point-at-bol) (point-at-eol) 'project-view t) ;; to identify project-view buffer, do not copy to other views
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	(put-text-property (point-at-bol) (point-at-eol) 'index index)
 	;; link to previously selected projects

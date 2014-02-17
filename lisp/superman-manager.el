@@ -761,7 +761,10 @@ Unless NOSELECT is nil, set the next window config of project.
 If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
-	 (pro (superman-get-project project))
+	 (pro
+	  (if (get-text-property (point-min) 'project-view)
+	      (superman-select-project)
+	    (superman-get-project project 'ask)))
 	 (stay (eq pro curpro)))
     (unless stay
       (if (member (car pro) superman-project-history)
