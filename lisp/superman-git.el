@@ -711,14 +711,11 @@ This function should be bound to a key or button."
 
 (defun superman-display-git-cycle ()
   (interactive)
-  (unless (or superman-git-mode (not (get-text-property (point-min) 'git-dir)))
+  (unless (or superman-git-mode
+	      (not (get-text-property (point-min) 'git-dir)))
     (let* ((index (get-text-property (point-min) 'index))
-	   ;; (repos-point (next-single-property-change (point-min) 'git-repos))
 	   index-marker
-	   ;; props
 	   (tempp (bufferp index)))
-      ;; (if repos-point
-      ;; (goto-char repos-point)
       (save-window-excursion
 	(if tempp (switch-to-buffer index)
 	  (find-file (get-text-property (point-min) 'index)))
@@ -735,11 +732,8 @@ This function should be bound to a key or button."
 		  "\n:hidden: not superman-git-mode"
 		  "\n:git-display: log\n:END:\n")
 	  (unless tempp (save-buffer)))
-	;; now in index buffer at git repos heading
+	;; now sitting in index buffer at the git-repos heading
 	(outline-back-to-heading)
-	;; (setq props (superman-parse-props
-	;; (get-text-property (point-at-bol) 'org-hd-marker)
-	;; 'p 'h))
 	(setq index-marker (point-marker)))
       ;; open git view buffer
       (let* ((pbuf (buffer-name))
@@ -758,8 +752,12 @@ This function should be bound to a key or button."
 	    (goto-char (point-min))
 	    (insert (superman-make-button
 		     (concat "* Git: " nickname)
-		     'superman-redo 'superman-project-button-face)
-		    "\n\n")
+		     'superman-redo 'superman-project-button-face))
+	    (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+		    "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
+		    "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+		    "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
+	    (insert "\n\n")
 	    (insert (superman-view-control nickname git-dir))
 	    (superman-view-insert-git-branches git-dir)
 	    (superman-view-insert-action-buttons

@@ -389,8 +389,8 @@ the current sub-category and return the minimum."
 for project views.")
 
 (defun superman-view-insert-action-buttons (&optional button-list no-newline title-string)
-  "Insert capture buttons. BUTTON-LIST is a alist of button labels and functions 
-which there is a function `superman-capture-n'. If omitted, it is set to
+  "Insert capture buttons. BUTTON-LIST is an alist providing button labels, functions and help strings.
+ If omitted, it is set to
   '((\"Document\" 'superman-capture-document)
     (\"Task\" 'superman-capture-task)
     (\"Note\" 'superman-capture-note)
@@ -485,8 +485,8 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 (defvar superman-sticky-displays
   '(("Timeline" superman-project-timeline superman-capture-button-face)
     ("Todo" superman-project-todo superman-capture-button-face)
-    ("Git" superman-display-git-cycle superman-capture-button-face)
-    ("Help: h" superman-ual superman-capture-button-face "Open the superman-ual"))
+    ("Git (g)" superman-display-git-cycle superman-capture-button-face)
+    ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual"))
   "Alist of displays that are shown as action buttons for all projects.")
 
 ;;}}}
@@ -1281,7 +1281,7 @@ Display an existing view buffer unless REFRESH is non-nil."
 	(superman-view-insert-project-buttons)
 	(insert (superman-project-view-header pro))
 	;; (when gitp
-	(insert (superman-view-control pro))
+	(insert "\n" (superman-view-control pro))
 	(superman-view-insert-config-buttons pro)
 	(superman-view-insert-unison-buttons pro)
 	;; action buttons

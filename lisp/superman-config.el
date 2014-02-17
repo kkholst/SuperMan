@@ -261,10 +261,30 @@ given in superman notation."
   (interactive)
   (let* ((project (or project superman-current-project (superman-select-project)))
 	 (index (superman-get-index project))
+	 (loc (superman-project-home project))
+	 (nick (car project))
 	 (org-agenda-window-setup 'current-window)
 	 (org-agenda-sticky nil)
 	 (org-agenda-redo-command 'superman-project-timeline)
-	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*")))
+	 (org-agenda-buffer-name (concat "*Timeline[" (car project) "]*"))
+	 (org-agenda-finalize-hook
+	  (lambda ()
+	    (save-excursion
+	      (goto-char (point-min))
+	      (kill-line)
+	      (insert 
+	       "Project ToDo list")
+	      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd `(superman-project-timeline ,nick))
+	      (put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
+	      (put-text-property (point-at-bol) (point-at-eol) 'dir loc)
+	      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+	      (put-text-property (point-at-bol) (point-at-eol) 'index index)
+	      (insert
+	       "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+	       "  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+	       "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
+	       "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+	       "\n")))))
     (if (file-exists-p index)
 	(progn
 	  ;; we need to be 100% sure that the agenda is not accidentally 
@@ -297,7 +317,14 @@ given in superman notation."
   "Display a project specific todo-list based on all org files."
   (interactive)
   (let* ((project (or project superman-current-project (superman-select-project)))
-	(loc (superman-project-home project)))
+	 (title  "Project ToDo list")
+	 (loc (superman-project-home project))
+	 (index (superman-get-index project))
+	 (nick (car project)))
+    (put-text-property 0 (length title) 'git-dir (superman-git-toplevel loc) title)
+    (put-text-property 0 (length title) 'dir loc title)
+    (put-text-property 0 (length title) 'nickname nick title)
+    (put-text-property 0 (length title) 'index index title)
     (if (file-exists-p loc)
 	(let* ((org-agenda-buffer-name  (concat "*Todo[" (car project) "]*"))
 	       (org-agenda-sticky nil)
@@ -319,7 +346,13 @@ given in superman notation."
 			 (superman-format-agenda
 			  superman-project-todolist-balls
 			  '(superman-project-todo)
-			  "Project ToDo list")))))))))
+			  title
+			  (concat "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+				  "  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+				  "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
+				  ;; "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+				  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
+			  )))))))))
 	  ;; to be 100% sure that the agenda is not accidentally written
 	  ;; to the index file
 	  (switch-to-buffer (get-buffer-create org-agenda-buffer-name))

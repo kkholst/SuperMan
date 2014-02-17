@@ -41,9 +41,9 @@
 (defun superman-file-list (project &optional ext)
   "List files in project's location that match extension EXT"
   (if (featurep 'file-list)
-      (let ((loc (superman-project-home project)))
+      (let ((dir (superman-project-home project)))
 	(cond ((file-list-select-internal nil (or ext ".")
-					  nil nil loc (concat "*File-list-" (car project) "*")))
+					  nil nil dir (concat "*File-list-" (car project) "*")))
 	      (t
 	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
 	       (toggle-read-only -1)
@@ -74,7 +74,7 @@
 	 (pbuf (if file-list-mode
 		   (get-text-property (point-min) 'project-buffer)
 		 (buffer-name)))
-	 (loc (or dir (get-text-property (point-min) 'loc)
+	 (dir (or dir (get-text-property (point-min) 'dir)
 		  (when project
 		    (superman-project-home project))
 		  (error "Missing location")))
@@ -85,12 +85,12 @@
 	    (if refresh
 		(file-list-select-internal
 		 nil (or ext ".")
-		 nil nil loc (concat "*File-list-" (or nick "nix") "*") 'dont)
+		 nil nil dir (concat "*File-list-" (or nick "nix") "*") 'dont)
 	      (or list
 		  file-list-current-file-list
 		  (file-list-select-internal
 		   nil (or ext ".")
-		   nil nil loc (concat "*File-list-" (or nick "nix") "*") 'dont)))))
+		   nil nil dir (concat "*File-list-" (or nick "nix") "*") 'dont)))))
 	 (balls superman-file-list-balls)
 	 (count 0)
 	 ;; (cycle file-list-display-level)
@@ -124,7 +124,13 @@
 		 "Refresh project view"))
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	(put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
-	(put-text-property (point-at-bol) (point-at-eol) 'loc loc)
+	(put-text-property (point-at-bol) (point-at-eol) 'git-dir dir)
+	(put-text-property (point-at-bol) (point-at-eol) 'dir dir)
+	(put-text-property (point-at-bol) (point-at-eol) 'index (superman-get-index project))
+	(insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+		"  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+		"  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+		"  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
 	(insert "\n")
 	(superman-view-insert-action-buttons
 	 `((,(concat (char-to-string #x2245) " file-name") file-list-by-name
@@ -175,7 +181,7 @@
 	   ("copy" file-list-copy nil "Copy all files to a new directory")
 	   ("query-replace" file-list-query-replace nil "Run interactive query replace through all files")
 	   ("delete" file-list-remove nil "Remove all files")) nil "Action:")
-	   ;; ("clear display" file-list-clear-display)) 
+	;; ("clear display" file-list-clear-display)) 
 	(insert "\n* ")
 	(put-text-property (point-at-bol) (point-at-eol) 'file-list-start t)
 	(insert "\n")
@@ -209,7 +215,7 @@
 	(insert "\n\n")
 	;; insert the section name		
 	(superman-view-insert-section-name
-	 loc
+	 dir
 	 count
 	 balls
 	 nil
@@ -244,7 +250,7 @@
 	  (append file-list-current-file-list (car ff)))
     (setq file-list-filter
 	  (delete-if '(lambda (x) (string= (car x) filter)) file-list-filter))
-    (superman-display-file-list (get-text-property (point-min) 'loc))))
+    (superman-display-file-list (get-text-property (point-min) 'dir))))
 
   
 (defun file-list-mode ()
