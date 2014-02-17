@@ -260,14 +260,19 @@ at (point-min) is git controlled."
 				       'superman-header-button-face
 				       "Show git status"))
 	 (control (if (or git-dir (superman-git-p loc))
-		      (let ((git-dir-link (concat "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")))
-			(put-text-property 0 1 'superman-header-marker t git-dir-link)
-			(concat "Git repository at "
-				;;FIXME: would like to have current git status as well
-				git-dir-link))
-		    "not set. <> press `GI' to initialize git control")))
-    ;; (put-text-property 0 (length "Contrl: ") 'face 'org-level-2 control)
+		      (superman-make-button
+		       (concat "Git repository at " "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
+		       'superman-display-git-cycle
+		       nil
+		       "Control git repository")
+		    (superman-make-button
+		     "not set. <> press button or `GI' to initialize git control"
+		     'superman-git-init
+		     nil
+		     (concat
+		      "Initialize git repository at " git-dir)))))
     (put-text-property 0 1 'superman-header-marker t button)
+    (put-text-property 0 1 'superman-header-marker t control)
     (concat button " " control)))
 
 (defun superman-view-others (project)
@@ -675,21 +680,18 @@ Translate the branch names into buttons."
       (insert "[" current-branch "]  ")
       (while other-branches
 	(let* ((b (car other-branches))
-	       (fun
-		`(lambda ()
-		   (interactive)
-		   (superman-run-cmd
-		    ,(concat "cd " loc "; "
-			     superman-cmd-git " checkout " b "\n")
-		    "*Superman-returns*"
-		    nil
-		    ,(buffer-name view-buf))))
-	       (button
-		(superman-make-button
-		 b
-		 fun
-		 'font-lock-comment-face
-		 "Checkout branch")))
+	       (fun `(lambda ()
+		       (interactive)
+		       (superman-run-cmd
+			,(concat "cd " loc "; "
+				 superman-cmd-git
+				 " checkout " b "\n")
+			"*Superman-returns*"
+			nil
+			,(buffer-name view-buf))))
+	       (button (superman-make-button
+			b fun 'font-lock-comment-face
+			"Checkout branch")))
 	  (setq other-branches (cdr other-branches))
 	  (put-text-property 0 1 'superman-header-marker t button)
 	  (insert "[" button "]  ")))
@@ -1279,7 +1281,7 @@ Display an existing view buffer unless REFRESH is non-nil."
 	(superman-view-insert-project-buttons)
 	(insert (superman-project-view-header pro))
 	;; (when gitp
-	;; (superman-view-insert-git-branches loc))
+	(insert (superman-view-control pro))
 	(superman-view-insert-config-buttons pro)
 	(superman-view-insert-unison-buttons pro)
 	;; action buttons
@@ -2039,6 +2041,7 @@ current section."
 	   (get-text-property (point-at-bol) 'org-hd-marker)
 	   (get-text-property (point-at-bol) 'superman-e-marker)))
 	 (catp (get-text-property (point-at-bol) 'cat))
+	 (columnsp (get-text-property (point-at-bol) 'column-names))
 	 (E-buf (generate-new-buffer-name "*Edit by SuperMan*"))
 	 (scene (current-window-configuration))
 	 (all-props (if (or (not marker) catp) nil (superman-view-property-keys)))
@@ -2056,10 +2059,10 @@ current section."
 	 used-props)
     (when (and free (not marker))
       (setq marker (get-text-property cat-point 'org-hd-marker)))
+    (when columnsp
+      (setq marker (get-text-property (superman-cat-point) 'org-hd-marker)))
     (if (not marker)
-	(if (setq marker (org-get-at-bol 'superman-e-marker))
-	    nil
-	  (message "Nothing here"))
+	(message "Nothing here")
       ;; add properties defined by balls to all-props
       (while balls
 	(when (stringp (setq prop (caar balls)))
@@ -2604,9 +2607,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "!" 'superman-goto-shell)
 (define-key superman-view-mode-map "?" 'supermanual)
 
-(define-key superman-view-mode-map "Bn" 'superman-new-ball)
-(define-key superman-view-mode-map "Bx" 'superman-delete-ball)
-(define-key superman-view-mode-map "Bs" 'superman-save-balls)
+;; (define-key superman-view-mode-map "Bn" 'superman-new-ball)
+;; (define-key superman-view-mode-map "Bx" 'superman-delete-ball)
+;; (define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
 ;; view context
 (define-key superman-view-mode-map "V" 'superman-toggle-context-view)
@@ -2675,8 +2678,11 @@ not in a section prompt for section first.
 		 (file (if (assoc "FileName" props)
 			   (let ((dir (expand-file-name (concat (superman-get-location pro) (car pro)))))
 			     (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))))
-	    (unless props
-	      (setq props `(("CaptureDate" ,(format-time-string "<%Y-%m-%d %a %R>")))))
+	    (if (assoc "CaptureDate" props)
+		(setq props
+		      (append `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a %R]")))
+			      (delete (assoc "CaptureDate" props) props)))
+	      (setq props `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a %R]")))))
 	    (when file
 	      (setq props (delete (assoc "FileName" props) props))
 	      (setq props (append `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]")))
