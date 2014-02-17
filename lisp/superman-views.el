@@ -445,8 +445,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 
 (defun superman-view-insert-config-buttons (project)
   "Insert window configuration buttons"
-  (let* ((pro (or project superman-current-project
-		  (superman-select-project)))
+  (let* ((pro (or project superman-current-project))
 	 (title
 	  (superman-make-button
 	   "View-S:"
@@ -527,8 +526,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 
 (defun superman-view-insert-unison-buttons (project)
   "Insert unison buttons"
-  (let* ((pro (or project superman-current-project
-		  (superman-select-project)))
+  (let* ((pro (or project superman-current-project))
 	 (title
 	  (superman-make-button
 	   "Unison:"
@@ -1205,6 +1203,15 @@ which locates the heading in the buffer."
 		  cats (append cats `(,(superman-parse-props cat-point 'p 'h)))))
 	  cats)))))
 
+(defun superman-get-project (object)
+  "Identify project based on OBJECT and current buffer's text-property nickname at point-min."
+  (cond ((stringp object)
+	 (assoc object superman-project-alist))
+	((setq object (get-text-property (point-min) 'nickname))
+	 (assoc object superman-project-alist))
+	(object) ;; assume object is a project
+	(superman-current-project)
+	(t (superman-select-project))))
 
 (defun superman-view-project (&optional project refresh) 
   "Display an overview for project in a view buffer. Optional
@@ -1214,11 +1221,7 @@ use `superman-current-project' and prompt if this is not set.
 
 Display an existing view buffer unless REFRESH is non-nil."
   (interactive)
-  (let* ((pro (if (stringp project)
-		  (assoc project superman-project-alist)
-		(or project
-		    superman-current-project
-		    (superman-switch-to-project nil t))))
+  (let* ((pro (superman-get-project project))
 	 (vbuf (concat "*Project[" (car pro) "]*")))
     (if (and (not refresh) (get-buffer vbuf))
 	(progn

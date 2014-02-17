@@ -80,10 +80,10 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
       (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
       (superman-redo))))
 
-(defun superman-git-init-project (&optional pro)
+(defun superman-git-init-project (&optional project)
   "Put project under git control."
   (interactive)
-  (let* ((pro (or pro (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (index (superman-get-index pro))
 	 (loc (concat (superman-get-location pro) (car pro))))
     (if (not index)
@@ -234,7 +234,7 @@ use the location of the current project, if no project is current prompt for pro
   (interactive)
   (let ((dir (or dir
 		 (superman-project-home
-		  (or superman-current-project (superman-select-project))))))
+		  (superman-get-project nil)))))
     (message
      (shell-command-to-string
       (concat "cd " dir "; " superman-cmd-git " branch " (read-string "Name of new branch: ") "\n")))
@@ -246,7 +246,7 @@ use the location of the current project, if no project is current prompt for pro
   (interactive)
   (let* ((dir (or dir
 		  (superman-project-home
-		   (or superman-current-project (superman-select-project)))))
+		   (superman-get-project nil))))
 	 (branch (or branch
 		     (let ((branches (superman-git-branches dir)))
 		       (completing-read "Choose branch to checkout: "
@@ -545,7 +545,7 @@ If COMMIT is non-nil prompt for commit message and
 commit the file to the git repository."
   (interactive)
   (let* ((dir (or dir
-		  (let ((pro (superman-select-project)))
+		  (let ((pro (superman-get-project nil)))
 		    (concat (superman-get-location pro) (car pro)))))
 	 (file-list (or file-list
 			(list (read-file-name "Git add file: " dir nil t))))
@@ -991,9 +991,12 @@ repository of PROJECT which is located at DIR."
   "Kill current buffer and return to project view."
   (interactive)
   (let ((pbuf (get-text-property (point-min) 'project-buffer)))
-    (kill-buffer (current-buffer))
-    (switch-to-buffer pbuf)
-    (superman-redo)))
+    (if pbuf
+	(progn
+	  (kill-buffer (current-buffer))
+	  (switch-to-buffer pbuf)
+	  (superman-redo))
+      (superman-view-project))))
 
 ;;}}}
 ;;{{{ preparing git displays

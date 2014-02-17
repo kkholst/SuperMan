@@ -66,13 +66,10 @@ Returns the corresponding buffer."
 
 (defun superman-capture-config (&optional project)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 superman-current-project
-		 (superman-select-project))))
+  (let ((pro (superman-get-project project)))
     (superman-capture-internal
-          pro
-	  "Configuration"
+     pro
+     "Configuration"
      `("Config" (("Config" ,(superman-current-config)))))))
      
 (fset 'superman-save-config 'superman-capture-config)
@@ -259,7 +256,7 @@ given in superman notation."
 (defun superman-project-timeline (&optional project)
   "Display a project specific timeline based on the index file."
   (interactive)
-  (let* ((project (or project superman-current-project (superman-select-project)))
+  (let* ((project (superman-get-project project))
 	 (index (superman-get-index project))
 	 (loc (superman-project-home project))
 	 (nick (car project))
@@ -316,7 +313,7 @@ given in superman notation."
 (defun superman-project-todo (&optional project)
   "Display a project specific todo-list based on all org files."
   (interactive)
-  (let* ((project (or project superman-current-project (superman-select-project)))
+  (let* ((project (superman-get-project project))
 	 (title  "Project ToDo list")
 	 (loc (superman-project-home project))
 	 (index (superman-get-index project))
@@ -404,7 +401,7 @@ given in superman notation."
     rsync))
 (defun superman-save-rsync (&optional config project)
   (interactive)
-  (let* ((pro (or project superman-current-project (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (org-capture-mode-hook 'org-narrow-to-subtree)
 	 (org-capture-templates `(("s" "save" plain
 				   (file+headline (superman-get-index pro) "Configuration")

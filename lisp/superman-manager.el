@@ -549,7 +549,7 @@ and others."
 
 (defun superman-move-project (&optional project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
+  (let* ((pro (or project (superman-get-project project)))
 	 (index (superman-get-index pro))
 	 (dir (concat (superman-get-location pro) (car pro)))
 	 (target  (read-directory-name (concat "Move all files below " dir " to: " )))
@@ -615,7 +615,7 @@ and others."
 
 (defun superman-set-others (project)
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
+  (let* ((pro (or project (superman-get-project project)))
 	 (others (superman-get-others pro))
 	 (init (if others (concat others ", ") "")))
     (if pro
@@ -761,11 +761,7 @@ Unless NOSELECT is nil, set the next window config of project.
 If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
-	 (pro (cond (project
-		     (if (stringp project)
-			 (assoc project superman-project-alist)
-		       project))
-		    (t (superman-select-project))))
+	 (pro (superman-get-project project))
 	 (stay (eq pro curpro)))
     (unless stay
       (if (member (car pro) superman-project-history)

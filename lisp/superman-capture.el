@@ -63,7 +63,7 @@ otherwise at the beginning.
 If JABBER is non-nil message about non-existing headings.
 "
   (interactive)
-  (let* ((pro (or project (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (index (superman-get-index pro))
 	 (head (or heading (read-string "Goto heading: ")))
 	 value)
@@ -324,10 +324,7 @@ If a file is associated with the current-buffer save it.
   "Capture a FILE-LIST of files in PROJECT. Add them all to the project
 index file as LEVEL headings. Then show the updated project view buffer."
   (interactive)
-  (let* ((pro (or project
-		  superman-view-current-project
-		  superman-current-project
-		  (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (gitp (superman-git-toplevel (concat
 				       (superman-get-location pro)
 				       (car pro))))
@@ -387,9 +384,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
 
 (defun superman-capture-document (&optional project)
   (interactive)
-  (let* ((pro (or project
-		  superman-view-current-project
-		  (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (cat-name (get-text-property (point-at-bol) 'cat))
 	 (heading (cond (cat-name)
@@ -500,9 +495,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     
 (defun superman-capture-note (&optional project marker)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture-internal pro
 		      (or marker "Notes")
@@ -510,9 +503,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 (defun superman-capture-text (&optional project marker)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (save-excursion
       (superman-goto-project project "Text" 'create nil nil nil ":FreeText: t")
@@ -525,9 +516,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 (defun superman-capture-bookmark (&optional project marker)
   (interactive)
-    (let ((pro (or project
-		   superman-view-current-project
-		   (superman-select-project)))
+    (let ((pro (superman-get-project project))
 	  (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture-internal pro
 		      (or marker "Bookmarks")
@@ -537,9 +526,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 (fset 'superman-capture-todo 'superman-capture-task)
 (defun superman-capture-task (&optional project marker)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture-internal
      pro
@@ -558,9 +545,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 (defun superman-capture-meeting (&optional project marker)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
 	;; (date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
 	(date (with-temp-buffer
@@ -583,9 +568,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 
 (defun superman-capture-unison (&optional project)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(root-1 (read-directory-name "Unison root directory 1: "))
 	(root-2 (read-directory-name "Unison root directory 2: ")))
     (superman-capture-internal
@@ -644,9 +627,7 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (mark-whole-buffer))
   (let* ((buf (current-buffer))
 	 (link (org-store-link 1))
-	 (entry (or project
-		    superman-view-current-project
-		    (superman-select-project)))
+	 (entry  (superman-get-project project))
 	 (pro (car entry))
 	 (loc (superman-get-location entry))
 	 (index (superman-get-index entry))
@@ -719,9 +700,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 ;;{{{ capture cats
 (defun superman-capture-cat (&optional project marker)
   (interactive)
-  (let ((pro (or project
-		 superman-view-current-project
-		 (superman-select-project)))
+  (let ((pro (superman-get-project project))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture-internal
      pro
@@ -738,10 +717,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 (defun superman-capture-git-section (&optional project git-dir level)
   "Capture files under version control. Delete and recreate section 'GitFiles' "
   (interactive)
-  (let* ((pro (or project
-		  superman-view-current-project
-		  superman-current-project
-		  (superman-select-project)))
+  (let* ((pro (superman-get-project project))
 	 (gitp (superman-git-toplevel (concat
 				       (superman-get-location pro)
 				       (car pro))))
