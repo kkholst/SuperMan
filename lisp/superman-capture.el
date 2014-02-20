@@ -40,6 +40,7 @@ just before the capture buffer is killed.")
 (defvar superman-capture-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
 (define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
+(define-key superman-capture-mode-map  "\C-x\C-s" 'superman-clean-scene)
 (define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
 
 (defvar superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
@@ -576,7 +577,8 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
      "Configuration"
      `("Unison" (("UNISON" "superman-unison-cmd")
 		 ;; (hdr "CHANGEME")
-		 ("SWITCHES" "-ignore 'Name .git'")
+		 ("SWITCHES" "-ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0")
+		 ;; :SWITCHES: -ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*' -perms 0
 		 ("ROOT-1" ,root-1)
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]")))))))

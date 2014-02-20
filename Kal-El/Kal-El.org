@@ -36,7 +36,6 @@
 
 
 
-
 *** sample-beamer
 :PROPERTIES:
 :CaptureDate: <2013-11-05 Tue 08:48>
@@ -49,11 +48,15 @@
 :END:
 
 
-
 *** latex: page dimensions
 :PROPERTIES:
 :CaptureDate: <2013-11-26 Tue 10:03>
 :FileName: [[./blog/latex:page-dimensions.pdf]]
+:END:
+*** Customize latexmk
+:PROPERTIES:
+:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/blog/customize-latexmk.org]]
+:CaptureDate: [2014-02-19 Wed 12:07]
 :END:
 
 * SuperBookmarks
