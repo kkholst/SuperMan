@@ -203,7 +203,8 @@ This function works outside R src blocks. Inside R src block
 	     (end (region-end))
 	     (visibly (< (length (buffer-substring-no-properties start end)) 300)))
 	(ess-eval-region-and-go start end (not visibly)))
-    (ess-eval-line-and-step)))
+    (save-excursion
+      (ess-eval-line-and-step))))
 
 
 (defun superman-control-export-back-to-org ()

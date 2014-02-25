@@ -118,8 +118,8 @@ category: Name of the category property
   (cdr (assoc label superman-property-list)))
 
 (defvar superman-home (expand-file-name "~/metropolis")
-  "File for managing projects. See the manual
-    for structure and syntax.")
+  "Directory for project management. It includes the file `superman-profile' which controls
+the list of project and can be accessed via the command `superman'.")
 
 (defvar superman-default-directory
   (file-name-as-directory superman-home)
