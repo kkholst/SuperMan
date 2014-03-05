@@ -131,8 +131,8 @@ category: Name of the category property
   (cdr (assoc label superman-property-list)))
 
 (defvar superman-home (expand-file-name "~/metropolis")
-  "File for managing projects. See the manual
-    for structure and syntax.")
+  "Directory for project management. It includes the file `superman-profile' which controls
+the list of project and can be accessed via the command `superman'.")
 
 (defvar superman-default-directory
   (file-name-as-directory superman-home)
@@ -775,7 +775,8 @@ If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
 	 (pro
-	  (if (get-text-property (point-min) 'project-view)
+	  (if (and (not project)
+		   (get-text-property (point-min) 'project-view))
 	      (superman-select-project)
 	    (superman-get-project project 'ask)))
 	 (stay (eq pro curpro)))

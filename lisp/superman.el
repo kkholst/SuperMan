@@ -75,10 +75,8 @@
 (defun superman-return ()
   "Switch to project at point."
   (interactive)
-  (let ((pro (assoc
-	      (superman-property-at-point
-	       (superman-property 'nickname) nil)
-	      superman-project-alist)))
+  (let ((pro (superman-property-at-point
+	      (superman-property 'nickname) nil)))
     (superman-switch-to-project pro)))
 
 (defun superman-get-priority-face (kwd)
@@ -193,6 +191,8 @@
     superman-project-alist))
 
 (defun superman ()
+  "Function to control the list of active projects (`superman-project-alist'). It displays 
+the contents of the file `superman-profile' which is found in the directory `superman-home'."
   (interactive)
   (let* ((cats-buffer "*S*")
 	 (cats (superman-parse-project-categories))

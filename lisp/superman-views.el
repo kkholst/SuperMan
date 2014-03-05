@@ -39,6 +39,7 @@ highlight the current line in superman views.")
 ;; (defvar superman-mark-face 'bold  "Face name for marked entries in the view buffers.")
 
 (defvar superman-cats '(("Meetings" . "Date")
+			("Calendar" . "Date")
 			("Documents" . "FileName")
 			("Data" . "DataFileName")
 			("Notes" . "NoteDate")
@@ -95,6 +96,7 @@ Column showing the todo-state
 	("Tasks" superman-task-balls)
 	("Bookmarks" superman-bookmark-balls)
 	("Meetings" superman-meeting-balls)
+	("Calendar" superman-meeting-balls)
 	("GitFiles" superman-document-balls)))
 
 (defun superman-dont-trim (x len) x)
@@ -111,8 +113,10 @@ Column showing the todo-state
 
 (setq superman-meeting-balls
       '((hdr ("width" 23) ("face" font-lock-function-name-face))
-	("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))
+	;; ("Date" ("fun" superman-trim-date) ("face" font-lock-string-face))
+	(".*Date" ("fun" superman-trim-date) ("regexp" t) ("face" font-lock-string-face))
 	("Participants" ("width" 23))))
+
 (setq superman-note-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("NoteDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
@@ -358,7 +362,8 @@ the current sub-category and return the minimum."
 			  'superman-next-project-button-face "List of projects"))
 	     (next-button (when next (superman-make-button
 				      next
-				      `(lambda () (interactive) (superman-switch-to-project ,next))
+				      `(lambda () (interactive)
+					 (superman-switch-to-project ,next))
 				      'superman-next-project-button-face
 				      (concat "Switch to project " next))))
 	     (prev-button (when prev
@@ -1208,13 +1213,16 @@ which locates the heading in the buffer."
 Unless optional argument ASK is non-nil use `superman-current-project' if
 neither object nor the current buffer identify a project."
   (let (nick)
-    (cond ((stringp object)
-	   (assoc object superman-project-alist))
-	  ((setq nick (get-text-property (point-min) 'nickname))
-	   (assoc nick superman-project-alist))
-	  (object) ;; assume object is a project
-	  ((not ask) superman-current-project)
-	  (t (superman-select-project)))))
+    (cond
+     ((stringp object)
+      (assoc object superman-project-alist))
+     ((assoc "index" (cadr object))
+      object) ;; assume object is a project
+     (ask (superman-select-project))
+     ((setq nick (get-text-property (point-min) 'nickname))
+      (assoc nick superman-project-alist))
+     ((not ask) superman-current-project)
+     (t (superman-select-project)))))
 
 (defun superman-view-project (&optional project refresh) 
   "Display an overview for project in a view buffer. Optional
@@ -2186,7 +2194,8 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	  (superman-view-index)
 	  (when (buffer-file-name)
 	    (org-narrow-to-subtree)
-	    (setq regret (not (yes-or-no-p "Delete this entry? ")))))
+	    (setq regret (not (yes-or-no-p "Delete this entry? ")))
+	    (widen)))
 	(set-window-configuration scene)
 	(unless regret
 	  (when marker
@@ -2349,7 +2358,8 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	  ;; heading
 	  (outline-next-heading)
 	  (narrow-to-region (point) (point-max))
-	  (superman-property-keys)))))))
+	  (superman-property-keys)
+	  (widen)))))))
 
 (defun superman-view-toggle-todo ()
   (interactive)
@@ -2440,9 +2450,13 @@ The value is non-nil unless the user regretted and the entry is not deleted.
       (org-with-point-at m
 	(cond (superman-mode
 	       (superman-return))
-	      ((re-search-forward org-any-link-re (save-excursion
-						    (outline-end-of-subtree)
-						    (point))t)
+	      ((re-search-forward
+		org-any-link-re
+		(save-excursion
+		  (widen)
+		  (outline-end-of-subtree)
+		  (point))
+		t)
 	       (org-open-at-point)
 	       (widen))
 	      (t
@@ -2655,6 +2669,7 @@ for git and other actions like commit, history search and pretty log-view."
 	("Tasks" superman-capture-task)
 	("Text" superman-capture-text)
 	("Meetings" superman-capture-meeting)
+	("Calendar" superman-capture-meeting)
 	("Bookmarks" superman-capture-bookmark)))
 
 (fset 'superman-new-item 'superman-capture-item)

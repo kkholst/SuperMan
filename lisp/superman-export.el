@@ -203,7 +203,8 @@ This function works outside R src blocks. Inside R src block
 	     (end (region-end))
 	     (visibly (< (length (buffer-substring-no-properties start end)) 300)))
 	(ess-eval-region-and-go start end (not visibly)))
-    (ess-eval-line-and-step)))
+    (save-excursion
+      (ess-eval-line-and-step))))
 
 
 (defun superman-control-export-back-to-org ()
@@ -319,7 +320,8 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
 (defun superman-next-latex-error (&optional first)
   (interactive)
   (let ((control-buf (buffer-name (current-buffer)))
-	(tex-file (get-text-property (point-min) 'tex-file)))
+	(tex-file (get-text-property (point-min) 'tex-file))
+	(org-buf (buffer-name (get-text-property (point-min) 'org-buffer))))
     ;; (help-tick
     ;; (when (buffer-live-p (get-buffer "*TeX Help*"))
     ;; (with-current-buffer
@@ -331,7 +333,7 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
 	(insert "No more errors.")))
     (TeX-next-error first)
     (superman-set-config
-     (concat tex-file " | *TeX Help* / " control-buf))
+     (concat org-buf " / " tex-file " | *TeX Help* / " control-buf))
     (other-window 2)))
   
 (defun superman-previous-R-error ()
