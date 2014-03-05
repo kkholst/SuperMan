@@ -61,7 +61,20 @@
   (interactive)
   (require 'loadhist)
   (let* ((dir (file-name-directory (locate-library "superman")))
-	 (exts (list "" "-views" "-capture" "-git" "-google" "-faces" "-manager" "-config" "-pub" "-deft" "-file-list")))
+	 (exts (list "" 
+		     "-capture" 
+		     "-config" 
+		     "-deft"
+		     "-display-file-list"
+		     "-export"
+		     "-faces"
+		     "-file-list"
+		     "-git" 
+		     "-google" 
+		     "-manager" 
+		     "-pub" 
+		     "-views" 
+		     )))
     (while exts
       (load (concat "superman" (car exts)) 'noerror)
       (setq exts (cdr exts)))
