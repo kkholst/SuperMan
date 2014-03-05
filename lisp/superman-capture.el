@@ -662,7 +662,8 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
     (save-excursion
       (switch-to-buffer buf)
       (gnus-summary-display-buttonized 't))
-    (goto-char (point-min))
+    ;; (goto-char (point-min))
+    (message-goto-body)
     (while (re-search-forward "\\[[0-9]+\\." nil t)
       ;; modified code from `mm-save-data'
       (save-excursion

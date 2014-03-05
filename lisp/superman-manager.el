@@ -762,7 +762,8 @@ If NOSELECT is set return the project."
   (interactive "P")
   (let* ((curpro superman-current-project)
 	 (pro
-	  (if (get-text-property (point-min) 'project-view)
+	  (if (and (not project)
+		   (get-text-property (point-min) 'project-view))
 	      (superman-select-project)
 	    (superman-get-project project 'ask)))
 	 (stay (eq pro curpro)))
