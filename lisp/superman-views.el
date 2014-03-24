@@ -393,7 +393,11 @@ the current sub-category and return the minimum."
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
-(defun superman-view-insert-action-buttons (&optional button-list no-newline title-string)
+(defun superman-view-pop-actions ()
+  (interactive)
+  (superman-capture-item 'pop))
+
+(defun superman-view-insert-action-buttons (&optional button-list no-newline title-string column)
   "Insert capture buttons. BUTTON-LIST is an alist providing button labels, functions and help strings.
  If omitted, it is set to
   '((\"Document\" 'superman-capture-document)
@@ -403,13 +407,14 @@ for project views.")
     (\"Meeting\" 'superman-capture-meeting))
 If NO-NEWLINE is non-nil no new line is inserted.
 TITLE-STRING is the label of the first button and defaults to \"Action\".
+If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 "
   (let* ((title
 	  (if (and title-string (get-text-property 0 'button title-string))
 	      title-string
 	    (superman-make-button
 	     (or title-string "Action:")
-	     'superman-edit-action-buttons
+	     'superman-view-pop-actions
 	     'superman-header-button-face
 	     "Edit action buttons")))
 	 (b-list
@@ -445,6 +450,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
 	(put-text-property
 	 0 1
 	 'superman-header-marker t b-name)
+	(when column (insert "\n"))
 	(insert "" b-name " "))
       (setq i (+ i 1) b-list (cdr b-list)))))
 
@@ -490,6 +496,7 @@ TITLE-STRING is the label of the first button and defaults to \"Action\".
   '(("Timeline" superman-project-timeline superman-capture-button-face)
     ("Todo" superman-project-todo superman-capture-button-face)
     ("Git (g)" superman-display-git-cycle superman-capture-button-face)
+    ("File-list (f)" superman-view-file-list superman-capture-button-face)
     ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual"))
   "Alist of displays that are shown as action buttons for all projects.")
 
@@ -2185,10 +2192,10 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	     (scene (current-window-configuration))
 	     (file (superman-filename-at-point t))
 	     (git-p
-	      (when file
+	      (when (file-exists-p file)
 		(let* ((status (superman-git-XY-status file))
 		       (xy (concat (nth 1 status) (nth 2 status))))
-		  (if (or (string= xy "") (string= xy "??")) nil t))))
+		  (if (or (string= xy "!!") (string= xy "??")) nil t))))
 	     (regret nil))
 	(unless dont-prompt
 	  (superman-view-index)
@@ -2457,13 +2464,28 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		  (outline-end-of-subtree)
 		  (point))
 		t)
-	       (org-open-at-point)
+	       (superman-open-at-point)
 	       (widen))
 	      (t
 	       (widen)
 	       (show-all)
 	       (org-narrow-to-subtree)
 	       (switch-to-buffer (marker-buffer m))))))))
+
+(defun superman-open-at-point ()
+  (interactive)
+  "Wrapper for org-open-at-point to fix a (temporary?) org-feature
+ which disables opening links in properties."
+  (if (not (org-at-property-p))
+      (org-open-at-point)
+    (let ((link (buffer-substring
+		 (progn (beginning-of-line)
+			(re-search-forward ":.*:[ \t]*\\[" nil t)
+			(1- (point)))
+		 (point-at-eol))))
+      (org-open-link-from-string link))))
+      
+  
 
 (defun superman-view-index ()
   "Switch to index buffer and show the entry at point."
@@ -2570,7 +2592,7 @@ for git and other actions like commit, history search and pretty log-view."
 	       (superman-return))
 	      ((re-search-forward org-any-link-re nil t)
 	       (re-search-forward org-any-link-re nil t)
-	       (org-open-at-point))
+	       (superman-open-at-point))
 	      (t
 	       (widen)
 	       (show-all)
@@ -2673,14 +2695,14 @@ for git and other actions like commit, history search and pretty log-view."
 	("Bookmarks" superman-capture-bookmark)))
 
 (fset 'superman-new-item 'superman-capture-item)
-(defun superman-capture-item ()
+(defun superman-capture-item (&optional pop)
   "Add a new document, note, task or other item to a project. If called
 from superman project view, assoc a capture function from `superman-capture-alist'.
 If non exists create a new item based on balls and properties in current section. If point is
 not in a section prompt for section first.
 "
-  (interactive)
-  (if superman-view-mode
+  (interactive "p")
+  (if (and (or (not pop) (= pop 1)) superman-view-mode)
       (let* ((pro (when superman-view-mode (superman-view-current-project t)))
 	     (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	     (cat (or (superman-current-cat)
@@ -2717,7 +2739,13 @@ not in a section prompt for section first.
     (let ((c-buf (get-buffer "*Superman-Capture*")))
       (if c-buf (pop-to-buffer c-buf)
 	(pop-to-buffer "*Superman-Capture*")
-	(superman-view-insert-action-buttons)
+	(superman-view-insert-action-buttons nil t "" t)
+	(insert "\n" (superman-make-button
+		      "Unison"
+		      'superman-capture-unison
+		      'superman-capture-button-face
+		      "Capture unison"))
+	(superman-view-mode)
 	(setq buffer-read-only t)
 	(goto-char (point-min))))))
 

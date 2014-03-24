@@ -532,9 +532,11 @@ given by the filename property of the item at point."
       (when dir (superman-git-add files dir 'commit nil)
 	    ;; move point inside cat to the first marked entry
 	    ;; FIXME: it would be safer to have a property 'marked
-	    (goto-char (next-single-property-change (point-min) 'type)) ;; org-marked-entry-overlay
-	    (goto-char (next-single-property-change (point) 'cat))
-	    (superman-redo-cat)))))
+	    (when (next-single-property-change (point-min) 'type)
+	      (goto-char (next-single-property-change (point-min) 'type))) ;; org-marked-entry-overlay
+	    (when (next-single-property-change (point) 'cat)
+	      (goto-char (next-single-property-change (point) 'cat))
+	      (superman-redo-cat))))))
 
 (defun superman-git-add (file-list dir &optional commit message)
   "Call git add on the files given by FILE-LIST. If DIR is nil,
@@ -886,7 +888,7 @@ This function should be bound to a key or button."
       (goto-char (point-max))
       (funcall post-hook))))
 
-
+  
 (defun superman-git-display-diff (commit ref dir project)
   "Display differences between the versions COMMIT and REF of the git
 repository of PROJECT which is located at DIR."
@@ -1133,7 +1135,8 @@ repository of PROJECT which is located at DIR."
       (goto-char next)
       (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit"))
 	     (ref (if (string= commit "Workspace") "HEAD" (concat commit "^")))
-	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
+	     (cmd `(lambda ()
+		     (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))
 
 (defvar superman-git-show-ignored nil
