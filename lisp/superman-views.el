@@ -2192,10 +2192,10 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	     (scene (current-window-configuration))
 	     (file (superman-filename-at-point t))
 	     (git-p
-	      (when file
+	      (when (file-exists-p file)
 		(let* ((status (superman-git-XY-status file))
 		       (xy (concat (nth 1 status) (nth 2 status))))
-		  (if (or (string= xy "") (string= xy "??")) nil t))))
+		  (if (or (string= xy "!!") (string= xy "??")) nil t))))
 	     (regret nil))
 	(unless dont-prompt
 	  (superman-view-index)
@@ -2464,13 +2464,28 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		  (outline-end-of-subtree)
 		  (point))
 		t)
-	       (org-open-at-point)
+	       (superman-open-at-point)
 	       (widen))
 	      (t
 	       (widen)
 	       (show-all)
 	       (org-narrow-to-subtree)
 	       (switch-to-buffer (marker-buffer m))))))))
+
+(defun superman-open-at-point ()
+  (interactive)
+  "Wrapper for org-open-at-point to fix a (temporary?) org-feature
+ which disables opening links in properties."
+  (if (not (org-at-property-p))
+      (org-open-at-point)
+    (let ((link (buffer-substring
+		 (progn (beginning-of-line)
+			(re-search-forward ":.*:[ \t]*\\[" nil t)
+			(1- (point)))
+		 (point-at-eol))))
+      (org-open-link-from-string link))))
+      
+  
 
 (defun superman-view-index ()
   "Switch to index buffer and show the entry at point."
@@ -2577,7 +2592,7 @@ for git and other actions like commit, history search and pretty log-view."
 	       (superman-return))
 	      ((re-search-forward org-any-link-re nil t)
 	       (re-search-forward org-any-link-re nil t)
-	       (org-open-at-point))
+	       (superman-open-at-point))
 	      (t
 	       (widen)
 	       (show-all)
@@ -2687,7 +2702,7 @@ If non exists create a new item based on balls and properties in current section
 not in a section prompt for section first.
 "
   (interactive "p")
-  (if (and (not pop) superman-view-mode)
+  (if (and (or (not pop) (= pop 1)) superman-view-mode)
       (let* ((pro (when superman-view-mode (superman-view-current-project t)))
 	     (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	     (cat (or (superman-current-cat)
