@@ -385,13 +385,17 @@ the current sub-category and return the minimum."
 	(insert (concat "  Prev: " prev-button " Next: " next-button "\tAll:" all-button)))
     (insert "  " (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
 
-(defvar superman-default-action-buttons '(("Document" superman-capture-document)
-		("Task" superman-capture-task)
-		("Note"  superman-capture-note)
-		("Bookmark" superman-capture-bookmark)
-		("Meeting" superman-capture-meeting))
+(defvar superman-default-action-buttons
+'(("Documents" (lambda () (interactive) (superman-capture-document nil nil nil)))
+  ("Notes" (lambda () (interactive) (superman-capture-note nil nil nil)))
+	("Tasks" (lambda () (interactive) (superman-capture-task nil nil nil)))
+	("Text" (lambda () (interactive) (superman-capture-text nil nil nil)))
+	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
+	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
+	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil nil))))
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
+
 
 (defun superman-view-pop-actions ()
   (interactive)
@@ -2476,15 +2480,15 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (interactive)
   "Wrapper for org-open-at-point to fix a (temporary?) org-feature
  which disables opening links in properties."
-  (if (not (org-at-property-p))
-      (org-open-at-point)
-    (let ((link (buffer-substring
-		 (progn (beginning-of-line)
-			(re-search-forward ":.*:[ \t]*\\[" nil t)
-			(1- (point)))
-		 (point-at-eol))))
-      (org-open-link-from-string link))))
-      
+  (let ((thing
+	 (if (save-excursion
+	       (beginning-of-line)
+	       (looking-at org-property-re))
+	     (match-string 3)
+	   (error "Not in property block"))))
+    (with-temp-buffer
+      (insert thing)
+      (org-open-at-point))))
   
 
 (defun superman-view-index ()
@@ -2685,14 +2689,14 @@ for git and other actions like commit, history search and pretty log-view."
  (\"heading\" function) e.g.  (\"Documents\" superman-capture-document).")
 
 (setq superman-capture-alist
-      '(("Documents" superman-capture-document)
-	("GitFiles" superman-capture-document)
-	("Notes" superman-capture-note)
-	("Tasks" superman-capture-task)
-	("Text" superman-capture-text)
-	("Meetings" superman-capture-meeting)
-	("Calendar" superman-capture-meeting)
-	("Bookmarks" superman-capture-bookmark)))
+      '(("Documents" (lambda () (interactive) (superman-capture-document nil nil nil)))
+	("GitFiles" (lambda () (interactive) (superman-capture-document nil nil nil)))
+	("Notes" (lambda () (interactive) (superman-capture-note nil nil nil)))
+	("Tasks" (lambda () (interactive) (superman-capture-task nil nil nil)))
+	("Text" (lambda () (interactive) (superman-capture-text nil nil nil)))
+	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
+	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
+	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil nil)))))
 
 (fset 'superman-new-item 'superman-capture-item)
 (defun superman-capture-item (&optional pop)

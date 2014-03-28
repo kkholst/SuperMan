@@ -71,6 +71,13 @@
 :END:
 
 
+*** steckemacs
+:PROPERTIES:
+:CaptureDate: [2014-03-26 Wed 06:39]
+:Link: http://steckerhalter.co.vu/steckemacs.html
+:END:
+ 
+
 *** Org-mode
 :PROPERTIES:
 :BookmarkDate: <2013-05-29 Wed>
