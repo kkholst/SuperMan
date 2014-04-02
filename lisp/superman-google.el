@@ -70,6 +70,7 @@
 (defun superman-google-export-appointment ()
   (interactive)
   (org-back-to-heading t)
+  (org-narrow-to-subtree)
   (let ((g-cal (org-entry-get nil "GoogleCalendar")))
     (if (or g-cal
 	    (and
@@ -146,7 +147,8 @@
 		  (superman-run-cmd g-command
 				    "*Superman-google-calendar*"
 				    (concat "Running\n" g-command " returned:\n\n"))
-		  (sit-for 3)))))))))
+		  (sit-for 3)))
+	      (widen)))))))
 ;; (shell-command-to-string g-command))))))))
 
 (provide 'superman-google)
