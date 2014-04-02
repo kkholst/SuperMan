@@ -396,6 +396,17 @@ the current sub-category and return the minimum."
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
+(defvar superman-default-action-buttons-outside-project
+'(("Documents" (lambda () (interactive) (superman-capture-document nil nil t)))
+  ("Notes" (lambda () (interactive) (superman-capture-note nil nil t)))
+	("Tasks" (lambda () (interactive) (superman-capture-task nil nil t)))
+	("Text" (lambda () (interactive) (superman-capture-text nil nil t)))
+	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil t)))
+	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil t)))
+	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil t))))
+  "Default action buttons as used by `superman-view-insert-action-buttons'
+for project views.")
+
 
 (defun superman-view-pop-actions ()
   (interactive)
@@ -2686,17 +2697,16 @@ for git and other actions like commit, history search and pretty log-view."
 
 (defvar superman-capture-alist nil
   "List to find capture function. Elements have the form
- (\"heading\" function) e.g.  (\"Documents\" superman-capture-document).")
-
+ (\"heading\" function) e.g.  (\"Documents\" superman-capture-document).") 
 (setq superman-capture-alist
-      '(("Documents" (lambda () (interactive) (superman-capture-document nil nil nil)))
-	("GitFiles" (lambda () (interactive) (superman-capture-document nil nil nil)))
-	("Notes" (lambda () (interactive) (superman-capture-note nil nil nil)))
-	("Tasks" (lambda () (interactive) (superman-capture-task nil nil nil)))
-	("Text" (lambda () (interactive) (superman-capture-text nil nil nil)))
-	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
-	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
-	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil nil)))))
+      '(("Documents" (lambda (pro) (interactive) (superman-capture-document pro nil nil)))
+	("GitFiles" (lambda (pro) (interactive) (superman-capture-document pro nil nil)))
+	("Notes" (lambda (pro) (interactive) (superman-capture-note pro nil nil)))
+	("Tasks" (lambda (pro) (interactive) (superman-capture-task pro nil nil)))
+	("Text" (lambda (pro) (interactive) (superman-capture-text pro nil nil)))
+	("Meetings" (lambda (pro) (interactive) (superman-capture-meeting pro nil nil)))
+	("Calendar" (lambda (pro) (interactive) (superman-capture-meeting pro nil nil)))
+	("Bookmarks" (lambda (pro) (interactive) (superman-capture-bookmark pro nil nil)))))
 
 (fset 'superman-new-item 'superman-capture-item)
 (defun superman-capture-item (&optional pop)
@@ -2743,7 +2753,9 @@ not in a section prompt for section first.
     (let ((c-buf (get-buffer "*Superman-Capture*")))
       (if c-buf (pop-to-buffer c-buf)
 	(pop-to-buffer "*Superman-Capture*")
-	(superman-view-insert-action-buttons nil t "" t)
+	(superman-view-insert-action-buttons
+	 superman-default-action-buttons-outside-project
+	 t "" t)
 	(insert "\n" (superman-make-button
 		      "Unison"
 		      'superman-capture-unison

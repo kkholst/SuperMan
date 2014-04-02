@@ -101,6 +101,17 @@
 :END:
 
 
+*** Git remote firewall https
+:PROPERTIES:
+:CaptureDate: [2014-03-31 Mon 14:48]
+:END:
+
+
+If you are behind a firewall and you need to use the https protocol instead of the git protocol:
+
+git config --global url."https://".insteadOf git://
+
+
 * SuperTasks
     
 
