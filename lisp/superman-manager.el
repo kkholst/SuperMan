@@ -266,10 +266,11 @@ and an action a one-optional-argument function which must return a buffer.")
 (define-key superman-manager-mode-map [f1] 'superman-manager)
 
 (add-hook 'find-file-hooks 
-        (lambda ()
-          (let ((file (buffer-file-name)))
-            (when (and file (equal file (expand-file-name superman-profile)))
-              (superman-manager-mode)))))
+	  (lambda ()
+	    (let ((file (buffer-file-name)))
+	      (when (and file (equal file (expand-file-name superman-profile)))
+		(setq org-todo-keywords-1 '("ACTIVE" "PENDING" "WAITING" "SLEEPING" "DONE" "CANCELED" "ZOMBI"))
+		(superman-manager-mode)))))
 
 
 (defun superman-goto-project-manager ()
