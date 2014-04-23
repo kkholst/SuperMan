@@ -1,6 +1,6 @@
 ;;; superman.el --- org project manager
 
-;; Copyright (C) 2013  Thomas Alexander Gerds
+;; Copyright (C) 2013-2014  Thomas Alexander Gerds
 
 ;; Authors:
 ;; Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -119,19 +119,23 @@
   (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-profile)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
-  (insert "  " (superman-make-button "Agenda"
-				     'superman-agenda
-				     'superman-next-project-button-face
-				     "Agenda across all projects") "  ")
-  (insert "  " (superman-make-button "Calendar"
-				     'superman-calendar
-				     'superman-next-project-button-face
-				     "Project-wide calendar") "  ")
-  (insert (superman-make-button "TodoList"
-				'superman-todo
-				'superman-next-project-button-face
-				"TodoList across all projects"))  
-  (insert "\n"))
+  (insert
+   "  "
+   (superman-make-button "Agenda"
+			 'superman-agenda
+			 'superman-next-project-button-face
+			 "Agenda across all projects")
+   "  "
+   (superman-make-button "Calendar"
+			 'superman-calendar
+			 'superman-next-project-button-face
+			 "Project-wide calendar")
+   "  "
+   (superman-make-button "TodoList"
+			 'superman-todo
+			 'superman-next-project-button-face
+			 "TodoList across all projects")
+   "\n"))
 
   ;; (insert "\n\nKeys: \n")
   ;; (forward-line -1)
@@ -215,7 +219,8 @@ the contents of the file `superman-profile' which is found in the directory `sup
 	     (tail (cdr (nth m cat-alist))))
 	(if tail
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
-	  (setcdr (nth m cat-alist) (list pro))))
+	  (when (nth m cat-alist)
+	  (setcdr (nth m cat-alist) (list pro)))))
       (setq projects (cdr projects)))
     (insert "\n")
     (superman-view-insert-action-buttons
@@ -345,7 +350,8 @@ the contents of the file `superman-profile' which is found in the directory `sup
 			 (superman-make-button "Projects"
 					       'superman
 					       'superman-next-project-button-face
-					       "List of projects"))))))))))
+					       "List of projects")
+					       )))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 
@@ -393,7 +399,10 @@ the contents of the file `superman-profile' which is found in the directory `sup
 						   "List of projects")
 			     "\n"
 			     (superman-make-button "\nClick here to add a Meeting\n"
-						   'superman-capture-meeting
+						   '(lambda ()
+						      (interactive)
+						      (superman-capture-meeting
+						       nil nil t))
 						   'superman-capture-button-face
 						   "Add a meeting to calendar")
 			     )))))
@@ -435,7 +444,10 @@ all dates."
 						   "List of projects")
 			     "\n"
 			     (superman-make-button "\nClick here to add a Meeting\n"
-						   'superman-capture-meeting
+						   '(lambda ()
+						      (interactive)
+						      (superman-capture-meeting
+						       nil nil t))
 						   'superman-capture-button-face
 						   "Add a meeting to calendar")
 			     "\n")))))

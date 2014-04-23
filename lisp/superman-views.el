@@ -127,6 +127,7 @@ Column showing the todo-state
 	("DataFileName" ("fun" superman-dont-trim))))
 (setq superman-task-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
+	(priority ("width" 8) ("face" superman-get-priority-face))
 	("TaskDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" full) ("face" font-lock-function-name-face))))
 (setq superman-bookmark-balls
@@ -135,6 +136,7 @@ Column showing the todo-state
 	("Link" ("fun" superman-trim-link) ("width" full) ("name" "Bookmark"))))
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
+	(priority ("width" 8) ("face" superman-get-priority-face))
 	("EmailDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
 	("Link" ("fun" superman-trim-bracketed-filename) ("width" 48))
@@ -1535,7 +1537,8 @@ to VIEW-BUF."
 		     (save-excursion (beginning-of-line 0)
 				     (not (looking-at "^[ \t]*$"))))
 		(insert "\n"))
-	      (superman-view-insert-section-name name count balls index-marker)
+	      (superman-view-insert-section-name
+	       name count balls index-marker)
 	      (insert "\n")
 	      ;; insert the column names
 	      (when superman-empty-line-after-cat
@@ -2699,14 +2702,14 @@ for git and other actions like commit, history search and pretty log-view."
   "List to find capture function. Elements have the form
  (\"heading\" function) e.g.  (\"Documents\" superman-capture-document).") 
 (setq superman-capture-alist
-      '(("Documents" (lambda (pro) (interactive) (superman-capture-document pro nil nil)))
-	("GitFiles" (lambda (pro) (interactive) (superman-capture-document pro nil nil)))
-	("Notes" (lambda (pro) (interactive) (superman-capture-note pro nil nil)))
-	("Tasks" (lambda (pro) (interactive) (superman-capture-task pro nil nil)))
-	("Text" (lambda (pro) (interactive) (superman-capture-text pro nil nil)))
-	("Meetings" (lambda (pro) (interactive) (superman-capture-meeting pro nil nil)))
-	("Calendar" (lambda (pro) (interactive) (superman-capture-meeting pro nil nil)))
-	("Bookmarks" (lambda (pro) (interactive) (superman-capture-bookmark pro nil nil)))))
+      '(("Documents" (lambda (&optional pro) (interactive) (superman-capture-document pro nil nil)))
+	("GitFiles" (lambda (&optional pro) (interactive) (superman-capture-document pro nil nil)))
+	("Notes" (lambda (&optional pro) (interactive) (superman-capture-note pro nil nil)))
+	("Tasks" (lambda (&optional pro) (interactive) (superman-capture-task pro nil nil)))
+	("Text" (lambda (&optional pro) (interactive) (superman-capture-text pro nil nil)))
+	("Meetings" (lambda (&optional pro) (interactive) (superman-capture-meeting pro nil nil)))
+	("Calendar" (lambda (&optional pro) (interactive) (superman-capture-meeting pro nil nil)))
+	("Bookmarks" (lambda (&optional pro) (interactive) (superman-capture-bookmark pro nil nil)))))
 
 (fset 'superman-new-item 'superman-capture-item)
 (defun superman-capture-item (&optional pop)
