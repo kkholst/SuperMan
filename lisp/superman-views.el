@@ -108,7 +108,7 @@ Column showing the todo-state
 
 (setq superman-default-balls
       '((todo ("width" 6) ("face" superman-get-todo-face))	
-	("Date" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
+	(".*Date" ("fun" superman-trim-date) ("regexp" t) ("face" font-lock-string-face))
 	(hdr ("width" full) ("face" font-lock-function-name-face))))
 
 (setq superman-meeting-balls
@@ -2004,8 +2004,7 @@ current section."
 		    (org-promote)
 		    (goto-char (point-max))))
 	      (widen)
-	      (delete-blank-lines)
-	      )
+	      (delete-blank-lines))
 	    ;;; Up:
 	  (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
 	  (dotimes (i n)
@@ -2019,16 +2018,15 @@ current section."
 	  (remove-list-of-text-properties (point-at-bol) (point-at-eol) '(next-item))
 	  (beginning-of-line)
 	  (yank)
-	  (delete-blank-lines)
-	  ))
+	  (delete-blank-lines)))
       (superman-redo)
       (if catp
 	  (progn 
 	    (goto-char (point-min))
-	    (re-search-forward curcat nil t)
+	    (re-search-forward (concat "\\*[ ]+" curcat " ") nil t)
 	    (beginning-of-line))
-	(forward-line (if down (- n 1) (- -1 n))) ;; OBS does not work correctly with 'headlines (level 2)'
-	))))
+	;; OBS does not work correctly with 'headlines (level 2)'
+	(forward-line (if down (- n 1) (- -1 n)))))))
 
 (defun superman-one-down (&optional arg)
   (interactive "P")
@@ -2352,7 +2350,9 @@ The value is non-nil unless the user regretted and the entry is not deleted.
     (when (and marker (not (get-text-property (point-at-bol) 'cat))
 	       (not (get-text-property (point-at-bol) 'subcat)))
       (beginning-of-line)
-      (let ((newline (superman-format-thing marker balls))
+      (let ((newline
+	     (org-with-point-at marker
+		 (superman-format-thing marker balls)))
 	    (beg (previous-single-property-change (point-at-eol) 'org-hd-marker))
 	    (end (or (next-single-property-change (point) 'org-hd-marker)
 		     (next-single-property-change (point) 'tail))))
