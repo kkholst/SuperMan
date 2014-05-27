@@ -1,13 +1,12 @@
 *** Index of project Kal-El
 :PROPERTIES:
 :ProjectStart: <2013-01-02 Wed 06:18>
-:CaptureButtons: Superman-home | superman-go-home
+:CaptureButtons: 
 :END:
 
 * SuperManual
   :PROPERTIES:
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
-  :Ball4:    FileName  :fun superman-dont-trim
   :END:
 
 
@@ -19,50 +18,49 @@
 :END:
 
 
-* Blog
+
+* SuperBlog
   :PROPERTIES:
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face
-  :Ball2:    .*Date  :fun superman-trim-date :face font-lock-string-face :regexp t
   :END:
 
-
-
-*** sample-article
-:PROPERTIES:
-:CaptureDate: <2014-02-09 Sun>
-:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/blog/sample-article.org]]
-:END:
-
-
-
-
-*** sample-beamer
-:PROPERTIES:
-:CaptureDate: <2013-11-05 Tue 08:48>
-:FileName: [[./blog/sample-beamer.org]]
-:END:
-*** [#B] use git to checkout rforge
-:PROPERTIES:
-:CaptureDate: <2013-12-13 Fri 08:10>
-:FileName: [[./blog/use-git-for-Rforge.org]]
-:END:
-
-
-*** latex: page dimensions
-:PROPERTIES:
-:CaptureDate: <2013-11-26 Tue 10:03>
-:FileName: [[./blog/latex:page-dimensions.pdf]]
-:END:
 *** Customize latexmk
 :PROPERTIES:
 :FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/blog/customize-latexmk.org]]
 :CaptureDate: [2014-02-19 Wed 12:07]
 :END:
 
+*** [#B] use git to checkout rforge
+:PROPERTIES:
+:CaptureDate: <2013-12-13 Fri 08:10>
+:FileName: [[./blog/use-git-for-Rforge.org]]
+:END:
+
+* SuperSamples
+  :PROPERTIES:
+  :Ball3:    hdr  :width full :face font-lock-function-name-face
+  :END:
+
+*** Org-mode article
+:PROPERTIES:
+:CaptureDate: <2014-02-09 Sun>
+:FileName: [[~/emacs-genome/genes/SuperMan/Kal-El/blog/sample-article.org]]
+:END:
+
+*** Latex beamer slide show
+:PROPERTIES:
+:CaptureDate: <2013-11-05 Tue 08:48>
+:FileName: [[./blog/sample-beamer.org]]
+:END:
+
+
+  
+
+
 * SuperBookmarks
-
-
-
+  :PROPERTIES:
+  :Ball3:    hdr  :width full :face font-lock-function-name-face
+  :END:
 
 *** beamertheme: org
 :PROPERTIES:
@@ -70,20 +68,17 @@
 :Link: https://github.com/mbork/beamerorgtheme
 :END:
 
-
 *** steckemacs
 :PROPERTIES:
 :CaptureDate: [2014-03-26 Wed 06:39]
 :Link: http://steckerhalter.co.vu/steckemacs.html
 :END:
  
-
 *** Org-mode
 :PROPERTIES:
 :BookmarkDate: <2013-05-29 Wed>
 :Link: http://orgmode.org/
 :END:
-
 *** superboy
    :PROPERTIES:
    :Bookmark: t
@@ -92,59 +87,47 @@
    :END:
 
 * SuperNotes
-
-
-
-*** Alias name: Man in Steel
-:PROPERTIES:
-:NoteDate: <2013-03-22 Fri>
-:END:
-
+  :PROPERTIES:
+  :Ball1:    hdr  :width full :face font-lock-function-name-face
+# :Ball2:    .*Date  :fun superman-trim-date :regexp t :face font-lock-string-face
+  :END:
 
 *** Git remote firewall https
 :PROPERTIES:
 :CaptureDate: [2014-03-31 Mon 14:48]
 :END:
 
-
 If you are behind a firewall and you need to use the https protocol instead of the git protocol:
 
 git config --global url."https://".insteadOf git://
 
 
-* SuperTasks
-    
+# * SuperTasks
+
+# *** TODO [#C] Learn org-mode 
+# :PROPERTIES:
+# :TaskDate: <2013-03-07 Thu>
+# :END:
+
+# ** Smallville
+# :PROPERTIES:
+# :CATEGORY: Home
+# :END:
+
+# *** DONE Help Mrs Kent milking the cows
+# CLOSED: [2013-01-15 Tue 16:42]
+# :PROPERTIES:
+# :CaptureDate: <1958-01-13 Mon>
+# :END:
+
+# *** TODO [#C] Help Mr Kent mow the lawn 
+# :PROPERTIES:
+# :CaptureDate: <1957-02-16 Sat>
+# :END:
 
 
-
-*** TODO [#C] Learn org-mode 
+*** LaTeX page dimensions 
 :PROPERTIES:
-:TaskDate: <2013-03-07 Thu>
-:END:
-
-
-
-** Smallville
-   :PROPERTIES:
-   :CATEGORY: Home
-   :END:
-
-*** DONE Help Mrs Kent milking the cows
-    CLOSED: [2013-01-15 Tue 16:42]
-:PROPERTIES:
-:CaptureDate: <1958-01-13 Mon>
-:END:
-
-*** TODO [#C] Help Mr Kent mow the lawn 
-:PROPERTIES:
-:CaptureDate: <1957-02-16 Sat>
-:END:
-
-* Configuration
-
-
-* Git repository
-:PROPERTIES:
-:git-cycle: log, status, modified, files
-:git-display: log
+:CaptureDate: <2013-11-26 Tue 10:03>
+:Link: [[./blog/latex:page-dimensions.pdf]]
 :END:
