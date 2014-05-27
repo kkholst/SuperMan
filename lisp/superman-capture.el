@@ -583,6 +583,10 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]")))))))
 
+(defun superman-unison-insert-switches ()
+  (interactive)
+  (insert ":SWITCHES: -ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0"))
+
 (defun superman-run-unison (&optional project)
   (interactive)
   (save-excursion
@@ -631,10 +635,15 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	 (link (org-store-link 1))
 	 (entry (superman-get-project project 'ask))
 	 (pro (car entry))
-	 (loc (superman-get-location entry))
+	 (loc (expand-file-name
+	       (file-name-directory (replace-regexp-in-string
+				     "/$" ""
+				     (file-name-directory
+				      (superman-get-index entry))))))
 	 (index (superman-get-index entry))
 	 (region (buffer-substring (region-beginning) (region-end)))
-	 (mailbox (file-name-as-directory (concat (file-name-as-directory loc) pro "/" "Mailbox")))
+	 (mailbox (file-name-as-directory
+		   (concat (file-name-as-directory loc) "Mailbox")))
 	 (from (message-fetch-field "from"))
 	 (subject (message-fetch-field "subject"))
 	 (date (message-fetch-field "date"))
