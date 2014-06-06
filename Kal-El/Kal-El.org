@@ -59,6 +59,14 @@
   :Ball3:    hdr  :width full :face font-lock-function-name-face
   :END:
 
+*** org babel refcard
+:PROPERTIES:
+:CaptureDate: [2014-06-06 Fri 16:28]
+:Link: https://github.com/fniessen/refcard-org-babel/blob/master/Org-Babel-refcard.org
+:END:
+
+
+
 *** beamertheme: org
 :PROPERTIES:
 :BookmarkDate: <2013-08-18 Sun>
@@ -127,4 +135,11 @@ git config --global url."https://".insteadOf git://
 :PROPERTIES:
 :CaptureDate: <2013-11-26 Tue 10:03>
 :Link: [[./blog/latex:page-dimensions.pdf]]
+:END:
+
+* Git repository
+:PROPERTIES:
+:git-cycle: log, modified, files, untracked
+:hidden: not superman-git-mode
+:git-display: log
 :END:
