@@ -130,7 +130,6 @@ Returns the corresponding buffer."
 	  (widen))
 	config))))
 ;;}}}
-
 ;;{{{ smashing window configs
 
 (defun superman-distangle-config-list (string)

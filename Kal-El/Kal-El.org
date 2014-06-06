@@ -9,14 +9,11 @@
   :Ball1:    hdr  :width 43 :face font-lock-function-name-face :name Description
   :END:
 
-
-
 *** Supermanual.org
 :PROPERTIES:
 :FileName: [[./supermanual/Supermanual.org]]
 :GitStatus: Committed
 :END:
-
 
 
 * SuperBlog

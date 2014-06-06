@@ -148,7 +148,8 @@
 				    "*Superman-google-calendar*"
 				    (concat "Running\n" g-command " returned:\n\n"))
 		  (sit-for 3)))
-	      (widen)))))))
+	      ;;(widen)
+	      ))))))
 ;; (shell-command-to-string g-command))))))))
 
 (provide 'superman-google)

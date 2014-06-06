@@ -70,6 +70,13 @@
 
 ;;{{{ variables and user options
 
+
+(defvar superman-item-level 3
+  "Outline level for items in project column views.
+Level 1 is used to indicate sections, all levels between
+1 and `superman-item-level' to indicate subsections.")
+(make-variable-buffer-local 'superman-item-level)
+
 (defvar superman-empty-line-before-cat t
   "Option for superman-view buffers: If non-nil insert an empty line before the category heading.")
 (defvar superman-empty-line-after-cat t
@@ -469,7 +476,8 @@ function is very similar to `org-property-values' with two differences:
       (let ((re (org-re-property key))
 	    values)
 	(while (re-search-forward re nil t)
-	  (add-to-list 'values (org-trim (match-string-no-properties 3))))
+	  (add-to-list 'values
+		       (org-trim (match-string-no-properties 3))))
 	(delete "" values)))))
 
 
