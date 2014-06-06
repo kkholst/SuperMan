@@ -919,7 +919,7 @@ Returns the formatted string with text-properties."
 	       sort-cmd))
 	;; replace trim function
 	;; (setcdr (assoc "fun" b) 'superman-trim-string)
-	(setq b (delete-if
+	(setq b (remove-if
 		 #'(lambda(x)
 		     (cond ((not (listp x)) nil)
 			   ((string-match (car x) "fun") t)
@@ -1129,10 +1129,11 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 next
 	 beg
 	 end)
-    (put-text-property
-     (previous-single-property-change (point) 'button)
-     (next-single-property-change (point) 'button)
-     'reverse (not reverse))
+    (when (get-text-property (point-at-bol) 'column-names)
+      (put-text-property
+       (previous-single-property-change (point) 'button)
+       (next-single-property-change (point) 'button)
+       'reverse (not reverse)))
     (when (and pos dim)
       (goto-char pos)
       (goto-char (next-single-property-change

@@ -38,18 +38,21 @@
 ;; ("state" . "ACTIVE"))))
 
 (defvar superman-balls
-      '((todo ("width" 9) ("face" superman-get-todo-face))
-	(priority ("width" 8) ("face" superman-get-priority-face))
-	(hdr ("width" 27) ("face" font-lock-function-name-face)
-	     ("name" "Description")
-	     ("fun" superman-trim-project-nickname))
-	("marker" ("width" 33)
-	  ("name" "Project")
-	  ("face" superman-next-project-button-face)
-	  ("fun" superman-make-project-button))
-	("lastvisit" ("fun" superman-trim-date) ("width" 17) ("face" font-lock-type-face) ("sort-key" t))
-	("others" ("width" 66) ("face" font-lock-keyword-face)))
-      "Definition of columns to be shown in overview buffer of superman projects.")
+  '((todo ("width" 9) ("face" superman-get-todo-face))
+    (priority ("width" 8) ("face" superman-get-priority-face))
+    (hdr ("width" 27) ("face" font-lock-function-name-face)
+	 ("name" "Description")
+	 ("fun" superman-trim-project-nickname))
+    ("marker" ("width" 33)
+     ("name" "Project")
+     ("face" superman-next-project-button-face)
+     ("fun" superman-make-project-button))
+    ("lastvisit" ("fun" superman-trim-date)
+     ("width" 17)
+     ("face" font-lock-type-face)
+     ("sort-key" t))
+    ("others" ("width" 66) ("face" font-lock-keyword-face)))
+  "Definition of columns to be shown in overview buffer of superman projects.")
 
   ;; "Returns a super project for project management"
   ;; `("SuperManager"
