@@ -118,9 +118,9 @@ If JABBER is non-nil message about non-existing headings.
 	 (fun (cadr (assoc temp superman-capture-alist))))
     (call-interactively fun)))
 
-(defun superman-capture-internal (project heading plist &optional level scene)
+(defun superman-capture-internal (project heading-or-marker plist &optional level scene)
   "Superman captures entries, i.e. outline-heading, to be added to the index file of a
-PROJECT at a given HEADING. HEADING can be the name of the outline heading which is found
+PROJECT at a given HEADING-OR-MARKER. HEADING-OR-MARKER can be the name of the outline heading-or-marker which is found
 in the project view buffer or a marker pointing to the project index file.
 
 A special case is where a new projects is captured for the supermanager.
@@ -128,7 +128,7 @@ A special case is where a new projects is captured for the supermanager.
 Argument PLIST is a list of properties for the new entry possibly with
 pre-specified default values.
 
-If LEVEL is given it is the level of the new heading (default is `superman-item-level').
+If LEVEL is given it is the level of the new heading-or-marker (default is `superman-item-level').
 If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
@@ -146,12 +146,12 @@ Default is to set the old window configuration.
 			 (car project))
 		 nil 'superman-capture-button-face))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
-    (if heading
-	(cond ((stringp heading)
-	       (superman-goto-project project heading 'create nil nil nil))
-	      ((markerp heading)
-	       (progn (switch-to-buffer (marker-buffer heading))
-		      (goto-char heading)
+    (if heading-or-marker
+	(cond ((stringp heading-or-marker)
+	       (superman-goto-project project heading-or-marker 'create nil nil nil))
+	      ((markerp heading-or-marker)
+	       (progn (switch-to-buffer (marker-buffer heading-or-marker))
+		      (goto-char heading-or-marker)
 		      (org-narrow-to-subtree)
 		      (end-of-line)
 		      (if (outline-next-heading)
@@ -370,7 +370,10 @@ and in the first cat otherwise."
     ;; (unless marker
     ;; or (get-text-property superman-cat-point 'org-hd-marker))
     ;; 
-    (superman-capture-internal pro cat props nil scene)))
+    (superman-capture-internal pro
+			       ;; cat
+			       marker
+			       props nil scene)))
 
 
 
