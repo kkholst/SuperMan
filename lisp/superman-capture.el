@@ -1,9 +1,10 @@
 ;;; superman-capture.el --- superman captures stuff
 
-;; Copyright (C) 2013  Klaus Kähler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2013-2014  Klaus Kähler Holst, Thomas Alexander Gerds
 
 ;; Authors: Klaus Kähler Holst <kkho@biostat.ku.dk>
 ;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
+;; 
 ;; Keywords: tools
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -117,20 +118,22 @@ If JABBER is non-nil message about non-existing headings.
 	 (fun (cadr (assoc temp superman-capture-alist))))
     (call-interactively fun)))
 
-(defun superman-capture-internal (project heading plist &optional level scene)
+(defun superman-capture-internal (project heading-or-marker plist &optional level scene)
   "Superman captures entries, i.e. outline-heading, to be added to the index file of a
-PROJECT at a given HEADING. A special case is where a new projects is captured
-for the supermanager.
+PROJECT at a given HEADING-OR-MARKER. HEADING-OR-MARKER can be the name of the outline heading-or-marker which is found
+in the project view buffer or a marker pointing to the project index file.
+
+A special case is where a new projects is captured for the supermanager.
 
 Argument PLIST is a list of properties for the new entry possibly with
 pre-specified default values.
 
-If LEVEL is given it is the level of the new heading (default is 3).
+If LEVEL is given it is the level of the new heading-or-marker (default is `superman-item-level').
 If SCENE is given it is used to determine what should happen after the capture.
 Default is to set the old window configuration.
 "
   (let* ((what (car plist))
-	 (level (or level 3))
+	 (level (or level superman-item-level))
 	 (props (cadr plist))
 	 (kill-whole-line t)
 	 (scene (or scene (current-window-configuration)))
@@ -143,12 +146,12 @@ Default is to set the old window configuration.
 			 (car project))
 		 nil 'superman-capture-button-face))
 	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*")))
-    (if heading
-	(cond ((stringp heading)
-	       (superman-goto-project project heading 'create nil nil nil))
-	      ((markerp heading)
-	       (progn (switch-to-buffer (marker-buffer heading))
-		      (goto-char heading)
+    (if heading-or-marker
+	(cond ((stringp heading-or-marker)
+	       (superman-goto-project project heading-or-marker 'create nil nil nil))
+	      ((markerp heading-or-marker)
+	       (progn (switch-to-buffer (marker-buffer heading-or-marker))
+		      (goto-char heading-or-marker)
 		      (org-narrow-to-subtree)
 		      (end-of-line)
 		      (if (outline-next-heading)
@@ -259,7 +262,8 @@ turn it off."
 	next)
     (goto-char (point-max))    
     (when (superman-get-property (point) "GoogleCalendar" t nil)
-      (superman-google-export-appointment))
+      (save-restriction
+	(superman-google-export-appointment)))
     (goto-char (point-min))
     (while (setq next (next-single-property-change
 		       (point-at-eol)
@@ -316,58 +320,62 @@ If a file is associated with the current-buffer save it.
 ;;}}}
 ;;{{{ capture documents, notes, etc.
 
-;; Choose a prefix
-;; (setq superman-capture-prefix "P")
-;; (add-to-list 'org-capture-templates
-	     ;; `(,superman-capture-prefix "Project management") 'append)
-
-(defun superman-capture-file-list (&optional project file-list level ask)
-  "Capture a FILE-LIST of files in PROJECT. Add them all to the project
-index file as LEVEL headings. Then show the updated project view buffer."
+(defun superman-capture-thing (&optional project)
+  "Associate a thing (file, note, task, link, meeting, etc.) with a project.
+The default place for the new item is at the cursor in superman-view-mode
+and in the first cat otherwise."
   (interactive)
-  (let* ((pro (superman-get-project project ask))
-	 (gitp (superman-git-toplevel (concat
-				       (superman-get-location pro)
-				       (car pro))))
-	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
-	 (heading (if (and marker (superman-current-cat))
-		      marker
-		    "Documents"))
-	 (pro-file-list-buffer (concat "*File-list-" (car pro) "*"))
-	 (level (or level 3))
-	 (file-list (cond (file-list)
-			  ((eq major-mode 'file-list-completion-mode)
-			   file-list-current-file-list)
-			  ((and (buffer-live-p pro-file-list-buffer)
-				(progn (switch-to-buffer pro-file-list-buffer)
-				       file-list-current-file-list))
-			   (superman-file-list pro)))))
-    ;; goto index file
-    (if heading
-	(cond ((stringp heading)
-	       (superman-goto-project pro heading 'create nil nil nil))
-	      ((markerp heading)
-	       (progn (switch-to-buffer (marker-buffer heading))
-		      (goto-char heading))))
-      (find-file (superman-get-index pro))
-      (widen)
-      (show-all)
-      (goto-char (point-max)))
-    (while file-list
-      (let* ((el (car file-list))
-	     (fname (file-list-make-file-name~ el)))
-	(message (concat "adding " fname))
-	(insert (make-string level (string-to-char "*"))
-		" "
-		(car el)
-		"\n:PROPERTIES:"
-		"\n:FileName: [["  (abbreviate-file-name fname) "]]"
-		"\n:GitStatus: Unknown"
-		;; (when gitp (concat "\n:GitStatus: " (nth 1 (superman-git-get-status fname nil))))
-		"\n:END:\n\n"))
-      (setq file-list (cdr file-list)))
-    (superman-view-project pro)
-    (superman-redo)))
+  (let ((pro (superman-get-project project nil))
+	(scene (current-window-configuration))
+	(cat (superman-current-cat))
+	(marker (get-text-property (point-at-bol) 'org-hd-marker))
+	(superman-setup-scene-hook
+	 #'(lambda ()
+	     (define-key
+	       superman-capture-mode-map
+	       [(tab)]
+	       'superman-complete-project-property)))
+	(defaults `((hdr "New item")
+		    ("Link" . nil)
+		    (fun
+		     (lambda ()
+		       (save-excursion
+			 (org-todo)
+			 (org-back-to-heading)
+			 (org-shiftup))))
+		    ("FileName")
+		    ("AppointmentDate")
+		    ("Location")
+		    ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))
+	props keys)
+    (if superman-view-mode
+	(when (and cat (superman-get-property (superman-cat-point) "freetext"))
+	  (error "Cannot add items in freetext area"))
+      ;; activate project view
+      (superman-switch-config pro nil "PROJECT")
+      (superman-next-cat)
+      (setq cat (superman-current-cat)))
+    ;; supplement list of existing properties
+    ;; with default properties
+    (setq keys
+	  (mapcar 'list
+		  (superman-view-property-keys)))
+    ;; (setq props
+    ;; (when keys
+    ;; (mapcar #'(lambda (x) (list x nil)) keys)))
+    (setq props
+	  `("item"
+	    ,(append keys defaults)))
+    ;; locate place for new item
+    ;; (unless marker
+    ;; or (get-text-property superman-cat-point 'org-hd-marker))
+    ;; 
+    (superman-capture-internal pro
+			       ;; cat
+			       marker
+			       props nil scene)))
+
+
 
 
 (defun superman-capture-others (&optional project)
@@ -383,7 +391,10 @@ index file as LEVEL headings. Then show the updated project view buffer."
     (if superman-view-mode
 	(superman-redo))))
 
+(fset 'superman-capture-file 'superman-capture-document)
 (defun superman-capture-document (&optional project marker ask)
+  "Register a file in your project-manager. At this point
+file does not need to exist."
   (interactive)
   (let* ((pro (superman-get-project project ask))
 	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
@@ -405,8 +416,7 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		   ;; ("GitStatus" ,(nth 1 (ignore-errors (superman-git-get-status file nil))))
 		   )))))
 
-
-(defun superman-view-new-project ()
+(defun superman-view-new-project-hook ()
   (interactive)
   "Hook to be run when a new project is captured.
 Creates the project directory and index file."
@@ -474,25 +484,72 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		  (hdr ,(concat "ACTIVE " nickname))
 		  ("Index" "")
 		  ("Category" ,category)))
-     superman-project-level 'superman-view-new-project)))
+     superman-project-level 'superman-view-new-project-hook)))
 
+
+(defun superman-capture-file-list (&optional project file-list level ask)
+  "Capture a FILE-LIST of files in PROJECT. Add them all to the project
+index file as LEVEL headings. Then show the updated project view buffer."
+  (interactive)
+  (let* ((pro (superman-get-project project ask))
+	 (gitp (superman-git-toplevel (concat
+				       (superman-get-location pro)
+				       (car pro))))
+	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (heading (if (and marker (superman-current-cat))
+		      marker
+		    "Documents"))
+	 (pro-file-list-buffer (concat "*File-list-" (car pro) "*"))
+	 (level (or level superman-item-level))
+	 (file-list (cond (file-list)
+			  ((eq major-mode 'file-list-completion-mode)
+			   file-list-current-file-list)
+			  ((and (buffer-live-p pro-file-list-buffer)
+				(progn (switch-to-buffer pro-file-list-buffer)
+				       file-list-current-file-list))
+			   (superman-file-list pro)))))
+    ;; goto index file
+    (if heading
+	(cond ((stringp heading)
+	       (superman-goto-project pro heading 'create nil nil nil))
+	      ((markerp heading)
+	       (progn (switch-to-buffer (marker-buffer heading))
+		      (goto-char heading))))
+      (find-file (superman-get-index pro))
+      (widen)
+      (show-all)
+      (goto-char (point-max)))
+    (while file-list
+      (let* ((el (car file-list))
+	     (fname (file-list-make-file-name~ el)))
+	(message (concat "adding " fname))
+	(insert (make-string level (string-to-char "*"))
+		" "
+		(car el)
+		"\n:PROPERTIES:"
+		"\n:FileName: [["  (abbreviate-file-name fname) "]]"
+		"\n:END:\n\n"))
+      (setq file-list (cdr file-list)))
+    (superman-view-project pro)
+    (superman-redo)))
 
 (defun superman-complete-project-property ()
   (interactive)
-  (let ((curprop (progn (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-    (cond
-     ((string= (downcase curprop) "filename")
-      (goto-char (+ (point) (length curprop) 2))
-      (delete-region (point) (point-at-eol))
-      (insert " " (read-file-name (concat curprop ": "))))
-     ((string= (downcase curprop) (downcase (superman-property 'index)))
-      (goto-char (+ (point) (length curprop) 2))
-      (delete-region (point) (point-at-eol))
-      (insert " " (read-file-name (concat "Set " curprop ": "))))
-     ((string= (downcase curprop) (downcase (superman-property 'location)))
-      (goto-char (+ (point) (length curprop) 2))
-      (delete-region (point) (point-at-eol))
-      (insert " " (read-directory-name (concat "Set " curprop ": ")))))))
+  (save-excursion
+    (let ((curprop (progn (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
+      (cond
+       ((string= (downcase curprop) "filename")
+	(goto-char (+ (point) (length curprop) 2))
+	(delete-region (point) (point-at-eol))
+	(insert " [[" (read-file-name (concat curprop ": ")) "]]"))
+       ((string= (downcase curprop) (downcase (superman-property 'index)))
+	(goto-char (+ (point) (length curprop) 2))
+	(delete-region (point) (point-at-eol))
+	(insert " [[" (read-file-name (concat "Set " curprop ": ")) "]]"))
+       ((string= (downcase curprop) (downcase (superman-property 'location)))
+	(goto-char (+ (point) (length curprop) 2))
+	(delete-region (point) (point-at-eol))
+	(insert " [[" (read-directory-name (concat "Set " curprop ": ")) "]]"))))))
     
 (defun superman-capture-note (&optional project marker ask)
   (interactive)
@@ -532,7 +589,8 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
     (superman-capture-internal
      pro
      (or marker "Tasks")
-     `("Task" (("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
+     `("Task" (("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
+	       ;; ("TaskDate"  ,(format-time-string "<%Y-%m-%d %a>"))
 	       (fun
 		(lambda ()
 		  (save-excursion
@@ -583,6 +641,10 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 		 ("ROOT-2" ,root-2)
 		 ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]")))))))
 
+(defun superman-unison-insert-switches ()
+  (interactive)
+  (insert ":SWITCHES: -ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0"))
+
 (defun superman-run-unison (&optional project)
   (interactive)
   (save-excursion
@@ -605,16 +667,6 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 ;;}}}
 ;;{{{ capture mails
 
-;; (defun superman-capture-mail ()
-  ;; (interactive)
-  ;; (let ((org-capture-templates
-    ;; '(("E"  "Store email (and attachments) in project"
-       ;; plain (function superman-gnus-goto-project-mailbox)
-       ;; "\n*** MAIL from %:fromname: %:subject %?\n:PROPERTIES:\n:CaptureDate: %T\n:LINK: %a\n:EmailDate: %:date\n:END:\n\n%i"))
-    ;; ))
-    ;; (push ?E unread-command-events)
-    ;; (call-interactively 'org-capture)))
-
 (defun superman-capture-mail (&optional project)
   ;; (defun superman-gnus-goto-project-mailbox (project &optional arg)
   (interactive)
@@ -631,10 +683,15 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
 	 (link (org-store-link 1))
 	 (entry (superman-get-project project 'ask))
 	 (pro (car entry))
-	 (loc (superman-get-location entry))
+	 (loc (expand-file-name
+	       (file-name-directory (replace-regexp-in-string
+				     "/$" ""
+				     (file-name-directory
+				      (superman-get-index entry))))))
 	 (index (superman-get-index entry))
 	 (region (buffer-substring (region-beginning) (region-end)))
-	 (mailbox (file-name-as-directory (concat (file-name-as-directory loc) pro "/" "Mailbox")))
+	 (mailbox (file-name-as-directory
+		   (concat (file-name-as-directory loc) "Mailbox")))
 	 (from (message-fetch-field "from"))
 	 (subject (message-fetch-field "subject"))
 	 (date (message-fetch-field "date"))
@@ -699,6 +756,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
                                       "\n:END:\n"
                                       mime-line)))))))
     mime-line))
+
 ;;}}}
 ;;{{{ capture cats
 (defun superman-capture-cat (&optional project marker ask)
@@ -728,7 +786,7 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 		     (read-directory-name (concat "Directory : "))))
 	 (gittop (superman-git-toplevel gitdir))
 	 ;; (headingfound (superman-goto-project pro "GitFiles"))
-	 (level (or level 3))
+	 (level (or level superman-item-level))
 	 (file-list (delete ""
 			    (split-string
 			     (shell-command-to-string

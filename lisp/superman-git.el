@@ -697,8 +697,7 @@ to identify the element, git-switches are the switches passed to git, balls are 
 cleanup is a function which is called before superman plays the balls.")
 
 (defvar superman-git-display-diff-balls
-  '(
-    ;; ("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+  '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
     ("GitStatus" ("width" 20) ("face" superman-get-git-status-face) ("name" "What happened"))
     (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
     ("Directory" ("width" 25) ("face" superman-subheader-face)))

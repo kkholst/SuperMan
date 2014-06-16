@@ -1,6 +1,6 @@
 ;;; superman-views.el --- Superman views of project contents 
 
-;; Copyright (C) 2012-2013 Thomas Alexander Gerds, Klaus Kaehler Holst
+;; Copyright (C) 2012-2014 Thomas Alexander Gerds, Klaus Kaehler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>
@@ -108,7 +108,7 @@ Column showing the todo-state
 
 (setq superman-default-balls
       '((todo ("width" 6) ("face" superman-get-todo-face))	
-	("Date" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
+	(".*Date" ("fun" superman-trim-date) ("regexp" t) ("face" font-lock-string-face))
 	(hdr ("width" full) ("face" font-lock-function-name-face))))
 
 (setq superman-meeting-balls
@@ -216,11 +216,14 @@ to an integer then do not trim the string STR."
     (superman-trim-string file (car args))))
 
 (defun superman-trim-filename (filename &rest args)
+  (if (string-match org-bracket-link-regexp filename)
+      (setq filename (org-match-string-no-properties 1 filename)))
   ;;  raw filenames
   (let ((linkname (file-name-nondirectory filename))
 	(len (car args)))
     (when (string= linkname "") ;; for directories show the mother
-      (setq linkname (file-name-nondirectory (directory-file-name filename))))
+      (setq linkname (file-name-nondirectory
+		      (directory-file-name filename))))
     (org-make-link-string
      filename
      (superman-trim-string linkname len))))
@@ -914,14 +917,22 @@ Returns the formatted string with text-properties."
 	       'superman-sort-section
 	       'superman-next-project-button-face
 	       sort-cmd))
+	;; replace trim function
+	;; (setcdr (assoc "fun" b) 'superman-trim-string)
+	(setq b (remove-if
+		 #'(lambda(x)
+		     (cond ((not (listp x)) nil)
+			   ((string-match (car x) "fun") t)
+			   (t nil))) b))
 	(setq name
 	      (superman-play-ball
 	       name
 	       b
 	       'no-face))
-	(setq names (append names (list col-name)))
 	(setq column-widths (append column-widths (list (length name))))
 	(setq column-names (concat column-names name))
+	(set-text-properties 0 (length col-name) nil col-name)
+	(setq names (append names (list col-name)))
 	;; (superman-make-button
 	;; (char-to-string #x25b3)
 	;; 'superman-sort-section
@@ -1118,10 +1129,11 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	 next
 	 beg
 	 end)
-    (put-text-property
-     (previous-single-property-change (point) 'button)
-     (next-single-property-change (point) 'button)
-     'reverse (not reverse))
+    (when (get-text-property (point-at-bol) 'column-names)
+      (put-text-property
+       (previous-single-property-change (point) 'button)
+       (next-single-property-change (point) 'button)
+       'reverse (not reverse)))
     (when (and pos dim)
       (goto-char pos)
       (goto-char (next-single-property-change
@@ -1475,7 +1487,8 @@ to VIEW-BUF."
 	(widen)
 	(goto-char index-cat-point)
 	(let* ((item-prop (superman-get-property (point) "item-level"))
-	       (item-level (if item-prop (string-to-number item-prop) 3))
+	       (item-level (if item-prop (string-to-number item-prop)
+			     superman-item-level))
 	       (sub-level (- item-level 1))
 	       ;; (or (superman-get-property (point) 'sub-level) 2))
 	       (attac-level (+ item-level 1))
@@ -1497,6 +1510,10 @@ to VIEW-BUF."
 		     (put-text-property 0 (length line) 'face 'superman-subheader-face line)
 		     (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
 		     (with-current-buffer view-buf (setq countsub (append countsub (list `(0 ,(point))))))
+		     ;; help superman-one-up to find the right place
+		     (when (get-text-property (point-at-bol) 'point-here)
+		       (put-text-property 0 (length line) 'point-here t line)
+		       (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
 		     (with-current-buffer view-buf (insert line " \n" ))
 		     (end-of-line)))
 		  ;; items
@@ -1505,8 +1522,11 @@ to VIEW-BUF."
 		       (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
 		   (setq count (+ count 1))
 		   (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+		   ;; help superman-one-up to find the right place
+		   (when (get-text-property (point-at-bol) 'point-here)
+		     (put-text-property 0 (length line) 'point-here t line)
+		     (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
 		   (with-current-buffer view-buf
-		     ;; (goto-char (point-max))
 		     (insert line "\n")))
 		  ;; attachments
 		  ((and (eq (org-current-level) attac-level) attac-balls)
@@ -1940,95 +1960,146 @@ current section."
    (t (org-shifttab arg))))
 
 
-(defun superman-goto-sup-outline (&optional backward goto leq greater)
-  "Goto next outline level less than or equal to 'leq' and greater than 'greater'"
-  (let* ((found-flag nil) (result nil)
-	 (gr (or greater 0))
-	 ;;	 (le (or leq (+ (nth 0 (org-heading-components)) 1) 3))
-	 (le (or leq (nth 0 (org-heading-components)) 3))
-	)
-    (save-excursion
-      (while (and (not found-flag) (if backward (outline-previous-heading) (outline-next-heading)))
-	(setq found-flag (and (<= (nth 0 (org-heading-components)) le)
-			      (> (nth 0 (org-heading-components)) gr)))
-	)
-	(if found-flag (setq found-flag (point-at-bol)))
-      )
-    (if (and goto found-flag) 
-	(goto-char found-flag)
-      found-flag)
-    ))
+;; (defun superman-goto-outline (&optional backward goto upper lower)
+  ;; "Find and move to next (previous if BACKWARD is non-nil) outline level
+ ;; which is less than or equal to UPPER and greater than LOWER.
+;; UPPER defaults to `superman-item-level'.
+;; If GOTO is nil do not move. Value is the point of
+;; the matching outline level or nil if there is none."
+  ;; (let* ((found nil)
+	 ;; (lower-bound (or lower 0))
+	 ;; (upper-bound (or upper
+			  ;; (nth 0 (org-heading-components))
+			  ;; superman-item-level)))
+    ;; (save-excursion
+      ;; (while (and (not found)
+		  ;; (if backward
+		      ;; (outline-previous-heading)
+		    ;; (outline-next-heading)))
+	;; (let ((current-level (nth 0 (org-heading-components))))
+	  ;; (setq found (and (<= current-level upper-bound)
+			   ;; (> current-level lower-bound))))
+	;; (if found (setq found (point-at-bol)))))
+    ;; (if (and goto found) 
+	;; (goto-char found)
+      ;; found)))
+
 
 (defun superman-one-up (&optional arg down)
-  "Move item in project view up or down."
+  "Move item or section in project view up or down. As a side effect
+move the corresonding heading in the index buffer, thus making
+movements permant."
   (interactive "p")
-  (let* ((marker (org-get-at-bol 'org-hd-marker))
-	 (catp (org-get-at-bol 'cat))
-	 (cur-level)
-	 (prev-level)
-	 (n (or arg 1))
-	 (curcat (when catp (superman-current-cat))))
-    (when (or catp marker)
-      (with-current-buffer
-	  (marker-buffer marker)
-	(goto-char marker)
-	(setq prev-level (nth 0 (org-heading-components)))
+  (let ((marker (org-get-at-bol 'org-hd-marker))
+	(catp (org-get-at-bol 'cat))
+	next-level
+	next-point
+	current-level
+	(f (if down
+	       'outline-next-heading
+	     'outline-previous-heading))
+	(first 1)
+	(n (or arg 1)))
+    (if (not (or catp marker))
+	(error "Point is not on an item  or a category" )
+      (with-current-buffer (marker-buffer marker)
 	(widen)
-	;; (or (condition-case nil
-	;; 	  (if down
-	;; 	      (org-move-subtree-down)
-	;; 	    (org-move-subtree-up))
-	;; 	(error nil))
+	(goto-char marker)
+	;; now at heading in index buffer
+	(setq current-level (nth 0 (org-heading-components)))
+	;; set a mark 
+	(put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
+	(put-text-property (point-at-bol) (point-at-eol) 'point-here 1)
+	;; identify new place
+	(while (> n 0)
+	  (setq next-point (funcall f))
+	  (setq next-level
+		(and next-point
+		     (nth 0 (org-heading-components))))
+	  (cond ((not next-point);; at last heading
+		 (if first
+		     (error "Cannot move further")
+		   (setq n 0)))
+		((> next-level current-level) ;; skip lower levels
+		 nil)
+		((= next-level current-level) ;; same level
+		 (setq n (- n 1)))
+		((< next-level current-level) ;; higher level
+		 ;; moving outside section
+		 (if (save-excursion 
+		       (if down
+			   ;; check if current heading is appropriate
+			   (superman-skip-headings current-level nil)
+			 ;; check if there are further appropriate headings 
+			 (and (funcall f)
+			      (superman-skip-headings current-level t))))
+		     (if (and (not down) first)
+			 nil ;; skip first higher level 
+		       (setq n (- n 1))) ;; there is another appropriate level
+		   (if first
+		       (error "Cannot move further")
+		     (setq n 0)))));; no further heading
+	  (setq first nil))
+	;; set another mark and remove the first
+	(put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
 	(if down
-	    (progn
-	      (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
-	      (dotimes (i n)
-		(if (not (superman-goto-sup-outline nil t prev-level (min 1 (- prev-level 1))))
-		    (error "Cannot move item outside category")))
-	      (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
-	      (goto-char (previous-single-property-change (point) 'current-item))
-	      (remove-list-of-text-properties (point-at-bol) (point-at-eol) '(current-item))
-	      (org-cut-subtree)
-	      ;; (org-move-subtree-down)		    
-	      (goto-char (next-single-property-change (point) 'next-item))
-	      (remove-list-of-text-properties (point-at-bol) (point-at-eol) '(next-item))
-	      (setq cur-level (nth 0 (org-heading-components)))
-	      (if (< cur-level prev-level) (org-demote))
-	      (org-narrow-to-subtree)
-	      (goto-char (point-max))
-	      (if (not (eq (point-at-bol) (point))) (insert "\n"))
-	      (yank)		    
-	      (if (< cur-level prev-level) 
-		  (progn 
-		    (goto-char (point-min))
-		    (org-promote)
-		    (goto-char (point-max))))
-	      (widen)
-	      (delete-blank-lines)
-	      )
-	    ;;; Up:
-	  (put-text-property (point-at-bol) (point-at-eol) 'current-item 1)
-	  (dotimes (i n)
-	    (if (not (superman-goto-sup-outline t t prev-level (min 1 (- prev-level 1))))
-		(error "Cannot move item outside category")))
-	  (put-text-property (point-at-bol) (point-at-eol) 'next-item 1)
-	  (goto-char (next-single-property-change (point) 'current-item))
-	  (remove-list-of-text-properties (point-at-bol) (point-at-eol) '(current-item))
-	  (org-cut-subtree)
-	  (goto-char (previous-single-property-change (point) 'next-item))
-	  (remove-list-of-text-properties (point-at-bol) (point-at-eol) '(next-item))
-	  (beginning-of-line)
-	  (yank)
-	  (delete-blank-lines)
-	  ))
+	    (goto-char (previous-single-property-change (point) 'current-item))
+	  (goto-char (next-single-property-change (point) 'current-item)))
+	(remove-list-of-text-properties (point-at-bol) (point-at-eol) '(current-item))
+	;; finally cut current heading 
+	(org-cut-subtree)
+	;; and yank it at new place
+	(if down
+	    (goto-char (next-single-property-change (point) 'next-item))
+	  (goto-char (previous-single-property-change (point) 'next-item)))
+	(remove-list-of-text-properties (point-at-bol) (point-at-eol) '(next-item))
+	(if (not down)
+	    (beginning-of-line)
+	  (if (< next-level current-level)
+	      (org-end-of-meta-data-and-drawers)
+	    (org-end-of-subtree t t))
+	  (when (not (eq (point-at-bol) (point))) (insert "\n")))
+	(yank)
+	(when (and (not down)
+		   (not (eq (point-at-bol) (point))))
+	  (insert "\n"))
+	(delete-blank-lines))
+      ;; back in view mode
       (superman-redo)
-      (if catp
-	  (progn 
-	    (goto-char (point-min))
-	    (re-search-forward curcat nil t)
-	    (beginning-of-line))
-	(forward-line (if down (- n 1) (- -1 n))) ;; OBS does not work correctly with 'headlines (level 2)'
-	))))
+      (goto-char
+       (or (next-single-property-change (point-min) 'point-here)
+	   (point-min))))))
+;; (if catp
+;; (progn 
+;; (goto-char (point-min))
+;; (re-search-forward (concat "\\*[ ]+" curcat " ") nil t)
+;; (beginning-of-line))
+;; OBS does not work correctly with 'headlines (level 2)'
+;; (forward-line (if down (- n 1) (- -1 n))))))
+
+(defun superman-skip-headings (level backward)
+  "Skip forward across headings with higher level then LEVEL and
+across headings indicated as either hidden or freetext. 
+Leave point at first appropriate heading or return nil if there is none.
+If BACKWARD is non-nil move backward."
+  (if (not (org-at-heading-p))
+      (error "Not at heading"))
+  (let (inappropriate
+	(here (point)))
+    (while (and (setq inappropriate
+		      (or
+		       (> (nth 0 (org-heading-components)) level)
+		       (superman-get-property (point) "freetext")
+		       (superman-get-property (point) "hidden")))
+		(if backward (outline-previous-heading)
+		  (outline-next-heading))))
+    (if (or inappropriate
+	    (not (org-at-heading-p)))
+	;;move back
+	(goto-char here)
+      (point))))
+      
+
 
 (defun superman-one-down (&optional arg)
   (interactive "P")
@@ -2210,7 +2281,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	     (scene (current-window-configuration))
 	     (file (superman-filename-at-point t))
 	     (git-p
-	      (when (file-exists-p file)
+	      (when (and file (file-exists-p file))
 		(let* ((status (superman-git-XY-status file))
 		       (xy (concat (nth 1 status) (nth 2 status))))
 		  (if (or (string= xy "!!") (string= xy "??")) nil t))))
@@ -2226,7 +2297,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	  (when marker
 	    (save-excursion
 	      (org-with-point-at marker (org-cut-subtree))))
-	  (when file
+	  (when (and file (file-exists-p file))
 	    (unless (setq regret
 			  (not (yes-or-no-p
 				(concat (if git-p "Call git rm " "Delete file ")
@@ -2284,7 +2355,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (let ((h-win
 	 (get-buffer-window "*Superman-view-help*" (selected-frame))))
     (when h-win (delete-window h-win))))
-  
+
 ;;}}}
 ;;{{{ Switch between projects
 
@@ -2352,7 +2423,9 @@ The value is non-nil unless the user regretted and the entry is not deleted.
     (when (and marker (not (get-text-property (point-at-bol) 'cat))
 	       (not (get-text-property (point-at-bol) 'subcat)))
       (beginning-of-line)
-      (let ((newline (superman-format-thing marker balls))
+      (let ((newline
+	     (org-with-point-at marker
+		 (superman-format-thing marker balls)))
 	    (beg (previous-single-property-change (point-at-eol) 'org-hd-marker))
 	    (end (or (next-single-property-change (point) 'org-hd-marker)
 		     (next-single-property-change (point) 'tail))))
@@ -2365,13 +2438,13 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	   '(face org-link)))
 	(beginning-of-line)))))
 
-
 ;;}}}
 ;;{{{ helper functions
 
 (defun superman-view-property-keys ()
   "Get a list of all property keys in current section"
-  (let ((cat-point (superman-cat-point)))
+  (let ((cat-point (superman-cat-point))
+	keys)
     (when cat-point
       (save-excursion
 	(org-with-point-at (get-text-property cat-point 'org-hd-marker)
@@ -2383,8 +2456,9 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	  ;; heading
 	  (outline-next-heading)
 	  (narrow-to-region (point) (point-max))
-	  (superman-property-keys)
-	  (widen)))))))
+	  (setq keys (superman-property-keys))
+	  (widen)
+	  keys))))))
 
 (defun superman-view-toggle-todo ()
   (interactive)
@@ -2716,8 +2790,7 @@ for git and other actions like commit, history search and pretty log-view."
   "Add a new document, note, task or other item to a project. If called
 from superman project view, assoc a capture function from `superman-capture-alist'.
 If non exists create a new item based on balls and properties in current section. If point is
-not in a section prompt for section first.
-"
+not in a section prompt for section first."
   (interactive "p")
   (if (and (or (not pop) (= pop 1)) superman-view-mode)
       (let* ((pro (when superman-view-mode (superman-view-current-project t)))
