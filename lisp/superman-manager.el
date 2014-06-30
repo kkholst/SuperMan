@@ -353,6 +353,21 @@ and an action a one-optional-argument function which must return a buffer.")
     (if (stringp prop)
 	(replace-regexp-in-string "[ \t]+$" "" prop))))
 
+;; (defun superman-set-property ()
+  ;; (interactive)
+  ;; (let* ((prop-list '(((superman-property 'location) . nil)
+		      ;; ((superman-property 'index) . nil)
+		      ;; ((superman-property 'category) . nil)
+		      ;; ((superman-property 'others) . nil)
+		      ;; ((superman-property 'publishdirectory) . nil)))
+	 ;; (prop (completing-read "Set property: " prop-list))
+	 ;; (pom (org-get-at-bol 'org-hd-marker))
+	 ;; (curval (org-entry-get pom prop))
+	 ;; ;; (if  (completing-read (concat "Value for " prop ": ")
+	 ;; (val (read-string (concat "Value for " prop ": ") curval)))
+    ;; (org-entry-put pom prop val))
+  ;; (superman-redo))
+
 (defvar superman-project-kal-el t
   "If non-nil add the Kal-El project to project alist.
 Kal-El is the planet where superman was born. It is there
@@ -583,33 +598,53 @@ and others."
       (save-buffer))))
 
 (defun superman-delete-project (&optional project)
-  "Delete the project PROJECT from superman control."
+  "Delete the project PROJECT from superman control. This includes
+cutting the heading in `superman-profile', removing the project
+from `superman-project-history', and killing the associated buffers.
+
+Optionally (the user is prompted) move also the whole
+project directory tree to the trash."
   (interactive)
   (let* ((marker (org-get-at-bol 'org-hd-marker))
 	 (scene (current-window-configuration))
-	 (pro (or project (superman-project-at-point)))
+	 (pro (or project (superman-get-project project 'ask)))
+	 ;; (or project (superman-project-at-point)))
 	 (dir (concat (superman-get-location pro) (car pro)))
 	 (index (superman-get-index pro))
 	 (ibuf (get-file-buffer index)))
+    ;; switch to entry in superman-profile
+    (if superman-mode
+	(superman-view-index)	
+      (superman-go-home (car pro) nil))
+    (org-narrow-to-subtree)
+    (when (yes-or-no-p (concat "Delete project " (car pro) " from SuperMan control? "))
+      ;; remove entry from superman-profile
+      (org-cut-subtree)
+      (widen)
+      (save-buffer)
+      (delete-blank-lines)
+      ;; delete from project-history
+      (delete (car pro) superman-project-history)
+      ;; kill buffers
+      (when (buffer-live-p ibuf)
+	(kill-buffer ibuf))
+      (when (buffer-live-p (get-buffer (concat "*Project[" (car pro) "]*")))
+	(kill-buffer (concat "*Project[" (car pro) "]*")))
+      ;; update superman buffer
+      (superman))
+    ;; (switch-to-buffer "*S*")
+    ;; (let ((buffer-read-only nil)
+    ;; (kill-line))))
+    ;; remove directory tree and index file
     (when (and (file-exists-p dir)
 	       (yes-or-no-p (concat "Remove project directory tree? " dir " ")))
-      (move-file-to-trash dir))
+      (when (yes-or-no-p (concat "Are you sure? "))
+	(move-file-to-trash dir)))
     (when (and (file-exists-p index)
 	       (yes-or-no-p (concat "Remove index file? " index)))
       (move-file-to-trash index))
-    (when (buffer-live-p ibuf)
-	(kill-buffer ibuf))
-    (superman-view-index)
-    (org-narrow-to-subtree)
-    (when (yes-or-no-p "Delete this project from SuperMan control? ")
-      (org-cut-subtree))
-    (widen)
-    (superman-parse-projects)
-    (delete (car pro) superman-project-history)
-    (when (buffer-live-p (get-buffer (concat "*Project[" (car pro) "]*")))
-      (kill-buffer (concat "*Project[" (car pro) "]*")))
-    (set-window-configuration scene)
-    (when superman-mode (superman-redo))))
+    (set-window-configuration scene)))
+
       
 
 ;;}}}
@@ -882,13 +917,20 @@ If NOSELECT is set return the project."
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
 
-(defun superman-go-home (&optional heading)
+(defun superman-go-home (&optional nick-or-heading cat)
   "Visit the file superman-profile and leave point at PROJECT."
   (find-file superman-profile)
   (goto-char (point-min))
-  (re-search-forward
-   (format org-complex-heading-regexp-format (regexp-quote heading))
-   nil t))
+  (let* ((case-fold-search t) 
+	 (regexp
+	  (if cat
+	      (format org-complex-heading-regexp-format
+		      (regexp-quote nick-or-heading))
+	    (concat ":nickname:[ \t]*" nick-or-heading))))
+    (re-search-forward
+     regexp
+     nil t)))
+  
 
 (defun superman-project-home (project)
   (let ((loc (superman-get-location project))

@@ -414,7 +414,7 @@ subdirectories below DIR are excluded depending on what file-list-exclude-p retu
 	 file-list)
     (cond ((not dir-list)
 	   (when file-list-verbose
-	   (message "file-list: reading %s ... (abort: C-g)" dir))
+	     (message "file-list: reading %s ... (abort: C-g)" dir))
 	   (setq file-list-alist
 		 (append
 		  file-list-alist
@@ -539,7 +539,7 @@ by listings all the entries of file-list-default-directories."
 	      (insert "Updated directories: \n\n")
 	      (mapcar (lambda (x) (insert x "\n")) update-info)))
 	(when file-list-verbose
-	(message "No directory below %s has changed" dir))))))
+	  (message "No directory below %s has changed" dir))))))
 
 (defun file-list-update-below-dir (dir)
   "Re-read filenames below dir from disk."
@@ -600,7 +600,8 @@ If INCLUDE is non-nil, then SUBDIR is excluded if it does not match REGEXP."
 	      (cdr (assoc-if (lambda (entry)
 			       (string-match entry dir))
 			     file-list-exclude-dirs))))
-	 (subDir (file-name-as-directory (expand-file-name subdir)))
+	 (subDir (file-name-as-directory
+		  (expand-file-name subdir)))
 	 decision)
     (when regexp
       (setq decision (string-match regexp subDir)))
@@ -706,7 +707,10 @@ Return  the sublist of the existing files. Does not re-display selected list."
 (defun file-list-redisplay ()
   (interactive)
   (file-list-select-existing-files)
-  (file-list-display-match-list))
+  (if (and file-list-mode (not file-list-completion-mode))
+      (superman-display-file-list 
+       (get-text-property (point-min) 'dir))
+    (file-list-display-match-list)))
 
 (defun file-list-select-internal (&optional file-list regexp by inverse dir display-buffer dont-display)
   "Returns sublist of filenames in file-list matched by regexp.
