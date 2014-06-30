@@ -656,7 +656,7 @@ see M-x manual-entry RET git-diff RET.")
 
 (defvar superman-git-display-command-list
   '(("log"
-     "log -n 18 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
+     "log -n 25 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
      ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit") ("fun" superman-trim-hash))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
       ("Tag" ("width" 10))
@@ -812,6 +812,9 @@ This function should be bound to a key or button."
 	    ;; (superman-redo-cat props)
 	    (superman-redo-cat)))))))
 
+(defvar superman-git-log-limit 25 "Limit on number of previous versions shown by default in git log view")
+(defvar superman-git-search-limit 250)
+
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."
   (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
@@ -820,7 +823,8 @@ This function should be bound to a key or button."
 		   (get-text-property (point-min) 'git-display))
 		 (cadr (assoc "git-display" props))
 		 (car cycles)))
-	 (limit (cadr (assoc "limit" props)))
+	 (limit (with-current-buffer view-buf
+		  (or (get-text-property (point-min) 'limit) superman-git-log-limit)))
 	 (rest (assoc cycle superman-git-display-command-list))
 	 (balls (or (nth 2 rest) superman-default-balls))
 	 (pre-hook (nth 3 rest))
@@ -836,7 +840,7 @@ This function should be bound to a key or button."
     (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
     ;; limit on number of revisions
     (when limit
-      (replace-regexp-in-string "-n [0-9]+ " (concat "-n " limit " ") cmd))
+      (setq cmd (replace-regexp-in-string "-n [0-9]+ " (concat "-n " (int-to-string limit) " ") cmd)))
     ;; insert the result of git command
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
@@ -889,11 +893,25 @@ This function should be bound to a key or button."
     (goto-char (previous-single-property-change (point) 'cat))
     (beginning-of-line)
     (put-text-property (point) (+ (point) 1) 'git-cycle cycle)
+    (when (re-search-forward "\[[0-9]*\]" nil t)
+      (replace-match (superman-make-button (concat "[Set limit: " (int-to-string limit) "]")
+					   'superman-git-set-limit 'superman-default-button-face "Set limit of logs")))
     (when post-hook 
       (goto-char (point-max))
       (funcall post-hook))))
 
-  
+(defun superman-git-set-limit ()
+  "Re-set limit on number of items and redisplay"
+  (interactive)
+  (if (not (or superman-git-mode superman-git-log-mode))
+      (error "Currently this works only in `superman-git-log-mode' and `superman-git-mode'.")
+    (let ((buffer-read-only nil)
+	  (new-limit (string-to-int
+		      (read-string "New limit (leave empty to cancel): "))))
+      (when (integerp new-limit)
+	(put-text-property (point-min) (+ (point-min) 1) 'limit new-limit))
+      (superman-redo-cat))))
+	
 (defun superman-git-display-diff (commit ref dir project)
   "Display differences between the versions COMMIT and REF of the git
 repository of PROJECT which is located at DIR."
@@ -1288,8 +1306,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
   :group 'org
   :keymap 'superman-git-log-mode-map)
 
-(defvar superman-git-log-limit 50)
-(defvar superman-git-search-limit 250)
 
 
 (defun superman-git-log-mode-on ()
@@ -1407,56 +1423,39 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-git-tag ()
   "Set git tag"
   (interactive)
-  (if superman-git-log-mode
-      ;; tag commit based on file-specific log-view
-      (let* ((oldtag (get-text-property (point-at-bol) 'decoration))
-	     (hash (get-text-property (point-at-bol) 'hash))
-	     (file (get-text-property (point-min) 'filename))
-	     (arglist (get-text-property (point-min) 'arglist)) ;; limit search decoration-only
-	     (tag (read-string "Tag (empty to clear): "))
-	     (linenum (line-number-at-pos)))
-	(if (string-equal tag "")
-	    (when oldtag
-	      (shell-command-to-string
-	       (concat "cd " (file-name-directory file) ";"
-		       superman-cmd-git " tag -d "
-		       (replace-regexp-in-string
-			"\)" ""
-			(replace-regexp-in-string "\(" "" oldtag)))))
+  ;; tag commit in git log-view
+  (let* ((marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (oldtag (superman-get-property
+		  marker
+		  "tag"))
+	 (dir (if superman-git-log-mode
+		  (get-text-property (point-min) 'git-dir)
+		(get-text-property (point-min) 'filename)))
+	 (hash (superman-get-property
+		marker
+		"commit"))
+	 (tag (read-string "Tag (empty to clear): " oldtag))
+	 (linenum (line-number-at-pos)))
+    ;; run git tag
+    (if (string-equal tag "")
+	(when oldtag
 	  (shell-command-to-string
-	   (concat "cd "
-		   (file-name-directory file)
-		   ";" superman-cmd-git " tag -a "
-		   tag " " hash " -m \"\"")))
+	   (concat "cd " dir ";"
+		   superman-cmd-git " tag -d "
+		   (replace-regexp-in-string "\\(\(tag:[ ]*\\|\(\\|\)\\)" "" oldtag))))
+      (superman-run-cmd (concat
+			 "cd " dir ";"
+			 superman-cmd-git " tag -a " tag " "
+			 hash " -m \"\"")
+			"*Superman-returns*"))
+    (if superman-git-log-mode
+	(progn
+	  (org-entry-put marker "Tag" tag)
+	  (superman-view-redo-line))
+      (let ((arglist (get-text-property (point-min) 'arglist))) ;; limit search decoration-only
 	(superman-git-log file (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
 	(goto-char (point-min))
-	(forward-line (1- linenum)))
-    ;; tag commit in git log-view
-    (let* ((marker (get-text-property (point-at-bol) 'org-hd-marker))
-	   (oldtag (superman-get-property
-		    marker
-		    "tag"))
-	   (dir (get-text-property (point-min) 'git-dir))
-	   (hash (superman-get-property
-		  marker
-		  "commit"))
-	   (tag (read-string "Tag (empty to clear): " oldtag)))
-      ;; run git tag
-      (if (string-equal tag "")
-	  (when oldtag
-	    (shell-command-to-string
-	     (concat "cd " dir ";"
-		     superman-cmd-git " tag -d "
-		     (replace-regexp-in-string
-		      "\)" ""
-		      (replace-regexp-in-string "\(" "" oldtag)))))
-	(superman-run-cmd (concat
-			   "cd " dir ";"
-			   superman-cmd-git " tag -a " tag " "
-			   hash " -m \"\"")
-			  "*Superman-returns*")
-	(org-entry-put marker "Tag" tag)
-	(superman-view-redo-line)))))
+	(forward-line (1- linenum))))))
 
 (defun superman-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
