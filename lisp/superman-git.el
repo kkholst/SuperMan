@@ -656,9 +656,10 @@ see M-x manual-entry RET git-diff RET.")
 
 (defvar superman-git-display-command-list
   '(("log"
-     "log -n 18 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Date: %cd\n:Message: %s\n:END:\n\""
+     "log -n 18 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
      ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit") ("fun" superman-trim-hash))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
+      ("Tag" ("width" 10))
       ("Date" ("width" 13) ("fun" superman-trim-date) ("face" font-lock-string-face))
       ("Message" ("width" 63)))
      superman-git-log-pre-display-hook
@@ -692,9 +693,14 @@ see M-x manual-entry RET git-diff RET.")
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face)))
      superman-git-diff-pre-display-hook))
-  "List of git-views. Each entry has 4 elements: (key git-switches balls cleanup), where key is a string
-to identify the element, git-switches are the switches passed to git, balls are used to define the columns and
-cleanup is a function which is called before superman plays the balls.")
+  "List of git-views. Each entry has 5 elements: (key git-switches balls pre-hook post-hook):
+
+1)  key is a string to identify the element
+2) git-switches are the switches passed to git
+3)  balls are used to define the columns
+4) pre-hook is a function which is called before superman plays the balls.
+5) post-hook is a function which is called after superman plays the balls.
+")
 
 (defvar superman-git-display-diff-balls
   '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
@@ -987,7 +993,7 @@ repository of PROJECT which is located at DIR."
 	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
       (setq next-item (next-single-property-change (point-min) 'superman-item-marker))
-      (when next-item   ;; might be nil in case nothing changed between workspace and HEAD
+      (when next-item ;; is nil when nothing changed between workspace and HEAD
 	(goto-char next-item)
 	(previous-line))
       (superman-git-diff git-dir commit ref)
@@ -1134,8 +1140,7 @@ repository of PROJECT which is located at DIR."
       (goto-char next)
       (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit"))
 	     (ref (if (string= commit "Workspace") "HEAD" (concat commit "^")))
-	     (cmd `(lambda ()
-		     (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
+	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,nickname))))
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))
 
 (defvar superman-git-show-ignored nil
@@ -1180,6 +1185,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
   (superman-git-mode t))
 
 (define-key superman-git-mode-map "q" 'superman-view-back)
+(define-key superman-git-mode-map "t" 'superman-git-tag)
 (define-key superman-git-mode-map "c" 'superman-git-commit-file)
 (define-key superman-git-mode-map "a" 'superman-git-add-file)
 (define-key superman-git-mode-map "s" 'superman-git-status-file)
@@ -1401,22 +1407,56 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-git-tag ()
   "Set git tag"
   (interactive)
-  (let* ((oldtag (get-text-property (point-at-bol) 'decoration))
-	 (hash (get-text-property (point-at-bol) 'hash))
-	 (file (get-text-property (point-min) 'filename))
-	 (arglist (get-text-property (point-min) 'arglist)) ;; limit search decoration-only
-	 (tag (read-string "Tag (empty to clear): "))
-	 (linenum (line-number-at-pos)))
-    (if (string-equal tag "")
-	(progn 
-	  (if oldtag
-	      (progn
-		(setq oldtag (replace-regexp-in-string "\)" "" (replace-regexp-in-string "\(" "" oldtag)))
-		(shell-command-to-string (concat "cd " (file-name-directory file) ";" superman-cmd-git " tag -d " oldtag)))))
-      (shell-command-to-string (concat "cd " (file-name-directory file) ";" superman-cmd-git " tag -a " tag " " hash " -m \"\"")))
-    (superman-git-log file (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
-    (goto-char (point-min))
-    (forward-line (1- linenum))))
+  (if superman-git-log-mode
+      ;; tag commit based on file-specific log-view
+      (let* ((oldtag (get-text-property (point-at-bol) 'decoration))
+	     (hash (get-text-property (point-at-bol) 'hash))
+	     (file (get-text-property (point-min) 'filename))
+	     (arglist (get-text-property (point-min) 'arglist)) ;; limit search decoration-only
+	     (tag (read-string "Tag (empty to clear): "))
+	     (linenum (line-number-at-pos)))
+	(if (string-equal tag "")
+	    (when oldtag
+	      (shell-command-to-string
+	       (concat "cd " (file-name-directory file) ";"
+		       superman-cmd-git " tag -d "
+		       (replace-regexp-in-string
+			"\)" ""
+			(replace-regexp-in-string "\(" "" oldtag)))))
+	  (shell-command-to-string
+	   (concat "cd "
+		   (file-name-directory file)
+		   ";" superman-cmd-git " tag -a "
+		   tag " " hash " -m \"\"")))
+	(superman-git-log file (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
+	(goto-char (point-min))
+	(forward-line (1- linenum)))
+    ;; tag commit in git log-view
+    (let* ((marker (get-text-property (point-at-bol) 'org-hd-marker))
+	   (oldtag (superman-get-property
+		    marker
+		    "tag"))
+	   (dir (get-text-property (point-min) 'git-dir))
+	   (hash (superman-get-property
+		  marker
+		  "commit"))
+	   (tag (read-string "Tag (empty to clear): " oldtag)))
+      ;; run git tag
+      (if (string-equal tag "")
+	  (when oldtag
+	    (shell-command-to-string
+	     (concat "cd " dir ";"
+		     superman-cmd-git " tag -d "
+		     (replace-regexp-in-string
+		      "\)" ""
+		      (replace-regexp-in-string "\(" "" oldtag)))))
+	(superman-run-cmd (concat
+			   "cd " dir ";"
+			   superman-cmd-git " tag -a " tag " "
+			   hash " -m \"\"")
+			  "*Superman-returns*")
+	(org-entry-put marker "Tag" tag)
+	(superman-view-redo-line)))))
 
 (defun superman-git-revision-at-point (&optional diff)
   "Shows version of the document at point "

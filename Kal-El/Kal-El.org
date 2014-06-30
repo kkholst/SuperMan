@@ -67,11 +67,35 @@
 
 
 
-*** beamertheme: org
+*** Tutorial org-dot-diagrams
+:PROPERTIES:
+:Bookmark: http://orgmode.org/worg/org-tutorials/org-dot-diagrams.html
+:CaptureDate: [2014-06-10 Tue]
+:END:
+
+
+
+*** latex-beamertheme: org
 :PROPERTIES:
 :BookmarkDate: <2013-08-18 Sun>
 :Link: https://github.com/mbork/beamerorgtheme
 :END:
+
+*** Org-babel: hot answers
+:PROPERTIES:
+:CaptureDate: [2014-06-08 Sun 08:16]
+:LINK: http://stackoverflow.com/tags/org-babel/hot
+:END:
+
+
+
+*** Beamer via new exporter
+:PROPERTIES:
+:CaptureDate: [2014-06-09 Mon 09:26]
+:Bookmark: http://orgmode.org/worg/exporters/beamer/ox-beamer.html
+:END:
+
+
 
 *** steckemacs
 :PROPERTIES:

@@ -62,21 +62,6 @@
      ;; ("state" . "ACTIVE")
      ;; ("config" . "INDEX | AGENDA / TODO"))))
 
-(defun superman-set-property ()
-  (interactive)
-  (let* ((prop-list '(((superman-property 'location) . nil)
-		      ((superman-property 'index) . nil)
-		      ((superman-property 'category) . nil)
-		      ((superman-property 'others) . nil)
-		      ((superman-property 'publishdirectory) . nil)))
-	 (prop (completing-read "Set property: " prop-list))
-	 (pom (org-get-at-bol 'org-hd-marker))
-	 (curval (org-entry-get pom prop))
-	  ;; (if  (completing-read (concat "Value for " prop ": ")
-	 (val (read-string (concat "Value for " prop ": ") curval)))
-    (org-entry-put pom prop val))
-  (superman-redo))
-
 (defun superman-return ()
   "Switch to project at point."
   (interactive)
@@ -225,7 +210,7 @@ the contents of the file `superman-profile' which is found in the directory `sup
 	(if tail
 	    (setcdr (nth m cat-alist) (append tail (list pro)))
 	  (when (nth m cat-alist)
-	  (setcdr (nth m cat-alist) (list pro)))))
+	    (setcdr (nth m cat-alist) (list pro)))))
       (setq projects (cdr projects)))
     (insert "\n")
     (superman-view-insert-action-buttons
@@ -237,8 +222,9 @@ the contents of the file `superman-profile' which is found in the directory `sup
     (while cat-alist
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
-	     (cat-fun `(lambda () (interactive)
-			 (superman-capture-project nil ,cat-name)))
+	     (cat-fun 'superman-tab)
+	      ;; `(lambda () (interactive)
+			 ;; (superman-capture-project nil ,cat-name)))
 	     (tail (cdr cat)))
 	;; (insert "\n** " cat-name)
 	(insert "\n** "
@@ -803,7 +789,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 ;; (define-key superman-mode-map "N" 'superman-new-project)
 ;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
 ;; (define-key superman-mode-map " " 'superman-switch-to-project)
-;; (define-key superman-mode-map "S" 'superman-set-property)
 (define-key superman-mode-map "i" 'superman-visit-project)
 (define-key superman-mode-map "x" 'superman-delete-project)
 (define-key superman-mode-map "V" 'superman-change-view)

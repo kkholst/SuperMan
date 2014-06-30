@@ -1020,6 +1020,12 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 	      nil
 	    string))))))
 
+(defvar superman-special-balls-regexp
+   "^todo\\|hdr\\|priority\\|index\\|org-hd-marker"
+   "Regular expression to identify ball-names as symbolic
+instead of string. Symbolic ball-names are treated
+in a special way by `superman-play-ball'")
+
 (defun superman-distangle-ball (ball)
   (let* ((plist (split-string ball "[ \t]+:"))
          (prop (car plist))
@@ -1038,7 +1044,7 @@ and PREFER-SYMBOL is non-nil return symbol unless PREFER-STRING."
 			;; prefer string
 			`(,key ,(superman-string-to-thing value t nil))))))
 	   (cdr plist))))
-    (when (string-match "^todo\\|hdr\\|index\\|org-hd-marker" prop)
+    (when (string-match superman-special-balls-regexp prop)
       (setq prop (intern prop)))
     (append (list prop) args)))
 
@@ -1254,6 +1260,8 @@ neither object nor the current buffer identify a project."
       (assoc object superman-project-alist))
      ((assoc "index" (cadr object))
       object) ;; assume object is a project
+     ((and superman-mode ;; in superman-buffer
+	   (superman-project-at-point)))
      (ask (superman-select-project))
      ((setq nick (get-text-property (point-min) 'nickname))
       (assoc nick superman-project-alist))
@@ -1442,7 +1450,11 @@ to VIEW-BUF."
 	    (when superman-empty-line-after-cat (insert "\n"))
 	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
 	    (insert text)
-	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)))))
+	    (end-of-line)
+	    (insert "\n")
+	    (forward-line -1)
+	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+	    (forward-line 1)))))
      ;; file-list
      (file-list
       (with-current-buffer index-buf
@@ -1610,7 +1622,8 @@ to VIEW-BUF."
 (defun superman-view-insert-section-name (name count balls index-marker &optional fun help)
   (let ((fun (or
 	      fun
-	      (cadr (assoc name superman-capture-alist))
+	      'superman-tab
+	      ;; (cadr (assoc name superman-capture-alist))
 	      'superman-capture-item)))
     (insert
      (superman-make-button (concat "** " name) fun
@@ -1820,11 +1833,11 @@ beginning of the list."
   "Exchange balls (column definitions) in this section."
   (let ((buffer-read-only nil)
 	(cat-point (superman-cat-point)))
-  (if cat-point
-      (save-excursion
-	(goto-char cat-point)
-	(put-text-property (point-at-bol) (point-at-eol) 'balls new-balls))
-    (message "Point is not inside a section"))))
+    (if cat-point
+	(save-excursion
+	  (goto-char cat-point)
+	  (put-text-property (point-at-bol) (point-at-eol) 'balls new-balls))
+      (message "Point is not inside a section"))))
 
 (defun superman-compute-columns-start (&optional col-width)
   "Compute column start points from a given list of column widths COL-WIDTH.
@@ -1891,7 +1904,12 @@ current line."
   (interactive)
   (superman-one-right 1))
 
-(defun superman-delete-ball ()
+(defun superman-current-column-name ()
+  (let* ((dim (superman-ball-dimensions))
+	 (names (get-text-property (point-at-bol) 'column-names)))
+    (nth (nth 2 dim) names)))
+
+(defun superman-delete-ball (&optional no-confirm)
   "Delete current column. The column will still pop-up when the
 view is refreshed, but can be totally removed
 by calling `superman-save-balls' subsequently."
@@ -1899,9 +1917,7 @@ by calling `superman-save-balls' subsequently."
   (let* ((dim (superman-ball-dimensions))
 	 (balls (get-text-property (superman-cat-point) 'balls))
 	 (buffer-read-only nil)
-	 (new-balls (remove-if (lambda (x) t) balls :start (nth 2 dim) :count 1))
-	 (beg (previous-single-property-change (point-at-bol) 'cat))
-	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
+	 (new-balls (remove-if (lambda (x) t) balls :start (nth 2 dim) :count 1)))
     (save-excursion
       (superman-change-balls new-balls)
       (superman-refresh-cat new-balls))))
@@ -1913,17 +1929,24 @@ current section."
   (let* ((balls (copy-sequence (get-text-property (superman-cat-point) 'balls)))
 	 (buffer-read-only nil)
 	 (props (superman-view-property-keys))
-	 (prop (completing-read "Property to show in new column (press tab see existing): "
-				(mapcar (lambda (x) (list x)) props) nil nil))
-	 (len (string-to-number (read-string "Column width: ")))
-	 (new-ball `(,prop ("width" ,len)))
-	 (new-balls (add-to-list 'balls new-ball))
-	 (beg (previous-single-property-change (point-at-bol) 'cat))
-	 (end (or (next-single-property-change (point-at-eol) 'cat) (point-max))))
-    (save-excursion
-      (superman-change-balls new-balls)
-      (superman-save-balls)
-      (superman-refresh-cat new-balls))))
+	 (common '(("todo" (todo ("width" 6) ("face" superman-get-todo-face)))
+		   ("Date" (".*Date" ("fun" superman-trim-date) ("regexp" t) ("face" font-lock-string-face)))
+		   ("priority" (priority ("width" 8) ("face" superman-get-priority-face)))
+		   ("hdr" (hdr ("width" full) ("face" font-lock-function-name-face)))))
+	 (expanded-props (append common (mapcar (lambda (x) (list x)) props) nil nil))
+	 (prop-key (completing-read "Property to show in new column (press tab see existing): "
+				    expanded-props))
+	 (prop (assoc prop-key expanded-props))
+	 (new-ball (if (cdr prop)
+		       (cadr prop)
+		     (let ((width (max 10 (string-to-number (read-string "Column width: "))))
+			   (fun (completing-read "Type: " '(("string" 'superman-trim-string)
+							    ("date" 'superman-trim-date)
+							    ("filename" 'superman-trim-filename)))))
+		       `(,prop ("width" ,width) ("fun" ,fun)))))
+	 (new-balls (add-to-list 'balls new-ball)))
+    (superman-change-balls new-balls)
+    (superman-save-balls)))
 
 
 (defun superman-tab (&optional arg)
@@ -2066,16 +2089,13 @@ movements permant."
 	(delete-blank-lines))
       ;; back in view mode
       (superman-redo)
-      (goto-char
-       (or (next-single-property-change (point-min) 'point-here)
-	   (point-min))))))
-;; (if catp
-;; (progn 
-;; (goto-char (point-min))
-;; (re-search-forward (concat "\\*[ ]+" curcat " ") nil t)
-;; (beginning-of-line))
-;; OBS does not work correctly with 'headlines (level 2)'
-;; (forward-line (if down (- n 1) (- -1 n))))))
+      (if catp
+	  (progn (goto-char (point-min))
+		 (re-search-forward (concat "*+[ ]+" catp) nil t)
+		 (beginning-of-line))
+	(goto-char
+	 (or (next-single-property-change (point-min) 'point-here)
+	     (point-min)))))))
 
 (defun superman-skip-headings (level backward)
   "Skip forward across headings with higher level then LEVEL and
@@ -2175,10 +2195,11 @@ If BACKWARD is non-nil move backward."
     (if (not marker)
 	(message "Nothing here")
       ;; add properties defined by balls to all-props
-      (while balls
-	(when (stringp (setq prop (caar balls)))
-	  (add-to-list 'all-props prop))
-	(setq balls (cdr balls)))
+      (unless free
+	(while balls
+	  (when (stringp (setq prop (caar balls)))
+	    (add-to-list 'all-props prop))
+	  (setq balls (cdr balls))))
       (set-buffer (marker-buffer marker))
       ;; do not edit dynamic buffers
       (unless (buffer-file-name)
@@ -2224,6 +2245,7 @@ If BACKWARD is non-nil move backward."
 		"\t" (superman-make-button
 		      "Cancel (C-c C-q)" 'superman-quit-scene
 		      'superman-next-project-button-face "Cancel edit")))
+      (superman-capture-mode)
       (insert "\n\n")
       (put-text-property (point) (point-at-eol) 'edit-point (point))
       (unless catp
@@ -2252,7 +2274,13 @@ If BACKWARD is non-nil move backward."
       (goto-char (next-single-property-change (point-min) 'edit-point))
       (end-of-line)
       (when free
-	(let ((diff (with-current-buffer obuf (- (point) (previous-single-property-change (point-at-eol) 'head)))))
+	(let ((diff
+	       (with-current-buffer
+		   obuf
+		 (- (point)
+		    (or
+		     (previous-single-property-change (point-at-eol) 'head)
+		     0)))))
 	  (org-end-of-meta-data-and-drawers)
 	  (forward-char diff)))
       (if read-only
@@ -2274,53 +2302,67 @@ the user if this should be removed as well.
 The value is non-nil unless the user regretted and the entry is not deleted.
 "
   (interactive)
-  (if (or (previous-single-property-change (point-at-bol) 'cat)
-	  (get-text-property (point) 'cat))
-      ;; inside section
-      (let* ((marker (org-get-at-bol 'org-hd-marker))
-	     (scene (current-window-configuration))
-	     (file (superman-filename-at-point t))
-	     (git-p
-	      (when (and file (file-exists-p file))
-		(let* ((status (superman-git-XY-status file))
-		       (xy (concat (nth 1 status) (nth 2 status))))
-		  (if (or (string= xy "!!") (string= xy "??")) nil t))))
-	     (regret nil))
-	(unless dont-prompt
-	  (superman-view-index)
-	  (when (buffer-file-name)
-	    (org-narrow-to-subtree)
-	    (setq regret (not (yes-or-no-p "Delete this entry? ")))
-	    (widen)))
-	(set-window-configuration scene)
-	(unless regret
-	  (when marker
-	    (save-excursion
-	      (org-with-point-at marker (org-cut-subtree))))
-	  (when (and file (file-exists-p file))
-	    (unless (setq regret
-			  (not (yes-or-no-p
-				(concat (if git-p "Call git rm " "Delete file ")
-					(file-name-nondirectory file) "? "))))
-	      (if git-p
-		  (superman-run-cmd (concat
-				     "cd "
-				     (file-name-directory file)
-				     ";"
-				     superman-cmd-git " rm -f "
-				     (file-name-nondirectory file))
-				    "*Superman-returns*")
-		(when (file-exists-p file)
-		  (delete-file file))))))
-	(unless dont-kill-line
-	  (let ((buffer-read-only nil))
-	    (beginning-of-line)
-	    (kill-line)))
-	;; (superman-view-redo-line))
-	(not regret))
-    ;; inside header
-    (if (get-text-property (point-at-bol) 'superman-e-marker)
-	(superman-view-edit-item))))
+  (cond (;; at category heading
+	 (get-text-property (point-at-bol) 'cat)
+	 (message "cannot (not yet) delete section in this way"))
+	;; at sub-cat heading
+	((get-text-property (point-at-bol) 'subcat)
+	 (message "cannot (not yet) delete sub-section in this way"))
+	;; inside header
+	((not (previous-single-property-change (point-at-bol) 'cat))
+	 (if (get-text-property (point-at-bol) 'superman-e-marker)
+	     (superman-view-edit-item)))
+	;; inside column names
+	((get-text-property (point-at-bol) 'column-names)
+	 (let ((cname (superman-current-column-name)))
+	   (superman-delete-ball)
+	   (if (yes-or-no-p (concat "Delete column " cname " permanently? "))
+	       (superman-save-balls)
+	     (message (concat "Deleted " cname "; type 'R' to put it back")))))
+	;; inside section
+	(t
+	 (let* ((marker (org-get-at-bol 'org-hd-marker))
+		(scene (current-window-configuration))
+		(file (superman-filename-at-point t))
+		(git-p (when (and file (file-exists-p file)
+				  (superman-git-p (file-name-directory file)))
+			 (let* ((status (superman-git-XY-status file))
+				(xy (concat (nth 1 status) (nth 2 status))))
+			   (if (or (string= xy "!!") (string= xy "??")) nil t))))
+		(regret nil))
+	   (unless dont-prompt
+	     (superman-view-index)
+	     (when (buffer-file-name)
+	       (org-narrow-to-subtree)
+	       (setq regret (not (yes-or-no-p "Delete this entry? ")))
+	       (widen)))
+	   (set-window-configuration scene)
+	   (unless (or regret dont-kill-line)
+	     (let ((buffer-read-only nil))
+	       (beginning-of-line)
+	       (kill-line)))
+	   (unless regret
+	     (when marker
+	       (save-excursion
+		 (org-with-point-at marker (org-cut-subtree))))
+	     (when (and file (file-exists-p file))
+	       (unless (setq regret
+			     (not (yes-or-no-p
+				   (concat (if git-p "Call git rm " "Delete file ")
+					   (file-name-nondirectory file) "? "))))
+		 (if git-p
+		     (superman-run-cmd (concat
+					"cd "
+					(file-name-directory file)
+					";"
+					superman-cmd-git " rm -f "
+					(file-name-nondirectory file))
+				       "*Superman-returns*")
+		   (when (file-exists-p file)
+		     (delete-file file))))))
+	   ;; (superman-view-redo-line))
+	   (not regret)))))
+
 
 (defun superman-view-delete-marked (&optional dont-prompt)
   (interactive)
@@ -2496,20 +2538,19 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 
 (defun superman-next-entry ()
   (interactive)
-  (forward-line 1)
-  (superman-choose-entry))
-
+  (forward-line 1))
+  ;; (superman-choose-entry))
 
 (defun superman-choose-entry ()
   (interactive)
   (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
     (when choice
       (cond ((functionp choice) (funcall choice))))))  
-	      
+
 (defun superman-previous-entry ()
   (interactive)
-  (forward-line -1)
-  (superman-choose-entry))
+  (forward-line -1))
+;; (superman-choose-entry))
 
 (defun superman-view-filter ()
   (interactive)
@@ -2527,10 +2568,14 @@ The value is non-nil unless the user regretted and the entry is not deleted.
     (find-file dir)))
 
 (defun superman-hot-return ()
+  "Action to be run when user hits return."
   (interactive)
   (let* ((m (org-get-at-bol 'org-hd-marker))
+	 (choice (org-get-at-bol 'superman-choice))
 	 (b (superman-current-cat))
 	 f pos)
+    (if (and choice (functionp choice))
+	(funcall choice)
     (if (not m)
 	(save-excursion
 	  (beginning-of-line)
@@ -2562,7 +2607,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	       (widen)
 	       (show-all)
 	       (org-narrow-to-subtree)
-	       (switch-to-buffer (marker-buffer m))))))))
+	       (switch-to-buffer (marker-buffer m)))))))))
 
 (defun superman-open-at-point ()
   (interactive)
@@ -2586,7 +2631,12 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		    ((org-get-at-bol 'column-names)
 		     (get-text-property (superman-cat-point)
 					'org-hd-marker))
-		    ((org-get-at-bol 'superman-e-marker))))
+		    ((org-get-at-bol 'superman-e-marker))
+		    ((ignore-errors
+		       (org-back-to-heading))
+		     (org-get-at-bol 'org-hd-marker))
+		    ((outline-next-heading)
+		     (org-get-at-bol 'org-hd-marker))))
 	 (ibuf (or (and pom (marker-buffer pom))
 		   (get-file-buffer
 		    (get-text-property (point-min) 'index))
@@ -2734,7 +2784,8 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "-" 'superman-view-delete-entry)
 (define-key superman-view-mode-map "+" 'superman-capture-item)
 (define-key superman-view-mode-map "X" 'superman-view-delete-marked)
-(define-key superman-view-mode-map "N" 'superman-new-item)
+;; (define-key superman-view-mode-map "N" 'superman-new-item)
+(define-key superman-view-mode-map "N" 'superman-capture-thing)
 (define-key superman-view-mode-map "Q" 'superman-unison)
 (define-key superman-view-mode-map "R" 'superman-redo)
 (define-key superman-view-mode-map "S" 'superman-sort-section)

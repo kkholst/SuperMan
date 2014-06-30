@@ -62,8 +62,15 @@
 	    (cadar list) "\n:END:\n")
     (setq list (cdr list))))
 
+(defun superman-file-capture-button (c &rest args)
+  (superman-make-button "c"
+			'superman-capture-file-at-point
+			'superman-next-project-button-face
+			"Capture file for project control"))
+
 (defvar superman-file-list-balls
-  '(("FileName" ("fun" superman-trim-string) ("width" 88) ("face" font-lock-variable-name-face))
+  '(("Capture" ("fun" superman-file-capture-button) ("width" 6) ("face" "no-face") ("face" superman-next-project-button-face))
+    ("FileName" ("fun" superman-trim-string) ("width" 88) ("face" font-lock-variable-name-face))
     ("Path" ("fun" superman-dont-trim) ("face" font-lock-keyword-face)))
   "balls used to display file-lists.")
 
@@ -85,7 +92,8 @@
 	    (if refresh
 		(file-list-select-internal
 		 nil (or ext ".")
-		 nil nil dir (concat "*File-list-" (or nick "nix") "*") 'dont)
+		 nil nil dir
+		 (concat "*File-list-" (or nick "nix") "*") 'dont)
 	      (or list
 		  file-list-current-file-list
 		  (file-list-select-internal

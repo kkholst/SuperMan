@@ -227,9 +227,11 @@ Default is to set the old window configuration.
     (insert body)
     ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
     (unless (= level 0) (insert "\n"))
-    (goto-char head-point)
+    (goto-char head-point) 
     (superman-capture-mode)
-    (run-hooks 'superman-setup-scene-hook)))
+    (run-hooks 'superman-setup-scene-hook)
+    (mark-line 1)))
+    ;; (push-mark (point-at-eol) nil t)))
 
 (define-minor-mode superman-capture-mode
   "Toggle superman capture mode.
@@ -437,28 +439,37 @@ Creates the project directory and index file."
 (defun superman-capture-project (&optional nickname category loc)
   "Create a new project. If CATEGORY is nil prompt for project category
 with completion in existing categories. If NICKNAME is nil prompt for nickname.
-If LOC is given it is the mother directory of the project.  
+If LOC is given it is the mother directory of the directory which
+defines the project. 
 
-This function modifies your 'superman-project-alist', it first 
-saves the new entry to the file superman-profile, the it creates
-directories and the index file, if these do not exist already, and
-finally it visit the new project is visited.
+The creation is a done in the following steps:
 
-To undo all this call 'superman-delete-project' from the supermanager (M-x superman). "
+Step (1) a new entry is added to the file `superman-profile' and the latter is saved.
+Step (2) The project directory is created (unless it exists).
+Step (3) The index file is initialized (unless it exists).
+Step (4) The new project is visited.
+
+Note that saving the superman-profile alters your current `superman-project-alist'.
+
+To undo all this, enter the supermanager (shortcut: M-x `superman'), navigate to
+the new project and call `superman-delete-project' (shortcut: x)
+"
   (interactive)
-  (superman-refresh)
+  ;; (superman-refresh)
   (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
 	 (category (or category
-		       (completing-read
-			"Category: "
-			(mapcar (lambda (x)
-				  (list x))
-				(superman-parse-project-categories))
-			nil nil)))
+		       (let ((cat
+			      (completing-read
+			       "Category: "
+			       (mapcar (lambda (x)
+					 (list x))
+				       (superman-parse-project-categories))
+			       nil nil)))
+			 (if (string= cat "") "CatWoman" cat))))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (loc (or loc
 		  (save-excursion
-		    (superman-go-home category)
+		    (superman-go-home category t)
 		    (superman-get-property (point) "location" 'inherit))
 		  superman-default-directory))
 	 (superman-setup-scene-hook
@@ -487,6 +498,14 @@ To undo all this call 'superman-delete-project' from the supermanager (M-x super
      superman-project-level 'superman-view-new-project-hook)))
 
 
+(defun superman-capture-file-at-point ()
+  (interactive)
+  (if (not (eq major-mode 'file-list-mode))
+      (error "Works only in file-list-mode")
+    (let ((nick (get-text-property (point-min) 'nickname))
+	  (file-list (list (file-list-make-entry (file-list-file-at-point)))))
+      (superman-capture-file-list nick file-list nil 'ask))))
+       
 (defun superman-capture-file-list (&optional project file-list level ask)
   "Capture a FILE-LIST of files in PROJECT. Add them all to the project
 index file as LEVEL headings. Then show the updated project view buffer."
@@ -501,13 +520,15 @@ index file as LEVEL headings. Then show the updated project view buffer."
 		    "Documents"))
 	 (pro-file-list-buffer (concat "*File-list-" (car pro) "*"))
 	 (level (or level superman-item-level))
-	 (file-list (cond (file-list)
-			  ((eq major-mode 'file-list-completion-mode)
-			   file-list-current-file-list)
-			  ((and (buffer-live-p pro-file-list-buffer)
-				(progn (switch-to-buffer pro-file-list-buffer)
-				       file-list-current-file-list))
-			   (superman-file-list pro)))))
+	 (file-list (cond
+		     (file-list)
+		     ((or major-mode 'file-list-mode)
+		      (eq major-mode 'file-list-completion-mode)
+		      file-list-current-file-list)
+		     ((and (buffer-live-p pro-file-list-buffer)
+			   (progn (switch-to-buffer pro-file-list-buffer)
+				  file-list-current-file-list))
+		      (superman-file-list pro)))))
     ;; goto index file
     (if heading
 	(cond ((stringp heading)
