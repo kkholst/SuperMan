@@ -566,7 +566,7 @@ commit the file to the git repository."
   "Number of context lines for diff. Passed to -U flag of git diff,
 see M-x manual-entry RET git-diff RET.")
 
-(defun superman-git-diff-file (&optional hash ref config)
+(defun superman-git-diff-file (&optional hash ref config marker)
   (interactive)
   (let* ((file (superman-filename-at-point))
 	 (hash (or hash (get-text-property (point-at-bol) 'hash)))
@@ -581,7 +581,10 @@ see M-x manual-entry RET git-diff RET.")
 	       (if hash (concat ref " " hash " ") "HEAD")
 	       (file-relative-name file (superman-git-toplevel file)) "\n")))
     (superman-run-cmd cmd "*Superman:Git-diff*" msg nil 'erase-buffer 'superman-prepare-git-diff-buffer)
-    (when config (superman-switch-config nil 0 config))))
+    (when config (superman-switch-config nil 0 config)
+	  (when marker
+	    (select-window (get-buffer-window (marker-buffer marker) nil))
+	    (goto-char (marker-position marker))))))
 
 
 (defun superman-annotate-version (&optional version)
@@ -1008,7 +1011,7 @@ repository of PROJECT which is located at DIR."
       (let (next)
 	(while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
 	  (goto-char next)
-	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config))))
+	  (let* ((cmd `(lambda () (superman-git-diff-file ,commit ,ref ,config (point-marker)))))
 	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd))))
       (setq next-item (next-single-property-change (point-min) 'superman-item-marker))
       (when next-item ;; is nil when nothing changed between workspace and HEAD
