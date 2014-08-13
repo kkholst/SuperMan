@@ -766,12 +766,10 @@ is always the first choice."
 			   (find-file-noselect superman-profile))
     (save-excursion
       (goto-char (point-min))
-      (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
-      (org-entry-put (point) "LastVisit"
-		     (format-time-string "<%Y-%m-%d %a %H:%M>")
-		     ;; (with-temp-buffer (org-insert-time-stamp (current-time) 'hm))
-		     )
-      (save-buffer))))
+      (when (re-search-forward (concat ":NICKNAME:[ \t]?.*" (car project)) nil t)
+	(org-entry-put (point) "LastVisit"
+		       (format-time-string "<%Y-%m-%d %a %H:%M>"))
+	(save-buffer)))))
 
 (defun superman-save-project (project)
   (interactive)
