@@ -997,7 +997,15 @@ repository of PROJECT which is located at DIR."
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
       ;; (goto-char (previous-single-property-change (point) 'cat))
       (goto-char (point-min))
-      (insert header "\n\n")
+      (insert header "\n")
+      (when (string= commit "")
+	(superman-view-insert-action-buttons
+	 '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
+	   ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
+	   ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
+	   ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
+	   ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files"))))
+      (insert "\n")
       (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd
 			 `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,project)))
       (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
