@@ -158,6 +158,7 @@ Default is to set the old window configuration.
 			  (beginning-of-line)
 			(goto-char (point-max)))
 		      (widen))))
+      ;; append item to the end of index file
       (find-file (superman-get-index project))
       (widen)
       (show-all)
@@ -354,9 +355,18 @@ and in the first cat otherwise."
 	(when (and cat (superman-get-property (superman-cat-point) "freetext"))
 	  (error "Cannot add items in freetext area"))
       ;; activate project view
-      (superman-switch-config pro nil "PROJECT")
+      (superman-switch-config pro nil "PROJECT"))
+    ;; now we are in project view
+    (unless cat
       (superman-next-cat)
-      (setq cat (superman-current-cat)))
+      (setq cat (or (superman-current-cat)
+		    (progn
+		      (save-excursion
+			(find-file (superman-get-index pro))
+			(end-of-buffer)
+			(insert "\n* NewCat\n")
+			(save-buffer))
+		      "NewCat"))))
     ;; supplement list of existing properties
     ;; with default properties
     (setq keys
@@ -368,13 +378,9 @@ and in the first cat otherwise."
     (setq props
 	  `("item"
 	    ,(append keys defaults)))
-    ;; locate place for new item
-    ;; (unless marker
-    ;; or (get-text-property superman-cat-point 'org-hd-marker))
     ;; 
     (superman-capture-internal pro
-			       ;; cat
-			       marker
+			       (or marker cat)
 			       props nil scene)))
 
 
