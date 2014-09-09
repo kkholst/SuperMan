@@ -231,7 +231,8 @@ Default is to set the old window configuration.
     (goto-char head-point) 
     (superman-capture-mode)
     (run-hooks 'superman-setup-scene-hook)
-    (mark-line 1)))
+    (when (fboundp 'mark-line) 
+      (mark-line 1))))
     ;; (push-mark (point-at-eol) nil t)))
 
 (define-minor-mode superman-capture-mode
@@ -338,14 +339,14 @@ and in the first cat otherwise."
 	       superman-capture-mode-map
 	       [(tab)]
 	       'superman-complete-project-property)))
-	(defaults `((hdr "New item")
+	(defaults `((hdr " TODO [A] New item")
 		    ("Link" . nil)
-		    (fun
-		     (lambda ()
-		       (save-excursion
-			 (org-todo)
-			 (org-back-to-heading)
-			 (org-shiftup))))
+;		    (fun		
+;		     (lambda ()
+;		       (save-excursion
+;			 (org-todo 1)
+;			 (org-back-to-heading)
+;			 (org-shiftup))))
 		    ("FileName")
 		    ("AppointmentDate")
 		    ("Location")
