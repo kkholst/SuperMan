@@ -156,12 +156,14 @@ passed to `superman-run-cmd'."
 	 (cmd (concat "cd " dir
 		      ";" superman-cmd-git " diff "
 		      (unless (string= hash "") (concat hash "^ " hash " "))
-		      (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
+		      (when superman-git-diff-context-lines
+			(concat "-U" superman-git-diff-context-lines " "))
 		      "\n"))
 	 (msg (concat
 	       "diff "
 	       (if hash (concat ref " " hash " ") "HEAD")"\n")))
-    (superman-run-cmd cmd "*Superman:Git-diff*" msg nil 'erase-buffer 'superman-prepare-git-diff-buffer)
+    (superman-run-cmd cmd "*Superman:Git-diff*" msg nil
+		      'erase-buffer 'superman-prepare-git-diff-buffer)
     (when config (superman-switch-config nil 0 config))))
 
 (defun superman-prepare-git-diff-buffer ()
@@ -574,13 +576,15 @@ see M-x manual-entry RET git-diff RET.")
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
 		      ref " " hash " "
-		      (when superman-git-diff-context-lines (concat "-U" superman-git-diff-context-lines " "))
+		      (when superman-git-diff-context-lines
+			(concat "-U" superman-git-diff-context-lines " "))
 		      "./" (file-name-nondirectory file) "\n"))
 	 (msg (concat
 	       "diff "
 	       (if hash (concat ref " " hash " ") "HEAD")
 	       (file-relative-name file (superman-git-toplevel file)) "\n")))
-    (superman-run-cmd cmd "*Superman:Git-diff*" msg nil 'erase-buffer 'superman-prepare-git-diff-buffer)
+    (superman-run-cmd cmd "*Superman:Git-diff*" msg nil
+		      'erase-buffer 'superman-prepare-git-diff-buffer)
     (when config (superman-switch-config nil 0 config)
 	  (when marker
 	    (select-window (get-buffer-window (marker-buffer marker) nil))
