@@ -630,6 +630,10 @@ index file as LEVEL headings. Then show the updated project view buffer."
 ;; Capturing meetings
 ;; Note: inactive time stamp for CaptureDate
 
+(defun superman-capture-calendar (&optional project marker ask)
+  (interactive)  
+  (superman-capture-meeting "Calendar" marker ask))
+  
 (defun superman-capture-meeting (&optional project marker ask)
   (interactive)
   (let ((pro (superman-get-project project ask))

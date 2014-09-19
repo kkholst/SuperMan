@@ -402,13 +402,13 @@ the current sub-category and return the minimum."
 for project views.")
 
 (defvar superman-default-action-buttons-outside-project
-'(("Documents" (lambda () (interactive) (superman-capture-document nil nil t)))
-  ("Notes" (lambda () (interactive) (superman-capture-note nil nil t)))
-	("Tasks" (lambda () (interactive) (superman-capture-task nil nil t)))
-	("Text" (lambda () (interactive) (superman-capture-text nil nil t)))
-	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil t)))
-	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil t)))
-	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil t))))
+  '(("Meeting (Calendar)" (lambda () (interactive) (superman-capture-calendar nil nil t)))
+    ("Meeting (Project)" (lambda () (interactive) (superman-capture-meeting nil nil t)))
+    ("Task" (lambda () (interactive) (superman-capture-task nil nil t)))
+    ("Document" (lambda () (interactive) (superman-capture-document nil nil t)))
+    ("Note" (lambda () (interactive) (superman-capture-note nil nil t)))
+    ("Text" (lambda () (interactive) (superman-capture-text nil nil t)))
+    ("Bookmark" (lambda () (interactive) (superman-capture-bookmark nil nil t))))
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
@@ -624,7 +624,9 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 (defun superman-make-button (string &optional fun face help fun-3)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
- HELP is a string which is shown when the mouse over the button."
+ HELP is a string which is shown when the mouse over the button.
+ If FUN-3 is a command it gets bound to mouse-3.
+"
   (let ((map (make-sparse-keymap))
 	(help (or help "Superman-button")))
     (unless (functionp fun)
@@ -2889,8 +2891,9 @@ not in a section prompt for section first."
 		      'superman-capture-button-face
 		      "Capture unison"))
 	(superman-view-mode)
-	(setq buffer-read-only t)
-	(goto-char (point-min))))))
+	(goto-char (point-min))
+	(kill-line)
+	(setq buffer-read-only t)))))
 
 ;;}}}
 ;;{{{ View-item-mode
