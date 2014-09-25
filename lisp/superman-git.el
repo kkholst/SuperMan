@@ -745,8 +745,9 @@ This function should be bound to a key or button."
     (goto-char (next-single-property-change (point-min) 'git-branches))
     (let ((buffer-read-only nil))
       (beginning-of-line)
-      (kill-line)
-      (superman-view-insert-git-branches (get-text-property (point-min) 'git-dir)))
+      (kill-line 2)
+      (superman-view-insert-git-branches (get-text-property (point-min) 'git-dir))
+      (insert "\n"))
     (goto-char (next-single-property-change (point-min) 'cat))
     (superman-redo-cat)))
 
