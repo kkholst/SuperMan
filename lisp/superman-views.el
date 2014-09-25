@@ -691,9 +691,9 @@ Translate the branch names into buttons."
       (when remote 
 	;; (setq other-branches (delete remote other-branches)))
 	(setq other-branches (delete-if (lambda (x) (string-match "remotes/" x)) other-branches)))
-      (insert "\n")
       (put-text-property 0 (length title) 'face 'org-level-2 title)
       (put-text-property 0 (length title) 'superman-header-marker t title)
+      (put-text-property 0 (length title) 'git-branches t title)
       (insert
        (superman-make-button
 	title

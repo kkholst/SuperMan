@@ -742,6 +742,11 @@ This function should be bound to a key or button."
 (defun superman-redo-git-display ()
   (interactive)
   (when superman-git-mode
+    (goto-char (next-single-property-change (point-min) 'git-branches))
+    (let ((buffer-read-only nil))
+      (beginning-of-line)
+      (kill-line)
+      (superman-view-insert-git-branches (get-text-property (point-min) 'git-dir)))
     (goto-char (next-single-property-change (point-min) 'cat))
     (superman-redo-cat)))
 
@@ -795,6 +800,7 @@ This function should be bound to a key or button."
 		    "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
 	    (insert "\n\n")
 	    (insert (superman-view-control nickname git-dir))
+	    (insert "\n")
 	    (superman-view-insert-git-branches git-dir)
 	    (superman-view-insert-action-buttons
 	     '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
