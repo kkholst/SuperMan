@@ -739,7 +739,7 @@ Translate the branch names into buttons."
       (when remote
 	(let* ((title "Remote:")
 	       (svn-p (string-match "svn" remote))
-	       (fetch-string (if svn-p "rebase" "[fetch]"))
+	       (fetch-string (if svn-p "fetch" "[fetch]"))
 	       (merge-string (if svn-p "merge" "[merge]"))
 	       (pull-string (if svn-p "rebase" "[pull]"))
 	       (push-string (if svn-p "dcommit" "[push]"))
