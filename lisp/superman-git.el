@@ -162,20 +162,69 @@ passed to `superman-run-cmd'."
 	 (msg (concat
 	       "diff "
 	       (if hash (concat ref " " hash " ") "HEAD")"\n")))
-    (superman-run-cmd cmd "*Superman:Git-diff*" msg nil
-		      'erase-buffer 'superman-prepare-git-diff-buffer)
+    (superman-run-cmd
+     cmd "*Superman:Git-diff*" msg nil
+     'erase-buffer '(lambda ()
+		      (superman-prepare-git-diff-buffer ref hash)))
     (when config (superman-switch-config nil 0 config))))
 
-(defun superman-prepare-git-diff-buffer ()
+(defun superman-prepare-git-diff-buffer (a b)
   (let ((buffer-read-only nil))
     (goto-char (point-min))
-    (while (re-search-forward "\\-\\-\\-" nil t)
-      (let ((file (progn (looking-at ".*$")
-			 (match-string-no-properties 0))))
+    (while (re-search-forward "\\-\\-\\-[ ]*" nil t)
+      (let* ((file (progn (looking-at ".*$")
+			  (match-string-no-properties 0))))
 	(beginning-of-line)
 	(insert "*** " file "\n")
+	(insert (superman-make-button
+		 "Highlight differences"
+		 `(lambda () (interactive)
+		    (superman-compare-files
+		     ,(concat default-directory 
+			      (substring file
+					 1 (length file)))
+		     ,a
+		     ,b))
+		 'superman-next-project-button-face
+		 "Show these versions with differences highlighted")
+		"\n")
 	(forward-line 2)))
     (goto-char (point-min))))
+
+(defun superman-compare-files (file a b)
+  (interactive)
+  (let ((buf-a (get-buffer-create
+		(concat (file-name-nondirectory file) "_" a)))
+	(buf-b (get-buffer-create
+		(concat (file-name-nondirectory file) "_" (if (string= b "") "WorkSpace" b)))))
+    (set-buffer buf-a)
+    (erase-buffer)
+    (insert
+     (shell-command-to-string 
+      (concat "cd " (file-name-directory file)
+	      ";" superman-cmd-git
+	      " show " a ":./"
+	      (file-name-nondirectory file))))
+    (set-buffer buf-b)
+    (erase-buffer)
+    (if (string= b "")
+	(insert-file file)
+      (insert
+       (shell-command-to-string 
+	(concat "cd " (file-name-directory file)
+		";" superman-cmd-git
+		" show " b ":./"
+		(file-name-nondirectory file)))))
+    (highlight-compare-buffers buf-a buf-b)
+    (set-buffer buf-b)
+    (highlight-changes-next-change)
+    (set-buffer buf-a)
+    (highlight-changes-next-change)
+    (superman-set-config
+     (concat
+      (buffer-name buf-a)
+      " | "
+      (buffer-name buf-b)))))
 
 (defun superman-git-push (&optional dir)
   "Pull to remote at DIR."
@@ -584,7 +633,8 @@ see M-x manual-entry RET git-diff RET.")
 	       (if hash (concat ref " " hash " ") "HEAD")
 	       (file-relative-name file (superman-git-toplevel file)) "\n")))
     (superman-run-cmd cmd "*Superman:Git-diff*" msg nil
-		      'erase-buffer 'superman-prepare-git-diff-buffer)
+		      'erase-buffer `(lambda ()
+				       (interactive)(superman-prepare-git-diff-buffer ,ref ,hash)))
     (when config (superman-switch-config nil 0 config)
 	  (when marker
 	    (select-window (get-buffer-window (marker-buffer marker) nil))
@@ -648,7 +698,7 @@ see M-x manual-entry RET git-diff RET.")
 
 ;;}}}
 ;;
-;;{{{ git cycle display
+;;{{{ git display cycle
 
 (defvar superman-git-display-cycles nil
   "Keywords to match the elements in superman-git-display-command-list")
@@ -663,7 +713,7 @@ see M-x manual-entry RET git-diff RET.")
 
 (defvar superman-git-display-command-list
   '(("log"
-     "log -n 25 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
+     "log -n 25 --skip 0 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
      ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit") ("fun" superman-trim-hash))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
       ("Tag" ("width" 10))
@@ -828,6 +878,7 @@ This function should be bound to a key or button."
 
 (defvar superman-git-log-limit 25 "Limit on number of previous versions shown by default in git log view")
 (defvar superman-git-search-limit 250)
+(defvar superman-git-log-skip 0 "Skip this many previous versions in git log view")
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."
@@ -839,6 +890,8 @@ This function should be bound to a key or button."
 		 (car cycles)))
 	 (limit (with-current-buffer view-buf
 		  (or (get-text-property (point-min) 'limit) superman-git-log-limit)))
+	 (skip (with-current-buffer view-buf
+		 (or (get-text-property (point-min) 'skip) superman-git-log-skip)))
 	 (rest (assoc cycle superman-git-display-command-list))
 	 (balls (or (nth 2 rest) superman-default-balls))
 	 (pre-hook (nth 3 rest))
@@ -855,6 +908,8 @@ This function should be bound to a key or button."
     ;; limit on number of revisions
     (when limit
       (setq cmd (replace-regexp-in-string "-n [0-9]+ " (concat "-n " (int-to-string limit) " ") cmd)))
+    (when skip
+      (setq cmd (replace-regexp-in-string "--skip [0-9]+ " (concat "--skip " (int-to-string skip) " ") cmd)))
     ;; insert the result of git command
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
@@ -921,9 +976,13 @@ This function should be bound to a key or button."
       (error "Currently this works only in `superman-git-log-mode' and `superman-git-mode'.")
     (let ((buffer-read-only nil)
 	  (new-limit (string-to-int
-		      (read-string "New limit (leave empty to cancel): "))))
+		      (read-string "Limit on number of revisions (leave empty to cancel): ")))
+	  (new-skip (string-to-int
+		      (read-string "Skip this many revisions (default 0): " nil nil "0"))))
       (when (integerp new-limit)
 	(put-text-property (point-min) (+ (point-min) 1) 'limit new-limit))
+      (when (integerp new-skip)
+	(put-text-property (point-min) (+ (point-min) 1) 'skip new-skip))
       (superman-redo-cat))))
 	
 (defun superman-git-display-diff (commit ref dir project)
@@ -1022,11 +1081,12 @@ repository of PROJECT which is located at DIR."
       (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
       (put-text-property (point-min) (+ (point-min) (length header)) 'nickname nickname)
       (put-text-property (point-min) (+ (point-min) (length header)) 'git-dir git-dir)
-      ;; now prepare the per file diffs
+      ;; prepare the file diffs
       (switch-to-buffer view-buf)
       (goto-char (point-min))
       (set-text-properties 0 (length commit) nil commit)
       (set-text-properties 0 (length ref) nil ref)
+      ;; prepare the list of files which have changed
       (let (next)
 	(while (setq next (next-single-property-change (point-at-eol) 'superman-item-marker))
 	  (goto-char next)
@@ -1450,7 +1510,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	 (oldtag (superman-get-property
 		  marker
 		  "tag"))
-	 (dir (if superman-git-log-mode
+	 (dir (if (or superman-git-mode
+		      superman-git-log-mode)
 		  (get-text-property (point-min) 'git-dir)
 		(get-text-property (point-min) 'filename)))
 	 (hash (superman-get-property
@@ -1470,7 +1531,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
 			 superman-cmd-git " tag -a " tag " "
 			 hash " -m \"\"")
 			"*Superman-returns*"))
-    (if superman-git-log-mode
+    (if (or superman-git-mode
+	    superman-git-log-mode)
 	(progn
 	  (org-entry-put marker "Tag" tag)
 	  (superman-view-redo-line))
@@ -1489,9 +1551,16 @@ Enabling superman-git mode enables the git keyboard to control single files."
   (let* ((file (get-text-property (point-min) 'filename))
 	 (hash (get-text-property (point-at-bol) 'hash))
 	 (ext (file-name-extension file))
-	 (filehash (concat (file-name-sans-extension (file-name-nondirectory file)) "_" hash (if ext (concat "." ext))))
+	 (filehash
+	  (concat
+	   (file-name-sans-extension
+	    (file-name-nondirectory file))
+	   "_" hash (if ext (concat "." ext))))
 	 (str (shell-command-to-string 
-	       (concat "cd " (file-name-directory file) ";" superman-cmd-git " show " hash ":./" (file-name-nondirectory file)))))
+	       (concat "cd " (file-name-directory file)
+		       ";" superman-cmd-git
+		       " show " hash ":./"
+		       (file-name-nondirectory file)))))
     (if diff (find-file file))
     (switch-to-buffer-other-window filehash) 
     (setq buffer-file-name filehash)

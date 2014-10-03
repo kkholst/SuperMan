@@ -115,6 +115,14 @@ ati*** Index of project Kal-El
    :LINK: http://en.wikipedia.org/wiki/Superboy_%28Kal-El%29
    :END:
 
+***  Git branches, fetch vs pull
+:PROPERTIES:
+:Bookmark: http://longair.net/blog/2009/04/16/git-fetch-and-merge/
+:CaptureDate: [2014-10-03 Fri]
+:END:
+
+
+
 * SuperNotes
   :PROPERTIES:
   :Ball1:    hdr  :width full :face font-lock-function-name-face

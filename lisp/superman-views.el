@@ -739,8 +739,12 @@ Translate the branch names into buttons."
       (when remote
 	(let* ((title "Remote:")
 	       (svn-p (string-match "svn" remote))
+	       (fetch-string (if svn-p "rebase" "[fetch]"))
+	       (merge-string (if svn-p "merge" "[merge]"))
 	       (pull-string (if svn-p "rebase" "[pull]"))
 	       (push-string (if svn-p "dcommit" "[push]"))
+	       (fetch-cmd (if svn-p "svn fetch" "fetch origin"))
+	       (merge-cmd "merge origin/master")
 	       (pull-cmd (if svn-p "svn rebase" "pull"))
 	       (push-cmd (if svn-p "svn dcommit" "push"))
 	       (remote-cmd (if svn-p "svn fetch" "remote show origin")))
@@ -748,22 +752,47 @@ Translate the branch names into buttons."
 	  (put-text-property 0 1 'superman-header-marker t title)
 	  (put-text-property 0 1 'superman-header-marker t pull-string)
 	  (put-text-property 0 1 'superman-header-marker t push-string)
+	  (put-text-property 0 1 'superman-header-marker t fetch-string)
+	  (put-text-property 0 1 'superman-header-marker t merge-string)
 	  (insert "\n"
 		  (superman-make-button
 		   title
-		   `(lambda () (interactive) (superman-run-cmd
-					      (concat "cd " ,loc ";" ,superman-cmd-git " " ,remote-cmd "\n")
-					      "*Superman-returns*"
-					      (concat "`" ,superman-cmd-git " " ,remote-cmd " run below \n" ,loc "' returns:\n\n")))
+		   `(lambda ()
+		      (interactive)
+		      (superman-run-cmd
+		       (concat "cd " ,loc ";"
+			       ,superman-cmd-git " " ,remote-cmd "\n")
+		       "*Superman-returns*"
+		       (concat "`" ,superman-cmd-git " " ,remote-cmd
+			       " run below \n" ,loc "' returns:\n\n")))
 		   'superman-header-button-face
-		   "Fetch origin of remote repository")
+		   "Show origin of remote repository")
+		  " "
+		  (superman-make-button
+		   fetch-string
+		   `(lambda () (interactive)
+		      (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " " ,fetch-cmd "\n")
+					"*Superman-returns*"
+					(concat "`" ,superman-cmd-git " " ,fetch-cmd "' run below \n" ,loc "' returns:\n\n")))
+		   'font-lock-type-face
+		   "Fetch changes from remote repository")
+		  " "
+		  (superman-make-button
+		   merge-string
+		   `(lambda () (interactive)
+		      (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " " ,merge-cmd "\n")
+					"*Superman-returns*"
+					(concat "`" ,superman-cmd-git " " ,merge-cmd "' run below \n" ,loc "' returns:\n\n")))
+		   'font-lock-type-face
+		   "Merge origin/master and master repository")
 		  " "
 		  (superman-make-button
 		   pull-string
 		   `(lambda () (interactive)
-		      (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " " ,pull-cmd "\n")
-					"*Superman-returns*"
-					(concat "`" ,superman-cmd-git " " ,pull-cmd "' run below \n" ,loc "' returns:\n\n")))
+		      (superman-run-cmd
+		       (concat "cd " ,loc  ";" ,superman-cmd-git " " ,pull-cmd "\n")
+		       "*Superman-returns*"
+		       (concat "`" ,superman-cmd-git " " ,pull-cmd "' run below \n" ,loc "' returns:\n\n")))
 		   'font-lock-type-face
 		   "Pull changes from remote repository")
 		  " "
@@ -2386,10 +2415,14 @@ The value is non-nil unless the user regretted and the entry is not deleted.
       (pop-to-buffer "*Superman-view-help*")
       (let ((buffer-read-only nil))
 	(insert "Key-bindings: (q: close this help window)\n\n"
-		"e: edit item; v: view item; g: git repository\n"
-		"i: visit index file; f: view file-list\n"
-		"t: toggle todo status; RETURN: visit file or item\n"
-		"N: Capture new item"))
+		"RETURN: visit file or item\n"
+		"e: edit item\n"
+		"v: view item\n"
+		"N: Capture new item\n"
+		"t: toggle todo status"
+		"i: visit index file\n\n"
+		"f: file-list\n"
+		"g: git repository\n"))
       (setq buffer-read-only t))
       (other-window 1)))
 
@@ -2463,7 +2496,8 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (interactive)
   (let* ((buffer-read-only nil)
 	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
-	 (balls (or balls (get-text-property (superman-cat-point) 'balls))))
+	 (balls (or balls (get-text-property (superman-cat-point) 'balls)))
+	 (props (text-properties-at (point-at-bol))))
     (when (and marker (not (get-text-property (point-at-bol) 'cat))
 	       (not (get-text-property (point-at-bol) 'subcat)))
       (beginning-of-line)
@@ -2475,6 +2509,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		     (next-single-property-change (point) 'tail))))
 	(delete-region beg end)
 	(insert newline)
+	(set-text-properties (point-at-bol) (+ (point-at-bol) 1) props)
 	(beginning-of-line)
 	(while (or (org-activate-bracket-links (point-at-eol)) (org-activate-plain-links (point-at-eol)))
 	  (add-text-properties
@@ -2578,38 +2613,41 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	 f pos)
     (if (and choice (functionp choice))
 	(funcall choice)
-    (if (not m)
-	(save-excursion
-	  (beginning-of-line)
-	  (cond ((looking-at "Others")
-		 (superman-capture-others
-		  (assoc (get-text-property (point-min) 'nickname)
-			 superman-project-alist))
-		 (superman-redo))
-		(t (error "Nothing to do here"))))
-      (when (and (not (marker-buffer m))
-		 (setq f (get-text-property (point-at-bol) 'superman-project-file)
-		       pos (get-text-property (point-at-bol) 'superman-project-file-marker)))
-	(find-file f)
-	(goto-char pos)
-	(setq m (point-marker)))
-      (org-with-point-at m
+      (if (not m)
+	  (save-excursion
+	    (beginning-of-line)
+	    (cond ((looking-at "Others")
+		   (superman-capture-others
+		    (assoc (get-text-property (point-min) 'nickname)
+			   superman-project-alist))
+		   (superman-redo))
+		  (t (error "Nothing to do here"))))
+	(when (and (not (marker-buffer m))
+		   (setq f (get-text-property (point-at-bol) 'superman-project-file)
+			 pos (get-text-property (point-at-bol) 'superman-project-file-marker)))
+	  (find-file f)
+	  (goto-char pos)
+	  (setq m (point-marker)))
 	(cond (superman-mode
 	       (superman-return))
-	      ((re-search-forward
-		org-any-link-re
-		(save-excursion
-		  (widen)
-		  (outline-end-of-subtree)
-		  (point))
-		t)
-	       (superman-open-at-point)
-	       (widen))
+	      ((org-with-point-at m
+		 (if (re-search-forward
+		      org-any-link-re
+		      (save-excursion
+			(widen)
+			(outline-end-of-subtree)
+			(point))
+		      t)
+		     (progn
+		       (superman-open-at-point)
+		       t)
+		   nil)))
 	      (t
+	       (switch-to-buffer (marker-buffer m))
 	       (widen)
 	       (show-all)
-	       (org-narrow-to-subtree)
-	       (switch-to-buffer (marker-buffer m)))))))))
+	       ;; (org-narrow-to-subtree)
+	       (goto-char (marker-position m))))))))
 
 (defun superman-open-at-point ()
   (interactive)
