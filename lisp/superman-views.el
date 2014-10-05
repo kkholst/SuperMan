@@ -1408,15 +1408,26 @@ properties such as balls for the section.
 "
   (if (not (get-text-property (point-at-bol) 'cat))
       (error "Not at category heading")
-    (let ((cat-point (point-at-bol))
-	  (cat (or cat
-		   (superman-parse-props
-		    (get-text-property (point-at-bol) 'org-hd-marker)
-		    'p 'h)))
-	  (view-buf (current-buffer))
-	  (index-buf (marker-buffer (get-text-property (point-at-bol) 'org-hd-marker)))
-	  (loc (get-text-property (point-min) 'git-dir))
-	  (buffer-read-only nil))
+    (let* ((cat-point (point-at-bol))
+	   (marker (get-text-property
+		    (point-at-bol) 'org-hd-marker))
+	   (cat (cond (cat)
+		      (marker
+		       (superman-parse-props
+			(get-text-property (point-at-bol) 'org-hd-marker)
+			'p 'h))
+		      ((string=
+			(get-text-property (point-at-bol) 'cat)
+			"git")
+		       `("git"
+			 (("git-cycle" ,superman-git-default-displays)
+			  ("git-display"  ,(car superman-git-default-displays))
+			  ("point" ,(point-at-bol)))))
+		      (t (error "Don't know how to do this cat"))))
+	   (view-buf (current-buffer))
+	   (index-buf (when marker (marker-buffer marker )))
+	   (loc (get-text-property (point-min) 'git-dir))
+	   (buffer-read-only nil))
       (org-cut-subtree)
       (superman-format-cat cat index-buf view-buf loc)
       (if cat-point
@@ -1428,19 +1439,21 @@ to VIEW-BUF."
   (let* ((case-fold-search t)
 	 (name (car cat))
 	 (props (cadr cat))
-	 (cat-balls (if props
-			(delete
-			 nil
-			 (mapcar
-			  #'(lambda (x)
-			      (when (string-match "^Ball[0-9]+$" (car x))
-				(superman-distangle-ball (cadr x)))) props))))
-	 (gear (cdr (assoc name superman-finalize-cat-alist)))
-	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
-	 (index-cat-point (cadr (assoc "point" props)))
-	 (buttons (cadr (assoc "buttons" props)))
 	 (git (assoc "git-cycle" props))
 	 (file-list (assoc "file-list" props))
+	 (cat-balls (unless (or git file-list)
+		      (if props
+			  (delete
+			   nil
+			   (mapcar
+			    #'(lambda (x)
+				(when (string-match "^Ball[0-9]+$" (car x))
+				  (superman-distangle-ball (cadr x)))) props)))))
+	 (gear (cdr (assoc name superman-finalize-cat-alist)))
+	 (balls (when cat-balls
+		  (or cat-balls (eval (nth 0 gear)) superman-default-balls)))
+	 (index-cat-point (cadr (assoc "point" props)))
+	 (buttons (cadr (assoc "buttons" props)))
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freetext" props))
 	 (hidden (assoc "hidden" props))
@@ -1499,15 +1512,15 @@ to VIEW-BUF."
       (insert "file-list-output:")
       (insert "\n")
       (org-mode)
-      ;; call git display cycle
+      ;; file-list-display
       (superman-format-file-list-display
        view-buf file-list props
        view-cat-head index-buf index-cat-point
        name))
      ;; git control section
      ((and git (file-exists-p git))
-      (with-current-buffer index-buf
-	(setq index-marker (point-marker)))
+      ;; (with-current-buffer index-buf
+      ;; (setq index-marker (point-marker)))
       (set-buffer (get-buffer-create
 		   (concat "*Git control[" (get-text-property (point-min) 'nickname) "]*")))
       (erase-buffer)
@@ -1516,7 +1529,7 @@ to VIEW-BUF."
 			 (superman-git-toplevel loc))
       (insert "\n")
       (org-mode)
-      ;; call git display cycle
+      ;; git display cycle
       (superman-format-git-display
        view-buf git props
        view-cat-head index-buf index-cat-point

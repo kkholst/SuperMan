@@ -692,7 +692,7 @@ see M-x manual-entry RET git-diff RET.")
       (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
 	      "  " (superman-make-button "Git overview" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
 	      ;; "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
-	      "  " (superman-make-button "log" 'superman-git-log 'superman-next-project-button-face "Show git log."))
+	      "  " (superman-make-button "versions" 'superman-git-log 'superman-next-project-button-face "Show git log."))
       (insert "\n")
       (insert (shell-command-to-string (concat "cd " git-dir ";" superman-cmd-git " blame " file))))))
 
@@ -704,7 +704,7 @@ see M-x manual-entry RET git-diff RET.")
   "Keywords to match the elements in superman-git-display-command-list")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
-(setq superman-git-default-displays '("log" "modified" "files" "untracked"))
+(setq superman-git-default-displays '("versions" "modified" "tracked" "untracked"))
 
 (defun superman-trim-hash (hash &rest args)
  (superman-make-button
@@ -712,7 +712,7 @@ see M-x manual-entry RET git-diff RET.")
   'superman-choose-entry nil "Run git diff"))
 
 (defvar superman-git-display-command-list
-  '(("log"
+  '(("versions"
      "log -n 25 --skip 0 --name-status --date=short --pretty=format:\"** %h\n:PROPERTIES:\n:Commit: %h\n:Author: %an\n:Tag: %d\n:Date: %cd\n:Message: %s\n:END:\n\""
      ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit") ("fun" superman-trim-hash))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
@@ -721,7 +721,7 @@ see M-x manual-entry RET git-diff RET.")
       ("Message" ("width" 63)))
      superman-git-log-pre-display-hook
      superman-git-log-post-display-hook)
-    ("files"
+    ("tracked"
      "ls-files --full-name"
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
@@ -776,16 +776,11 @@ see M-x manual-entry RET git-diff RET.")
   "Cycles to the next value in `superman-git-display-cycles'.
 This function should be bound to a key or button."
   (interactive)
-  (let* ((pom (get-text-property (point-at-bol) 'org-hd-marker))
-	 (cycles (split-string
-		  (or (and pom (superman-get-property pom "git-cycle"))
-		      superman-git-default-displays)
-		  "[ \t]*,[ \t]*"))
+  (let* ((cycles superman-git-default-displays)
 	 (current (or (get-text-property (point-min) 'git-display)
 		      (car cycles)))
 	 (rest (member current cycles))
 	 (next (if (> (length rest) 1) (cadr rest) (car cycles))))
-    ;; (setq superman-git-display-cycles (append (cdr superman-git-display-cycles) (list (car superman-git-display-cycles))))
     (superman-set-git-cycle next)
     (superman-redo-cat)))
 
@@ -805,76 +800,53 @@ This function should be bound to a key or button."
   (interactive)
   (unless (or superman-git-mode
 	      (not (get-text-property (point-min) 'git-dir)))
+    ;; open git view buffer
     (let* ((index (get-text-property (point-min) 'index))
-	   index-marker
-	   (tempp (bufferp index)))
-      (save-window-excursion
-	(if tempp (switch-to-buffer index)
-	  (find-file (get-text-property (point-min) 'index)))
-	(goto-char (point-min))
-	(unless (re-search-forward ":git-cycle:" nil t)
+	   (pbuf (buffer-name))
+	   (nickname (get-text-property (point-min) 'nickname))
+	   (ibuf (concat (buffer-name) " :Git-repository"))
+	   (git-dir (get-text-property (point-min) 'git-dir))
+	   (gbuf (get-buffer ibuf)))
+      (if gbuf (switch-to-buffer ibuf)
+	(get-buffer-create ibuf)
+	(switch-to-buffer ibuf))
+      (setq buffer-read-only t)
+      (let ((buffer-read-only nil))
+	(if (get-text-property (point-min) 'git-display)
+	    nil ;; buffer already showing git-display
+	  (erase-buffer) ;; probably unnecessary
+	  (goto-char (point-min))
+	  (insert (superman-make-button
+		   (concat "* Git: " nickname)
+		   'superman-redo 'superman-project-button-face))
+	  (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
+		  "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
+		  "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+		  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
+	  (insert "\n\n")
+	  (insert (superman-view-control nickname git-dir))
+	  (insert "\n")
+	  (superman-view-insert-git-branches git-dir)
+	  (superman-view-insert-action-buttons
+	   '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
+	     ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
+	     ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
+	     ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
+	     ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files")))
+	  (insert "\n\n")
+	  (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
+	  (put-text-property (point-min) (1+ (point-min)) 'region-start t)
+	  (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
+	  (put-text-property (point-min) (1+ (point-min)) 'nickname nickname)
+	  (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
+	  (put-text-property (point-min) (1+ (point-min)) 'index index)
+	  (put-text-property (point-min) (1+ (point-min)) 'git-display "versions")
+	  (superman-view-mode-on)
+	  (superman-git-mode-on)
 	  (goto-char (point-max))
-	  (insert "\n* Git repository\n:PROPERTIES:\n:git-cycle: "
-		  (let ((sd (cdr superman-git-default-displays))
-			(dstring (car superman-git-default-displays)))
-		    (while sd
-		      (setq dstring (concat dstring ", " (car sd))
-			    sd (cdr sd)))
-		    dstring)
-		  "\n:hidden: not superman-git-mode"
-		  "\n:git-display: log\n:END:\n")
-	  (unless tempp (save-buffer)))
-	;; now sitting in index buffer at the git-repos heading
-	(outline-back-to-heading)
-	(setq index-marker (point-marker)))
-      ;; open git view buffer
-      (let* ((pbuf (buffer-name))
-	     (nickname (get-text-property (point-min) 'nickname))
-	     (ibuf (concat (buffer-name) " :Git-repository"))
-	     (git-dir (get-text-property (point-min) 'git-dir))
-	     (gbuf (get-buffer ibuf)))
-	(if gbuf (switch-to-buffer ibuf)
-	  (get-buffer-create ibuf)
-	  (switch-to-buffer ibuf))
-	(setq buffer-read-only t)
-	(let ((buffer-read-only nil))
-	  (if (get-text-property (point-min) 'git-display)
-	      nil ;; buffer already showing git-display
-	    (erase-buffer) ;; probably unnecessary
-	    (goto-char (point-min))
-	    (insert (superman-make-button
-		     (concat "* Git: " nickname)
-		     'superman-redo 'superman-project-button-face))
-	    (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-		    "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
-		    "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
-		    "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
-	    (insert "\n\n")
-	    (insert (superman-view-control nickname git-dir))
-	    (insert "\n")
-	    (superman-view-insert-git-branches git-dir)
-	    (superman-view-insert-action-buttons
-	     '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
-	       ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
-	       ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
-	       ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
-	       ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files")))
-	    (insert "\n\n")
-	    (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
-	    (put-text-property (point-min) (1+ (point-min)) 'region-start t)
-	    (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
-	    (put-text-property (point-min) (1+ (point-min)) 'nickname nickname)
-	    (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
-	    (put-text-property (point-min) (1+ (point-min)) 'index index)
-	    (put-text-property (point-min) (1+ (point-min)) 'git-display "log")
-	    (superman-view-mode-on)
-	    (superman-git-mode-on)
-	    (goto-char (point-max))
-	    (insert "** Git")
-	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
-	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'org-hd-marker index-marker)
-	    ;; (superman-redo-cat props)
-	    (superman-redo-cat)))))))
+	  (insert "** Git")
+	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
+	  (superman-redo-cat))))))
 
 (defvar superman-git-log-limit 25 "Limit on number of previous versions shown by default in git log view")
 (defvar superman-git-search-limit 250)
@@ -882,7 +854,11 @@ This function should be bound to a key or button."
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
   "Called by `superman-format-cat' to format git displays."
-  (let* ((cycles (split-string (cadr (assoc "git-cycle" props)) "[ \t]*,[ \t]*"))
+  (let* ((cycles-given (cadr (assoc "git-cycle" props)))
+	 (cycles (cond ((listp cycles-given) cycles-given)
+		       (t (split-string
+			   cycles-given
+			   "[ \t]*,[ \t]*"))))
 	 (cycle (or
 		 (with-current-buffer view-buf
 		   (get-text-property (point-min) 'git-display))
@@ -913,7 +889,7 @@ This function should be bound to a key or button."
     ;; insert the result of git command
     (insert (shell-command-to-string cmd))
     (goto-char (point-min))
-    ;; prepare buffer if necessary
+    ;; prepare buffer 
     (when pre-hook (funcall pre-hook))
     (goto-char (point-min))
     (while (outline-next-heading)
@@ -931,12 +907,8 @@ This function should be bound to a key or button."
       (insert "\n"))
     (put-text-property 0 (length name) 'git-repos dir name) 
     (superman-view-insert-section-name
-     name count balls
-     ;; FIXME: it must be possible to construct the marker based on buf and point
-     (with-current-buffer index-buf
-       (widen)
-       (goto-char index-cat-point) (point-marker))
-     'superman-cycle-git-display)
+     name count balls nil 
+     'superman-cycle-git-display "Cycle git display")
     (insert "\n")
     (end-of-line 0)
     (let ((cycle-strings cycles))
@@ -1440,7 +1412,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
 	    "  " (superman-make-button "Git overview" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
 	    "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
-	    ;; "  " (superman-make-button "log" 'superman-git-log 'superman-next-project-button-face "Show git log.")
+	    ;; "  " (superman-make-button "versions" 'superman-git-log 'superman-next-project-button-face "Show git log.")
 	    )
     (insert "\n\n")
     ;; column names
