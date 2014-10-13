@@ -644,14 +644,16 @@ If INCLUDE is non-nil, then SUBDIR is excluded if it does not match REGEXP."
 	  (if dont-match
 	      (if yang
 		  (setq 
-		   file-list-filter (append file-list-filter (list (cons filter-name (list yin))))
+		   file-list-filter
+		   (append file-list-filter
+			   (list (cons filter-name (list yin))))
 		   file-list-current-file-list yang)
-		(message "No files are matched by this criteria." regexp))
+		(message "No files are matched by this criterion." regexp))
 	    (if yin	  
 		(setq 
 		 file-list-filter (append file-list-filter (list (cons filter-name (list yang))))
 		 file-list-current-file-list yin)
-	      (message "No files are matched by this criteria." regexp))))
+	      (message "No files are matched by this criterion." regexp))))
       (setq yin file-list))))
 
 ;;mapcar this function on a file-list ...
@@ -744,8 +746,10 @@ Changes the file-list-current-file-list. See also file-list-add."
 			     nil
 			     'file-list-regexp-history)))
 	 (filter-name (cond ((string= by "time")
-			     (format "age"  "%s '%s' day%s"
-				     (if inverse " no-exceed:" "exceed:") regexp (if (string= regexp "1") "" "s")))
+			     (format "age" "%s '%s' day%s"
+				     (if inverse
+					 " no-exceed:" "exceed:")
+				     regexp (if (string= regexp "1") "" "s")))
 			    ((string= by "size")
 			     (format "size %s '%s'" (if inverse " no-exceed:" "exceed:") regexp))
 			    ((string= by "path")

@@ -1450,8 +1450,7 @@ to VIEW-BUF."
 				(when (string-match "^Ball[0-9]+$" (car x))
 				  (superman-distangle-ball (cadr x)))) props)))))
 	 (gear (cdr (assoc name superman-finalize-cat-alist)))
-	 (balls (when cat-balls
-		  (or cat-balls (eval (nth 0 gear)) superman-default-balls)))
+	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
 	 (index-cat-point (cadr (assoc "point" props)))
 	 (buttons (cadr (assoc "buttons" props)))
 	 ;; (folded (cadr (assoc "startfolded") props))
@@ -1682,7 +1681,18 @@ to VIEW-BUF."
   (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker index-marker)
   (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " name))
   (end-of-line)
-  (insert " [" (int-to-string count) "]"))
+  (insert " [" (int-to-string count) "]")
+  (unless superman-git-mode
+    (insert (superman-make-button
+	     "column+"
+	     'superman-new-ball
+	     'superman-git-keyboard-face-i
+	     "Add a column")
+    " " (superman-make-button
+	     "item+"
+	     'superman-capture-thing
+	     'superman-git-keyboard-face-i
+	     "Add an item"))))
 
 ;;}}}
 ;;{{{ Formatting items and column names
@@ -1981,13 +1991,15 @@ current section."
 	 (prop-key (completing-read "Property to show in new column (press tab see existing): "
 				    expanded-props))
 	 (prop (assoc prop-key expanded-props))
+	 (types '(("string" . superman-trim-string)
+		 ("date" . superman-trim-date)
+		 ("filename" . superman-trim-filename)))
 	 (new-ball (if (cdr prop)
 		       (cadr prop)
-		     (let ((width (max 10 (string-to-number (read-string "Column width: "))))
-			   (fun (completing-read "Type: " '(("string" 'superman-trim-string)
-							    ("date" 'superman-trim-date)
-							    ("filename" 'superman-trim-filename)))))
-		       `(,prop ("width" ,width) ("fun" ,fun)))))
+		     (let* ((width (max 10 (string-to-number (read-string "Column width: "))))
+			    (fun-el (completing-read "Formatting type: " types))
+			    (fun (cdr (assoc fun-el types))))
+		       `(,(car prop) ("width" ,width) ("fun" ,fun)))))
 	 (new-balls (add-to-list 'balls new-ball)))
     (superman-change-balls new-balls)
     (superman-save-balls)))
@@ -2846,9 +2858,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "!" 'superman-goto-shell)
 (define-key superman-view-mode-map "?" 'supermanual)
 
-;; (define-key superman-view-mode-map "Bn" 'superman-new-ball)
-;; (define-key superman-view-mode-map "Bx" 'superman-delete-ball)
-;; (define-key superman-view-mode-map "Bs" 'superman-save-balls)
+(define-key superman-view-mode-map "Bn" 'superman-new-ball)
+(define-key superman-view-mode-map "Bx" 'superman-delete-ball)
+(define-key superman-view-mode-map "Bs" 'superman-save-balls)
 
 ;; view context
 (define-key superman-view-mode-map "V" 'superman-toggle-context-view)

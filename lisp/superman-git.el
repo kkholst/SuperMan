@@ -704,7 +704,7 @@ see M-x manual-entry RET git-diff RET.")
   "Keywords to match the elements in superman-git-display-command-list")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
-(setq superman-git-default-displays '("versions" "modified" "tracked" "untracked"))
+(setq superman-git-default-displays '("versions" "modified" "tracked" "untracked" "stash"))
 
 (defun superman-trim-hash (hash &rest args)
  (superman-make-button
@@ -745,6 +745,13 @@ see M-x manual-entry RET git-diff RET.")
      superman-git-files-pre-display-hook)
     ("diff"
      "diff --name-status"
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+      ("Directory" ("width" 25) ("face" superman-subheader-face)))
+     superman-git-diff-pre-display-hook)
+    ("stash"
+     "stash show --name-status"
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face))
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
@@ -1236,6 +1243,103 @@ repository of PROJECT which is located at DIR."
 
 ;;}}}
 ;;
+;;{{{ filter
+(defvar superman-git-filter nil
+  "List of currently selected lines.")
+(make-variable-buffer-local 'superman-git-filter)
+
+(defun superman-git-set-filter ()
+  (interactive)
+  (let* ((cstart (next-single-property-change (point-min) 'column-names))
+	 (column-names (superman-list-to-alist
+			(get-text-property cstart 'column-names)))
+	 (filenamep (assoc "Filename" column-names))
+	 (col (completing-read
+	       (concat "Filter on column"
+		       (if filenamep " (default: Filename): " ": "))
+	       column-names nil t nil nil
+	       (when filenamep "Filename")))
+	 (dim (progn
+		(goto-char cstart)
+		(re-search-forward col nil t)
+		(superman-ball-dimensions)))
+	 (regexp 
+	  (read-string "Filter regexp: "))
+	 (filter-name (concat col " matches " regexp))
+	 catch
+	 next
+	 (buffer-read-only nil))
+    (goto-char cstart)
+    ;; (forward-line 1)
+    ;; (beginning-of-line)
+    (while (setq next (next-single-property-change (point-at-eol) 'org-hd-marker))
+      (goto-char next)
+      (forward-char (car dim))
+      ;; match against regexp inside column
+      (if (re-search-forward regexp (+ (point) (nth 1 dim)) t)
+	  nil
+	(beginning-of-line)
+	(setq catch (append catch
+			    (list
+			     (buffer-substring (point) (point-at-eol)))))
+	(kill-line)
+	(forward-line -1)))
+    ;; in case we remove the last line
+    (unless (next-single-property-change (point-min) 'tail)
+      (let ((end (previous-single-property-change (point-max) 'org-hd-marker)))
+	(put-text-property end (1+ end) 'tail t)))
+    (if (not catch)
+	(message "No lines are deleted by this filter.")
+      (setq superman-git-filter
+	    (append superman-git-filter
+		    (list (cons filter-name catch))))
+      (goto-char (superman-cat-point))
+      (if (next-single-property-change (point) 'git-filter)
+	  (progn 
+	    (goto-char (next-single-property-change (point) 'git-filter))
+	    (end-of-line))
+	(end-of-line)
+	(insert "\n\n" (superman-make-button
+			"Filter:"
+			'superman-git-set-filter
+			'superman-header-button-face
+			"Set filter"))
+	(put-text-property (point-at-bol) (+ (point-at-bol) 1) 'git-filter t)
+	(end-of-line))
+      (insert "\t" (superman-make-button
+		    filter-name
+		    `(lambda () (interactive)
+		       (superman-git-remove-filter ,filter-name))
+		    'superman-next-project-button-face
+		    "Press button to remove filter")))))
+
+    ;; (dolist (x superman-git-filter nil)
+    ;; (insert "\t" (superman-make-button
+		  ;; (car x)
+		  ;; `(lambda () (interactive)
+		     ;; (superman-git-remove-filter ,(car x)))
+		  ;; 'superman-next-project-button-face
+		  ;; "Unfilter list"))))
+
+(defun superman-git-remove-filter (filter-name)	
+  (interactive)
+  (let* ((filter (assoc filter-name superman-git-filter))
+	 (filter-contents (cdr filter))
+	 (buffer-read-only nil))
+    (goto-char (next-single-property-change (point-min) 'tail))
+    (while filter-contents
+      (insert "\n" (car filter-contents))
+      (setq filter-contents (cdr filter-contents)))
+    (setq superman-git-filter
+	  (delete filter superman-git-filter))
+    (goto-char (next-single-property-change
+		(point-min)
+		'git-filter))
+    (re-search-forward filter-name nil t)
+    (replace-match "") (just-one-space 0)))
+
+;;}}}
+;;
 ;;{{{ superman-git-mode
 
 (defvar superman-git-mode-map (make-sparse-keymap)
@@ -1267,9 +1371,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "l" 'superman-git-log-file)
 (define-key superman-git-mode-map "#" 'superman-git-ignore-file)
 (define-key superman-git-mode-map " " 'superman-git-last-log-file) 
-
+(define-key superman-git-mode-map "/" 'superman-git-set-filter)
 ;;}}}
-
 ;;{{{ superman-git-keyboard
 
 (defun superman-make-git-keyboard (f &rest args)

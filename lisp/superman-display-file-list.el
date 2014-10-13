@@ -142,17 +142,17 @@
 	(insert "\n")
 	(superman-view-insert-action-buttons
 	 `((,(concat (char-to-string #x2245) " file-name") file-list-by-name
-	    nil "Select files by matching file-name")
+	    nil "Select matching file-names")
 	   (,(concat (char-to-string #x21AF) " file-name") (lambda () (interactive) (file-list-by-name 1))
-	    nil "Select files by matching file-name")
+	    nil "Select not matching file-names")
 	   (,(concat (char-to-string #x2245) " dir-name") file-list-by-path
-	    nil "Select files by matching directory name")
+	    nil "Select matching directory names")
 	   (,(concat (char-to-string #x21AF) " dir-name") (lambda () (interactive) (file-list-by-path 1))
-	    nil "Select files by matching directory name")
-	   ("< time" file-list-by-time nil "Select files based on modification time")
-	   ("> time" (lambda () (interactive) (file-list-by-time 1)) nil "Select files based on modification time")
-	   ("< size" (lambda () (interactive) (file-list-by-size 1)) nil "Select files based on size")
-	   ("> size" file-list-by-size nil "Select files based on size"))
+	    nil "Select not matching directory names")
+	   ("< time" file-list-by-time nil "Select files younger than (modification time)")
+	   ("> time" (lambda () (interactive) (file-list-by-time 1)) nil "Select files older than (modification time)")
+	   ("< size" (lambda () (interactive) (file-list-by-size 1)) nil "Select files smaller than (bytes)")
+	   ("> size" file-list-by-size nil "Select files greater than (bytes)"))
 	 nil "Filter:")
 	(superman-view-insert-action-buttons
 	 `((,(concat (char-to-string #x25b3) " file-name")
@@ -243,7 +243,7 @@
 			  `(lambda () (interactive)
 			     (file-list-remove-filter ,(car x)))
 			  'superman-next-project-button-face
-			  "Unfilter list"))))
+			  "Press button to remove this filter"))))
 	;; insert the column names
 	(insert "\n")
 	(when superman-empty-line-after-cat (insert "\n"))
