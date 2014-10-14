@@ -338,7 +338,7 @@ turn it off."
 	 next
 	 catch
 	 (pos-dest (next-single-property-change (point-min) 'destination))
-	 (dest (when pos-dest (get-text-property pos-dest) 'destination)))
+	 (dest (when pos-dest (get-text-property pos-dest 'destination))))
     (goto-char (point-max))    
     (when (superman-get-property (point) "GoogleCalendar" t nil)
       (save-restriction
