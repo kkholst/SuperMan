@@ -332,15 +332,13 @@ turn it off."
 (defun superman-clean-scene ()
   "Clean the capture scene and re-set the window configuration."
   (interactive)
-  (let ((scene (get-text-property (point-min) 'scene))
-	(kill-whole-line t)
-	req
-	next
-	catch
-	(dest (get-text-property
-	       (next-single-property-change
-		(point-min)
-		'destination) 'destination)))
+  (let* ((scene (get-text-property (point-min) 'scene))
+	 (kill-whole-line t)
+	 req
+	 next
+	 catch
+	 (pos-dest (next-single-property-change (point-min) 'destination))
+	 (dest (when pos-dest (get-text-property pos-dest) 'destination)))
     (goto-char (point-max))    
     (when (superman-get-property (point) "GoogleCalendar" t nil)
       (save-restriction
@@ -365,18 +363,21 @@ turn it off."
     (run-hooks 'superman-capture-before-clean-scene-hook)
     (goto-char (point-min))
     (outline-next-heading)
-    ;; (delete-region (point-min) (point))
-    ;; (save-buffer)
-    (setq catch (buffer-substring (point-at-bol)
-				  (point-max)))
-    (kill-buffer (current-buffer))
-    (goto-char dest)
-    (org-narrow-to-subtree)
-    (goto-char (point-max))
-    (insert "\n")
-    (insert catch)
-    (save-buffer)
-    (widen)
+    (if (not pos-dest) ;; this is an edit
+	(progn
+	  (delete-region (point-min) (point))
+	  (save-buffer)
+	  (kill-buffer (current-buffer)))	  
+      (setq catch (buffer-substring (point-at-bol)
+				    (point-max)))
+      (kill-buffer (current-buffer))
+      (goto-char dest)
+      (org-narrow-to-subtree)
+      (goto-char (point-max))
+      (insert "\n")
+      (insert catch)
+      (save-buffer)
+      (widen))
     (cond ((window-configuration-p scene)
 	   ;; set window-configuration
 	   (set-window-configuration scene))
@@ -520,7 +521,8 @@ Creates the project directory and index file."
   (let* ((case-fold-search t)
 	 (nick
 	  (progn
-	    (outline-next-heading)
+	    ;; (outline-next-heading)
+	    (org-back-to-heading)
 	    (superman-get-property (point) "nickname")))
 	 (pro (progn
 		(save-buffer)

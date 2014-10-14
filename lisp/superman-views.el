@@ -2301,6 +2301,17 @@ If BACKWARD is non-nil move backward."
 		"\t" (superman-make-button
 		      "Cancel (C-c C-q)" 'superman-quit-scene
 		      'superman-next-project-button-face "Cancel edit")))
+      ;; (insert (superman-make-button
+      ;; "Destination:"
+      ;; 'superman-change-destination
+      ;; 'superman-header-button-face "Change destination")
+      ;; " Position " (int-to-string (marker-position marker))
+      ;; " in buffer " (buffer-name (marker-buffer marker)))
+      ;; (put-text-property (point-at-bol) (1+ (point-at-bol)) 'destination marker)
+      ;; (insert "\t" (superman-make-button
+      ;; "Show context"
+      ;; 'superman-capture-show-context
+      ;; 'superman-header-button-face "Show some context around destination"))
       (superman-capture-mode)
       (insert "\n\n")
       (put-text-property (point) (point-at-eol) 'edit-point (point))
