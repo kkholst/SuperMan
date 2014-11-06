@@ -132,7 +132,7 @@
 		 "Refresh project view"))
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	(put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
-	(put-text-property (point-at-bol) (point-at-eol) 'git-dir dir)
+	(put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel dir))
 	(put-text-property (point-at-bol) (point-at-eol) 'dir dir)
 	(put-text-property (point-at-bol) (point-at-eol) 'index (superman-get-index project))
 	(insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")

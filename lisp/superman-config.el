@@ -67,10 +67,12 @@ Returns the corresponding buffer."
 (defun superman-capture-config (&optional project)
   (interactive)
   (let ((pro (superman-get-project project)))
-    (superman-capture-internal
+    (superman-capture
      pro
      "Configuration"
-     `("Config" (("Config" ,(superman-current-config)))))))
+     "Configuration"
+     nil
+     `(("Config" ,(superman-current-config))))))
      
 (fset 'superman-save-config 'superman-capture-config)
 

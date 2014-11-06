@@ -1,4 +1,4 @@
-ati*** Index of project Kal-El
+*** Index of project Kal-El
 :PROPERTIES:
 :ProjectStart: <2013-01-02 Wed 06:18>
 :CaptureButtons: 

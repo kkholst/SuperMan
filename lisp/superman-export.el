@@ -200,11 +200,16 @@ This function works outside R src blocks. Inside R src block
   (interactive)
   (if (region-active-p)
       (let* ((start (region-beginning))
-	     (end (region-end))
-	     (visibly (< (length (buffer-substring-no-properties start end)) 300)))
-	(ess-eval-region-and-go start end (not visibly)))
+	     (end (region-end)))
+	     ;; (code (buffer-substring start end))
+	     ;; (cur-buf-name (buffer-name (current-buffer))))
+	(ess-eval-region-and-go start end  'nowait))
+	;; (visibly (< (length (buffer-substring-no-properties start end)) 300)))
+	;; (with-temp-buffer (R-mode) (insert code)
+			  ;; (ess-eval-buffer-and-go 'nowait)))
+    ;; (ess-eval-region-and-go start end  'nowait))
     (save-excursion
-      (ess-eval-line-and-step))))
+      (ess-eval-line-and-step nil nil t))))
 
 
 (defun superman-control-export-back-to-org ()

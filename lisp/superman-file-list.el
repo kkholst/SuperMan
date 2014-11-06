@@ -280,10 +280,10 @@ list in completion buffer.")
 
 (defvar file-list-list-files-regexp "^.*[^\.]+$")
 
-(defun file-list-replace-in-string (str regexp newtext &optional literal)
+(defun file-list-replace-in-string (str regexp newtext &optional literal fixedcase)
   (if (featurep 'xemacs)
       (replace-in-string str regexp newtext)
-    (replace-regexp-in-string regexp newtext str nil literal)))
+    (replace-regexp-in-string regexp newtext str fixedcase literal)))
 
 (defun file-list-list-internal (dir &optional dont-exclude recursive exclude-handler)
   "Lists filenames below DIR and subdirectories of DIR.
@@ -707,12 +707,18 @@ Return  the sublist of the existing files. Does not re-display selected list."
   file-list-current-file-list)
 
 (defun file-list-redisplay ()
+  "Update below root directory, however only if the directory
+ is stored in the button at point-min.
+ Then remove non-existing files and redisplay file-list."
   (interactive)
-  (file-list-select-existing-files)
-  (if (and file-list-mode (not file-list-completion-mode))
-      (superman-display-file-list 
-       (get-text-property (point-min) 'dir))
-    (file-list-display-match-list)))
+  (let ((dir (get-text-property (point-min) 'dir)))
+    (when dir
+      (file-list-update-below-dir dir))
+    (file-list-select-existing-files)
+    (if (and file-list-mode (not file-list-completion-mode))
+	(superman-display-file-list 
+	 (get-text-property (point-min) 'dir))
+      (file-list-display-match-list))))
 
 (defun file-list-select-internal (&optional file-list regexp by inverse dir display-buffer dont-display)
   "Returns sublist of filenames in file-list matched by regexp.
@@ -1166,18 +1172,17 @@ Switches to the corresponding directory of each file."
 	 (concat "cd " (file-name-directory fname) ";" fcommand)))))))
 
 
-(defun file-list-rename-file-at-point ()
+(defun file-list-rename-file-at-point (&optional newname)
   (interactive)
   (let* ((oldname (file-list-file-at-point))
-	 (newname (expand-file-name (read-file-name (format "Enter new name for %s " oldname)))))
+	 (newname (or newname
+		      (expand-file-name (read-file-name (format "Enter new name for %s " oldname))))))
     (rename-file oldname newname 'ok)
     (file-list-update-file-alist oldname 'delete)
     (file-list-update-file-alist newname)
     (file-list-update-current-file-list oldname newname)
     (file-list-display-match-list)
     (re-search-forward newname nil t)))
-
-
 
 (defun file-list-rename (&optional file-list one-by-one)
   (interactive)
@@ -1200,7 +1205,7 @@ Switches to the corresponding directory of each file."
 	    (setq filename
 		  (file-list-make-file-name
 		   (cons filename newdir)))
-;	  (shell-command (concat "mv " oldname " " filename))
+					;	  (shell-command (concat "mv " oldname " " filename))
 	    (rename-file oldname filename)
 	    ;; update current file list
 	    (dolist (entry file-list-current-file-list)
@@ -1212,7 +1217,7 @@ Switches to the corresponding directory of each file."
 			 (format "Replace match ('%s') with " old-regexp))))
       (dolist (entry file-list)
 	(let* ((old-name (car entry))
-	       (new-name (file-list-replace-in-string old-name old-regexp replacement nil)))
+	       (new-name (file-list-replace-in-string old-name old-regexp replacement nil 'fixed)))
 	  (setcar entry new-name)
 	  (rename-file (concat (cadr entry) old-name)
 		       (concat (cadr entry) new-name) t)))))
@@ -1685,6 +1690,14 @@ Switches to the corresponding directory of each file."
   (global-set-key (read-kbd-macro "C-x f L") 'file-list-by-name-below-directory))
 ;;}}}
 ;;{{{ utility functions 
+
+(defun file-list-time-stamp-file-at-point ()
+  (interactive)
+  (let ((f (file-list-file-at-point)))
+    (file-list-rename-file-at-point
+     (concat (file-name-sans-extension f)
+	     (format-time-string "%Y%m%d")
+	     (file-name-extension f 'p)))))
 
 (defun file-list-clear-home ()
   "Delete all files whose names are matched by file-list-clear-home-regexp."

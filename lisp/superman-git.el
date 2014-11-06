@@ -76,9 +76,9 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
 (defun superman-git-init ()
   (interactive)
   (or (get-text-property (point-min) 'git-dir)
-    (let ((pro (superman-view-current-project)))
-      (superman-git-init-directory (concat (superman-get-location pro) (car pro)))
-      (superman-redo))))
+      (let ((pro (superman-view-current-project)))
+	(superman-git-init-directory (concat (superman-get-location pro) (car pro)))
+	(superman-redo))))
 
 (defun superman-git-init-project (&optional project)
   "Put project under git control."
@@ -99,6 +99,12 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
   (if (superman-git-p dir)
       (message (concat "Directory " dir " is under git control."))
     (shell-command-to-string (concat "cd " dir ";" superman-cmd-git " init"))
+    (let ((buffer-read-only nil))
+      (put-text-property (point-min) (1+ (point-min)) 'git-dir dir))
+    (with-current-buffer
+	(get-buffer (get-text-property (point-min) 'project-buffer))
+      (let ((buffer-read-only nil))
+	(put-text-property (point-min) (1+ (point-min)) 'git-dir dir)))
     (append-to-file superman-git-ignore nil (concat (file-name-as-directory dir) ".gitignore"))))
 
 ;;}}}
@@ -243,12 +249,13 @@ passed to `superman-run-cmd'."
 
 (defun superman-git-toplevel (file)
   "Find the toplevel directory DIR is under git control."
-  (let ((dir (if (file-directory-p file) file (file-name-directory file))))
-    (if (superman-git-p dir)
-	(replace-regexp-in-string
-	 "\n" ""
-	 (shell-command-to-string
-	  (concat "cd " dir "; " superman-cmd-git " rev-parse --show-toplevel "))))))
+  (when (and file (file-exists-p file))
+    (let ((dir (if (file-directory-p file) file (file-name-directory file))))
+      (if (superman-git-p dir)
+	  (replace-regexp-in-string
+	   "\n" ""
+	   (shell-command-to-string
+	    (concat "cd " dir "; " superman-cmd-git " rev-parse --show-toplevel ")))))))
 
 (defun superman-git-branches (dir)
   (let* ((branch-list
@@ -717,7 +724,7 @@ see M-x manual-entry RET git-diff RET.")
      ((hdr ("width" 9) ("face" font-lock-function-name-face) ("name" "Commit") ("fun" superman-trim-hash))
       ("Author" ("width" 10) ("face" superman-get-git-status-face))
       ("Tag" ("width" 10))
-      ("Date" ("width" 13) ("fun" superman-trim-date) ("face" font-lock-string-face))
+      ("Date" ("width" 13) ("fun" superman-trim-string) ("face" font-lock-string-face))
       ("Message" ("width" 63)))
      superman-git-log-pre-display-hook
      superman-git-log-post-display-hook)
@@ -792,26 +799,46 @@ This function should be bound to a key or button."
     (superman-redo-cat)))
 
 (defun superman-redo-git-display ()
+  "Update the header and then call `superman-redo-cat'."
   (interactive)
+  (let ((git-dir (get-text-property (point-min) 'git-dir))
+	(branch-start (next-single-property-change (point-min) 'git-branches))
+	(remote-start (next-single-property-change (point-min) 'git-remote))
+	(buttons (next-single-property-change (point-min) 'git-buttons))
+	(buffer-read-only nil))
+    (if (not branch-start)
+	(progn
+	  (goto-char (point-min))
+	  (forward-line 2))
+      (goto-char branch-start)
+      (kill-whole-line))
+    (when remote-start
+      (goto-char remote-start)
+      (kill-whole-line))
+    (when git-dir
+      (superman-view-insert-git-branches git-dir)
+      (if buttons
+	  (insert "\n")
+	(superman-view-insert-git-buttons)
+	)))
   (when superman-git-mode
-    (goto-char (next-single-property-change (point-min) 'git-branches))
-    (let ((buffer-read-only nil))
-      (beginning-of-line)
-      (kill-line 2)
-      (superman-view-insert-git-branches (get-text-property (point-min) 'git-dir))
-      (insert "\n"))
     (goto-char (next-single-property-change (point-min) 'cat))
     (superman-redo-cat)))
 
 (defun superman-display-git-cycle ()
+  "Switch to git control cycle of the current project's directory,
+if it is git controlled. This function inserts some
+buttons and then calls `superman-redo-cat'."
   (interactive)
-  (unless (or superman-git-mode
-	      (not (get-text-property (point-min) 'git-dir)))
+  ;; (unless (or superman-git-mode 
+  ;; (not (get-text-property (point-min) 'dir)))
+  (when (get-text-property (point-min) 'dir)
     ;; open git view buffer
     (let* ((index (get-text-property (point-min) 'index))
 	   (pbuf (buffer-name))
 	   (nickname (get-text-property (point-min) 'nickname))
 	   (ibuf (concat (buffer-name) " :Git-repository"))
+	   (dir (get-text-property (point-min) 'dir))
 	   (git-dir (get-text-property (point-min) 'git-dir))
 	   (gbuf (get-buffer ibuf)))
       (if gbuf (switch-to-buffer ibuf)
@@ -831,16 +858,13 @@ This function should be bound to a key or button."
 		  "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
 		  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
 	  (insert "\n\n")
-	  (insert (superman-view-control nickname git-dir))
+	  ;; (insert (superman-view-control nickname (or git-dir dir)))
+	  ;; (insert "\n")
+	  (when git-dir
+	    (superman-view-insert-git-branches git-dir)
+	    (superman-view-insert-git-buttons)
+	    (insert "\n"))
 	  (insert "\n")
-	  (superman-view-insert-git-branches git-dir)
-	  (superman-view-insert-action-buttons
-	   '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
-	     ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
-	     ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
-	     ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
-	     ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files")))
-	  (insert "\n\n")
 	  (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
 	  (put-text-property (point-min) (1+ (point-min)) 'region-start t)
 	  (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
@@ -850,103 +874,125 @@ This function should be bound to a key or button."
 	  (put-text-property (point-min) (1+ (point-min)) 'git-display "versions")
 	  (superman-view-mode-on)
 	  (superman-git-mode-on)
-	  (goto-char (point-max))
 	  (insert "** Git")
 	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
-	  (superman-redo-cat))))))
+	  (if (not git-dir)
+	      (insert (superman-initialize-git-control-string dir))
+	    (superman-redo-cat)))))))
+
+(defun superman-initialize-git-control-string (dir)
+  (concat "\n\nDirectory " dir " is not yet under git control.\n"
+	  "press `GI' or this button to: " 
+	  (superman-make-button
+	   "initialize git control"
+	   'superman-git-init
+	   'superman-capture-button-face
+	   (concat
+	    "Initialize git repository at " dir))))
 
 (defvar superman-git-log-limit 25 "Limit on number of previous versions shown by default in git log view")
 (defvar superman-git-search-limit 250)
 (defvar superman-git-log-skip 0 "Skip this many previous versions in git log view")
 
 (defun superman-format-git-display (view-buf dir props view-point index-buf index-cat-point name)
-  "Called by `superman-format-cat' to format git displays."
-  (let* ((cycles-given (cadr (assoc "git-cycle" props)))
-	 (cycles (cond ((listp cycles-given) cycles-given)
-		       (t (split-string
-			   cycles-given
-			   "[ \t]*,[ \t]*"))))
-	 (cycle (or
-		 (with-current-buffer view-buf
-		   (get-text-property (point-min) 'git-display))
-		 (cadr (assoc "git-display" props))
-		 (car cycles)))
-	 (limit (with-current-buffer view-buf
-		  (or (get-text-property (point-min) 'limit) superman-git-log-limit)))
-	 (skip (with-current-buffer view-buf
-		 (or (get-text-property (point-min) 'skip) superman-git-log-skip)))
-	 (rest (assoc cycle superman-git-display-command-list))
-	 (balls (or (nth 2 rest) superman-default-balls))
-	 (pre-hook (nth 3 rest))
-	 (post-hook (nth 4 rest))
-	 (count 0)
-	 (cmd (concat "cd " dir ";" superman-cmd-git " "
-		      (with-current-buffer view-buf
-			(eval (nth 1 rest))))))
-    ;; for the first time ...
-    (with-current-buffer view-buf
-      (unless (get-text-property (point-min) 'git-display)
-	(put-text-property (point-min) (1+ (point-min)) 'git-display cycle)))
-    (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
-    ;; limit on number of revisions
-    (when limit
-      (setq cmd (replace-regexp-in-string "-n [0-9]+ " (concat "-n " (int-to-string limit) " ") cmd)))
-    (when skip
-      (setq cmd (replace-regexp-in-string "--skip [0-9]+ " (concat "--skip " (int-to-string skip) " ") cmd)))
-    ;; insert the result of git command
-    (insert (shell-command-to-string cmd))
-    (goto-char (point-min))
-    ;; prepare buffer 
-    (when pre-hook (funcall pre-hook))
-    (goto-char (point-min))
-    (while (outline-next-heading)
-      (setq count (+ count 1))
-      (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-      (with-current-buffer view-buf (insert line "\n")))
-    (set-buffer view-buf)
-    (when superman-empty-line-before-cat (insert "\n"))
-    (goto-char view-point)
-    ;; section names
-    (when (and
-	   superman-empty-line-before-cat
-	   (save-excursion (beginning-of-line 0)
-			   (not (looking-at "^[ \t]*$"))))
-      (insert "\n"))
-    (put-text-property 0 (length name) 'git-repos dir name) 
-    (superman-view-insert-section-name
-     name count balls nil 
-     'superman-cycle-git-display "Cycle git display")
-    (insert "\n")
-    (end-of-line 0)
-    (let ((cycle-strings cycles))
-      (while cycle-strings
-	(let ((cstring (car cycle-strings)))
-	  (set-text-properties 0 (length cstring) nil cstring)
-	  (insert " >> ")
-	  (insert (superman-make-button
-		   cstring
-		   `(lambda () (interactive)
-		      (superman-set-git-cycle ,cstring)
-		      (superman-redo-cat))
-		   (if (string= cycle cstring)
-		       'superman-next-project-button-face nil)
-		   (concat "Cycle display to git " cstring)))
-	  (setq  cycle-strings (cdr cycle-strings)))))
-    (forward-line 1)
-    ;; insert the column names
-    (when superman-empty-line-after-cat (insert "\n"))
-    (insert (superman-column-names balls))
-    (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
-    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
-    (goto-char (previous-single-property-change (point) 'cat))
-    (beginning-of-line)
-    (put-text-property (point) (+ (point) 1) 'git-cycle cycle)
-    (when (re-search-forward "\[[0-9]*\]" nil t)
-      (replace-match (superman-make-button (concat "[Set limit: " (int-to-string limit) "]")
-					   'superman-git-set-limit 'superman-default-button-face "Set limit of logs")))
-    (when post-hook 
-      (goto-char (point-max))
-      (funcall post-hook))))
+  "Usually called via `superman-display-git-cycle' and
+`superman-redo-cat' by `superman-format-cat' to format git displays.
+
+If directory is not yet git controlled provide button to initialize git control.
+ "
+  (if (not (get-text-property (point-min) 'git-dir))
+      (progn
+	(switch-to-buffer view-buf)
+	(goto-char view-point)
+	(insert "** Git")
+	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
+	(insert (superman-initialize-git-control-string dir)))
+    (let* ((cycles-given (cadr (assoc "git-cycle" props)))
+	   (cycles (cond ((listp cycles-given) cycles-given)
+			 (t (split-string
+			     cycles-given
+			     "[ \t]*,[ \t]*"))))
+	   (cycle (or
+		   (with-current-buffer view-buf
+		     (get-text-property (point-min) 'git-display))
+		   (cadr (assoc "git-display" props))
+		   (car cycles)))
+	   (limit (with-current-buffer view-buf
+		    (or (get-text-property (point-min) 'limit) superman-git-log-limit)))
+	   (skip (with-current-buffer view-buf
+		   (or (get-text-property (point-min) 'skip) superman-git-log-skip)))
+	   (rest (assoc cycle superman-git-display-command-list))
+	   (balls (or (nth 2 rest) superman-default-balls))
+	   (pre-hook (nth 3 rest))
+	   (post-hook (nth 4 rest))
+	   (count 0)
+	   (cmd (concat "cd " dir ";" superman-cmd-git " "
+			(with-current-buffer view-buf
+			  (eval (nth 1 rest))))))
+      ;; for the first time ...
+      (with-current-buffer view-buf
+	(unless (get-text-property (point-min) 'git-display)
+	  (put-text-property (point-min) (1+ (point-min)) 'git-display cycle)))
+      (unless superman-git-display-cycles (setq superman-git-display-cycles cycles))
+      ;; limit on number of revisions
+      (when limit
+	(setq cmd (replace-regexp-in-string "-n [0-9]+ " (concat "-n " (int-to-string limit) " ") cmd)))
+      (when skip
+	(setq cmd (replace-regexp-in-string "--skip [0-9]+ " (concat "--skip " (int-to-string skip) " ") cmd)))
+      ;; insert the result of git command
+      (insert (shell-command-to-string cmd))
+      (goto-char (point-min))
+      ;; prepare buffer 
+      (when pre-hook (funcall pre-hook))
+      (goto-char (point-min))
+      (while (outline-next-heading)
+	(setq count (+ count 1))
+	(setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+	(with-current-buffer view-buf (insert line "\n")))
+      (set-buffer view-buf)
+      (when superman-empty-line-before-cat (insert "\n"))
+      (goto-char view-point)
+      ;; section names
+      (when (and
+	     superman-empty-line-before-cat
+	     (save-excursion (beginning-of-line 0)
+			     (not (looking-at "^[ \t]*$"))))
+	(insert "\n"))
+      (put-text-property 0 (length name) 'git-repos dir name) 
+      (superman-view-insert-section-name
+       name count balls nil 
+       'superman-cycle-git-display "Cycle git display")
+      (insert "\n")
+      (end-of-line 0)
+      (let ((cycle-strings cycles))
+	(while cycle-strings
+	  (let ((cstring (car cycle-strings)))
+	    (set-text-properties 0 (length cstring) nil cstring)
+	    (insert " >> ")
+	    (insert (superman-make-button
+		     cstring
+		     `(lambda () (interactive)
+			(superman-set-git-cycle ,cstring)
+			(superman-redo-cat))
+		     (if (string= cycle cstring)
+			 'superman-next-project-button-face nil)
+		     (concat "Cycle display to git " cstring)))
+	    (setq  cycle-strings (cdr cycle-strings)))))
+      (forward-line 1)
+      ;; insert the column names
+      (when superman-empty-line-after-cat (insert "\n"))
+      (insert (superman-column-names balls))
+      (goto-char (1- (or (next-single-property-change (point) 'cat) (point-max))))
+      (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+      (goto-char (previous-single-property-change (point) 'cat))
+      (beginning-of-line)
+      (put-text-property (point) (+ (point) 1) 'git-cycle cycle)
+      (when (re-search-forward "\[[0-9]*\]" nil t)
+	(replace-match (superman-make-button (concat "[Set limit: " (int-to-string limit) "]")
+					     'superman-git-set-limit 'superman-default-button-face "Set limit of logs")))
+      (when post-hook 
+	(goto-char (point-max))
+	(funcall post-hook)))))
 
 (defun superman-git-set-limit ()
   "Re-set limit on number of items and redisplay"
@@ -1048,13 +1094,8 @@ repository of PROJECT which is located at DIR."
       (goto-char (point-min))
       (insert header "\n")
       (when (string= commit "")
-	(superman-view-insert-action-buttons
-	 '(("Diff project" superman-git-diff superman-git-keyboard-face-D "Git diff")
-	   ("Commit project" superman-git-commit-project superman-git-keyboard-face-P "Git all project")
-	   ("Commit marked" superman-git-commit-marked superman-git-keyboard-face-C "Git commit marked files")
-	   ("Status" superman-git-status superman-git-keyboard-face-S "Git status")
-	   ("Delete marked" superman-view-delete-marked superman-git-keyboard-face-X "Delete marked files"))))
-      (insert "\n")
+	(superman-view-insert-git-buttons)
+	(insert "\n"))
       (put-text-property (point-min) (+ (point-min) 1) 'redo-cmd
 			 `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,project)))
       (put-text-property (point-min) (+ (point-min) (length header)) 'region-start t)
@@ -1248,35 +1289,54 @@ repository of PROJECT which is located at DIR."
   "List of currently selected lines.")
 (make-variable-buffer-local 'superman-git-filter)
 
+
 (defun superman-git-set-filter ()
+  "Match regexp against value of one of the columns
+and remove the whole line in case of no-match."
   (interactive)
   (let* ((cstart (next-single-property-change (point-min) 'column-names))
 	 (column-names (superman-list-to-alist
 			(get-text-property cstart 'column-names)))
 	 (filenamep (assoc "Filename" column-names))
-	 (col (completing-read
-	       (concat "Filter on column"
-		       (if filenamep " (default: Filename): " ": "))
-	       column-names nil t nil nil
-	       (when filenamep "Filename")))
-	 (dim (progn
-		(goto-char cstart)
-		(re-search-forward col nil t)
-		(superman-ball-dimensions)))
+	 (balls (get-text-property (superman-cat-point) 'balls))
+	 (col
+	  (completing-read
+	   (concat "Filter on column"
+		   (if filenamep " (default: Filename): " ": "))
+	   column-names nil t nil nil
+	   (when filenamep "Filename")))
+	 (prop (cond ((assoc-ignore-case col balls)
+		      (car (assoc-ignore-case col balls)))
+		     ((car (rassoc-if '(lambda (u)
+					 (let ((name
+						(or
+						 (cadr (assoc "name" u))
+						 (car u))))
+					   (unless (stringp name)
+					     (setq name (symbol-name name)))
+					   (string-match col name)))
+				      balls)))))
+	 ;; (dim (progn
+	 ;; (goto-char cstart)
+	 ;; (re-search-forward col nil t)
+	 ;; (superman-ball-dimensions)))
 	 (regexp 
 	  (read-string "Filter regexp: "))
 	 (filter-name (concat col " matches " regexp))
 	 catch
 	 next
+	 val
 	 (buffer-read-only nil))
     (goto-char cstart)
-    ;; (forward-line 1)
-    ;; (beginning-of-line)
     (while (setq next (next-single-property-change (point-at-eol) 'org-hd-marker))
       (goto-char next)
-      (forward-char (car dim))
-      ;; match against regexp inside column
-      (if (re-search-forward regexp (+ (point) (nth 1 dim)) t)
+      ;; match regexp against value of column
+      (if (and (setq
+		val (superman-get-property
+		     (get-text-property next 'org-hd-marker)
+		     prop))
+	       (string-match regexp val))
+	  ;; (if (re-search-forward regexp (+ (point) (nth 1 dim)) t)
 	  nil
 	(beginning-of-line)
 	(setq catch (append catch
@@ -1287,7 +1347,10 @@ repository of PROJECT which is located at DIR."
     ;; in case we remove the last line
     (unless (next-single-property-change (point-min) 'tail)
       (let ((end (previous-single-property-change (point-max) 'org-hd-marker)))
-	(put-text-property end (1+ end) 'tail t)))
+	(if end
+	    (put-text-property end (1+ end) 'tail t)
+	  (goto-char (next-single-property-change (point-min) 'column-names))
+	  (put-text-property (point-at-eol) (- (point-at-eol) 1) 'tail t))))
     (if (not catch)
 	(message "No lines are deleted by this filter.")
       (setq superman-git-filter
@@ -1326,6 +1389,9 @@ repository of PROJECT which is located at DIR."
   (let* ((filter (assoc filter-name superman-git-filter))
 	 (filter-contents (cdr filter))
 	 (buffer-read-only nil))
+    ;; first remove the button
+    (kill-region (previous-single-property-change (point) 'button)
+		 (next-single-property-change (point) 'button))
     (goto-char (next-single-property-change (point-min) 'tail))
     (while filter-contents
       (insert "\n" (car filter-contents))
@@ -1334,9 +1400,11 @@ repository of PROJECT which is located at DIR."
 	  (delete filter superman-git-filter))
     (goto-char (next-single-property-change
 		(point-min)
-		'git-filter))
-    (re-search-forward filter-name nil t)
-    (replace-match "") (just-one-space 0)))
+		'git-filter))))
+;; (if (re-search-forward filter-name nil t)
+;; (progn
+;; (replace-match "") (just-one-space 0))
+;; (message filter-name))))
 
 ;;}}}
 ;;

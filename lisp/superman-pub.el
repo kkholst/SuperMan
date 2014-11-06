@@ -23,87 +23,250 @@
 
 ;; Code:
 
-(defun superman-bibtex-parse-bibtex ()
+(defun superman-redo-bibtex-view ()
+  "Redo the superman display of BibTeX file."
   (interactive)
-  (let* ((bibfile (buffer-file-name (current-buffer)))
-	(orgfile  (concat (file-name-sans-extension bibfile) ".org")))
-  (goto-char (point-max))
-  (while (re-search-backward "@" nil t)
-    (ignore-errors
-      (superman-bibtex-parse-entry)))
-  (when (file-exists-p orgfile)
-    (delete-file orgfile))
-  (write-file orgfile)
-  (org-mode)))
-    
+  (let ((bib-marker (get-text-property (point-min) 'bib-marker))
+	(bib-file  (get-text-property (point-min) 'bib-file)))
+    (find-file bib-file)
+    (superman-view-bibtex)))
+    ;; (pro (get-text-property (point-min) 'pro))
+    ;; (buffer-read-only nil))
+  ;; (superman-prepare-bibtex-index bib-buf index-buf)
+  ;; (superman-view-project pro t)
+  ;; (superman-view-bibtex-mode)
+  ;; (put-text-property (point-min) (1+ (point-min)) 'bib-marker bib-marker)))
 
-(defun superman-bibtex-parse-entry (&optional pom)
+(defun superman-view-bibtex ()
+  "Show the contents of a BibTeX file in
+electric table format."
   (interactive)
-  (let ((cbuf (current-buffer))
-	(cmode major-mode))
-    (bibtex-mark-entry)
-    (if (eq cmode 'org-mode)
-	(call-interactively 'kill-region)
-      (call-interactively 'copy-region-as-kill))
-    (find-file "/tmp/superman-parse-pub.bib")
+  (let* ((bib-buf (current-buffer))
+	 (bib-file (buffer-file-name bib-buf))
+	 (index-buf
+	  (get-buffer-create
+	   (concat
+	    "*Superman:"
+	    (file-name-sans-extension bib-file)
+	    "*")))
+	 (dir (file-name-directory bib-file))
+	 (name (buffer-name bib-buf))
+	 (redo 'superman-redo-bibtex-view)
+	 (bib-marker (progn
+		       (set-buffer bib-buf)
+		       (goto-char (point-min))
+		       (point-marker)))
+	 pro)
+    (superman-prepare-bibtex-index bib-buf index-buf)
+    (set-buffer index-buf)
+    (goto-char (point-min))
+    (setq pro (list name
+		    (list (cons "location" dir)
+			  (cons "index" index-buf)
+			  (cons "category" "Temp")
+			  (cons "others" nil)
+			  (cons 'hdr nil)
+			  (cons "marker" nil)
+			  (cons "bibtex-file" bib-file)
+			  (cons "lastvisit" nil)
+			  (cons "config" nil)
+			  (cons 'todo nil)
+			  (cons "publish-directory" nil))))
+    ;; (add-to-list 'superman-project-alist pro)
+    (superman-view-project pro t redo)
+    (superman-view-bibtex-mode)
+    (let ((buffer-read-only nil))
+      (put-text-property (point-min) (1+ (point-min)) 'bib-marker bib-marker)
+      (put-text-property (point-min) (1+ (point-min)) 'bib-file bib-file))))
+
+
+(defvar superman-view-bibtex-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-view-bibtex-mode' commands.")
+   
+(define-minor-mode superman-view-bibtex-mode
+     "Toggle superman project view-bibtex mode.
+With argument ARG turn superman-view-bibtex-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-view-bibtex mode electrifies the view buffer for bibtex files."
+     :lighter " *S-view-bibtex*"
+     :group 'org
+     :keymap 'superman-view-bibtex-mode-map)
+
+(defun superman-view-bibtex-mode-on ()
+  (interactive)
+  (superman-view-bibtex-mode t))
+(define-key superman-view-bibtex-mode-map "N" 'superman-capture-bibtex)
+(define-key superman-view-bibtex-mode-map "v" 'superman-bibtex-view-entry)
+(define-key superman-view-bibtex-mode-map "e" 'superman-bibtex-edit-entry)
+
+(defun superman-bibtex-view-entry ()
+  (interactive)
+  (let ((marker (superman-get-text-property
+			  (get-text-property (point-at-bol) 'org-hd-marker) 'bib-marker)))
+    (superman-view-edit-item t marker)))
+
+(defun superman-bibtex-edit-entry ()
+  (interactive)
+  (let ((marker
+	 (superman-get-text-property
+	  (get-text-property (point-at-bol) 'org-hd-marker) 'bib-marker)))
+    (superman-view-edit-item nil marker)))
+
+(defun superman-capture-bibtex (&optional project marker ask)
+  (interactive)
+  (let* ((scene (current-window-configuration))
+	 (bib-file (get-text-property (point-min) 'dir))
+	 (bib-marker (or marker
+			 (superman-get-text-property
+			  (get-text-property (point-at-bol) 'org-hd-marker) 'bib-marker)
+			 (progn
+			   (find-file bib-file)
+			   (goto-char (point-max))
+			   (setq marker (point-marker)))))
+	 ;; (pro (superman-get-project project ask))
+	 (pro (superman-get-project nil))
+	 (fields (or (superman-view-property-keys)
+		     (list "title" "author" "journal" "year")))
+	 (superman-setup-scene-hook
+	  #'(lambda ()
+	      (let ((inhibit-read-only t))
+		(put-text-property (point-min) (1+ (point-min)) 'clean-hook
+				   'superman-clean-bibtex))))
+	 (template "@article{,"))
+    ;; (bibtex-entry)
+    (while fields
+      (setq template (concat template "\n" (car fields) "={},")
+	    fields (cdr fields)))
+    (setq template (concat template "\n}"))
+    (superman-capture
+     pro bib-marker "bibtex"
+     template nil 0 scene)))
+
+(defun superman-prepare-bibtex-index (bib-buf index-buf)
+  "Parse all bibtex entries in buffer BIB-BUF and
+write the result to buffer INDEX-BUF."
+  (let (fields
+	bib-marker
+	(pos -1))
+    (set-buffer index-buf)
     (erase-buffer)
-    (yank)
-    (org-with-point-at (or pom (point))
-      (let* ((start (bibtex-beginning-of-entry))
-	     (end (bibtex-end-of-entry))
-	     (type (progn
-		     (goto-char start)
-		     (looking-at bibtex-entry-head)
-		     (setq type (match-string-no-properties 1))))
-	     (bibkey (match-string-no-properties 2))
-	     (bib  (buffer-substring start end))
-	     (plain (ignore-errors (superman-bibtex2text bib)))
-	     done
-	     previous
-	     next
-	     fields)
-	(goto-char start)
-	(while (and (not done)
-		    (setq next (bibtex-next-field 1))
-		    (not (string= next previous))
-		    (not (string= next "Entry key")))
-	  (let* ((field-info (bibtex-find-text-internal t nil t))
-		 (field-key (when field-info
-			      (downcase
-			       (car field-info))))
-		 (end-of-field (nth 2 field-info))
-		 (field-val (when field-info
-			      (replace-regexp-in-string "[\n}{]*" ""
-							(buffer-substring-no-properties
-							 (nth 1 field-info)
-							 end-of-field)))))
-	    (setq fields
-		  (append fields
-			  (list (cons field-key field-val))))
-	    (setq previous next)
-	    (if (> (point) end)
-		(setq done t))))
-	(goto-char start)
-	(insert "*** " bibkey "\n" ":PROPERTIES:\n")
-	(while fields
-	  (let ((prop (caar fields))
-		(val (cdar fields)))
-	    (insert ":" prop ": ")
-	    (insert val "\n")
-	    (setq fields (cdr fields))))
-	(insert ":END:\n")
-	(when plain
-	  (insert "\n**** Plain\n"
-		  (replace-regexp-in-string "\\[1\\]" ""
-					    (car (split-string plain "=+")))))
-	(insert "\n**** BibTeX \n")))
-    (if (eq cmode 'org-mode)
-	(let ((parsed-text (buffer-string)))
-	  (switch-to-buffer cbuf)
-	  (insert parsed-text))
-      (copy-region-as-kill (point-min) (point-max))
-      (pop-to-buffer cbuf)
-      (message "Buffer-string copied to kill-ring"))))
+    (org-mode)
+    (set-buffer bib-buf)
+    ;; (insert-buffer bib-buf)
+    (goto-char (point-min))
+    (while (and (bibtex-skip-to-valid-entry)
+		(> (point) pos))
+      (setq bib-marker (point-marker))
+      (setq pos (point-at-eol))
+      ;; (ignore-errors
+      (setq fields (superman-bibtex-parse-entry))
+      (set-buffer index-buf)
+      (goto-char (point-max))
+      (insert "*** " (cdar fields))
+      (put-text-property (point-at-bol) (point-at-eol) 'bib-marker bib-marker)
+      (insert "\n" ":PROPERTIES:\n")
+      (setq fields (cdr fields))
+      (while fields
+	(let ((prop (caar fields))
+	      (val (cdar fields)))
+	  (insert ":" prop ": ")
+	  (insert val "\n")
+	  (setq fields (cdr fields))))
+      (insert ":END:\n")
+      (set-buffer bib-buf))
+    (set-buffer index-buf)
+    (goto-char (point-min))
+    (insert "* BibTeX\n"
+	    ":PROPERTIES:\n"
+	    ":CaptureButtons: nil\n"
+	    ;; ":Ball1: org-hd-marker :fun superman-show-plain\n"
+	    ":Ball2:    year  :width 4\n"
+	    ":Ball3:    author  :width 13\n"
+	    ":Ball4:    journal :width 30\n"
+	    ":Ball5:    title  :width 50\n"
+	    ;; ":buttons: superman-pub-make-sort-buttons\n"
+	    ":END:\n\n")))
+
+
+(defun superman-clean-bibtex ()
+  (message "Don't know how to clean yet."))
+  ;; (goto-char (next-single-property-change (point-min) 'header-end))
+  ;; (re-search-forward "@" nil t)
+  ;; (while (re-search-forward "={}" nil t)
+    ;; (kill-whole-line)))
+;; FIXME: this is a rather crude and time-consuming hack:
+;; (set-buffer
+;; (marker-buffer
+;; (get-text-property
+;; (next-single-property-change (point-min) 'destination) 'destination))))
+
+(defun superman-bibtex-parse-entry ()
+  (interactive)
+  (let* ((start (bibtex-beginning-of-entry))
+	 (end (bibtex-end-of-entry))
+	 (type (progn
+		 (goto-char start)
+		 (looking-at bibtex-entry-head)
+		 (setq type (match-string-no-properties 1))))
+	 (bibkey (match-string-no-properties 2))
+	 ;; (bib  (buffer-substring start end))
+	 done
+	 previous
+	 next
+	 fields)
+    (goto-char start)
+    (while (re-search-forward "^[ \t\n]*\\(.*\\)[ \t\n]*=[ \t\n]*\\(.*\\)[,]?$" end t)
+      (let ((field-key
+	     (replace-regexp-in-string "^[ \t]*\\|[ \t]*$" ""
+				       (match-string-no-properties 1)))
+	    (field-val
+	     (replace-regexp-in-string "[{},]*" ""
+				       (match-string-no-properties 2))))
+	(setq fields
+	      (append fields
+		      (list (cons field-key field-val))))
+	(setq previous next)
+	(if (> (point) end)
+	    (setq done t))))
+    (append `(("key" . ,bibkey)) fields)))
+
+    ;; (while (and (not done)
+		;; (setq next (bibtex-next-field 1))
+		;; (setq next (bibtex-next-field 1))
+		;; (not (string= next previous))
+		;; (not (string= next "Entry key")))
+      ;; (let* ((field-info (bibtex-find-text-internal t nil t))
+	     ;; (field-key (when field-info
+			  ;; (downcase
+			   ;; (car field-info))))
+	     ;; (end-of-field (nth 2 field-info))
+	     ;; (field-val (when field-info
+			  ;; (replace-regexp-in-string
+			   ;; "[\n}{]*" ""
+			   ;; (buffer-substring-no-properties
+			    ;; (nth 1 field-info)
+			    ;; end-of-field)))))
+	;; (setq fields
+	      ;; (append fields
+		      ;; (list (cons field-key field-val))))
+	;; (setq previous next)
+	;; (if (> (point) end)
+	    ;; (setq done t))))
+    ;; (append `(("key" . ,bibkey)) fields)))
+
+;; (when plain
+;; (insert "\n**** Plain\n"
+;; (replace-regexp-in-string "\\[1\\]" ""
+;; (car (split-string plain "=+")))))
+;; (insert "\n**** BibTeX \n")))
+;; (if (eq cmode 'org-mode)
+;; (let ((parsed-text (buffer-string)))
+;; (switch-to-buffer cbuf)
+;; (insert parsed-text))
+;; (copy-region-as-kill (point-min) (point-max))
+;; (pop-to-buffer cbuf)
+;; (message "Buffer-string copied to kill-ring"))))
       
   
 (defun superman-bibtex2text (bib-string)

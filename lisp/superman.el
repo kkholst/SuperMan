@@ -307,6 +307,7 @@ the contents of the file `superman-profile' which is found in the directory `sup
 
 
 (defun superman-todo (&optional project)
+  "Show todo list for PROJECT."
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-TODO*"))
 	(org-agenda-sticky nil)
@@ -681,6 +682,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 		nil))))))
 
 (defun superman-format-agenda (&optional balls redo title buttons by)
+  "Workhorse for `superman-todo'."
   (let ((balls (or balls superman-agenda-balls))
 	;; (redo-cmd org-agenda-redo-command)
 	(count 0)

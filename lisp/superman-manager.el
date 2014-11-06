@@ -279,19 +279,18 @@ and an action a one-optional-argument function which must return a buffer.")
   :keymap 'superman-manager-mode-map
   (setq superman-manager-mode
 	(not (or (and (null arg) superman-manager-mode)
-		 (<= (prefix-numeric-value arg) 0))))    
+		 (<= (prefix-numeric-value arg) 0))))
   (add-hook 'after-save-hook 'superman-refresh nil 'local))
 
 (define-key superman-manager-mode-map [(meta return)] 'superman-return)
 (define-key superman-manager-mode-map [f1] 'superman-manager)
 
-(add-hook 'find-file-hooks 
+(add-hook 'find-file-hook 
 	  (lambda ()
 	    (let ((file (buffer-file-name)))
 	      (when (and file (equal file (expand-file-name superman-profile)))
-		(setq org-todo-keywords-1 '("ACTIVE" "PENDING" "WAITING" "SLEEPING" "DONE" "CANCELED" "ZOMBI"))
+		;; (setq org-todo-keywords-1 '("ACTIVE" "PENDING" "WAITING" "SLEEPING" "DONE" "CANCELED" "ZOMBI"))
 		(superman-manager-mode)))))
-
 
 (defun superman-goto-project-manager ()
   (interactive)
@@ -350,6 +349,16 @@ and an action a one-optional-argument function which must return a buffer.")
       (if (stringp prop)
 	  (replace-regexp-in-string "[ \t]+$" "" prop)))))
 
+(defun superman-get-text-property (marker property)
+  "Return text-property at marker."
+  (if (markerp marker)
+      (with-current-buffer (marker-buffer marker)
+	(get-text-property (marker-position marker)
+			   property))
+    (progn
+      (message "Cannot see a marker here")
+      nil)))
+
 (defun superman-get-property (pom property &optional inherit literal-nil)
   "Read property and remove trailing whitespace."
   (let* ((case-fold-search t)
@@ -406,7 +415,7 @@ we find the `supermanual' and other helpful materials.")
     (set-buffer (find-file-noselect superman-profile))
     (show-all)
     (widen)
-    (unless (superman-manager-mode 1))
+    (superman-manager-mode 1)
     (save-buffer)
     (goto-char (point-min))
     (while (superman-forward-project)
@@ -454,12 +463,13 @@ we find the `supermanual' and other helpful materials.")
   (interactive)
   (let* ((dir (read-directory-name "Create temporary project for directory: "))
 	 (name (file-name-nondirectory (replace-regexp-in-string "/$" "" dir)))
-	 (index-buffer (get-buffer-create (concat "*Superman-" name "*.org"))))
+	 (index-buffer (get-buffer-create (concat "*Superman-" name "*.org")))
+	 pro)
     (set-text-properties 0 (length name) nil name)
     (set-buffer index-buffer)
     (org-mode)
-    (add-to-list 'superman-project-alist
-		 (list name
+    ;; (add-to-list 'superman-project-alist
+    (setq pro (list name
 		       (list (cons "location"  dir)
 			     (cons "index" index-buffer)
 			     (cons "category" "Temp")
@@ -470,7 +480,8 @@ we find the `supermanual' and other helpful materials.")
 			     (cons "config" nil)
 			     (cons 'todo nil)
 			     (cons "publish-directory" nil))))
-    (superman-view-project (assoc name superman-project-alist))
+    (superman-view-project pro t)
+    ;; (assoc name superman-project-alist))
     (if (superman-git-p dir) (superman-display-git-cycle)
       (superman-display-file-list dir))))
 	 
@@ -670,9 +681,9 @@ project directory tree to the trash."
    (read-string "NickName for project: "
 		(nth 4 (org-heading-components)))))
 
-(defun superman-set-others (project)
+(defun superman-set-others (&optional project ask)
   (interactive)
-  (let* ((pro (or project (superman-get-project project)))
+  (let* ((pro (or project (superman-get-project project ask)))
 	 (others (superman-get-others pro))
 	 (init (if others (concat others ", ") "")))
     (if pro
@@ -922,7 +933,7 @@ If NOSELECT is set return the project."
   (cdr (assoc el (cadr project))))
 
 (defun superman-get-index (project)
-"Extract the index file of PROJECT."
+  "Extract the index file of PROJECT."
   (cdr (assoc "index" (cadr project))))
 
 (defun superman-get-git (project)
