@@ -25,6 +25,7 @@
 
 ;;{{{ variables
 
+
 (defvar superman-cmd-git "git")
 (defvar superman-git-ignore "" "Decides about which files to include and which to exclude.
 See M-x manual-entry RET gitignore.

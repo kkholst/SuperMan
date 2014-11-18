@@ -31,12 +31,6 @@
 (defvar superman-setup-scene-hook nil
   "Hook run by `superman-capture-whatever'
 just before the capture buffer is given to the user.")
-(defvar superman-capture-before-clean-scene-hook nil
-  "Hook run by `superman-clean-scene'
-just before the capture buffer is cleaned.")
-(defvar superman-capture-after-clean-scene-hook nil
-  "Hook run by `superman-clean-scene'
-just before the capture buffer is killed.")
 
 (defvar superman-capture-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
@@ -138,8 +132,8 @@ by `superman-quit-scene' instead of SCENE.
 
 CLEAN-HOOK and QUIT-HOOK are functions that are stored in the capture buffer
 in form of text-properties at the point-min and called by `superman-clean-scene'
-and `superman-quit-scene' just before `superman-capture-before-clean-scene-hook'
-and before killing the buffer, respectively.
+just before `superman-capture-before-clean-scene-hook'
+and by `superman-quit-scene' just before killing the buffer.
 
 See also `superman-capture-whatever' for the other arguments."
   (interactive)
@@ -160,13 +154,15 @@ See also `superman-capture-whatever' for the other arguments."
 				 (progn (switch-to-buffer
 					 (marker-buffer heading-or-marker))
 					(goto-char heading-or-marker)
-					(org-narrow-to-subtree)
-					(end-of-line)
-					(if (outline-next-heading)
-					    (beginning-of-line)
-					  (goto-char (point-max)))
-					(widen)
-					(point-marker))))
+					(if (ignore-errors (org-narrow-to-subtree))
+					    (progn
+					      (end-of-line)
+					      (if (outline-next-heading)
+						  (beginning-of-line)
+						(goto-char (point-max)))
+					      (widen)
+					      (point-marker))
+					  (point-marker)))))
 			;; append item to the end of index file
 			(find-file (superman-get-index project))
 			(widen)
@@ -208,7 +204,7 @@ differnent ways:
  - quit calls `superman-quit-scene'
 
 See `superman-capture' for the other arguments."
- (let* ((level (or level superman-item-level))
+(let* ((level (or level superman-item-level))
        (kill-whole-line t)
        body-start
        (body (or body ""))
@@ -232,12 +228,12 @@ See `superman-capture' for the other arguments."
   (goto-char (point-min))
   (insert title)
   (when scene  
-    (put-text-property (point-at-bol) (point-at-eol) 'scene scene))
+    (put-text-property (point-min) (1+ (point-min)) 'scene scene))
   (when quit-scene
-    (put-text-property (point-at-bol) (point-at-eol) 'quit-scene quit-scene))
+    (put-text-property (point-min) (1+ (point-min)) 'quit-scene quit-scene))
   (when edit
-    (put-text-property (point-at-bol) (point-at-eol) 'edit t))
-  (put-text-property (point-at-bol) (point-at-eol) 'type 'capture)
+    (put-text-property (point-min) (1+ (point-min)) 'edit t))
+  (put-text-property (point-min) (1+ (point-min)) 'type 'capture)
   (insert "\n\n")
   (unless read-only
     (insert (superman-make-button
@@ -248,8 +244,8 @@ See `superman-capture' for the other arguments."
 	    "\t"))
   (insert (superman-make-button
 	   (if read-only
-	       "Cancel (q)"
-	   "Cancel (C-c C-q)")
+	       "back (q)"
+	     "Cancel (C-c C-q)")
 	   'superman-quit-scene
 	   'superman-next-project-button-face
 	   (if read-only "Back" "Cancel")))
@@ -315,7 +311,12 @@ See `superman-capture' for the other arguments."
   (superman-capture-mode)
   (when read-only
     (setq buffer-read-only t))
-  (run-hooks 'superman-setup-scene-hook)))
+  (run-hooks 'superman-setup-scene-hook)
+  (let ((inhibit-read-only t))
+    (when clean-hook
+      (put-text-property (point-min) (1+ (point-min)) 'clean-hook clean-hook))
+    (when quit-hook
+      (put-text-property (point-min) (1+ (point-min)) 'quit-hook quit-hook)))))
 
 
 (defun superman-capture-show-context ()
@@ -427,7 +428,7 @@ at the requested destination and then reset the window configuration."
 	   next
 	   catch
 	   hidden-hook
-	   (capture-start (next-single-property-change (point-max) 'read-only))
+	   ;; (capture-start (previous-single-property-change (point-max) 'read-only))
 	   (pos-dest (next-single-property-change (point-min) 'destination))
 	   (dest (when pos-dest (get-text-property pos-dest 'destination))))
       (goto-char (point-min))
@@ -449,10 +450,9 @@ at the requested destination and then reset the window configuration."
       (when (superman-get-property (point) "GoogleCalendar" t nil)
 	(save-restriction
 	  (superman-google-export-appointment)))
-      ;; hook time
+      ;; run hidden hook 
       (when (setq hidden-hook (get-text-property (point-min) 'clean-hook))
 	(funcall hidden-hook))
-      (run-hooks 'superman-capture-before-clean-scene-hook)
       (goto-char (next-single-property-change (point-min) 'read-only))
       (skip-chars-forward "\n\t ")
       (setq catch (buffer-substring (point-at-bol)
@@ -461,10 +461,11 @@ at the requested destination and then reset the window configuration."
       (kill-buffer (current-buffer))
       (set-buffer (marker-buffer dest))
       (goto-char (marker-position dest))
-      (org-narrow-to-subtree)
       (if edit
-	  ;; if this is an edit replace the heading at destination
-	  (delete-region (point-min) (point-max))
+	  (progn (org-narrow-to-subtree)
+		 ;; if this is an edit replace the heading at destination
+		 (delete-region (point-min) (point-max)))
+	(ignore-errors (org-narrow-to-subtree))
 	(goto-char (point-max))
 	(insert "\n"))
       (insert catch)
@@ -476,7 +477,6 @@ at the requested destination and then reset the window configuration."
 	    ;; call function
 	    ((functionp scene) (funcall scene))
 	    (t nil))
-      (run-hooks 'superman-capture-after-clean-scene-hook)
       (when (or superman-view-mode superman-mode) (superman-redo)))))
 
 (defun superman-quit-scene ()
@@ -488,7 +488,8 @@ point-min.
 If a file is associated with the current-buffer save it.
 "
   (interactive)
-  (let ((scene (get-text-property (point-min) 'scene)))
+  (let ((scene (or (get-text-property (point-min) 'quit-scene)
+		   (get-text-property (point-min) 'scene))))
     (when (setq hidden-hook (get-text-property (point-min) 'quit-hook))
       (funcall hidden-hook))
     (kill-buffer (current-buffer))
@@ -615,6 +616,48 @@ Creates the project directory and index file."
     (superman-switch-to-project pro)
     (superman-switch-config pro nil "PROJECT")))
 
+(defun superman-capture-superman ()
+  "Set up superman profile."
+  (unless superman-profile ;; user set the name but file does not exist yet.
+    (stop "You need to set the variable superman-profile to a file-name in your .emacs file."))
+  (find-file superman-profile)
+  (goto-char (point-min))
+  (let* ((profile-buffer (buffer-name (current-buffer)))
+	 (marker (point-marker))
+	 (quit-scene (current-window-configuration))
+	 (welcome
+	  (concat
+	   (superman-make-button "Initialize the SuperMan(ager)" nil 'superman-project-button-face)
+	   "\n\nCheck and adjust the setup below, then press the Save button or press C-c C-c.\nThe profile will be saved in the file:\n\n"
+	   (superman-make-button superman-profile nil 'superman-capture-button-face)))
+	 (clean-hook
+	  `(lambda ()
+	     (goto-char (point-min))
+	     (re-search-forward "*[ ]+SupermanSetup" nil t)
+	     ;; read-off value of superman-home
+	     ;; (superman-parse-setup (point) (superman-defaults) nil)
+	     ;; create directory if necessary
+	     (unless (file-exists-p (file-name-directory superman-profile))
+	       (make-directory (file-name-directory superman-profile)  't))
+	     ;; save profile
+	     (save-excursion
+	       (find-file superman-profile)
+	       (save-buffer)))))
+    (superman-capture-whatever
+     marker
+     welcome
+     1
+     (concat "\n" (superman-set-up-defaults))
+     `(("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
+       (hdr "Superman(ager)"))
+     nil ;; this is not an edit
+     'superman ;; scene
+     nil ;; read-only
+     quit-scene ;; quit-scene
+     clean-hook ;; clean-hook
+     nil ;; quit-hook
+     )))
+
 (defun superman-capture-project (&optional nickname category loc)
   "Create a new project. If CATEGORY is nil prompt for project category
 with completion in existing categories. If NICKNAME is nil prompt for nickname.
@@ -644,7 +687,7 @@ the new project and call `superman-delete-project' (shortcut: x)
 					 (list x))
 				       (superman-parse-project-categories))
 			       nil nil)))
-			 (if (string= cat "") "CatWoman" cat))))
+			 (if (string= cat "") "Krypton" cat))))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (loc (or loc
 		  (save-excursion
@@ -668,19 +711,19 @@ the new project and call `superman-delete-project' (shortcut: x)
      (or marker category)
      "Project"
      nil
-     (("Nickname" ,nickname)
-      ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
-      ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
-      ("Others" "")
-      ;; ("Location" ("" (required t)))
-      ("Location" ,loc)
-      (hdr ,(concat "ACTIVE " nickname))
-      ("Index" "")
-      ("Category" ,category)) 
-    superman-project-level
-    'superman-view-new-project-hook ;; sets the scene to PROJECT 
-    scene ;; when capture is canceled
-    )))
+     `(("Nickname" ,nickname)
+       ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
+       ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
+       ("Others" "")
+       ;; ("Location" ("" (required t)))
+       ("Location" ,loc)
+       (hdr ,(concat "ACTIVE " nickname))
+       ("Index" "")
+       ("Category" ,category)) 
+     superman-project-level
+     'superman-view-new-project-hook ;; sets the scene to PROJECT 
+     scene ;; when capture is canceled
+     )))
 
 
 (defun superman-capture-file-at-point ()

@@ -1356,8 +1356,7 @@ to refresh the view.
 		    (superman-parse-cats ibuf 1)))
 	     ;; identify appropriate buttons
 	     (buttons
-	      (save-excursion
-		(switch-to-buffer ibuf)
+	      (with-current-buffer ibuf
 		(goto-char (point-min))
 		(let ((b-string))
 		  (when (re-search-forward ":CaptureButtons:" nil t)
@@ -1366,7 +1365,13 @@ to refresh the view.
 			(mapcar #'(lambda (x)
 				    (split-string x "|"))
 				(split-string (replace-regexp-in-string
-					       "[ \t]*" "" b-string) "," t)) "nil")))))
+					       "^[ \t]*\\|[ \t]$" "" b-string) "," t)) "nil")))))
+	     ;; maybe disable config buttons
+	     (config-buttons nil)
+	      ;; (with-current-buffer
+		  ;; (goto-char (point-min))
+		;; (when (re-search-forward ":ConfigButtons:" nil t))))
+		  ;; (superman-get-property (point) "ConfigButtons" nil))))
 	     (font-lock-global-modes nil)
 	     (org-startup-folded nil))
 	(set-text-properties 0 (length nick) nil nick)
@@ -1402,7 +1407,8 @@ to refresh the view.
 	    (insert others "\n")))
 	;; (when gitp
 	;; (insert (superman-view-control pro))
-	(superman-view-insert-config-buttons pro)
+	(unless config-buttons
+	  (superman-view-insert-config-buttons pro))
 	(superman-view-insert-unison-buttons pro)
 	;; action buttons
 	(unless (and (stringp buttons) (string= buttons "nil"))
@@ -2235,7 +2241,8 @@ disable editing."
   (let* ((obuf (current-buffer))
 	 (superman-setup-scene-hook
 	  (if read-only
-	      (append '(superman-view-item-mode) 'superman-setup-scene-hook)
+	      (append '(superman-view-item-mode)
+		      'superman-setup-scene-hook)
 	    superman-setup-scene-hook))
 	 (marker
 	  (or marker
@@ -2289,102 +2296,15 @@ disable editing."
 	(org-narrow-to-subtree)
 	(setq item (buffer-substring (point-min) (point-max)))
 	(widen))
-       (error "dont know what to copy"))
+       (t (error "dont know what to copy")))
       (superman-capture-whatever
        marker
        (superman-make-button
 	(concat  "Superman " (if read-only "views" "edits") " item")
 	nil 'superman-capture-button-face)
-       0 ;; level 0 
+       0 ;; level 0 because we are pasting a heading in
        item
        nil 'edit scene read-only nil nil nil))))
-;; (if (not read-only)
-;; (switch-to-buffer
-;; (make-indirect-buffer (marker-buffer marker) E-buf))
-;; (delete-other-windows)
-;; (pop-to-buffer
-;; (make-indirect-buffer (marker-buffer marker) E-buf)))
-;; ;; narrow to section
-;; (org-narrow-to-subtree)
-;; ;; narrow to item
-;; (when (and cat-point
-;; (not catp)
-;; (outline-next-heading))
-;; (narrow-to-region (point-min) (point)))
-;; (unless read-only
-;; (delete-other-windows))
-;; (org-mode)
-;; (font-lock-mode -1)
-;; (show-all)
-;; (goto-char (point-min))
-;; (insert title)
-;; (put-text-property (point-at-bol) (point-at-eol) 'scene scene)
-;; (put-text-property (point-at-bol) (point-at-eol) 'type 'edit)
-;; (if read-only
-;; ;; (message "Press q to leave view mode.")
-;; (insert "\n\n" (superman-make-button
-;; "Back (q)"
-;; 'superman-quit-scene
-;; 'superman-next-project-button-face "Back"))
-;; (insert "\n\n"
-;; (superman-make-button "Save (C-c C-c)"
-;; 'superman-clean-scene
-;; 'superman-next-project-button-face "Save edit")
-;; "\t" (superman-make-button
-;; "Cancel (C-c C-q)" 'superman-quit-scene
-;; 'superman-next-project-button-face "Cancel edit")))
-;; ;; (insert (superman-make-button
-;; ;; "Destination:"
-;; ;; 'superman-change-destination
-;; ;; 'superman-header-button-face "Change destination")
-;; ;; " Position " (int-to-string (marker-position marker))
-;; ;; " in buffer " (buffer-name (marker-buffer marker)))
-;; ;; (put-text-property (point-at-bol) (1+ (point-at-bol)) 'destination marker)
-;; ;; (insert "\t" (superman-make-button
-;; ;; "Show context"
-;; ;; 'superman-capture-show-context
-;; ;; 'superman-header-button-face "Show some context around destination"))
-;; (superman-capture-mode)
-;; (insert "\n\n")
-;; (put-text-property (point) (point-at-eol) 'edit-point (point))
-;; (unless catp
-;; (if (re-search-forward org-property-start-re nil t)
-;; (progn
-;; (setq range (org-get-property-block))
-;; (goto-char (car range))
-;; (while (re-search-forward
-;; (org-re "^[ \t]*:\\([-[:alnum:]_]+\\):")
-;; (cdr range) t)
-;; (put-text-property (point) (+ (point) 1) 'prop-marker (point))
-;; (add-to-list 'used-props (org-match-string-no-properties 1)))
-;; (goto-char (cdr range))
-;; (forward-line -1)
-;; (end-of-line))
-;; (outline-next-heading)
-;; (end-of-line)
-;; (insert "\n:PROPERTIES:\n:END:\n")
-;; (forward-line -2)
-;; (end-of-line))
-;; (while all-props
-;; (when (not (member (car all-props) used-props))
-;; (insert "\n:" (car all-props) ": ")
-;; (put-text-property (- (point) 1) (point) 'prop-marker (point)))
-;; (setq all-props (cdr all-props))))
-;; (goto-char (next-single-property-change (point-min) 'edit-point))
-;; (end-of-line)
-;; (when free
-;; (let ((diff
-;; (with-current-buffer
-;; obuf
-;; (- (point)
-;; (or
-;; (previous-single-property-change (point-at-eol) 'head)
-;; 0)))))
-;; (org-end-of-meta-data-and-drawers)
-;; (forward-char diff)))
-;; (if read-only
-;; (superman-view-item-mode)
-;; (superman-capture-mode)))))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
   "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.

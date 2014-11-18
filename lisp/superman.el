@@ -29,164 +29,11 @@
 
 ;;; Code:
 
-;;{{{
-
-;; (defvar superman '(("SuperMan" ("location" . (file-name-directory superman-profile))
-;; ("index" . superman-profile)
-;; ("category" . nil)
-;; ("config" . nil)
-;; ("state" . "ACTIVE"))))
-
-(defvar superman-balls
-  '((todo ("width" 9) ("face" superman-get-todo-face))
-    (priority ("width" 8) ("face" superman-get-priority-face))
-    (hdr ("width" 27) ("face" font-lock-function-name-face)
-	 ("name" "Description")
-	 ("fun" superman-trim-project-nickname))
-    ("marker" ("width" 33)
-     ("name" "Project")
-     ("face" superman-next-project-button-face)
-     ("fun" superman-make-project-button))
-    ("lastvisit" ("fun" superman-trim-date)
-     ("width" 17)
-     ("face" font-lock-type-face)
-     ("sort-key" t))
-    ("others" ("width" 66) ("face" font-lock-keyword-face)))
-  "Definition of columns to be shown in overview buffer of superman projects.")
-
-  ;; "Returns a super project for project management"
-  ;; `("SuperManager"
-    ;; (("location" . ,superman-default-directory)
-     ;; ("index" . ,superman-file)
-     ;; ("category" . "Super")
-     ;; ("state" . "ACTIVE")
-     ;; ("config" . "INDEX | AGENDA / TODO"))))
-
-(defun superman-return ()
-  "Switch to project at point."
-  (interactive)
-  (let ((pro (superman-property-at-point
-	      (superman-property 'nickname) nil)))
-    (superman-switch-to-project pro)))
-
-(defun superman-get-priority-face (kwd)
-  "Get face for priority symbols"
-  (if (< (length kwd) 3)
-     'org-priority
-    (or (org-face-from-face-or-color
-	 'priority 'org-priority
-	 (cdr (assoc (string-to-char
-		      (substring kwd 2 3))
-		     org-priority-faces)))
-	'org-priority)))
-
-(defun superman-get-todo-face (kwd)
-  "A slight modification of `org-get-tag-face'"
-  (or (org-face-from-face-or-color
-       'todo 'org-todo (cdr (assoc kwd org-todo-keyword-faces)))
-      (and (member kwd org-done-keywords) 'org-done)
-      'org-todo))
-
-
-;;}}}
 ;;{{{ superman 
-
-(defun superman-popup-tip (msg)
-  (save-excursion
-    (goto-char (point-min))
-    (tooltip-show msg)))
-;;    (popup-tip msg)))
-
-(defvar superman-help-fun 'superman-popup-tip 
-  "Function used to display help. Possible values 'tooltip-show or 'popup-tip (depends on popup.el)") 
-
-
-(defun superman-make-header ()
-  "Insert header into superman project view buffer"
-  (goto-char (point-min))
-  (insert "SuperMan(ager)")
-  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
-  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
-  (put-text-property (point-at-bol) (point-at-eol) 'index superman-profile)
-  (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
-  (insert
-   "  "
-   (superman-make-button "Agenda"
-			 'superman-agenda
-			 'superman-next-project-button-face
-			 "Agenda across all projects")
-   "  "
-   (superman-make-button "Calendar"
-			 'superman-calendar
-			 'superman-next-project-button-face
-			 "Project-wide calendar")
-   "  "
-   (superman-make-button "TodoList"
-			 'superman-todo
-			 'superman-next-project-button-face
-			 "TodoList across all projects")
-   "\n"))
-
-  ;; (insert "\n\nKeys: \n")
-  ;; (forward-line -1)
-  ;; (put-text-property (point) (length "Keys: ") 'face 'org-level-2)
-  ;; (end-of-line)
-  ;; (insert "N: new project RET: select project")
-  ;; (put-text-property (point-at-bol) (+ (point-at-bol) (length "Keys: ")) 'face 'org-level-2))
-
-
-(defun superman-categorize-projects (&optional cats balls)
-  "Parse the file `superman-profile' and return a categorized project-alist."
-  (interactive)
-  (save-excursion
-    (setq superman-project-alist nil)
-    (set-buffer (find-file-noselect superman-profile))
-    (unless (superman-manager-mode 1))
-    (save-buffer)
-    (goto-char (point-min))
-    (while (superman-forward-project)
-      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
-	     (category (superman-get-property nil (superman-property 'category) 'inherit))
-	     (others (superman-get-property nil (superman-property 'others) nil))
-	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
-	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
-		       (nth 4 (org-heading-components))))
-	     (marker (copy-marker (point)))
-	     (hdr  (org-get-heading t t))
-	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
-	     (config (superman-get-property nil (superman-property 'config) 'inherit))
-	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (superman-get-property nil (superman-property 'index) nil)
-			(let ((default-org-home
-				(concat (file-name-as-directory loc)
-					name
-					superman-org-location)))
-			  ;; (make-directory default-org-home t)
-			  (concat (file-name-as-directory default-org-home) name ".org")))))
-	(set-text-properties 0 (length hdr) nil hdr)
-	;; (add-text-properties
-	;; 0 (length hdr)
-	;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
-	(unless (file-name-absolute-p index)
-	  (setq index
-		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-	(add-to-list 'superman-project-alist
-		     (list name
-			   (list (cons "location"  loc)
-				 (cons "index" index)
-				 (cons "category" category)
-				 (cons "others" others)
-				 (cons 'hdr hdr)
-				 (cons "marker" marker)				 
-				 (cons "lastvisit" lastvisit)
-				 (cons "config" config)
-				 (cons 'todo todo)
-				 (cons "publish-directory" publish-dir))))))
-    superman-project-alist))
-
+(defalias 'S 'superman)
 (defun superman ()
   "Function to control the list of active projects (`superman-project-alist'). It displays 
-the contents of the file `superman-profile' which is found in the directory `superman-home'."
+the contents of the file `superman-profile'."
   (interactive)
   (let* ((cats-buffer "*S*")
 	 (cats (superman-parse-project-categories))
@@ -204,7 +51,7 @@ the contents of the file `superman-profile' which is found in the directory `sup
     ;; parse projects by category using superman-balls
     (while projects
       (let* ((pro (car projects))
-	     (cat (or (cdr (assoc "category" (cadr pro))) "CatWoman"))
+	     (cat (or (cdr (assoc "category" (cadr pro))) "Krypton"))
 	     (m (- howmany-cats (length (member cat cats))))
 	     (tail (cdr (nth m cat-alist))))
 	(if tail
@@ -213,6 +60,19 @@ the contents of the file `superman-profile' which is found in the directory `sup
 	    (setcdr (nth m cat-alist) (list pro)))))
       (setq projects (cdr projects)))
     (insert "\n")
+    ;; project directory
+    (insert (superman-make-button
+	     "Set-up:" 'superman-show-setup
+	     'superman-header-button-face "Edit superman(ager) set-up")
+	    " "
+	    (superman-make-button
+	     "Edit" 'superman-edit-setup
+	     'superman-capture-button-face "Change superman(ager) set-up")
+	    " "
+	    (superman-make-button
+	     "Diagnose" 'superman-diagnose-setup
+	     'superman-capture-button-face "Diagnose superman set-up."))
+    ;; action buttons
     (superman-view-insert-action-buttons
      '(("New project" superman-capture-project)
        ("Meeting" superman-capture-meeting)
@@ -223,8 +83,8 @@ the contents of the file `superman-profile' which is found in the directory `sup
       (let* ((cat (car cat-alist))
 	     (cat-name (car cat))
 	     (cat-fun 'superman-tab)
-	      ;; `(lambda () (interactive)
-			 ;; (superman-capture-project nil ,cat-name)))
+	     ;; `(lambda () (interactive)
+	     ;; (superman-capture-project nil ,cat-name)))
 	     (tail (cdr cat)))
 	;; (insert "\n** " cat-name)
 	(insert "\n** "
@@ -264,48 +124,241 @@ the contents of the file `superman-profile' which is found in the directory `sup
   (superman-on)
   (setq buffer-read-only t))
 
+(defun superman-show-setup ()
+  (interactive)
+  (superman-edit-setup 'edit))
+
+;; FIXME
+(defun superman-edit-setup (&optional read-only)
+  "Edit heading Set-up in `superman-profile'"
+  (interactive)
+  (let* ((scene (current-window-configuration))
+	 marker
+	 current-set-up
+	 (superman-setup-scene-hook
+	  (if read-only
+	      (append '(superman-view-item-mode)
+		      'superman-setup-scene-hook)
+	    superman-setup-scene-hook))
+	 (clean-scene-hook #'(lambda ()
+			       (goto-char (point-min))
+			       ;; (outline-next-heading)
+			       (when (re-search-forward ":PROPERTIES:" nil t)
+				 (superman-parse-setup (point) (superman-defaults))))))
+    ;; find current set-up
+    (find-file superman-profile)
+    (widen)
+    (show-all)
+    (goto-char (point-min))
+    (if (re-search-forward "SupermanSetup" nil t)
+	(superman-parse-setup (point) (superman-defaults))
+      (while (looking-at "\\#\\+")
+	(forward-line 1))
+      (insert "\n")
+      (insert (superman-set-up-defaults)))
+    (org-back-to-heading)
+    (setq marker (point-marker)
+	  current-set-up
+	  (buffer-substring
+	   (point)
+	   (progn
+	     (org-end-of-subtree t t)
+	     (if (and (org-at-heading-p)
+		      (not (eobp))) (backward-char 1))
+	     (point))))
+    (superman-capture-whatever
+     marker
+     (superman-make-button
+      "Superman(ager) setup"
+      nil 'superman-capture-button-face)
+     0 ;; level 0 because we are pasting a heading in
+     current-set-up
+     nil (not read-only) scene read-only nil clean-scene-hook nil)))
+
+(defun superman-parse-setup (pom list &optional fill)
+  "Parse properties at point or marker POM and loop over 
+list. List contains (variable value) pairs. If a property matches the
+symbol-name of a variable, then the value of the variable is set to the value of the property.
+
+If FILL is non-nil fill property list with those elements of list that do not match
+the existing properties."
+  (let ((setup list))
+    (while setup
+      (let* ((el (car setup))
+	     (var (car el))
+	     (varname (symbol-name var))
+	     (value (superman-get-property pom varname nil)))
+	(if value
+	    (set var value)
+	  (when fill 
+	    (org-entry-put pom varname (cadr el)))))
+      (setq setup (cdr setup)))))
+
+(defun superman-set-up-defaults ()
+  (let ((props (apply #'concat
+		      (mapcar #'(lambda (d)
+				  (let ((thing (cadr d))
+					value)
+				    (concat ":" (symbol-name (car d)) ": "
+					    (cond
+					     ((ignore-errors (setq value (symbol-value (intern thing))))
+					      (cond ((symbolp value) (symbol-name value))
+						    ((integerp value) (int-to-string value))
+						    ((stringp value) value)))
+					     ((symbolp thing) (symbol-name thing))
+					     ((integerp thing) (int-to-string thing))
+					     ((stringp thing) thing))
+					    "\n")))
+			      (superman-defaults)))))
+    (concat
+     "*** SupermanSetup\n:PROPERTIES:\n"
+     props
+     ":END:\n")))
+
+(defun superman-defaults ()
+  "Create an alist of superman options."
+  (require 'superman-manager)
+  `((superman-default-directory ,superman-default-directory)
+    (superman-default-category ,(or superman-default-directory "Krypton"))
+    (superman-org-location ,superman-org-location)
+    (superman-project-kal-el ,superman-project-kal-el)
+    (superman-cmd-git ,superman-cmd-git)
+    ;; (superman-switch-to-project [f2])
+    (superman-save-buffers ,superman-save-buffers)
+    (superman-select-project-completion-format
+     ,superman-select-project-completion-format)))
+
+  
+   
+(defun superman-make-header ()
+  "Insert header into superman project view buffer"
+  (goto-char (point-min))
+  (insert "SuperMan(ager)")
+  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
+  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+  (put-text-property (point-at-bol) (point-at-eol) 'index superman-profile)
+  (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
+  (insert
+   "  "
+   (superman-make-button "Agenda"
+			 'superman-agenda
+			 'superman-next-project-button-face
+			 "Agenda across all projects")
+   "  "
+   (superman-make-button "Calendar"
+			 'superman-calendar
+			 'superman-next-project-button-face
+			 "Project-wide calendar")
+   "  "
+   (superman-make-button "TodoList"
+			 'superman-todo
+			 'superman-next-project-button-face
+			 "TodoList across all projects")
+   "\n"))
+
+;;}}}
+;;{{{ balls and format
+
+(defvar superman-balls
+  '((todo ("width" 9) ("face" superman-get-todo-face))
+    (priority ("width" 8) ("face" superman-get-priority-face))
+    (hdr ("width" 27) ("face" font-lock-function-name-face)
+	 ("name" "Description")
+	 ("fun" superman-trim-project-nickname))
+    ("marker" ("width" 33)
+     ("name" "Project")
+     ("face" superman-next-project-button-face)
+     ("fun" superman-make-project-button))
+    ("lastvisit" ("fun" superman-trim-date)
+     ("width" 17)
+     ("face" font-lock-type-face)
+     ("sort-key" t))
+    ("others" ("width" 66) ("face" font-lock-keyword-face)))
+  "Definition of columns to be shown in overview buffer of superman projects.")
+
 
 (defun superman-format-loop (list balls)
   "Loop over list and insert all items formatted according to balls."
   (while list
-    (let* ((item (superman-format-thing
-		  (car list)
-		  balls)))
+    (let* ((item (superman-format-thing (car list) balls)))
       (insert item)
       (end-of-line)
       (insert "\n")
       (setq list (cdr list)))))
 
+(defun superman-get-priority-face (kwd)
+  "Get face for priority symbols"
+  (if (< (length kwd) 3)
+     'org-priority
+    (or (org-face-from-face-or-color
+	 'priority 'org-priority
+	 (cdr (assoc (string-to-char
+		      (substring kwd 2 3))
+		     org-priority-faces)))
+	'org-priority)))
+
+(defun superman-get-todo-face (kwd)
+  "A slight modification of `org-get-tag-face'"
+  (or (org-face-from-face-or-color
+       'todo 'org-todo (cdr (assoc kwd org-todo-keyword-faces)))
+      (and (member kwd org-done-keywords) 'org-done)
+      'org-todo))
+
 ;;}}}
-;;{{{ cycle view 
-
-(defvar superman-views nil)
-(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-agenda))
-
-(defun superman-change-view  (&optional arg)
-  (interactive "p")
-  ;; cycle view list
-  (when (or (eq major-mode 'org-agenda-mode)
-	    superman-view-mode)
-    (let ((current  (car superman-views))
-	  (rest  (cdr superman-views)))
-      (setq superman-views rest)
-      (add-to-list 'superman-views current 'append)))
-  (eval `(,(car superman-views)))
-  (superman-view-mode-on)
-  (superman-on))
-  
-(defalias 'S 'superman)
-(defalias 'S-todo 'superman-todo)
-;; (defalias 'S-todo-B 'superman-todo-B)
+;;{{{ Agenda
+(defun superman-make-agenda-title (string face)
+  (put-text-property 0 (length string) 'face face string)
+  string)
 (defalias 'S-agenda 'superman-agenda)
-
-
-(defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
-
+(defun superman-agenda (&optional project)
+  "Similar to `superman-calendar' but does not show
+all dates."
+  (interactive)
+  (let ((org-agenda-buffer-name "*SuperMan-Agenda*")
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands nil))
+    (add-to-list 'org-agenda-custom-commands
+		 '("A" "Superman agenda"
+		   ((agenda "" ((org-agenda-files (superman-index-list)))))
+		   ((org-agenda-compact-blocks nil)
+		    (org-agenda-show-all-dates nil)
+		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-buffer-name "*SuperMan-Agenda*")
+		    (org-agenda-this-buffer-name "*SuperMan-Agenda*")
+		    (org-agenda-overriding-header
+		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
+			     "  "
+			     (superman-make-button "TodoList"
+						   'superman-todo
+						   'superman-next-project-button-face
+						   "TodoList across all projects")
+			     "  "
+			     (superman-make-button "Calendar"
+						   'superman-calendar
+						   'superman-next-project-button-face
+						   "Project-wide calendar")
+			     "  "
+			     (superman-make-button "Projects"
+						   'superman
+						   'superman-next-project-button-face
+						   "List of projects")
+			     "\n"
+			     (superman-make-button "\nClick here to add a Meeting\n"
+						   '(lambda ()
+						      (interactive)
+						      (superman-capture-meeting
+						       nil nil t))
+						   'superman-capture-button-face
+						   "Add a meeting to calendar")
+			     "\n")))))
+    (push ?A unread-command-events)
+    (call-interactively 'org-agenda)))
+;; (superman-clean-buffer-list S-index-list)))
+;;}}}
+;;{{{ Todo lists
 (defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
-
-
+(defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
+(defalias 'S-todo 'superman-todo)
 (defun superman-todo (&optional project)
   "Show todo list for PROJECT."
   (interactive)
@@ -354,12 +407,8 @@ the contents of the file `superman-profile' which is found in the directory `sup
 			 )))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
-
-
-(defun superman-make-agenda-title (string face)
-  (put-text-property 0 (length string) 'face face string)
-  string)
-
+;;}}}
+;;{{{ Calendar
 
 (defun superman-calendar (&optional project)
   "Show events from all projects in a calendar view."
@@ -409,52 +458,23 @@ the contents of the file `superman-profile' which is found in the directory `sup
     (push ?C unread-command-events)
     (call-interactively 'org-agenda)))
 
-    
-(defun superman-agenda (&optional project)
-  "Similar to `superman-calendar' but does not show
-all dates."
-  (interactive)
-  (let ((org-agenda-buffer-name "*SuperMan-Agenda*")
-	(org-agenda-sticky nil)
-	(org-agenda-custom-commands nil))
-    (add-to-list 'org-agenda-custom-commands
-		 '("A" "Superman agenda"
-		   ((agenda "" ((org-agenda-files (superman-index-list)))))
-		   ((org-agenda-compact-blocks nil)
-		    (org-agenda-show-all-dates nil)
-		    (org-agenda-window-setup 'current-window)
-		    (org-agenda-buffer-name "*SuperMan-Agenda*")
-		    (org-agenda-this-buffer-name "*SuperMan-Agenda*")
-		    (org-agenda-overriding-header
-		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
-			     "  "
-			     (superman-make-button "TodoList"
-						   'superman-todo
-						   'superman-next-project-button-face
-						   "TodoList across all projects")
-			     "  "
-			     (superman-make-button "Calendar"
-						   'superman-calendar
-						   'superman-next-project-button-face
-						   "Project-wide calendar")
-			     "  "
-			     (superman-make-button "Projects"
-						   'superman
-						   'superman-next-project-button-face
-						   "List of projects")
-			     "\n"
-			     (superman-make-button "\nClick here to add a Meeting\n"
-						   '(lambda ()
-						      (interactive)
-						      (superman-capture-meeting
-						       nil nil t))
-						   'superman-capture-button-face
-						   "Add a meeting to calendar")
-			     "\n")))))
-    (push ?A unread-command-events)
-    (call-interactively 'org-agenda)))
-;; (superman-clean-buffer-list S-index-list)))
+;;}}}
+;;{{{ Cycle view 
 
+(defvar superman-views nil)
+(setq superman-views (list 'S 'S-todo 'S-todo-B 'S-agenda))
+(defun superman-change-view  (&optional arg)
+  (interactive "p")
+  ;; cycle view list
+  (when (or (eq major-mode 'org-agenda-mode)
+	    superman-view-mode)
+    (let ((current  (car superman-views))
+	  (rest  (cdr superman-views)))
+      (setq superman-views rest)
+      (add-to-list 'superman-views current 'append)))
+  (eval `(,(car superman-views)))
+  (superman-view-mode-on)
+  (superman-on))
 ;;}}}
 ;;{{{ superman-todo-mode-map
 (defvar superman-todo-mode-map (make-sparse-keymap)
@@ -470,6 +490,7 @@ for git and other actions like commit, history search and pretty log-todo."
      :lighter " *S-todo*"
      :group 'org
      :keymap 'superman-todo-mode-map)
+
 
 (defun superman-todo-mode-on ()
   (interactive)
@@ -773,12 +794,13 @@ Enabling superman mode electrifies the superman buffer for project management."
       ;; (setq org-files (cdr org-files)))))
 
 (defun superman-visit-project ()
+  "Goto the definition of the project in `superman-profile'"
   (interactive)
   (let* ((pom (get-text-property (point-at-bol) 'superman-item-marker))
-	(home superman-profile)
-	(ibuf (if pom (marker-buffer pom)
-		(get-file-buffer home)))
-	(iwin (when ibuf (get-buffer-window ibuf nil))))
+	 (home superman-profile)
+	 (ibuf (if pom (marker-buffer pom)
+		 (get-file-buffer home)))
+	 (iwin (when ibuf (get-buffer-window ibuf nil))))
     (if (and ibuf iwin)
 	(select-window (get-buffer-window ibuf nil))
       (split-window-vertically)
@@ -786,18 +808,72 @@ Enabling superman mode electrifies the superman buffer for project management."
       (if ibuf (switch-to-buffer ibuf)
 	(find-file home)))
     (when pom (goto-char pom))))
-		 
+
+(defun superman-return ()
+  "Switch to project at point."
+  (interactive)
+  (let ((pro (superman-property-at-point
+	      (superman-property 'nickname) nil)))
+    (superman-switch-to-project pro)))
+
 (define-key superman-mode-map [return] 'superman-return) 
-;; (define-key superman-mode-map "N" 'superman-new-project)
-;; (define-key superman-mode-map [(f1)] 'superman-switch-to-project)
-;; (define-key superman-mode-map " " 'superman-switch-to-project)
 (define-key superman-mode-map "i" 'superman-visit-project)
 (define-key superman-mode-map "x" 'superman-delete-project)
 (define-key superman-mode-map "V" 'superman-change-view)
 (define-key superman-mode-map "N" 'superman-new-project)
 (define-key superman-mode-map "?" 'supermanual)
-
 ;;}}}  
+;;{{{ forgotton/not used/useful?
+
+(defun superman-categorize-projects (&optional cats balls)
+  "Parse the file `superman-profile' and return a categorized project-alist."
+  (interactive)
+  (save-excursion
+    (setq superman-project-alist nil)
+    (set-buffer (find-file-noselect superman-profile))
+    (unless (superman-manager-mode 1))
+    (save-buffer)
+    (goto-char (point-min))
+    (while (superman-forward-project)
+      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
+	     (category (superman-get-property nil (superman-property 'category) 'inherit))
+	     (others (superman-get-property nil (superman-property 'others) nil))
+	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
+	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
+		       (nth 4 (org-heading-components))))
+	     (marker (copy-marker (point)))
+	     (hdr  (org-get-heading t t))
+	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
+	     (config (superman-get-property nil (superman-property 'config) 'inherit))
+	     (todo (substring-no-properties (or (org-get-todo-state) "")))
+	     (index (or (superman-get-property nil (superman-property 'index) nil)
+			(let ((default-org-home
+				(concat (file-name-as-directory loc)
+					name
+					superman-org-location)))
+			  ;; (make-directory default-org-home t)
+			  (concat (file-name-as-directory default-org-home) name ".org")))))
+	(set-text-properties 0 (length hdr) nil hdr)
+	;; (add-text-properties
+	;; 0 (length hdr)
+	;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
+	(unless (file-name-absolute-p index)
+	  (setq index
+		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+	(add-to-list 'superman-project-alist
+		     (list name
+			   (list (cons "location"  loc)
+				 (cons "index" index)
+				 (cons "category" category)
+				 (cons "others" others)
+				 (cons 'hdr hdr)
+				 (cons "marker" marker)				 
+				 (cons "lastvisit" lastvisit)
+				 (cons "config" config)
+				 (cons 'todo todo)
+				 (cons "publish-directory" publish-dir))))))
+    superman-project-alist))
+;;}}}
 
 (provide 'superman)
 ;;; superman.el ends here

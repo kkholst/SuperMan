@@ -97,7 +97,8 @@ Level 1 is used to indicate sections, all levels between
 before the column names.")
 
 (defvar superman-default-cat nil "Category for otherwise uncategorized projects.
- If this variable is nil, then uncategorized projects are filed under \"CatWoman\".")
+ If this variable is nil, then uncategorized projects are filed under \"Krypton\".")
+
 (defvar superman-property-list 
   '((index . "Index")
     (nickname . "NickName")
@@ -137,17 +138,13 @@ category: Name of the category property
   (interactive)
   (cdr (assoc label superman-property-list)))
 
-(defvar superman-home (expand-file-name "~/metropolis")
-  "Directory for project management. It includes the file `superman-profile' which controls
-the list of project and can be accessed via the command `superman'.")
+(defvar superman-profile "~/metropolis/Projects.org"
+  "File for managing projects.")
 
 (defvar superman-default-directory
-  (file-name-as-directory superman-home)
-  "A place for new projects.")
-
-(defvar superman-profile
-  (concat (file-name-as-directory superman-home) "Projects.org")
-  "File for managing projects.")
+  (file-name-as-directory
+   (expand-file-name (file-name-directory superman-profile)))
+  "Default place for new projects.")
 
 (defvar superman-ual
   (expand-file-name
@@ -155,6 +152,15 @@ the list of project and can be accessed via the command `superman'.")
     (file-name-directory (locate-library "superman"))
     "../Kal-El/supermanual/" "Supermanual.org"))
   "File with instructions for using superman.")
+
+(defvar superman-help-fun 'superman-popup-tip 
+  "Function used to display help. Possible values 'tooltip-show or 'popup-tip (depends on popup.el)") 
+
+(defun superman-popup-tip (msg)
+  (save-excursion
+    (goto-char (point-min))
+    (tooltip-show msg)))
+;;    (popup-tip msg)))
 
 (defvar superman-gitworkflow
   (expand-file-name
@@ -187,15 +193,17 @@ the list of project and can be accessed via the command `superman'.")
  The project directory is set by a property LOCATION in
 the `superman-profile'.")
 (defvar superman-default-category "Unsorted" "Category for new projects.")
-(defvar superman-select-project-summary-format
+(defvar superman-select-project-completion-format
   "%c/%o/%n"
   "Format of the entries of the completion-list when selecting a project. ")
-;; (setq superman-select-project-summary-format "%n %c -- %o")
-;; (setq superman-select-project-summary-format "%n %o")
+;; (setq superman-select-project-completion-format "%n %c -- %o")
+;; (setq superman-select-project-completion-format "%n %o")
 (defvar superman-frame-title-format nil
-  "if non-nil add the nickname of the active project to frame-title")
-(defvar superman-save-buffers 'save-some-buffers
-    "Function to be called to save buffers before switching project.")
+  "If non-nil add the nickname of the active project to frame-title")
+(defvar superman-save-buffers "ask"
+    "String or function to be called to save
+   buffers before switching to a project. If a string, it can be 
+   'no-questions-asked' then buffers are saved silently.")
 
 (defvar superman-config-alist '(("supermanual" . "PROJECT / SUPERMANUAL")))
 
@@ -210,7 +218,6 @@ the `superman-profile'.")
     ("FILELIST" . superman-file-list)
     ("PROJECT" . superman-view-project)
     ("SUPERMANUAL" . supermanual)
-    ("magit" . superman-magit)
     ("recent.org" . superman-recent-org)
     ("*shell*" . superman-start-shell)
     ("*S*" . '(lambda (&optional project) superman))
@@ -395,10 +402,19 @@ and an action a one-optional-argument function which must return a buffer.")
 Kal-El is the planet where superman was born. It is there
 we find the `supermanual' and other helpful materials.")
 
+(defun superman-initialize ()
+  "Start the super manager."
+  (interactive)
+  (if (not (file-exists-p superman-profile))
+      (superman-capture-superman)
+    (superman-parse-projects)
+    (superman)))
+
 (defun superman-parse-projects ()
   "Parse the file `superman-profile' and update `superman-project-alist'. If
 `superman-project-kal-el' is non-nil also add the Kal-El project."
   (interactive)
+  ;; add project Kal-El
   (save-excursion
     (if superman-project-kal-el
 	(let ((superman-loc
@@ -421,12 +437,16 @@ we find the `supermanual' and other helpful materials.")
     (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
-	       (category (or (superman-get-property nil (superman-property 'category) 'inherit) "CatWoman"))
+	       (category (or (superman-get-property nil (superman-property 'category) 'inherit) "Krypton"))
 	       (others (superman-get-property nil (superman-property 'others) nil))
 	       (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
 	       (name (or (superman-get-property nil (superman-property 'nickname) nil)
 			 (nth 4 (org-heading-components))))
-	       (marker (org-agenda-new-marker (match-beginning 0)))
+	       (marker
+		;; (org-agenda-new-marker (match-beginning 0)))
+		(save-excursion
+		  (org-back-to-heading)
+		  (point-marker)))
 	       (hdr (org-get-heading t t))
 	       (lastvisit (superman-get-property nil "LastVisit" 'inherit))
 	       (config (superman-get-property nil (superman-property 'config) 'inherit))
@@ -472,7 +492,7 @@ we find the `supermanual' and other helpful materials.")
     (setq pro (list name
 		       (list (cons "location"  dir)
 			     (cons "index" index-buffer)
-			     (cons "category" "Temp")
+			     (cons "category" "Temporary")
 			     (cons "others" nil)
 			     (cons 'hdr nil)
 			     (cons "marker" nil)				 
@@ -499,8 +519,8 @@ we find the `supermanual' and other helpful materials.")
 	     (save-excursion
 	       (reverse
 		(superman-property-values "category")))))))
-      (when superman-project-kal-el (add-to-list 'cats "Krypton" 'append))
-      (add-to-list 'cats (or superman-default-cat "CatWoman") 'append)
+      ;; (when superman-project-kal-el (add-to-list 'cats "Krypton" 'append))
+      (add-to-list 'cats (or superman-default-cat "Krypton") 'append)
       cats))
 
 (defun superman-property-values (key)
@@ -754,9 +774,11 @@ Examples:
 (defun superman-format-project (entry)
   (let* ((cat (or (superman-get entry "category") ""))
 	 (coll (or (superman-get entry "others") ""))
+	 (todo (or (superman-get entry 'todo) ""))
 	 (nickname (car entry))
-	 (string (replace-regexp-in-string "%c" cat superman-select-project-summary-format))
+	 (string (replace-regexp-in-string "%c" cat superman-select-project-completion-format))
 	 (string (replace-regexp-in-string "%o" coll string))
+	 (string (replace-regexp-in-string "%t" todo string))
 	 (string (replace-regexp-in-string "%n" (car entry) string)))
     (cons string (car entry))))
 
@@ -799,15 +821,19 @@ is always the first choice."
   (interactive)
   (unless
       (string=
-       (superman-get-category project) "Temp")
+       (superman-get-category project) "Temporary")
     (save-excursion
       (let ((pbuf (get-file-buffer
 		   (superman-get-index project))))
 	(when pbuf
 	  (switch-to-buffer pbuf)
 	  (save-buffer))))
-    (when (functionp superman-save-buffers)
-      (funcall superman-save-buffers))))
+    (cond ((functionp superman-save-buffers)
+	   (funcall superman-save-buffers))
+	  ((string= superman-save-buffers "no-questions-asked")
+	   (save-some-buffers t))
+	  (superman-save-buffers 
+	   (save-some-buffers nil)))))
 
 ;;}}}
 ;;{{{ switching projects (see also superman-config)
@@ -930,6 +956,7 @@ If NOSELECT is set return the project."
 ;;}}}
 ;;{{{ extracting properties from a project 
 (defun superman-get (project el)
+  "Return element named EL from PROJECT."
   (cdr (assoc el (cadr project))))
 
 (defun superman-get-index (project)

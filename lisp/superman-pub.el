@@ -63,7 +63,7 @@ electric table format."
     (setq pro (list name
 		    (list (cons "location" dir)
 			  (cons "index" index-buf)
-			  (cons "category" "Temp")
+			  (cons "category" "Temporary")
 			  (cons "others" nil)
 			  (cons 'hdr nil)
 			  (cons "marker" nil)
@@ -179,7 +179,8 @@ write the result to buffer INDEX-BUF."
     (goto-char (point-min))
     (insert "* BibTeX\n"
 	    ":PROPERTIES:\n"
-	    ":CaptureButtons: nil\n"
+	    ":CaptureButtons: New entry|superman-capture-bibtex,Visit bibtex|superman-visit-bibtex\n"
+	    ":ConfigButtons: nil\n"
 	    ;; ":Ball1: org-hd-marker :fun superman-show-plain\n"
 	    ":Ball2:    year  :width 4\n"
 	    ":Ball3:    author  :width 13\n"
@@ -188,6 +189,10 @@ write the result to buffer INDEX-BUF."
 	    ;; ":buttons: superman-pub-make-sort-buttons\n"
 	    ":END:\n\n")))
 
+(defun superman-visit-bibtex ()
+  (interactive)
+  (find-file
+   (get-text-property (point-min) 'bib-file)))
 
 (defun superman-clean-bibtex ()
   (message "Don't know how to clean yet."))
