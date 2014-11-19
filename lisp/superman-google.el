@@ -151,6 +151,7 @@
 		      (sit-for 3)))
 		  ;;(widen)
 		  )))))))
+;; google calendar add --cal "Tag Team" "kattan phone review point to point reply on 2014/11/21 from  1:00pm to  2:00pm"
 ;; (shell-command-to-string g-command))))))))
 
 (provide 'superman-google)

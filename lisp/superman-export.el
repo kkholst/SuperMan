@@ -49,152 +49,232 @@ If no process is running start the pearl script latexmk.
 This function works outside R src blocks. Inside R src block
  it calls `superman-ess-eval-and-go'."
   (interactive "P")
-  (if (string= (car (org-babel-get-src-block-info)) "R")
-      (superman-ess-eval-and-go)
-    (let* ((org-buf (current-buffer))
-	   (raw-file (superman-file-name nil nil t ""))
-	   (tex-file (concat raw-file ".tex"))
-	   (org-file (concat raw-file ".org"))
-	   (tex-buf (get-file-buffer tex-file))
-	   (help-buf (concat "*Superman-export-control: " (file-name-nondirectory org-file) "*"))
-	   (wconf (current-window-configuration))
-	   (process (TeX-process tex-file))
-	   R-buf
-	   R-proc)
-      (save-buffer)
-      ;; we silently assume that the user wants to overwrite
-      ;; the current tex file and to avoid that the user has
-      ;; to confirm this -- in case of an open tex-buffer -- we
-      ;; kill a possibly existing tex-buffer
-      (when tex-buf
+  (let* ((org-buf (current-buffer))
+	 (raw-file (superman-file-name nil nil t ""))
+	 (tex-file (concat raw-file ".tex"))
+	 (org-file (concat raw-file ".org"))
+	 (tex-buf (get-file-buffer tex-file))
+	 ;; (help-buf (concat "*Superman-export-control: " (file-name-nondirectory org-file) "*"))
+	 (wconf (current-window-configuration))
+	 (process (TeX-process tex-file))
+	 R-buf
+	 R-proc)
+    (save-buffer)
+    ;; we silently assume that the user wants to overwrite
+    ;; the current tex file and to avoid that the user has
+    ;; to confirm this -- in case of an open tex-buffer -- we
+    ;; kill a possibly existing tex-buffer
+    (when tex-buf
+      (save-excursion
+	(set-buffer tex-buf)
+	(revert-buffer t t t) 
+	(kill-buffer (get-file-buffer tex-file))))
+    ;; find R process
+    (when debug
+      (switch-to-buffer org-buf)
+      (setq R-proc (and ess-current-process-name (get-process ess-current-process-name)))
+      (if R-proc (setq R-buf (buffer-name (process-buffer R-proc)))
 	(save-excursion
-	  (set-buffer tex-buf)
-	  (revert-buffer t t t) 
-	  (kill-buffer (get-file-buffer tex-file))))
-      ;; find R process
-      (when debug
-	(switch-to-buffer org-buf)
-	(setq R-proc (and ess-current-process-name (get-process ess-current-process-name)))
-	(if R-proc (setq R-buf (buffer-name (process-buffer R-proc)))
-	  (save-excursion
-	    (goto-char (point-min))
-	    (while (and (not R-buf)
-			(re-search-forward org-block-regexp nil t))
-	      (beginning-of-line) ;; move inside block
-	      (let ((info (org-babel-get-src-block-info)))
-		(and (string= (car info) "R")
-		     (setq R-buf (cdr (assoc ':session (caddr info))))))))))
-      (when (and R-buf (buffer-live-p R-buf))
-	(with-current-buffer R-buf
-	  (let ((ess-current-process-name R-buf))
-	    (ess-switch-to-end-of-ESS)
-	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'eval-point t))))
-      ;; export to latex or beamer
-      (if org-beamer-mode
-	  (org-beamer-export-to-latex)
-	(org-latex-export-to-latex))      
-      ;; check/start latexmk process
-      ;; (message "export")
-      (if process
-	  (cond (debug (delete-process process)
-		       (find-file tex-file)
-		       (TeX-command "LaTeX" 'TeX-master-file nil))  ;; run latex to identify problems
-		((not (eq (process-status process) 'run));; kill not running process
-		 (delete-process process)
-		 (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file))
-		(t (message (concat "Currently running process: " (process-name process)))))
-	(if debug ;; run latex to identify problems
-	    (progn
-	      (find-file tex-file)
-	      (TeX-command "LaTeX" 'TeX-master-file nil))
-	  (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
-      ;; (message "process")
-      (when debug
+	  (goto-char (point-min))
+	  (while (and (not R-buf)
+		      (re-search-forward org-block-regexp nil t))
+	    (beginning-of-line) ;; move inside block
+	    (let ((info (org-babel-get-src-block-info)))
+	      (and (string= (car info) "R")
+		   (setq R-buf (cdr (assoc ':session (caddr info))))))))))
+    (when (and R-buf (buffer-live-p R-buf))
+      (with-current-buffer R-buf
+	(let ((ess-current-process-name R-buf))
+	  (ess-switch-to-end-of-ESS)
+	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'eval-point t))))
+    ;; export to latex or beamer
+    (if org-beamer-mode
+	(org-beamer-export-to-latex)
+      (org-latex-export-to-latex))      
+    ;; check/start latexmk process
+    ;; (message "export")
+    (if process
+	(cond (debug (delete-process process)
+		     (find-file tex-file)
+		     (TeX-command "LaTeX" 'TeX-master-file nil))  ;; run latex to identify problems
+	      ((not (eq (process-status process) 'run));; kill not running process
+	       (delete-process process)
+	       (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file))
+	      (t (message (concat "Currently running process: " (process-name process)))))
+      (if debug ;; run latex to identify problems
+	  (progn
+	    (find-file tex-file)
+	    (superman-latex-headline-mode)
+	    (TeX-command "LaTeX" 'TeX-master-file nil))
+	(TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
+    ;; (message "process")
+    (when debug
+      (if  R-buf
+	  (superman-set-config
+	   (concat (buffer-name org-buf) " | " tex-file " / " R-buf))
 	(superman-set-config
-	 (concat (buffer-name org-buf) " | " tex-file " / 0-8 " help-buf))
-	(set-buffer help-buf)
-	(select-window (get-buffer-window help-buf nil))
-	(font-lock-mode -1)
-	(superman-control-export-mode-on)
-	(let ((buffer-read-only nil))
-	  (erase-buffer)
-	  (insert "Control org export (\\M-j): " org-file "\n")
-	  (put-text-property (point-min) (1+ (point-min)) 'tex-file tex-file)
-	  (put-text-property (point-min) (1+ (point-min)) 'org-buffer org-buf)
-	  (put-text-property (point-min) (1+ (point-min)) 'wconf wconf)
-	  (put-text-property (point-min) (1+ (point-min)) 'beamer-p org-beamer-mode)
-	  (when R-buf
-	    (put-text-property (point-min) (1+ (point-min)) 'R-buf R-buf))
-	  (insert
-	   (superman-make-button
-	    "Run LaTeX (l)"
-	    'superman-run-latex
-	    nil
-	    "Run LaTeX.")
-	   "  "
-	   (superman-make-button
-	    "Run BibTeX (b)"
-	    'superman-run-bibtex
-	    nil
-	    "Run BibTeX.")
-	   "  "
-	   (superman-make-button
-	    "start viewer (v)"
-	    'superman-start-viewer
-	    nil
-	    "Start viewer.")
-	   "  "
-	   (superman-make-button
-	    "Start LaTeX make (m)"
-	    'superman-start-latexmk
-	    nil
-	    "Start latexmk script.")
-	   "\n")
-	  ;; (insert (superman-make-button
-	  ;; "Export to LaTeX (e)"
-	  ;; 'superman-latex-export
-	  ;; nil
-	  ;; "Export from org to latex (e)")
-	  ;; "  ")
-	  (insert (superman-make-button
-		   "LaTeX-next-error (n)"
-		   'superman-next-latex-error
-		   nil
-		   "Show next LaTeX error")
-		  "  "
-		  (superman-make-button
-		   "LaTeX-first-error (1)"
-		   'superman-first-latex-error
-		   nil
-		   "Show first LaTeX error")
-		  " "
-		  ;; (superman-make-button
-		  ;; "LaTeX-find-error (f)"
-		  ;; 'superman-find-latex-error
-		  ;; nil
-		  ;; "Find LaTeX error")
-		  "\n")
-	  (when R-buf
-	    (insert
-	     (superman-make-button
-	      "R-previous-error (r)"
-	      'superman-previous-R-error
-	      nil
-	      (concat "Show previous error in " R-buf))
-	     "  "
-	     (superman-make-button
-	      "R-next-error (s)"
-	      'superman-next-R-error
-	      nil
-	      (concat "Show next error in " R-buf))
-	     "\n"))
-	  (insert
-	   (superman-make-button
-	    "Back to org (q)"
-	    `(lambda () (interactive)
-	       (set-window-configuration (get-text-property (point-at-bol) 'wconf)))
-	    nil
-	    "Switch to previous window configuration.")))))))
+	 (concat (buffer-name org-buf) " | " tex-file " / " ))))))
+;;{{{ superman org headline buttons
+
+(defvar superman-org-headline-map (make-sparse-keymap)
+  "Keymap for `superman-org-headline-mode', a minor mode.
+Use this map to set additional keybindings for when Org-mode is used.")
+
+(defvar superman-org-headline-mode-hook nil
+  "Hook for the minor `superman-org-headline-mode'.")
+
+(define-minor-mode superman-org-headline-mode
+  "Minor mode for headline buttons in header line in org buffers."
+  nil "" superman-org-headline-map
+  (org-set-local
+   'header-line-format
+   (concat "Export: "
+	   (header-button-format "PDF" :action 'superman-export-as-latex)
+	   " "
+	   (header-button-format "HTML" :action
+				 #'(lambda (&optional arg)
+				     (let ((org-export-show-temporary-export-buffer nil))
+				       (org-html-export-as-html)
+				       (superman-browse-this-file))))
+	   " "
+	   (header-button-format "DOCX" :action 'org-odt-export-to-odt)
+	   " View: "
+	   (header-button-format "HTML" :action #'(lambda (&optional arg) (interactive)
+						    (let ((html (concat (file-name-sans-extension (buffer-file-name)) ".html")))
+						      (if (file-exists-p html)
+							  'superman-browse-this-file)
+						      (message (concat "No such file: " html)))))
+	   " "
+	   (header-button-format "PDF" :action  #'(lambda (&optional arg) (interactive)
+						    (let ((pdf (concat (file-name-sans-extension (buffer-file-name)) ".pdf")))
+						      (if (file-exists-p pdf)
+							  (org-open-file pdf)
+							(message (concat "No such file: " pdf))))))
+	   " "
+	   (header-button-format "Word" :action #'(lambda (&optional arg) (interactive)
+						    (let ((docx (concat (file-name-sans-extension (buffer-file-name)) ".docx"))
+							  (odt (concat (file-name-sans-extension (buffer-file-name)) ".odt")))
+						      (if (file-exists-p docx)
+							  (org-open-file docx)
+							(if (file-exists-p odt)
+							    (org-open-file odt)
+							  (message (concat "No such file: " docx " or " odt)))))))
+	   " Debug: "
+	   (header-button-format "LaTeX-export" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-export-as-latex 'debug)))
+	   " R-Blocks: "
+	   (header-button-format "run" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (beginning-of-line)
+				     (if (string= (car (org-babel-get-src-block-info)) "R")
+					 (superman-ess-eval-and-go)
+				       (message "Cursor is not in R-block"))))
+	   " "
+	   (header-button-format "insert" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (beginning-of-line)
+				     (unless (looking-at "^[ \t\n]*$")
+				       (insert "\n")
+				       (forward-line -1))
+				     (insert "<Rr")
+				     (org-cycle)
+				     (superman-create-R-block-help-buffer)
+				     (superman-set-config (concat (buffer-name) " / *Superman:R-block help*"))))
+	   " "
+	   (header-button-format "clear-all" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (org-babel-clear-all-results)))
+	   " "
+	   (header-button-format "run-all" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (beginning-of-line)
+				     (org-babel-execute-buffer)))
+	   " "
+	   )))
+
+(defun superman-create-R-block-help-buffer ()
+  (unless (get-buffer "*Superman:R-block help*")
+    (get-buffer-create "*Superman:R-block help*")
+    (set-buffer  "*Superman:R-block help*")
+    (insert "Header arguments:\n\n"
+	    ":exports code\n"
+	    "    The default in most languages. The body of the code block is exported, as described in Literal examples.\n\n"
+	    ":exports results\n"
+	    "    The code block will be evaluated and the results will be placed in the Org mode buffer for export,\n    either updating previous results of the code block located anywhere in the buffer\n    or, if no previous results exist, placing the results immediately after the code block. \n    The body of the code block will not be exported.\n\n"
+	    ":exports both\n"
+	    "    Both the code block and its results will be exported.\n\n"
+	    ":exports none\n"
+	    "    Neither the code block nor its results will be exported.\n\n"
+	    ":results raw output drawer\n"
+	    "    Interprete results as org-code (drawer will only be exported if d:t in file header) \n\n"
+	    ":results output\n"
+	    "    Do not interprete output.\n\n"
+	    )
+    (setq buffer-read-only t)))
+
+
+(add-hook 'org-mode-hook #'(lambda ()
+			     (when (buffer-file-name)
+			       (superman-org-headline-mode))))
+;;}}}
+;;{{{ superman latex header line buttons
+
+(defvar superman-latex-headline-map (make-sparse-keymap)
+  "Keymap for `superman-latex-headline-mode', a minor mode.
+Use this map to set additional keybindings for when Superman-Latex-mode is used.")
+
+;; (defvar superman-latex-headline-mode-hook nil
+  ;; "Hook for the minor `superman-latex-headline-mode'.")
+
+(define-minor-mode superman-latex-headline-mode
+  "Minor mode for headline buttons in header line in org buffers."
+  nil "" superman-latex-headline-map
+  (org-set-local
+   'header-line-format
+   (concat "Run: "
+	   (header-button-format "LaTeX" :action 
+				 #'(lambda (&optional arg) (interactive) 
+				     (TeX-command "LaTeX" 'TeX-master-file nil)))
+	   " "
+	   (header-button-format "BibTeX" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (TeX-command "BibTeX" 'TeX-master-file nil)))
+	   " "
+	   (header-button-format "Make-pdf" :action
+				 #'(lambda (&optional arg) (interactive)
+				     ;; (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
+				     (TeX-command "make-pdf" 'TeX-master-file nil)))
+	   " Error: "
+	   (header-button-format "next" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-next-latex-error)))
+	   " "
+	   (header-button-format "first" :action 
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-next-latex-error 1)))
+	   " "
+	   (header-button-format "find" :action 
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-find-latex-error)))
+	   " View: "
+	   (header-button-format "Start viewer" :action 
+				 #'(lambda (&optional arg) (interactive)
+				     (let ((pdf (concat (file-name-sans-extension (buffer-file-name)) ".pdf")))
+				       (if (file-exists-p pdf)
+					   (org-open-file pdf)
+					 (message (concat "No such file: " pdf))))))
+	   ;; (TeX-command "View" 'TeX-master-file nil)))
+	   )))
+
+
+;; (add-hook 'LaTeX-mode-hook #'(lambda ()
+			       ;; (when (buffer-file-name)
+				 ;; (superman-latex-headline-mode))))
+
+
+;;}}}
+
 
 (defun superman-ess-eval-and-go ()
   (interactive)
@@ -212,10 +292,10 @@ This function works outside R src blocks. Inside R src block
       (ess-eval-line-and-step nil nil t))))
 
 
-(defun superman-control-export-back-to-org ()
-  (interactive)
-  (set-window-configuration
-   (get-text-property (point-min) 'wconf)))
+;; (defun superman-control-export-back-to-org ()
+  ;; (interactive)
+  ;; (set-window-configuration
+   ;; (get-text-property (point-min) 'wconf)))
 
 
 (defun superman-file-name (&optional file buf full ext)
@@ -233,24 +313,10 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
 	    (or ext ".org"))))
   
 
-(defvar superman-control-export-mode-map (make-sparse-keymap)
-  "Keymap used for `superman-view-mode' commands.")
-(define-key superman-control-export-mode-map  "q" 'superman-control-export-back-to-org)
-(define-key superman-control-export-mode-map  "n" 'superman-next-latex-error)
-(define-key superman-control-export-mode-map  "1" 'superman-first-latex-error)
-(define-key superman-control-export-mode-map  "r" 'superman-previous-R-error)
-(define-key superman-control-export-mode-map  "s" 'superman-next-R-error)
-(define-key superman-control-export-mode-map  "l" 'superman-run-latex)
-(define-key superman-control-export-mode-map  "b" 'superman-run-bibtex)
-(define-key superman-control-export-mode-map  "v" 'superman-start-viewer)
-(define-key superman-control-export-mode-map  "m" 'superman-start-latexmk)
-(define-key superman-control-export-mode-map  "e" 'superman-latex-export)
-(define-key superman-control-export-mode-map  "\M-j" 'superman-latex-export)
-;; (define-key superman-control-export-mode-map  "f" 'superman-find-latex-error)
 
 (defun superman-find-latex-error ()
   (interactive)
-  (let ((tex-file (get-text-property (point-min) 'tex-file))
+  (let ((tex-file (buffer-file-name))
 	(control-buf (buffer-name (current-buffer)))
 	(last-pos (get-text-property (point-min) 'latex-pos))
 	tex-buf
@@ -279,44 +345,39 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
       (let ((buffer-read-only nil))
       (put-text-property (point-min) (1+ (point-min)) 'latex-pos pos)))))
     
-(defun superman-latex-export ()
-  (interactive)
-  (let ((obuf (get-text-property (point-min) 'org-buffer)))
-    (with-current-buffer obuf
-      (superman-export-as-latex))))
+;; (defun superman-latex-export ()
+  ;; (interactive)
+  ;; (let ((obuf (get-text-property (point-min) 'org-buffer)))
+    ;; (with-current-buffer obuf
+      ;; (superman-export-as-latex))))
 
-(defun superman-run-latex ()
-  (interactive)
-  (let ((tex-file (get-text-property (point-min) 'tex-file)))
-    (save-window-excursion
-      (if (get-file-buffer tex-file)
-	  (set-buffer (get-file-buffer tex-file))
-	(find-file tex-file))
-      ;; (set-buffer (find-buffer-visiting tex-file))
-      (TeX-command "LaTeX" 'TeX-master-file nil))))
+;; (defun superman-run-latex ()
+  ;; (interactive)
+  ;; (let ((tex-file (get-text-property (point-min) 'tex-file)))
+    ;; (save-window-excursion
+      ;; (if (get-file-buffer tex-file)
+	  ;; (set-buffer (get-file-buffer tex-file))
+	;; (find-file tex-file))
+      ;; ;; (set-buffer (find-buffer-visiting tex-file))
+      ;; (TeX-command "LaTeX" 'TeX-master-file nil))))
 
-(defun superman-start-viewer ()
-  (interactive)
-  (let ((tex-file (get-text-property (point-min) 'tex-file)))
-    (save-excursion
-      (if (get-file-buffer tex-file)
-	  (set-buffer (get-file-buffer tex-file))
-	(find-file tex-file))
-      (TeX-command "View" 'TeX-master-file nil))))
+;; (defun superman-start-viewer ()
+  ;; (interactive)
+  ;; (TeX-command "View" 'TeX-master-file nil))
 
-(defun superman-run-bibtex ()
-  (interactive)
-  (let ((tex-file (get-text-property (point-min) 'tex-file)))
-    (save-excursion
-      (if (get-file-buffer tex-file)
-	  (set-buffer (get-file-buffer tex-file))
-	(find-file tex-file))
-      (TeX-command "BibTeX" 'TeX-master-file nil))))
+;; (defun superman-run-bibtex ()
+  ;; (interactive)
+  ;; (let ((tex-file (get-text-property (point-min) 'tex-file)))
+    ;; (save-excursion
+      ;; (if (get-file-buffer tex-file)
+	  ;; (set-buffer (get-file-buffer tex-file))
+	;; (find-file tex-file))
+      ;; (TeX-command "BibTeX" 'TeX-master-file nil))))
 
-(defun superman-start-latexmk ()
-  (interactive)
-  (let ((tex-file (get-text-property (point-min) 'tex-file)))
-    (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
+;; (defun superman-start-latexmk ()
+  ;; (interactive)
+  ;; (let ((tex-file (get-text-property (point-min) 'tex-file)))
+    ;; (TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
 
 (defun superman-first-latex-error ()
   (interactive)
@@ -324,21 +385,15 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
 
 (defun superman-next-latex-error (&optional first)
   (interactive)
-  (let ((control-buf (buffer-name (current-buffer)))
-	(tex-file (get-text-property (point-min) 'tex-file))
+  (let ((tex-file (buffer-file-name))
 	(org-buf (buffer-name (get-text-property (point-min) 'org-buffer))))
-    ;; (help-tick
-    ;; (when (buffer-live-p (get-buffer "*TeX Help*"))
-    ;; (with-current-buffer
-    ;; "*TeX Help*"
-    ;; (buffer-modified-tick)))))
     (when (buffer-live-p (get-buffer "*TeX Help*"))
       (with-current-buffer  "*TeX Help*"
 	(erase-buffer)
 	(insert "No more errors.")))
     (TeX-next-error first)
     (superman-set-config
-     (concat org-buf " / " tex-file " | *TeX Help* / " control-buf))
+     (concat org-buf " / " tex-file " | *TeX Help* / "))
     (other-window 2)))
   
 (defun superman-previous-R-error ()
@@ -354,30 +409,15 @@ is non-nil, search backwards within the boundery set by last call to
   (let ((control-buf (buffer-name (current-buffer)))
 	(R-buf (get-text-property (point-min) 'R-buf)))
     (when R-buf
-      (superman-switch-config
-       nil nil
-       (concat R-buf " / " control-buf))
-      (unless
-	  (if backwards
-	      ;; search for errors within the bound set by the last
-	      ;; call to superman-export-as-latex 
-	      (re-search-backward "^Error[: ]+" (previous-single-property-change (point) 'eval-point) t)
-	    (re-search-forward "^Error[: ]+ " nil t))
-	(message "No next error"))
-      (other-window 1))))
+      (switch-to-buffer R-buf))
+    (unless
+	(if backwards
+	    ;; search for errors within the bound set by the last
+	    ;; call to superman-export-as-latex 
+	    (re-search-backward "^Error[: ]+" (previous-single-property-change (point) 'eval-point) t)
+	  (re-search-forward "^Error[: ]+ " nil t))
+      (message "No next error"))))
 
-(define-minor-mode superman-control-export-mode
-  "Toggle superman view item mode.
-With argument ARG turn superman-control-export-mode on if ARG is positive, otherwise
-turn it off."
-  :lighter "*S:export*"
-  :group 'org
-  :keymap 'superman-control-export-mode-map
-  (setq buffer-read-only t))
-
-(defun superman-control-export-mode-on ()
-  (interactive)
-  (superman-control-export-mode t))
 
 (defun org-turn-on-auto-export ()
   (interactive)
