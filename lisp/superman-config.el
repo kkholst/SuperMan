@@ -150,7 +150,8 @@ Returns the corresponding buffer."
 
 (defun superman-smash-windows (window-config project)
   "Smash windows according to the WINDOW-CONFIG and
-then fill relative to project."
+then fill the windows relative to project. See `superman-set-config' for
+the syntax of superman window configurations."
   (let ((ncolumns (length window-config))
 	(nrows (mapcar 'length window-config))
 	top-windows)
@@ -167,22 +168,30 @@ then fill relative to project."
 	    (loop for r from 0 to (- nrow 1) do
 		  (let ((thing (nth r (nth c window-config)))
 			width height)
-		    (string-match "\\([0-9]*\\)-?\\([0-9]*\\)[ ]*\\(.*\\)" thing)
-		    (setq width (string-to-int (match-string 1 thing))
-			  height (string-to-int (match-string 2 thing))
-			  thing (match-string 3 thing))
+		    (if (string-match ":width[ \t]*\\([0-9]*\\)[ \t]+\\(.*\\)" thing)
+			(setq width (string-to-int (match-string 1 thing))
+			      thing (match-string 2 thing))
+		      (setq width 0))
+		    (if (string-match ":height[ \t]*\\([0-9]*\\)[ \t]+\\(.*\\)" thing)
+			(setq height (string-to-int (match-string 1 thing))
+			      thing (match-string 2 thing))
+		      (setq height 0))
+		    ;; (string-match ":height\\([0-9]*\\)-?\\([0-9]*\\)[ ]*\\(.*\\)" thing)
+		    ;; (setq width (string-to-int (match-string 1 thing))
+		    ;; height (string-to-int (match-string 2 thing))
+		    ;; thing (match-string 3 thing))
 		    (switch-to-buffer
 		     (superman-find-thing thing project))
 		    ;; maybe shrink window
-		    (let ((w-heigth (window-height (selected-window)))
+		    (let ((w-height (window-height (selected-window)))
 			  (w-width  (window-width (selected-window))))
 		      ;; The aim to shrink the window can fail, e.g.,
 		      ;; root window cannot be shrunken. We prefer
 		      ;; to do nothing and not to signal an error
-		      (when (and (> height 0) (< height w-heigth))
-			(ignore-errors (shrink-window (- w-heigth height))))
-		      (when (and (> width 0) (< width w-heigth))
-			(ignore-errors (shrink-window (- w-heigth width) 'horizontal)))))
+		      (when (and (> height 0) (< height w-height))
+			(ignore-errors (shrink-window (- w-height height))))
+		      (when (and (> width 0) (< width w-height))
+			(ignore-errors (shrink-window (- w-height width) 'horizontal)))))
 		  (when (and (< r (- nrow 1)) (> nrow 1 ))
 		    (split-window-vertically)
 		    (other-window 1)))))
@@ -190,11 +199,61 @@ then fill relative to project."
 
 (defun superman-set-config (config &optional project)
   "Distangle and set superman-window-configuration CONFIG.
-Optional PROJECT should be an element of the `superman-project-alist'. It is
-passed to `superman-find-thing'.
+PROJECT if given should be an element of the `superman-project-alist'. 
 
-See `superman-ual' for the syntax of
- superman-window-configurations.
+A superman window configuration is a string such as
+
+'THING1 / THING2 | THING3'
+
+in which case the emacs frame would show three windows:
+
+-----------------------
+        THING1
+
+-----------------------
+           |
+THING2     |    THING3    
+           |
+The contents of the three windows would be the buffers
+returned by the function `superman-find-thing' according
+to the meaning of THING which is identified by looking THING
+up in `superman-config-action-alist' relative to PROJECT:
+
+  'file-name' refers to finding the file 'file-name'
+   (either file-name is absolute or relative to the location
+   of the project)
+  'buffer-name' refers to the buffer named 'buffer-name'
+  'PROJECT' show the project overview
+  'TODO' show the project specific task list
+  'INDEX' show the project index file
+  'TIMELINE' show the project specific time line
+  'FILELIST' show the project specific file-list
+  'LOCATION' show the project directory (dired)
+  'recent.org' show the most recent org file in project
+  '*S*' show the superman manager
+  '*S-todo*' show the overall project task list
+  '*S-agenda*' show the overall project agenda
+  '*shell*' show a shell buffer
+  '*ielm*' show ielm
+  '*R*' show the *R* buffer (start one if necessary)
+  '' show the current buffer
+
+For example,
+
+PROJECT / ./lecturenotes | TODO / TIMELINE
+
+will show four windows: the project overview,
+the sub-directory lecturenotes of the project location
+the task list and the timeline.
+
+Experimental: control of width and height of some of the windows
+as follows:
+
+THING1 / :width 8 THING2 | :height 4 THING3
+
+In this case the window showing THING2 will be shrinked
+by delta=8 horizontally (see `shrink-window') and the window showing
+THING2 will be shrinked by delta=4 vertically.
 "
   (superman-smash-windows
    (superman-distangle-config config)

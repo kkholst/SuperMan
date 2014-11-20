@@ -40,7 +40,7 @@
 
 (defun superman-file-list (project &optional ext)
   "List files in project's location that match extension EXT"
-  (if (featurep 'file-list)
+  (if (featurep 'superman-file-list)
       (let ((dir (superman-project-home project)))
 	(cond ((file-list-select-internal nil (or ext ".")
 					  nil nil dir (concat "*File-list-" (car project) "*")))
@@ -49,7 +49,7 @@
 	       (toggle-read-only -1)
 	       (erase-buffer)
 	       (insert "FILE-LIST: No files in project"))))
-    (error "file-list.el not loaded.")))
+    (error "superman-file-list.el not loaded.")))
 
 (defun superman-write-file-list (list buf)
   "Write file-list LIST to temporary buffer BUF."
