@@ -134,7 +134,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	   (header-button-format "HTML" :action
 				 #'(lambda (&optional arg)
 				     (let ((org-export-show-temporary-export-buffer nil))
-				       (org-html-export-as-html)
+				       (org-html-export-to-html)
 				       (superman-browse-this-file))))
 	   " "
 	   (header-button-format "DOCX" :action 'org-odt-export-to-odt)
@@ -163,7 +163,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	   (header-button-format "LaTeX-export" :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-export-as-latex 'debug)))
-	   " R-Blocks: "
+	   " R: "
 	   (header-button-format "run" :action
 				 #'(lambda (&optional arg) (interactive)
 				     (beginning-of-line)
@@ -171,13 +171,24 @@ Use this map to set additional keybindings for when Org-mode is used.")
 					 (superman-ess-eval-and-go)
 				       (message "Cursor is not in R-block"))))
 	   " "
-	   (header-button-format "insert" :action
+	   (header-button-format "new" :action
 				 #'(lambda (&optional arg) (interactive)
 				     (beginning-of-line)
 				     (unless (looking-at "^[ \t\n]*$")
 				       (insert "\n")
 				       (forward-line -1))
 				     (insert "<Rr")
+				     (org-cycle)
+				     (superman-create-R-block-help-buffer)
+				     (superman-set-config (concat (buffer-name) " / *Superman:R-block help*"))))
+	   " "
+	   (header-button-format "graph" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (beginning-of-line)
+				     (unless (looking-at "^[ \t\n]*$")
+				       (insert "\n")
+				       (forward-line -1))
+				     (insert "<Rg")
 				     (org-cycle)
 				     (superman-create-R-block-help-buffer)
 				     (superman-set-config (concat (buffer-name) " / *Superman:R-block help*"))))
