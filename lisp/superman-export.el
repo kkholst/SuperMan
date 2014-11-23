@@ -113,7 +113,7 @@ This function works outside R src blocks. Inside R src block
 	  (superman-set-config
 	   (concat (buffer-name org-buf) " | " tex-file " / " R-buf))
 	(superman-set-config
-	 (concat (buffer-name org-buf) " | " tex-file " / " ))))))
+	 (concat (buffer-name org-buf) " | " tex-file))))))
 ;;{{{ superman org headline buttons
 
 (defvar superman-org-headline-map (make-sparse-keymap)
@@ -129,7 +129,9 @@ Use this map to set additional keybindings for when Org-mode is used.")
   (org-set-local
    'header-line-format
    (concat "Export: "
-	   (header-button-format "PDF" :action 'superman-export-as-latex)
+	   (header-button-format "PDF" :action
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-export-as-latex nil)))
 	   " "
 	   (header-button-format "HTML" :action
 				 #'(lambda (&optional arg)

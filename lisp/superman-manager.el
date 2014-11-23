@@ -350,7 +350,7 @@ and an action a one-optional-argument function which must return a buffer.")
   "Return properties at point that match REGEXP."
   (org-with-point-at pom
     (let* ((case-fold-search t)
-	   (proplist (org-entry-properties nil nil nil))
+	   (proplist (org-entry-properties nil nil))
 	   (prop (cdr (assoc-if #'(lambda (x) (string-match regexp x)) proplist))))
       (if (stringp prop)
 	  (replace-regexp-in-string "[ \t]+$" "" prop)))))
