@@ -743,10 +743,10 @@ Changes the file-list-current-file-list. See also file-list-add."
 				      ((string= by "time") "age in days")
 				      ((string= by "size") "size in bytes")
 				      (t "filename"))
-				(cond ((not by) (format "is%s matched by regexp " (if inverse " *not*" "")))
+				(cond ((not by) (format "is%s matched by regexp" (if inverse " *not*" "")))
 				      ((string= by "time") (format "exceeds%s " (if (not inverse) " *not*" "")))
 				      ((string= by "size") (format "exceeds%s " (if inverse " *not*" "")))
-				      (t (format "is%s matched by regexp " (if inverse " *not*" ""))))))
+				      (t (format "is%s matched by regexp" (if inverse " *not*" ""))))))
 	 (regexp (or regexp (read-string
 			     prompt-string
 			     nil
