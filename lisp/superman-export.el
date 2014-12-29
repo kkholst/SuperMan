@@ -39,7 +39,9 @@
 
 (defun superman-control-latex-export ()
   (interactive)
-  (superman-export-as-latex 'debug))
+  (if (string= (car (org-babel-get-src-block-info)) "R")
+      (ess-switch-to-end-of-ESS)
+  (superman-export-as-latex 'debug)))
 
 ;; See library tex-buf for help on TeX-process.
 (defun superman-export-as-latex (&optional debug)
