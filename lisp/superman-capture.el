@@ -519,8 +519,8 @@ and in the first cat otherwise."
 		    ("Link" . nil)
 		    ("FileName")
 		    ("AppointmentDate")
-		    ("Location")
-		    ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))
+		    ("Location")))
+		    ;; ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))
 	props keys)
     (if superman-view-mode
 	(when (and cat (superman-get-property (superman-cat-point) "freetext"))
