@@ -29,7 +29,6 @@
 
 (require 'deft)
 
-
 (defun deft-local-setup ()
   ;; (kill-all-local-variables)
   (make-variable-buffer-local 'deft-buffer)

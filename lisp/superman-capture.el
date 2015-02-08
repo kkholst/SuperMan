@@ -879,8 +879,12 @@ index file as LEVEL headings. Then show the updated project view buffer."
      `(("MeetingDate" ,date)
        ("Participants" nil)
        ("Location" nil)
+       (when superman-google-default-calendar
+	 ("GoogleReminderMinutes" nil)
+	 )
        ,(when superman-google-default-calendar
-	  `("GoogleCalendar" ,superman-google-default-calendar))
+	  `("GoogleCalendar" ,superman-google-default-calendar)
+	  )
        ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))))
 
 ;;}}}
