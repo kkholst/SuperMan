@@ -175,7 +175,7 @@ passed to `superman-run-cmd'."
 		      (superman-prepare-git-diff-buffer ref hash)))
     (when config (superman-switch-config nil 0 config))))
 
-(defun superman-prepare-git-diff-buffer (a b)
+(defun superman-prepare-git-diff-buffer (a b dir)
   (let ((buffer-read-only nil))
     (goto-char (point-min))
     (while (re-search-forward "\\-\\-\\-[ ]*" nil t)
