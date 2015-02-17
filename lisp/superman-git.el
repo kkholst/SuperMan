@@ -172,7 +172,7 @@ passed to `superman-run-cmd'."
     (superman-run-cmd
      cmd "*Superman:Git-diff*" msg nil
      'erase-buffer '(lambda ()
-		      (superman-prepare-git-diff-buffer ref hash)))
+		      (superman-prepare-git-diff-buffer ref hash dir)))
     (when config (superman-switch-config nil 0 config))))
 
 (defun superman-prepare-git-diff-buffer (a b dir)
@@ -628,6 +628,7 @@ see M-x manual-entry RET git-diff RET.")
 (defun superman-git-diff-file (&optional hash ref config marker)
   (interactive)
   (let* ((file (superman-filename-at-point))
+	 (dir (superman-git-toplevel file))
 	 (hash (or hash (get-text-property (point-at-bol) 'hash)))
 	 (ref (if hash (or ref (concat hash "^")) "HEAD"))
 	 (cmd (concat "cd " (file-name-directory file)
@@ -642,7 +643,7 @@ see M-x manual-entry RET git-diff RET.")
 	       (file-relative-name file (superman-git-toplevel file)) "\n")))
     (superman-run-cmd cmd "*Superman:Git-diff*" msg nil
 		      'erase-buffer `(lambda ()
-				       (interactive)(superman-prepare-git-diff-buffer ,ref ,hash)))
+				       (interactive)(superman-prepare-git-diff-buffer ,ref ,hash dir)))
     (when config (superman-switch-config nil 0 config)
 	  (when marker
 	    (select-window (get-buffer-window (marker-buffer marker) nil))
