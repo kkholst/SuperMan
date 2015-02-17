@@ -111,6 +111,15 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
 ;;}}}
 ;;{{{ push, pull, diff, branch and other global git actions 
 
+(defun superman-git-root (file)
+  (interactive)  
+  "Return git root of FILE"
+  (replace-regexp-in-string
+   "\n$" "" 
+   (shell-command-to-string
+    (concat "cd " (file-name-directory (or file (buffer-file-name))) "; "
+	    superman-cmd-git " rev-parse --show-toplevel"))))
+  
 (defun superman-git-p (dir)
   "Test if directory DIR is under git control."
   (when (and dir (file-exists-p dir))
@@ -460,7 +469,7 @@ Else return FILE as it is."
   (let* ((limit (if (or (not arg) (= arg 1))
 		    superman-git-log-limit
 		  (or arg superman-git-log-limit)))
-	 (file (superman-filename-at-point)))
+	 (file (or (condition-case nil (superman-filename-at-point) (error nil)) (buffer-file-name))))
     (superman-git-log file limit nil nil)))
 
 (defun superman-git-last-log-file (&optional arg)
@@ -1561,9 +1570,9 @@ Enabling superman-git mode enables the git keyboard to control single files."
 
 
 (defun superman-git-setup-log-buffer (file git-switches decoration-only arglist)
-  (let* ((dir (get-text-property (point-min) 'git-dir))
+  (let* ((dir (or (get-text-property (point-min) 'git-dir) (superman-git-root file)))
 	 (rel-file (superman-relative-name file dir))
-	 (index (get-text-property (point-min) 'index))
+	 (index (or (get-text-property (point-min) 'index) rel-file))
 	 (cmd (concat
 	       "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
 	 (gitlog (shell-command-to-string cmd))
@@ -1578,7 +1587,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (insert "* Git Log of " (file-name-nondirectory file))
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (put-text-property (point-at-bol) (point-at-eol) 'filename file)
-    (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+    (if (and (boundp 'nick) nick) (cond (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)))
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir dir)
     (put-text-property (point-at-bol) (point-at-eol) 'arglist arglist)
@@ -1624,9 +1633,11 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
 
 (defun superman-git-log (&optional file limit search-string decoration-only)
+  (interactive)
   (let* ((file (or file
-		   (superman-filename-at-point)
-		   (get-text-property (point-min) 'filename)))
+		   (condition-case nil (superman-filename-at-point) (error nil))
+		   (get-text-property (point-min) 'filename)
+		   (buffer-file-name)))
 	 (limit (or limit superman-git-log-limit))
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (get-text-property (point-min) 'git-dir))
