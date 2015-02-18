@@ -2671,7 +2671,9 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	(when (and (not (marker-buffer m))
 		   (setq f (get-text-property (point-at-bol) 'superman-project-file)
 			 pos (get-text-property (point-at-bol) 'superman-project-file-marker)))
-	  (find-file f)
+	  (if (file-directory-p f)
+	      (superman-view-directory f)
+	    (find-file f))
 	  (goto-char pos)
 	  (setq m (point-marker)))
 	(cond (superman-mode
