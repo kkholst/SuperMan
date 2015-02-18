@@ -63,13 +63,13 @@
     (setq list (cdr list))))
 
 (defun superman-file-capture-button (c &rest args)
-  (superman-make-button "c"
+  (superman-make-button "track"
 			'superman-capture-file-at-point
 			'superman-next-project-button-face
 			"Capture file for project control"))
 
 (defvar superman-file-list-balls
-  '(("Capture" ("fun" superman-file-capture-button) ("width" 6) ("face" "no-face") ("face" superman-next-project-button-face))
+  '(("Capture" ("fun" superman-file-capture-button) ("width" 7) ("face" "no-face") ("face" superman-next-project-button-face))
     ("FileName" ("fun" superman-trim-string) ("width" 88) ("face" font-lock-variable-name-face))
     ("Path" ("fun" superman-dont-trim) ("face" font-lock-keyword-face)))
   "balls used to display file-lists.")

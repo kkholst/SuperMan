@@ -722,7 +722,8 @@ see M-x manual-entry RET git-diff RET.")
   "Keywords to match the elements in superman-git-display-command-list")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
-(setq superman-git-default-displays '("versions" "modified" "tracked" "untracked" "stash"))
+(setq superman-git-default-displays
+      '("versions" "modified" "tracked" "submodule" "untracked" "stash"))
 
 (defun superman-trim-hash (hash &rest args)
  (superman-make-button
@@ -746,6 +747,13 @@ see M-x manual-entry RET git-diff RET.")
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-files-pre-display-hook)
+    ("submodule"
+     "submodule"
+     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+      ("Directory" ("width" 25) ("face" superman-subheader-face))
+      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
+     superman-git-submodule-pre-display-hook)
     ("untracked"
      (concat "ls-files --full-name " (unless superman-git-show-ignored "--exclude-standard") " --others")
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
@@ -1182,6 +1190,14 @@ repository of PROJECT which is located at DIR."
 		 "\n:PROPERTIES:\n:GitStatus: " status
 		 "\n:Directory: " (cond (dname) (t "."))  
 		 "\n:FILENAME: [[" fullname "]]\n:END:\n\n") 'fixed)))))
+
+(defun superman-git-submodule-pre-display-hook ()
+  (while (re-search-forward "^[ -][^ \t]+" nil t)
+    (kill-region (point-at-bol) (1+ (point)))
+    (re-search-forward "[^ \t]+" (point-at-eol) t)
+    (kill-region (point) (point-at-eol))
+    (end-of-line))
+  (superman-git-files-pre-display-hook))
 
 
 (defun superman-git-files-pre-display-hook ()
