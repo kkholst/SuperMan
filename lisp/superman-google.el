@@ -87,9 +87,15 @@
 		       (looking-at org-complex-heading-regexp)
 		       (match-string-no-properties 4)))
 	   (g-entry (org-entry-get nil superman-google-date-entry))
-	   (g-date (progn
-		     (string-match org-ts-regexp g-entry)
-		     (match-string-no-properties 1 g-entry)))
+	   (g-date
+	    ;; Strip this type of string "<2015-03-24 Tue 13:00--14:20>"
+	    (if (string-match "\\( +\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\(-+\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)" g-entry)
+		(let* ((a (match-string-no-properties 2 g-entry))
+		       (sep (match-string-no-properties 3 g-entry))
+		       (b (match-string-no-properties 4 g-entry)))
+		  (concat (replace-in-string g-entry (concat sep b) "")))
+	      (string-match org-ts-regexp g-entry)
+	      (match-string-no-properties 1 g-entry)))
 	   (g-duration
 	    (or (superman-google-calculate-duration g-entry)
 		superman-google-default-duration)))
@@ -133,6 +139,13 @@ STRING is an org-date-range such as
 '<2015-01-19 Mon 13:00>--<2015-01-19 Mon 13:09>'
 "
   (interactive)
+  (when (string-match "\\( +\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\(-+\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)" string)
+    (let* ((a (match-string-no-properties 2 string))
+	   (sep (match-string-no-properties 3 string))
+	   (b (match-string-no-properties 4 string))
+	   (range-string
+	    (concat (replace-in-string string (concat sep b) "") sep (replace-in-string string (concat a sep) ""))))
+      (setq string range-string)))
   (cond
    ((string-match org-tr-regexp string)
     (let* ((ts1 (match-string-no-properties 1 string))
@@ -152,8 +165,34 @@ STRING is an org-date-range such as
    ((string-match org-ts-regexp string)
     "60")))
 
-(superman-google-calculate-duration
- "<2015-01-19 Mon 13:00>--<2015-01-20 Tue 13:00>")
+  ;; (progn (string-match "\\( +\\)\\(\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\(-+\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\)" "<2015-03-24 Tue 13:00--14:20>")
+	 ;; (list (match-string-no-properties 1 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 2 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 3 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 4 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 5 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 6 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 7 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 8 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; (match-string-no-properties 9 "<2015-03-24 Tue 13:00--14:20>")
+	       ;; )
+  ;; (progn (string-match org-tsr-regexp-both "<2015-01-19 Mon 13:00>--<2015-01-20 Tue 13:00>") (match-string-no-properties 1 "<2015-01-19 Mon 13:00>--<2015-01-20 Tue 13:00>"))
+  ;; (progn (string-match org-ts-regexp2 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (progn (string-match  "\\(\\([0-9]\\{4\\}\\)-\\([0-9]\\{2\\}\\)-\\([0-9]\\{2\\}\\)\\( +[^]+0-9>\r\n -]+\\)?\\( +\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\(-+\\([0-9]\\{1,2\\}\\):\\([0-9]\\{2\\}\\)\\)?\\)" "<2015-03-24 Tue 13:00--14:20>")
+  ;; (list (match-string-no-properties 1 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 2 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 3 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 4 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 5 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 6 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 7 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 8 "<2015-03-24 Tue 13:00--14:20>")
+  ;; (match-string-no-properties 9 "<2015-03-24 Tue 13:00--14:20>")
+  ;; ))
+  ;; org-tsr-regexp
+  ;; (superman-google-calculate-duration
+  ;; "<2015-01-19 Mon 13:00>--<2015-01-20 Tue 13:00>")
+ ;; (superman-google-calculate-duration "<2015-03-24 Tue 13:00--14:20>")
 
 (provide 'superman-google)
 ;;; superman-google.el ends here
