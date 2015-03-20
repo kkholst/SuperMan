@@ -917,7 +917,7 @@ buttons and then calls `superman-redo-cat'."
   "Usually called via `superman-display-git-cycle' and
 `superman-redo-cat' by `superman-format-cat' to format git displays.
 
-If directory is not yet git controlled provide button to initialize git control.
+If directory is not yet git controlled provide a button which when pressed initializes git control.
  "
   (if (not (get-text-property (point-min) 'git-dir))
       (progn
@@ -1558,8 +1558,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
   :group 'org
   :keymap 'superman-git-log-mode-map)
 
-
-
 (defun superman-git-log-mode-on ()
   (interactive)
   (hl-line-mode 1)
@@ -1585,12 +1583,35 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	    pstring) "    " (superman-trim-string hdr 70)))
 
 
-(defun superman-git-setup-log-buffer (file git-switches decoration-only arglist)
-  (let* ((dir (or (get-text-property (point-min) 'git-dir) (superman-git-root file)))
+(setq superman-log-balls
+      '(("Date" ("width" 10) ("face" font-lock-string-face))
+	("Hash" ("width" 10) ("face" font-lock-comment-face))
+	("Author" ("width" 20) ("face" font-lock-function-name-face))
+	("Tag" ("width" 10) ("face" font-lock-comment-face))
+	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
+
+(defun superman-git-log (&optional file limit search-string decoration-only)
+  (interactive)
+  (let* ((file (or file
+		   (condition-case nil (superman-filename-at-point) (error nil))
+		   (get-text-property (point-min) 'filename)
+		   (buffer-file-name)))
+	 (limit (or limit superman-git-log-limit))
+	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
+	 (gitpath (get-text-property (point-min) 'git-dir))
+	 (nick (get-text-property (point-min) 'nickname))
+	 (gitcmd (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
+			 gitsearch  " "
+			 (if limit (concat "-n " (int-to-string limit)))))
+	 ;; (superman-git-setup-log-buffer
+	 ;; file gitcmd decoration-only
+	 ;; (list limit search-string decoration-only))))
+	 ;; (defun superman-git-setup-log-buffer (file git-switches decoration-only arglist)
+	 ;; (let* (
+	 (dir (or (get-text-property (point-min) 'git-dir) (superman-git-root file)))
 	 (rel-file (superman-relative-name file dir))
 	 (index (or (get-text-property (point-min) 'index) rel-file))
-	 (cmd (concat
-	       "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
+	 (cmd (concat "cd " dir "; " superman-cmd-git git-switches " -- " rel-file))
 	 (gitlog (shell-command-to-string cmd))
 	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	 log-strings)
@@ -1603,10 +1624,12 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (insert "* Git Log of " (file-name-nondirectory file))
     (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
     (put-text-property (point-at-bol) (point-at-eol) 'filename file)
-    (if (and (boundp 'nick) nick) (cond (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)))
+    (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
     (put-text-property (point-at-bol) (point-at-eol) 'index index)
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir dir)
-    (put-text-property (point-at-bol) (point-at-eol) 'arglist arglist)
+    (put-text-property (point-at-bol) (point-at-eol) 'limit limit)
+    (put-text-property (point-at-bol) (point-at-eol) 'search-string search-string)
+    (put-text-property (point-at-bol) (point-at-eol) 'decoration-only decoration-only)
     (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
 	    "  " (superman-make-button "Git overview" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
 	    "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
@@ -1641,29 +1664,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
     (superman-next-entry)
     (setq buffer-read-only t)))
 
-(setq superman-log-balls
-      '(("Date" ("width" 10) ("face" font-lock-string-face))
-	("Hash" ("width" 10) ("face" font-lock-comment-face))
-	("Author" ("width" 20) ("face" font-lock-function-name-face))
-	("Tag" ("width" 10) ("face" font-lock-comment-face))
-	("Comment" ("fun" superman-dont-trim) ("face" font-lock-keyword-face))))
 
-(defun superman-git-log (&optional file limit search-string decoration-only)
-  (interactive)
-  (let* ((file (or file
-		   (condition-case nil (superman-filename-at-point) (error nil))
-		   (get-text-property (point-min) 'filename)
-		   (buffer-file-name)))
-	 (limit (or limit superman-git-log-limit))
-	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
-	 (gitpath (get-text-property (point-min) 'git-dir))
-	 (nick (get-text-property (point-min) 'nickname))
-	 (gitcmd (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
-			 gitsearch  " "
-			 (if limit (concat "-n " (int-to-string limit))))))
-    (superman-git-setup-log-buffer
-     file gitcmd decoration-only
-     (list limit search-string decoration-only) )))
+
 
 ;; (defun superman-git-comment-file ()
   ;; (interactive)
@@ -1708,10 +1710,11 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	(progn
 	  (org-entry-put marker "Tag" tag)
 	  (superman-view-redo-line))
-      (let ((arglist (get-text-property (point-min) 'arglist))) ;; limit search decoration-only
-	(superman-git-log file (nth 0 arglist) (nth 1 arglist) (nth 2 arglist))
-	(goto-char (point-min))
-	(forward-line (1- linenum))))))
+      (superman-git-log file (get-text-property (point-min) 'limit)
+			(get-text-property (point-min) 'search-string)
+			(get-text-property (point-min) 'decoration-only))
+      (goto-char (point-min))
+      (forward-line (1- linenum)))))
 
 (defun superman-git-revision-at-point (&optional diff)
   "Shows version of the document at point "
