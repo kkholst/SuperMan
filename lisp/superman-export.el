@@ -149,10 +149,10 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	 (org-html-export-to-html)
 	 (superman-browse-this-file))))
 
-(defvar superman-babel-target-list '("this" "all")
+(defvar superman-babel-target-list '("this-block" "all-blocks")
   "Babel R-block targets.")
 
-(defvar superman-babel-target "all" "Either 'all': action on all R-blocks\n or 'this': action on current R-block.")
+(defvar superman-babel-target "all-blocks" "Either 'all-blocks': action on all R-blocks\n or 'this-block': action on current R-block.")
 
 (defun superman-babel-change-target ()
   (interactive)
@@ -177,15 +177,25 @@ Use this map to set additional keybindings for when Org-mode is used.")
 (define-minor-mode superman-org-headline-mode
   "Minor mode for headline buttons in header line in org buffers."
   nil "" superman-org-headline-map
+  (make-local-variable 'superman-org-export-target)
+  (make-local-variable 'superman-babel-target)
+  (make-local-variable 'superman-org-export-target-list)
+  (make-local-variable 'superman-babel-target-list)
   (org-set-local
    'header-line-format
-   (concat (header-button-format "Mode:" :action
+   (concat (header-button-format (concat "Mode:" (or superman-org-export-target "not set")) :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-org-export-change-target)))
 	   " "
-	   (header-button-format (or superman-org-export-target "not set") :action
+	   (header-button-format "export" :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-org-export-as nil)))
+	   (when (string= superman-org-export-target "pdf")
+	     (concat  
+	      " "
+	      (header-button-format "debug" :action
+				    #'(lambda (&optional arg) (interactive)
+					(superman-export-as-latex t)))))
 	   " "
 	   (header-button-format "view" :action
 				 #'(lambda (&optional arg) (interactive)
@@ -194,28 +204,28 @@ Use this map to set additional keybindings for when Org-mode is used.")
 				       (if (file-exists-p target)
 					   (org-open-file target)
 					 (message (concat "No such file: " target))))))
-	   " "
-	   (header-button-format "R:" :action
+	   " | "
+	   (header-button-format (concat "R:" superman-babel-target) :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-babel-change-target)))
 	   " "
-	   (header-button-format (concat "run-" superman-babel-target) :action
+	   (header-button-format "run" :action
 				 #'(lambda (&optional arg) (interactive)
-				     (cond ((string= superman-babel-target "this")
+				     (cond ((string= superman-babel-target "this-block")
 					    (beginning-of-line)
 					    ;; (if (string= (car (org-babel-get-src-block-info)) "R")
 					    (if (org-babel-get-src-block-info)
 						(org-babel-execute-src-block)
 					      ;; (superman-ess-eval-and-go)
 					      (message "Cursor is not in src-block")))
-					   ((string= superman-babel-target "all")
+					   ((string= superman-babel-target "all-blocks")
 					    (org-babel-execute-buffer)))))
 	   " "
-	   (header-button-format (concat "clear-" superman-babel-target) :action
+	   (header-button-format "clear"  :action
 				 #'(lambda (&optional arg) (interactive)
-				     (cond ((string= superman-babel-target "all")
+				     (cond ((string= superman-babel-target "all-blocks")
 					    (org-babel-clear-all-results))
-					   ((string= superman-babel-target "this")
+					   ((string= superman-babel-target "this-block")
 					    (if (org-babel-get-src-block-info)
 						(org-babel-remove-result)
 					      ;; (superman-ess-eval-and-go)

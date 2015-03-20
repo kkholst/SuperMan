@@ -717,12 +717,20 @@ Return  the sublist of the existing files. Does not re-display selected list."
     (file-list-select-existing-files)
     (if (and file-list-mode (not file-list-completion-mode))
 	(superman-display-file-list 
-	 (get-text-property (point-min) 'dir))
+	 (get-text-property (point-min) 'dir)
+	 nil
+	 (get-text-property (point-min) 'filter)
+	 (get-text-property (point-min) 'sort)
+	 (get-text-property (point-min) 'balls)
+	 nil
+	 (current-buffer)
+	 'refresh
+	 (not (get-text-property (point-min) 'project-buffer)))
       (file-list-display-match-list))))
 
 (defun file-list-select-internal (&optional file-list regexp by inverse dir display-buffer dont-display)
   "Returns sublist of filenames in file-list matched by regexp.
-Changes the file-list-current-file-list. See also file-list-add."
+Changes the variable `file-list-current-file-list'. See also `file-list-add'."
   (setq file-list-reference-buffer (current-buffer))
   (let* ((display-buffer (or display-buffer
 			     (file-list-current-display-buffer)
@@ -785,14 +793,25 @@ Changes the file-list-current-file-list. See also file-list-add."
     (unless (stringp sub-file-list)
       (unless dont-display
 	(if (or (not file-list-mode) file-list-completion-mode)
-	    (file-list-display-match-list sub-file-list filter-name display-buffer)
+	    ;; (file-list-display-match-list sub-file-list filter-name display-buffer)
+	    (superman-display-file-list
+	     dir
+	     sub-file-list
+	     `(,regexp ,by ,inverse)
+	     nil
+	     nil
+	     nil
+	     nil
+	     nil t)
 	  (superman-display-file-list
 	   nil
 	   sub-file-list
+	   `(,regexp ,by ,inverse)
+	   nil
 	   nil
 	   nil
 	   (current-buffer)
-	   nil))
+	   nil t))
 	(setq file-list-current-file-list sub-file-list))
       sub-file-list)))
 
@@ -1016,7 +1035,16 @@ Return the difference in the format of a time value."
       (message "File list sorted by %s%s" by (if reverse " in reverse order" ""))
       (if file-list-completion-mode
 	  (file-list-display-match-list file-list-current-file-list)
-	(superman-display-file-list nil file-list-current-file-list)))))
+	(superman-display-file-list
+	 (get-text-property (point-min) 'dir)
+	 file-list-current-file-list
+	 (get-text-property (point-min) 'filter)
+	 (get-text-property (point-min) 'sort)
+	 (get-text-property (point-min) 'balls)
+	 nil
+	 (current-buffer)
+	 'refresh
+	 (not (get-text-property (point-min) 'project-buffer)))))))
 
 ;;}}}
 
@@ -1231,7 +1259,7 @@ Switches to the corresponding directory of each file."
 		     (expand-file-name
 		      (file-name-as-directory
 		       (read-directory-name
-			"Target directory "
+			"Copy all files to directory: "
 			nil nil nil)))))
 	 (use-path (if ask (yes-or-no-p "Use path as part of file-name? "))))
     (cond ((file-directory-p target) nil)
@@ -1833,20 +1861,24 @@ Switches to the corresponding directory of each file."
 	  (query-replace (car args) (cadr args))
 	  (save-buffer))))))
 
-(defun file-list-call-keyboard-macro (&optional file-list)
+(defun file-list-call-defun (&optional file-list)
   (interactive)
-  (let* ((buffer-read-only nil)
-	 (file-list (or file-list file-list-current-file-list))
-	 (args (query-replace-read-args "Query-replace" nil)))
+  (let* ((fun (read-command "Function to be called on all files: "))
+	 (buffer-read-only nil)
+	 (file-list (or file-list file-list-current-file-list)))
     (dolist (file file-list)
       (save-window-excursion
 	(find-file (file-list-make-file-name file))
 	(save-restriction
 	  (widen)
-	  (goto-char (point-min))
-	  (query-replace (car args) (cadr args))
+	  (funcall fun)
 	  (save-buffer))))))
 
+(defun roxy-clean-export-lines ()
+  (interactive)
+  (goto-char (point-min))
+  (while (re-search-forward "@export " nil t)
+    (kill-region (point) (point-at-eol))))
 
 (defun file-list-replace (&optional file-list)
   (interactive)

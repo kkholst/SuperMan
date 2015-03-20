@@ -502,7 +502,9 @@ we find the `supermanual' and other helpful materials.")
     (superman-view-project pro t)
     ;; (assoc name superman-project-alist))
     (if (superman-git-p dir) (superman-display-git-cycle)
-      (superman-display-file-list dir))))
+      (superman-display-file-list dir
+				  nil nil nil nil nil nil nil
+				  'no-project))))
 	 
 
 (defun superman-parse-project-categories ()
@@ -893,20 +895,26 @@ If NOSELECT is set return the project."
   "Browse the html version of the current file using `browse-url'. If
         prefix arg is given, then browse the corresponding file on the superman-public-server"
   (interactive "P")
-  (let* ((bf (buffer-file-name (current-buffer)))
-	 (server-home (if (and arg (not superman-public-server-home))
-			  (read-string "Specify address on server: " "http://")
-			superman-public-server-home))
-         (html-file (if arg
-                        (concat (replace-regexp-in-string
-                                 (expand-file-name superman-public-directory)
-                                 server-home
-                                 (file-name-sans-extension bf))
-                                ".html")
-                      (concat "file:///" (file-name-sans-extension bf) ".html"))))
-    ;; fixme superman-browse-file-hook (e.g. to synchronize with public server)
-    (message html-file)
-    (browse-url html-file)))
+  (cond ((string= superman-org-export-target "html")
+	 (let* ((bf (buffer-file-name (current-buffer)))
+		(server-home (if (and arg (not superman-public-server-home))
+				 (read-string "Specify address on server: " "http://")
+			       superman-public-server-home))
+		(html-file (if arg
+			       (concat (replace-regexp-in-string
+					(expand-file-name superman-public-directory)
+					server-home
+					(file-name-sans-extension bf))
+				       ".html")
+			     (concat "file:///" (file-name-sans-extension bf) ".html"))))
+	   ;; fixme superman-browse-file-hook (e.g. to synchronize with public server)
+	   (message html-file)
+	   (browse-url html-file)))
+	 (t 
+	  (let ((target (concat (file-name-sans-extension (buffer-file-name)) "." superman-org-export-target)))
+	    (if (file-exists-p target)
+		(org-open-file target)
+	      (message (concat "No such file: " target)))))))
 
 
 (defun superman-set-publish-alist ()

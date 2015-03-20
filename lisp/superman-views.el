@@ -2167,7 +2167,11 @@ movements permant."
 		     (error "Cannot move further")
 		   (setq n 0)))
 		((> next-level current-level) ;; skip lower levels
-		 nil)
+		 (superman-skip-headings current-level (not down))
+		 (if (= (point) next-point) ;; no further appropriate level
+		     (error "Cannot move further")
+		   (setq n (- n 1))
+		   ))
 		((= next-level current-level) ;; same level
 		 (setq n (- n 1)))
 		((< next-level current-level) ;; higher level
