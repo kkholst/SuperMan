@@ -253,8 +253,6 @@
   :group 'superman)
 
 ;;}}}
-
-
 ;;{{{ superman-git-keyboard
 
 (defface superman-git-keyboard-face-d
@@ -364,7 +362,6 @@
   "Face used for git-status (larger box)."
   :group 'superman)
 ;;}}}
-
 
 (provide 'superman-faces)
 ;;; superman-faces.el ends here

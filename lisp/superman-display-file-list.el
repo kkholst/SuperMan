@@ -440,8 +440,8 @@
 	  (kill-buffer (current-buffer))
 	  (switch-to-buffer pbuf)
 	  (superman-redo))
-      (or force (not (one-window-p)))
-      (delete-window)
+      (if (or force (not (one-window-p)))
+	  (delete-window))
       (switch-to-buffer (other-buffer)))))
 ;; (file-list-mode
 ;; (superman-view-back))

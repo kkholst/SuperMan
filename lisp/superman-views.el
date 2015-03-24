@@ -770,86 +770,86 @@ Translate the branch names into buttons."
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[fetch origin]"
+	      " fetch origin "
 	      `(lambda () (interactive)
 		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " fetch origin\n")
 				   "*Superman-returns*"
 				   (concat "`" ,superman-cmd-git " fetch origin' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-action-button-face
 	      "Fetch changes from remote git repository")))
 	  ;; fetch svn
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[svn fetch]"
+	      "svn fetch"
 	      `(lambda () (interactive)
 		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn fetch\n")
 				   "*Superman-returns*"
 				   (concat "`" ,superman-cmd-git " svn fetch' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-info-button-face
 	      "Fetch changes from remote svn repository")))
 	  ;; merge
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[merge origin/master]"
+	      " merge "
 	      `(lambda () (interactive)
 		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " merge origin/master\n")
 				   "*Superman-returns*"
 				   (concat "`" ,superman-cmd-git " merge origin/master' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-inverse-filter-button-face
 	      "Merge origin/master and master repository")))
 	  ;; pull
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[pull]"
+	      "  pull  "
 	      `(lambda () (interactive)
 		 (superman-run-cmd
 		  (concat "cd " ,loc  ";" ,superman-cmd-git " pull\n")
 		  "*Superman-returns*"
 		  (concat "`" ,superman-cmd-git " pull' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-filter-button-face
 	      "Pull changes from remote git repository")))
 	  ;; push
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[push]"
+	      "  push  "
 	      `(lambda () (interactive)
 		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " push\n")
 				   "*Superman-returns*"
 				   (concat "`" ,superman-cmd-git " ' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-action-button-face
 	      "Push changes to remote git repository")))
 	  ;; rebase
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[rebase]"
+	      " rebase "
 	      `(lambda () (interactive)
 		 (superman-run-cmd
 		  (concat "cd " ,loc  ";" ,superman-cmd-git " svn rebase\n")
 		  "*Superman-returns*"
 		  (concat "`" ,superman-cmd-git " svn rebase' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-info-button-face
 	      "Rebase with remote svn repository")))
 	  ;; dcommit
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
-	      "[dcommit]"
+	      " dcommit "
 	      `(lambda () (interactive)
 		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn dcommit\n")
 				   "*Superman-returns*"
 				   (concat "`" ,superman-cmd-git " svn dcommit' run below \n" ,loc "' returns:\n\n")))
-	      'superman-default-button-face
+	      'file-list-action-button-face
 	      "Push changes to remote svn repository"))))))))
 
 

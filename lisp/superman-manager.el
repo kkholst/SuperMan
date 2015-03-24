@@ -138,7 +138,7 @@ category: Name of the category property
   (interactive)
   (cdr (assoc label superman-property-list)))
 
-(defvar superman-profile "~/metropolis/Projects.org"
+(defvar superman-profile "~/.SuperMan.org"
   "File for managing projects.")
 
 (defvar superman-default-directory
@@ -396,7 +396,7 @@ and an action a one-optional-argument function which must return a buffer.")
     ;; (org-entry-put pom prop val))
   ;; (superman-redo))
 
-(defvar superman-project-kal-el t
+(defvar superman-project-kal-el nil
   "If non-nil add the Kal-El project to project alist.
 Kal-El is the planet where superman was born. It is there
 we find the `supermanual' and other helpful materials.")
