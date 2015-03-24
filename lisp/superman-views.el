@@ -605,26 +605,6 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 ;;}}}
 ;;{{{ superman-buttons
 
-;; (defun superman-call-button-function (button)
-  ;; (interactive)
-  ;; (callf (button-get button 'fun)))
-  ;; (let ((win (get-buffer-window (button-get button 'buffer)))
-	;; (cur-win (get-buffer-window (current-buffer))))
-    ;; (select-window cur-win)
-    ;; (if win
-	;; (progn
-	  ;; (select-window win)
-	  ;; (goto-char (button-get button 'point)))))
-  ;; (callf (button-get button 'fun)))
-
-;; (insert (superman-make-button "bla" 'test))
-
-
-;; (defun superman-with-point-at-mouse (event)
-  ;; (set-buffer (window-buffer (posn-window event))
-	      ;; (goto-char (posn-point event))
-	      ;; (message (concat (buffer-name) (int-to-string (point))))))
-
 (defun superman-make-button (string &optional fun face help fun-3)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
@@ -975,12 +955,12 @@ If MARKED is non-nil run only on marked items."
 ;;{{{ Columns and balls
 
 (defun superman-column-names (balls)
+  "Insert column names that are extracted from BALLS via `superman-format-column names'."
   (let ((cols (superman-format-column-names balls)))
-    (put-text-property 0 (length cols) 'face 'font-lock-comment-face cols)
+    (put-text-property 0 (length cols) 'face 'superman-column-name-face cols)
     ;; (put-text-property 0 (length cols) 'column-names t cols)
     (put-text-property 0 (length cols) 'names (length cols) cols)
     cols))
-
 
 (defun superman-format-column-names (balls)
   "Format column names NAMES according to balls, similar to

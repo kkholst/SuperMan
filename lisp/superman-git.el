@@ -718,12 +718,20 @@ see M-x manual-entry RET git-diff RET.")
 ;;
 ;;{{{ git display cycle
 
+
 (defvar superman-git-display-cycles nil
   "Keywords to match the elements in superman-git-display-command-list")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
 (setq superman-git-default-displays
       '("versions" "modified" "tracked" "submodule" "untracked" "stash"))
+
+(defvar superman-git-display-diff-balls
+  '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+    ("GitStatus" ("width" 20) ("face" superman-get-git-status-face) ("name" "What happened"))
+    (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+    ("Directory" ("width" 25) ("face" superman-subheader-face)))
+  "Balls to format git diff views.")
 
 (defun superman-trim-hash (hash &rest args)
  (superman-make-button
@@ -792,57 +800,6 @@ see M-x manual-entry RET git-diff RET.")
 5) post-hook is a function which is called after superman plays the balls.
 ")
 
-(defvar superman-git-display-diff-balls
-  '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-    ("GitStatus" ("width" 20) ("face" superman-get-git-status-face) ("name" "What happened"))
-    (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
-    ("Directory" ("width" 25) ("face" superman-subheader-face)))
-  "Balls to format git diff views.")
-
-(defun superman-set-git-cycle (value)
-  (let ((buffer-read-only nil))
-    (put-text-property (point-min) (1+ (point-min)) 'git-display value)))
-;; (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
-;; (org-set-property "git-display" value))
-
-(defun superman-cycle-git-display ()
-  "Cycles to the next value in `superman-git-display-cycles'.
-This function should be bound to a key or button."
-  (interactive)
-  (let* ((cycles superman-git-default-displays)
-	 (current (or (get-text-property (point-min) 'git-display)
-		      (car cycles)))
-	 (rest (member current cycles))
-	 (next (if (> (length rest) 1) (cadr rest) (car cycles))))
-    (superman-set-git-cycle next)
-    (superman-redo-cat)))
-
-(defun superman-redo-git-display ()
-  "Update the header and then call `superman-redo-cat'."
-  (interactive)
-  (let ((git-dir (get-text-property (point-min) 'git-dir))
-	(branch-start (next-single-property-change (point-min) 'git-branches))
-	(remote-start (next-single-property-change (point-min) 'git-remote))
-	(buttons (next-single-property-change (point-min) 'git-buttons))
-	(buffer-read-only nil))
-    (if (not branch-start)
-	(progn
-	  (goto-char (point-min))
-	  (forward-line 2))
-      (goto-char branch-start)
-      (kill-whole-line))
-    (when remote-start
-      (goto-char remote-start)
-      (kill-whole-line))
-    (when git-dir
-      (superman-view-insert-git-branches git-dir)
-      (if buttons
-	  (insert "\n")
-	(superman-view-insert-git-buttons)
-	)))
-  (when superman-git-mode
-    (goto-char (next-single-property-change (point-min) 'cat))
-    (superman-redo-cat)))
 
 (defun superman-display-git-cycle ()
   "Switch to git control cycle of the current project's directory,
@@ -898,6 +855,52 @@ buttons and then calls `superman-redo-cat'."
 	  (if (not git-dir)
 	      (insert (superman-initialize-git-control-string dir))
 	    (superman-redo-cat)))))))
+
+(defun superman-set-git-cycle (value)
+  (let ((buffer-read-only nil))
+    (put-text-property (point-min) (1+ (point-min)) 'git-display value)))
+;; (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker)
+;; (org-set-property "git-display" value))
+
+(defun superman-cycle-git-display ()
+  "Cycles to the next value in `superman-git-display-cycles'.
+This function should be bound to a key or button."
+  (interactive)
+  (let* ((cycles superman-git-default-displays)
+	 (current (or (get-text-property (point-min) 'git-display)
+		      (car cycles)))
+	 (rest (member current cycles))
+	 (next (if (> (length rest) 1) (cadr rest) (car cycles))))
+    (superman-set-git-cycle next)
+    (superman-redo-cat)))
+
+(defun superman-redo-git-display ()
+  "Update the header and then call `superman-redo-cat'."
+  (interactive)
+  (let ((git-dir (get-text-property (point-min) 'git-dir))
+	(branch-start (next-single-property-change (point-min) 'git-branches))
+	(remote-start (next-single-property-change (point-min) 'git-remote))
+	(buttons (next-single-property-change (point-min) 'git-buttons))
+	(buffer-read-only nil))
+    (if (not branch-start)
+	(progn
+	  (goto-char (point-min))
+	  (forward-line 2))
+      (goto-char branch-start)
+      (kill-whole-line))
+    (when remote-start
+      (goto-char remote-start)
+      (kill-whole-line))
+    (when git-dir
+      (superman-view-insert-git-branches git-dir)
+      (if buttons
+	  (insert "\n")
+	(superman-view-insert-git-buttons)
+	)))
+  (when superman-git-mode
+    (goto-char (next-single-property-change (point-min) 'cat))
+    (superman-redo-cat)))
+
 
 (defun superman-initialize-git-control-string (dir)
   (concat "\n\nDirectory " dir " is not yet under git control.\n"
@@ -1600,7 +1603,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 	 (gitsearch (if search-string (concat " -G\"" search-string "\"") ""))
 	 (gitpath (get-text-property (point-min) 'git-dir))
 	 (nick (get-text-property (point-min) 'nickname))
-	 (gitcmd (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
+	 (git-switches (concat " --no-pager log --full-history --pretty=\"%h:#:%s:#:%ad:#:%an:#:%d\" --date=short "
 			 gitsearch  " "
 			 (if limit (concat "-n " (int-to-string limit)))))
 	 ;; (superman-git-setup-log-buffer

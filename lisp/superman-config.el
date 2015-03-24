@@ -392,7 +392,7 @@ given in superman notation."
 		     ((todo ""
 			    ((org-agenda-files 
 			      (mapcar 'file-list-make-file-name
-				      (file-list-select-internal
+				      (file-list-select
 				       nil
 				       (or "^[^\\.#].*org$" ".") nil nil
 				       loc

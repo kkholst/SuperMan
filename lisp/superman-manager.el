@@ -884,7 +884,7 @@ If NOSELECT is set return the project."
   (if (featurep 'file-list)
       (mapcar 'file-list-make-file-name
 	      (file-list-sort-internal
-	       (file-list-select-internal nil ext nil nil dir nil 'dont)
+	       (file-list-select nil ext nil nil dir nil 'dont)
 	       (or sort-by "time") nil t))
     (directory-files dir nil ext t)))
 

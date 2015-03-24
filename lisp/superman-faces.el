@@ -38,7 +38,118 @@
 	       ("CANCELED" :foreground "slate grey" :weight bold)))))
 
 ;;}}}
+;;{{{ file-list faces
+(defface superman-file-name-face
+  '((t (:inherit font-lock-variable-name-face :underline nil)))
+  "Face used for file names."
+  :group 'superman)
 
+(defface superman-directory-name-face
+  '((t (:inherit font-lock-keyword-face :underline nil)))
+  "Face used for directory names."
+  :group 'superman)
+
+(defface superman-column-name-face
+  '((t (:inherit font-lock-comment-face :underline nil)))
+  "Face used for directory names."
+  :group 'superman)
+
+(defface file-list-action-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "CornflowerBlue"
+     :inverse-video nil
+     :background "gray99"
+     :height 1.0)
+    (t
+     :inherit superman-default-button-face
+     :foreground "CornflowerBlue"
+     :background "gray99"
+     :box (:line-width 1 :color "black" :style released-button)
+     :inverse-video nil
+     :height 1.0))
+  "Face for next file-list-filter-buttons."
+  :group 'superman)
+
+(defface file-list-info-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :box (:line-width 1 :color "black" :style released-button)
+     :background "DarkOrchid"
+     :inverse-video nil
+     :background "gray99"
+     :height 1.0)
+    (t
+     :inherit superman-default-button-face
+     :foreground "DarkOrchid"
+     :background "gray99"
+     :box (:line-width 1 :color "black" :style released-button)
+     :inverse-video nil
+     :height 1.0))
+  "Face for next file-list-filter-buttons."
+  :group 'superman)
+
+
+
+(defface file-list-active-filter-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :foreground "gray99"
+     :background "black"
+     :inverse-video nil
+     :box (:line-width 1 :color "black" :style pressed-button)
+     :background "black"
+     :height 1.0)
+    (t
+     :inherit superman-default-button-face
+     :foreground "black"
+     :background "gray99"
+     :box (:line-width 1 :color "black" :style pressed-button)
+     :inverse-video nil
+     :height 1.0))
+  "Face for next file-list-filter-buttons."
+  :group 'superman)
+
+(defface file-list-filter-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "LimeGreen"
+     :inverse-video nil
+     :box (:line-width 1 :color "black" :style released-button)
+     :background "gray99"
+     :height 1.0)
+    (t
+     :inherit superman-default-button-face
+     :foreground "LimeGreen"
+     :background "gray99"
+     :box (:line-width 1 :color "black" :style released-button)
+     :inverse-video nil
+     :height 1.0))
+  "Face for next file-list-filter-buttons."
+  :group 'superman)
+
+(defface file-list-inverse-filter-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "OrangeRed1"
+     :box (:line-width 1 :color "black" :style pressed-button)
+     :inverse-video nil
+     :background "gray99"
+     :height 1.0)
+    (t
+     :inherit superman-default-button-face
+     :foreground "OrangeRed1"
+     :background "gray99"
+     :box (:line-width 1 :color "black" :style pressed-button)
+     :inverse-video nil
+     :height 1.0))
+  "Face for next file-list-filter-buttons."
+  :group 'superman)
+
+
+
+;;}}}
+;;{{{ warning & subheader faces
 (defface superman-warning-face
   '((t (:inherit font-lock-warning-face :underline nil)))
     "Face used for warnings."
@@ -48,7 +159,7 @@
   '((t (:inherit font-lock-string-face)))
     "Face used for the selected tab."
     :group 'superman)
-
+;;}}}
 ;;{{{ button faces
 (defface superman-default-button-face
   '((t (:box (:line-width 1 :color "gray88" :style released-button))))
