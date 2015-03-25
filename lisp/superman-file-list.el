@@ -628,7 +628,7 @@ If INCLUDE is non-nil, then SUBDIR is excluded if it does not match REGEXP."
 ;;mapcar this function on a file-list ...
 (defun file-list-make-file-name (entry)
   "Concats path-name and file-name of entry."
-  (concat  (cadr entry) (car entry)))
+  (concat (cadr entry) (car entry)))
 
 
 (defun file-list-make-file-name~ (entry)

@@ -891,6 +891,8 @@ If NOSELECT is set return the project."
 ;;}}}
 ;;{{{ publishing project contents
 
+(defvar superman-public-server-home nil "String indicating a place on the web where org to html exports are published.")
+
 (defun superman-browse-this-file (&optional arg)
   "Browse the html version of the current file using `browse-url'. If
         prefix arg is given, then browse the corresponding file on the superman-public-server"
