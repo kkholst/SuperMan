@@ -367,10 +367,10 @@ Finally apply filter stored at point-min and all elements of
   (let* ((dir (get-text-property (point-min) 'dir))
 	 (main-filter (get-text-property (point-min) 'filter))
 	 (active-filter-list
-	  (mapcar 'car
-		  file-list-filter))
+	  (mapcar 'car file-list-filter))
 	 (flist
 	  (progn
+	    (setq file-list-filter nil)
 	    (file-list-update-below-dir dir)
 	    (file-list-select
 	     nil
