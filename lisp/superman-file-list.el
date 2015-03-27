@@ -742,9 +742,14 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 		     (nth 5 (file-attributes (file-list-make-file-name entry))))))
 		(t nil)))
 	 (sub-file-list
-	  ;; (file-list-extract-sublist
-	  (file-list-split-file-list
-	   file-list (or test regexp) filter-name inverse)))
+	  (progn
+	    (add-text-properties 0 (length filter-name)
+				 `(by ,by
+				      regexp ,regexp
+				      inverse ,inverse) filter-name)
+	    ;; (file-list-extract-sublist
+	    (file-list-split-file-list
+	     file-list (or test regexp) filter-name inverse))))
     (unless (stringp sub-file-list)
       (unless dont-display
 	(superman-display-file-list
@@ -757,8 +762,6 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 	 nil t)
 	(setq file-list-current-file-list sub-file-list))
       sub-file-list)))
-
-
 
 (defun file-list-by-name (&optional arg file-list dir)
   "Returns sublist of filenames (in file-list) whose path is matched by regexp.
@@ -1603,7 +1606,7 @@ Switches to the corresponding directory of each file."
 (define-key file-list-mode-map "r" 'file-list-rename-file-at-point)
 (define-key file-list-mode-map "R" 'file-list-rename)
 (define-key file-list-mode-map "t" 'file-list-toggle-display-mode)
-(define-key file-list-mode-map "u" 'file-list-redisplay)
+(define-key file-list-mode-map "u" 'file-list-reload)
 (define-key file-list-mode-map "x" 'file-list-shell-command-at-point)
 (define-key file-list-mode-map "X" 'file-list-shell-command)
 (define-key file-list-mode-map "y" 'file-list-add)

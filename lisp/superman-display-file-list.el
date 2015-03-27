@@ -70,17 +70,7 @@
 		    (superman-project-home project))
 		  (error "Missing location")))
 	 (view-buf (or view-buffer (get-buffer-create (concat "*FileList: " nick "*"))))
-	 (list (or list
-		   (with-current-buffer view-buf
-		     (if refresh
-			 (progn
-			   (file-list-update-below-dir dir)
-			   (file-list-select-existing-files)
-			   file-list-current-file-list
-			   ;; FIXME: need to teach file-list-select
-			   ;; to work with filters nil nil dir nil
-			   )))
-		   file-list-current-file-list))
+	 (list (or list file-list-current-file-list))
 	 ;; when balls are specified force level 0
 	 ;; and provide file-name and directory name
 	 (level (if balls 0 file-list-display-level))
@@ -117,7 +107,7 @@
 	(insert (superman-make-button
 		 (concat "FileList"
 			 (concat ": " dir))
-		 'file-list-redisplay
+		 'file-list-reload
 		 'superman-project-button-face
 		 "Refresh file-list"))
 	(unless no-project
@@ -147,7 +137,7 @@
 	   (" delete files " file-list-remove file-list-action-button-face "Delete all files")
 	   ("find & replace" file-list-query-replace file-list-action-button-face "Run interactive query replace through all files")
 	   ("shell-command " file-list-shell-command file-list-action-button-face "Run the same shell command on all files")
-	   ;; (" update list  " file-list-redisplay nil "Update file-list")
+	   ;; (" update list  " file-list-reload nil "Update file-list")
 	   )
 	 nil
 	 "Action   :")
@@ -229,12 +219,12 @@
        count
        balls
        nil
-       'file-list-redisplay
+       'file-list-reload
        "Refresh view")
       (put-text-property (point-at-bol) (point-at-eol) 'file-list-section-start t)
       (insert " ")
       (insert (superman-make-button "Update list"
-				    'file-list-redisplay
+				    'file-list-reload
 				    'superman-next-project-button-face
 				    "Update file-list")
 	      " "
@@ -258,12 +248,12 @@
 	  (delete-region (point-at-bol) (point-at-eol)))
 	(insert "Active filter: ")
 	(dolist (x file-list-filter nil)
-	  (insert "\t" (superman-make-button
-			(car x)
-			`(lambda () (interactive)
-			   (file-list-remove-filter ,(car x)))
-			'file-list-active-filter-button-face
-			"Press button to remove this filter"))))
+	  (insert " " (superman-make-button
+		       (car x)
+		       `(lambda () (interactive)
+			  (file-list-remove-filter ,(car x)))
+		       'file-list-active-filter-button-face
+		       "Press button to remove this filter"))))
       ;; insert the column names
       (when new-buffer
 	(insert "\n")
@@ -368,14 +358,37 @@
      'refresh
      (not (get-text-property (point-min) 'project-buffer)))))
 
-(defun file-list-redisplay ()
+(defun file-list-reload ()
   "Update below the directory which is stored at point-min.
- Then remove non-existing files and redisplay file-list."
+ Then remove non-existing files and redisplay file-list.
+Finally apply filter stored at point-min and all elements of
+ `file-list-filter'."
   (interactive)
-  (let ((dir (get-text-property (point-min) 'dir)))
-    (when dir
-      (file-list-update-below-dir dir))
-    (file-list-select-existing-files)
+  (let* ((dir (get-text-property (point-min) 'dir))
+	 (main-filter (get-text-property (point-min) 'filter))
+	 (active-filter-list
+	  (mapcar 'car
+		  file-list-filter))
+	 (flist
+	  (progn
+	    (file-list-update-below-dir dir)
+	    (file-list-select
+	     nil
+	     (nth 0 main-filter)
+	     (nth 1 main-filter)
+	     (nth 2 main-filter)
+	     dir
+	     nil t))))
+    (while active-filter-list
+      (let* ((filter (car active-filter-list))
+	     (regexp (get-text-property 0 'regexp filter))
+	     (by (get-text-property 0 'by filter))
+	     (inverse (get-text-property 0 'inverse filter)))
+	(setq flist
+	      (file-list-select nil regexp by inverse dir nil t)))
+      (setq active-filter-list (cdr active-filter-list)))
+    ;; (file-list-select-existing-files)
+    (setq file-list-current-file-list flist)
     (superman-file-list-refresh-display)))
 
 (defun file-list-clear-display ()
