@@ -1,6 +1,6 @@
 ;;; superman-google.el --- superman has google
 
-;; Copyright (C) 2013  Thomas Alexander Gerds
+;; Copyright (C) 2013-2015  Thomas Alexander Gerds
 
 ;; Author: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;; Keywords: convenience
@@ -19,7 +19,8 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;
+;; 
+;; Export meetings to google calendar via gcalcli.
 ;; If you capture a meeting in this form
 ;;
 ;; ,----
@@ -29,31 +30,18 @@
 ;; |  :Participants: Robin, WonderWoman
 ;; |  :CaptureDate: <2013-01-16 Wed>
 ;; |  :GoogleCalendar: Bat
-;; |  :Status: confirmed
 ;; |  :END:
 ;; `----
 ;;
-;; and you also have
-;;
-;; (add-hook
-;; 'org-capture-before-finalize-hook
-;; 'org-google-export-appointment)
-;; 
 ;; then finalizing the capture \C-c \C-c
 ;; will prompt you for exporting the appointment
 ;; to your calendar "Bat"
 ;;
 ;; If property GoogleCalendar is not set,
-;; the prompt uses your
+;; the prompt uses the value of 
 ;; superman-google-default-calendar
 ;;
-;; ADVARSEL: non-standard letters like ø or ä
-;;           can easily destroy the transporter
-;;
 ;;; Code:
-
-
-
 
 (defvar superman-google-cmd
   "gcalcli" ;; "google"
@@ -92,8 +80,10 @@
 	    (if (string-match "\\( +\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\(-+\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)" g-entry)
 		(let* ((a (match-string-no-properties 2 g-entry))
 		       (sep (match-string-no-properties 3 g-entry))
-		       (b (match-string-no-properties 4 g-entry)))
-		  (concat (replace-in-string g-entry (concat sep b) "")))
+		       (b (match-string-no-properties 4 g-entry))
+		       (d (concat (replace-in-string g-entry (concat sep b) ""))))
+		  (string-match org-ts-regexp d)
+		  (match-string-no-properties 1 d))
 	      (string-match org-ts-regexp g-entry)
 	      (match-string-no-properties 1 g-entry)))
 	   (g-duration
@@ -162,8 +152,7 @@ STRING is an org-date-range such as
 	  (if negative
 	      (error "Negative time range")
 	    (int-to-string (floor (/ diff 60)))))))
-   ((string-match org-ts-regexp string)
-    "60")))
+   ((string-match org-ts-regexp string) "60")))
 
   ;; (progn (string-match "\\( +\\)\\(\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\(-+\\)\\([0-9]\\{1,2\\}:[0-9]\\{2\\}\\)\\)" "<2015-03-24 Tue 13:00--14:20>")
 	 ;; (list (match-string-no-properties 1 "<2015-03-24 Tue 13:00--14:20>")

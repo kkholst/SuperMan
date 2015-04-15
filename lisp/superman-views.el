@@ -605,14 +605,24 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 ;;}}}
 ;;{{{ superman-buttons
 
-(defun superman-make-button (string &optional fun face help fun-3)
+(defun superman-make-button (string &optional fun face help fun-3 width)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
  HELP is a string which is shown when the mouse over the button.
  If FUN-3 is a command it gets bound to mouse-3.
+Width determines the amount of white-space around string to achieve
+a fixed button width. This is useful to align a series of buttons.
 "
   (let ((map (make-sparse-keymap))
-	(help (or help "Superman-button")))
+	(help (or help "Superman-button"))
+	(string (if (not width) string
+		  (let* ((len (length string))
+			 (diff (- width len))
+			 (rest (/ diff 2)))
+		    (if (< diff 0)
+			(substring string 0 width)
+		      (concat (make-string rest (string-to-char " "))
+			      string (make-string (- width (+ len rest)) (string-to-char " "))))))))
     (unless (functionp fun)
       (setq fun #'(lambda () (interactive)
 		    (message

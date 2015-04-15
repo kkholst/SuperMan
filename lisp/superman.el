@@ -273,7 +273,11 @@ the existing properties."
      ("width" 17)
      ("face" font-lock-type-face)
      ("sort-key" t))
-    ("others" ("width" 66) ("face" font-lock-keyword-face)))
+    ("others" ("width" 66) ("face" font-lock-keyword-face))
+    ("InitialVisit" ("fun" superman-trim-date)
+     ("width" 17)
+     ("face" font-lock-type-face)
+     ("sort-key" nil)))
   "Definition of columns to be shown in overview buffer of superman projects.")
 
 
