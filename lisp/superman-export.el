@@ -37,10 +37,12 @@
 
 ;;; Code:
 
-(defun superman-control-latex-export ()
-  (interactive)
+(defun superman-control-latex-export (&optional arg)
+  (interactive "p")
   (if (string= (car (org-babel-get-src-block-info)) "R")
+      (progn
       (ess-switch-to-end-of-ESS)
+      (when arg (erase-buffer) (inferior-ess-send-input)))
   (superman-export-as-latex 'debug)))
 
 ;; See library tex-buf for help on TeX-process.

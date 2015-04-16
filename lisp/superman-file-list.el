@@ -1,4 +1,4 @@
- ;;{{{ Header
+;;{{{ Header
 
 ;;; superman-file-list.el --- working with alist of filenames
 ;;
@@ -1054,6 +1054,9 @@ If ARG keep only filename at point."
   (interactive "P")
   (when file-list-mode
     (let* ((c-list file-list-current-file-list)
+	   (here (point-at-bol))
+	    ;; (or (previous-single-property-change (point-min) 'superman-item-marker)
+		     ;; (save-excursion (forward-line -1) (point))))
 	   (filename (file-list-file-at-point))
 	   (nth-in-list (file-list-nth-in-list filename file-list-current-file-list)))
       (if arg (progn
@@ -1063,7 +1066,8 @@ If ARG keep only filename at point."
 	(setq file-list-current-file-list
 	      (delete (nth nth-in-list file-list-current-file-list)
 		      file-list-current-file-list))
-	(superman-file-list-refresh-display)))))
+	(superman-file-list-refresh-display)
+	(goto-char here)))))
 
 
 (defun file-list-find (arg &optional file-list)
