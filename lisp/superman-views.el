@@ -1065,7 +1065,9 @@ which holds the point of the heading."
     (save-excursion
     (let ((case-fold-search t)
 	  (beg (point))
-	  (end (org-end-of-meta-data-and-drawers))
+	  (end (if (boundp 'org-end-of-meta-data-and-drawers)
+		   (org-end-of-meta-data-and-drawers)
+		 (org-end-of-meta-data)))
 	  (kill-whole-line t)
 	  balls)
       (save-excursion
@@ -1546,7 +1548,10 @@ to VIEW-BUF."
 	(org-narrow-to-subtree)
 	(let ((text
 	       (buffer-substring
-		(progn (org-end-of-meta-data-and-drawers)
+		(progn
+		  (if (boundp 'org-end-of-meta-data-and-drawers)
+		      (org-end-of-meta-data-and-drawers)
+		    (org-end-of-meta-data))
 		       (point))
 		(point-max))))
 	  (with-current-buffer view-buf
@@ -2186,7 +2191,9 @@ movements permant."
 	(if (not down)
 	    (beginning-of-line)
 	  (if (< next-level current-level)
-	      (org-end-of-meta-data-and-drawers)
+	      (if (boundp 'org-end-of-meta-data-and-drawers)
+		   (org-end-of-meta-data-and-drawers)
+		 (org-end-of-meta-data))
 	    (org-end-of-subtree t t))
 	  (when (not (eq (point-at-bol) (point))) (insert "\n")))
 	(yank)
@@ -3028,7 +3035,7 @@ for the item at point or for all items in the current category."
       ;; (setq current-tail
 	    ;; (when current-head
 	      ;; (next-single-property-change current-head 'item-tail))))))
-					
+
 ;;}}}
 ;;{{{ easy menu
 
