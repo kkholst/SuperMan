@@ -201,11 +201,11 @@ the syntax of superman window configurations."
   "Distangle and set superman-window-configuration CONFIG.
 PROJECT if given should be an element of the `superman-project-alist'. 
 
-A superman window configuration is a string such as
+A superman window configuration is a string which looks like this:
 
 'THING1 / THING2 | THING3'
 
-in which case the emacs frame would show three windows:
+In this case the current emacs frame will show three windows:
 
 -----------------------
         THING1
@@ -214,7 +214,7 @@ in which case the emacs frame would show three windows:
            |
 THING2     |    THING3    
            |
-The contents of the three windows would be the buffers
+The contents of the three windows will be the buffers
 returned by the function `superman-find-thing' according
 to the meaning of THING which is identified by looking THING
 up in `superman-config-action-alist' relative to PROJECT:
