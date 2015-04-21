@@ -338,7 +338,7 @@ given in superman notation."
 	      (put-text-property (point-at-bol) (point-at-eol) 'index index)
 	      (insert
 	       "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-	       "  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+	       "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
 	       "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
 	       "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
 	       "\n")))))
@@ -405,7 +405,7 @@ given in superman notation."
 			  '(superman-project-todo)
 			  title
 			  (concat "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-				  "  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+				  "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
 				  "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
 				  ;; "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
 				  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))

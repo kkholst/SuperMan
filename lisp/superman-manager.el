@@ -501,7 +501,7 @@ we find the `supermanual' and other helpful materials.")
 			     (cons "publish-directory" nil))))
     (superman-view-project pro t)
     ;; (assoc name superman-project-alist))
-    (if (superman-git-p dir) (superman-display-git-cycle)
+    (if (superman-git-p dir) (superman-git-display)
       (superman-display-file-list dir
 				  nil nil nil nil nil nil nil
 				  'no-project))))

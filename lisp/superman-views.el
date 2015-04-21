@@ -265,13 +265,13 @@ otherwise it is tested if the path provided by a text-property 'git-dir
 at (point-min) is git controlled."
   (let* ((loc (or git-dir (get-text-property (point-min) 'git-dir)))
 	 (button (superman-make-button "Contrl:"
-				       'superman-display-git-cycle
+				       'superman-git-display
 				       'superman-header-button-face
 				       "Show git status"))
 	 (control (if (or git-dir (superman-git-p loc))
 		      (superman-make-button
 		       (concat "Git repository at " "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
-		       'superman-display-git-cycle
+		       'superman-git-display
 		       nil
 		       "Control git repository")
 		    (superman-make-button
@@ -519,7 +519,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 (defvar superman-sticky-displays
   '(("Timeline" superman-project-timeline superman-capture-button-face)
     ("Todo" superman-project-todo superman-capture-button-face)
-    ("Git (g)" superman-display-git-cycle superman-capture-button-face)
+    ("Git (g)" superman-git-display superman-capture-button-face)
     ("File-list (f)" superman-view-file-list superman-capture-button-face)
     ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual"))
   "Alist of displays that are shown as action buttons for all projects.")
@@ -1436,7 +1436,8 @@ to refresh the view.
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
 			   (or redo
 			       `(superman-view-project ,nick t)))
-	(put-text-property (point-at-bol) (point-at-eol) 'git-dir (superman-git-toplevel loc))
+	(put-text-property (point-at-bol) (point-at-eol) 'git-dir
+			   (superman-git-toplevel loc))
 	(put-text-property (point-at-bol) (point-at-eol) 'dir loc)
 	(put-text-property (point-at-bol) (point-at-eol) 'project-view t) ;; to identify project-view buffer, do not copy to other views
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
@@ -1494,29 +1495,27 @@ properties such as balls for the section.
 		       (superman-parse-props
 			(get-text-property (point-at-bol) 'org-hd-marker)
 			'p 'h))
-		      ((string=
-			(get-text-property (point-at-bol) 'cat) "git")
+		      ((string= (get-text-property (point-at-bol) 'cat) "git")
 		       `("git"
 			 (("git-cycle" ,superman-git-default-displays)
 			  ("git-display"  ,(car superman-git-default-displays))
 			  ("point" ,(point-at-bol)))))
 		      (t (error "Don't know how to do this cat"))))
 	   (view-buf (current-buffer))
-	   (index-buf (when marker (marker-buffer marker )))
-	   (loc (get-text-property (point-min) 'git-dir))
+	   (index-buf (when marker (marker-buffer marker)))
 	   (buffer-read-only nil))
       (org-cut-subtree)
-      (superman-format-cat cat index-buf view-buf loc)
+      (superman-format-cat cat index-buf view-buf (get-text-property (point-min) 'git-dir))
       (if cat-point
 	  (goto-char cat-point)))))
 
-(defun superman-format-cat (cat index-buf view-buf loc)
+(defun superman-format-cat (cat index-buf view-buf git-dir)
   "Format category CAT based on information in INDEX-BUF and write the result
 to VIEW-BUF."
   (let* ((case-fold-search t)
 	 (name (car cat))
 	 (props (cadr cat))
-	 (git (assoc "git-cycle" props))
+	 (git (string= "git" (car cat)))
 	 (file-list (assoc "file-list" props))
 	 (cat-balls (unless (or git file-list)
 		      (if props
@@ -1594,20 +1593,11 @@ to VIEW-BUF."
        name))
      ;; git control section
      (git
-      (let ((git-dir (get-text-property (point-min) 'git-dir)))
-	(set-buffer (get-buffer-create
-		     (concat "*Git control[" (get-text-property (point-min) 'nickname) "]*")))
-	(erase-buffer)
-	(insert "git-output")
-	(put-text-property (point-at-bol) (point-at-eol) 'git-dir
-			   (superman-git-toplevel git-dir))
-	(insert "\n")
-	(org-mode)
-	;; git display cycle
-	(superman-format-git-display
-	 view-buf git-dir props
-	 view-cat-head index-buf index-cat-point
-	 name)))
+      ;; git display git control of directory 
+      (superman-git-format-display
+       view-buf git-dir props
+       view-cat-head index-buf 
+       name))
      ;; regular sections
      (balls
       ;; create table view based on balls 
@@ -2883,7 +2873,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "V" 'superman-toggle-context-view)
 (define-key superman-view-mode-map "v" 'superman-view-item)
 ;; Git control
-(define-key superman-view-mode-map "g" 'superman-display-git-cycle)
+(define-key superman-view-mode-map "g" 'superman-git-display)
 (define-key superman-view-mode-map "G " 'superman-git-last-log-file)
 (define-key superman-view-mode-map "Ga" 'superman-git-annotate)
 (define-key superman-view-mode-map "Gx" 'superman-git-delete-file)

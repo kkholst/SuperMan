@@ -120,7 +120,7 @@
 	(unless no-project
 	  (put-text-property (point-at-bol) (point-at-eol) 'index (superman-get-index project))
 	  (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-		  "  " (superman-make-button "Git" 'superman-display-git-cycle 'superman-next-project-button-face "Control project's git repository.")
+		  "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
 		  "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
 		  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline.")))
 	(insert "\n")
