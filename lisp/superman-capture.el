@@ -665,7 +665,7 @@ with completion in existing categories. If NICKNAME is nil prompt for nickname.
 If LOC is given it is the mother directory of the directory which
 defines the project. 
 
-The creation is a done in the following steps:
+The following steps are performed:
 
 Step (1) a new entry is added to the file `superman-profile' and the latter is saved.
 Step (2) The project directory is created (unless it exists).

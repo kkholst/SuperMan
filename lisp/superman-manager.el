@@ -319,26 +319,33 @@ and an action a one-optional-argument function which must return a buffer.")
 	       (save-buffer) ;; to update the project-alist
 	       (org-entry-get nil "NICKNAME")))))
 
-(defun superman-goto-profile (project)
-  (let ((case-fold-search t))
+(defun superman-goto-profile (project-or-nickname)
+  "Open the file `superman-profile' and leave point at entry of PROJECT-OR-NICKNAME. 
+PROJECT-OR-NICKNAME is either a project, i.e., a list whose first element is the nickname 
+or the nickname."
+  (let ((case-fold-search t)
+	(nick (if (listp project-or-nickname) (car project-or-nickname) project-or-nickname)))
     (find-file superman-profile)
     (unless (superman-manager-mode 1))
     (goto-char (point-min))
-    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" (car project)) nil t)
-	(error (concat "Cannot locate project " (car project))))))
+    (or (re-search-forward (concat "^[ \t]*:NICKNAME:[ \t]*" nick) nil t)
+	(error (concat "Cannot locate project " nick)))))
 
 (defun superman-project-at-point (&optional pom)
+  "Return project at point."
   (let* ((pom (or pom (org-get-at-bol 'org-hd-marker)))
 	 (nickname (superman-get-property pom "NickName"))
 	 (pro (assoc nickname superman-project-alist)))
     pro))
 
 (defun superman-forward-project ()
+  "Move to next project."
   (interactive)
   (re-search-forward
    (format "^\\*\\{%d\\} " superman-project-level) nil t))
 
 (defun superman-backward-project ()
+  "Move to previous project."
   (interactive)
   (re-search-backward
    (format "^\\*\\{%d\\} " superman-project-level) nil t))
@@ -704,15 +711,24 @@ project directory tree to the trash."
 
 (defun superman-set-others (&optional project ask)
   (interactive)
-  (let* ((pro (or project (superman-get-project project ask)))
-	 (others (superman-get-others pro))
-	 (init (if others (concat others ", ") "")))
-    (if pro
-	(org-set-property
-	 (superman-property 'others)
-	 (replace-regexp-in-string
-	  "[,\t ]+$" ""
-	  (read-string (concat "Set collaborators for " (car pro) ": ") init))))))
+  (let* ((pro (or project
+		  (superman-get-project project ask)))
+	 marker
+	 (others  (superman-get-others pro))
+	 (init (if others (concat others ", ") ""))
+	 (others (read-string (concat "Set collaborators for " (car pro) ": ") init)))
+    (superman-goto-profile (car pro))
+    (org-back-to-heading)
+    (setq marker (point-marker))
+    (org-set-property (superman-property 'others)
+		      (replace-regexp-in-string
+		       "[,\t ]+$" ""
+		       others))
+    (superman-view-edit-item nil marker)))
+;; (superman-capture (list "*S*" marker "bla"))))
+;; (org-set-property
+;; (superman-property 'others)
+
 
 (defun superman-fix-others ()
   "Update the others property (collaborator names) of all projects in `superman-profile'."
