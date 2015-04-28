@@ -1073,21 +1073,21 @@ which holds the point of the heading."
   "Delete balls, i.e. column properties, at point or marker POM."
   (org-with-point-at pom
     (save-excursion
-    (let ((case-fold-search t)
-	  (beg (point))
-	  (end (if (boundp 'org-end-of-meta-data-and-drawers)
-		   (org-end-of-meta-data-and-drawers)
-		 (org-end-of-meta-data)))
-	  (kill-whole-line t)
-	  balls)
-      (save-excursion
-	(goto-char beg)
-	(when (re-search-forward "PROPERTIES" end t)
-	  (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end t)
-	    (beginning-of-line)
-	    (kill-line)
-	    (goto-char (point-at-bol)))
-	  balls))))))
+      (let ((case-fold-search t)
+	    (beg (point))
+	    (end (if (boundp 'org-end-of-meta-data)
+		     (org-end-of-meta-data)
+		   (org-end-of-meta-data-and-drawers)))
+	    (kill-whole-line t)
+	    balls)
+	(save-excursion
+	  (goto-char beg)
+	  (when (re-search-forward "PROPERTIES" end t)
+	    (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end t)
+	      (beginning-of-line)
+	      (kill-line)
+	      (goto-char (point-at-bol)))
+	    balls))))))
 
 
 (defun superman-string-to-thing (string &optional prefer-string prefer-symbol)
@@ -1558,10 +1558,10 @@ to VIEW-BUF."
 	(let ((text
 	       (buffer-substring
 		(progn
-		  (if (boundp 'org-end-of-meta-data-and-drawers)
-		      (org-end-of-meta-data-and-drawers)
-		    (org-end-of-meta-data))
-		       (point))
+		  (if (boundp 'org-end-of-meta-data)
+		      (org-end-of-meta-data)
+		    (org-end-of-meta-data-and-drawers))
+		  (point))
 		(point-max))))
 	  (with-current-buffer view-buf
 	    (when superman-empty-line-before-cat (insert "\n"))
@@ -2191,9 +2191,9 @@ movements permant."
 	(if (not down)
 	    (beginning-of-line)
 	  (if (< next-level current-level)
-	      (if (boundp 'org-end-of-meta-data-and-drawers)
-		   (org-end-of-meta-data-and-drawers)
-		 (org-end-of-meta-data))
+	      (if (boundp 'org-end-of-meta-data)
+		  (org-end-of-meta-data)
+		(org-end-of-meta-data-and-drawers))
 	    (org-end-of-subtree t t))
 	  (when (not (eq (point-at-bol) (point))) (insert "\n")))
 	(yank)
