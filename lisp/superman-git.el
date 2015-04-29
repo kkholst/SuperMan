@@ -803,12 +803,14 @@ see M-x manual-entry RET git-diff RET.")
 ")
 
 
-(defun superman-git-display ()
+(defun superman-git-display (&optional project)
   "Display git control for the current project's directory
  (if it is git controlled). This function inserts the header
 and then calls `superman-redo-cat' to format the results of an appropriate
 git command."
   (interactive)
+  (when project
+    (superman-view-project project))
   (when (get-text-property (point-min) 'dir)
     ;; open git view buffer
     (let* ((index (get-text-property (point-min) 'index))
