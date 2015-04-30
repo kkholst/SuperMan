@@ -106,10 +106,11 @@ Returns the corresponding buffer."
 
 (defun superman-read-config (project)
   (let* ((config (superman-get-config project))
-	 (config (when superman-sticky-config
+	 (config (if superman-sticky-config
 		   (if config 
 		       (concat superman-sticky-config " : " config)
-		     superman-sticky-config)))
+		     superman-sticky-config)
+		   config))
 	 (case-fold-search t))
     (save-window-excursion
       (save-restriction
@@ -130,7 +131,8 @@ Returns the corresponding buffer."
 	  (when (not config)
 	    (setq config superman-default-config))
 	  (widen))
-	config))))
+	config))
+    config))
 ;;}}}
 ;;{{{ smashing window configs
 
