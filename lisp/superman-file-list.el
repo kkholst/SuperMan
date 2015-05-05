@@ -752,14 +752,18 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 	     file-list (or test regexp) filter-name inverse))))
     (unless (stringp sub-file-list)
       (unless dont-display
-	(superman-display-file-list
-	 dir
-	 sub-file-list
-	 `(,regexp ,by ,inverse)
-	 nil
-	 nil
-	 display-buffer
-	 nil t)
+	(let ((sorted (get-text-property (point-min) 'sort)))
+	  (superman-display-file-list
+	   dir
+	   sub-file-list
+	   `(,regexp ,by ,inverse)
+	   sorted
+	   nil
+	   display-buffer
+	   nil t)
+	  (when sorted
+	    (file-list-sort-internal sub-file-list (nth 0 sorted)
+				     (nth 1 sorted))))
 	(setq file-list-current-file-list sub-file-list))
       sub-file-list)))
 
@@ -993,6 +997,8 @@ Return the difference in the format of a time value."
 	sorted-list
       (setq file-list-current-file-list sorted-list)
       (message "File list sorted by %s%s" by (if reverse " in reverse order" ""))
+      (let ((buffer-read-only nil))
+	(put-text-property (point-min) (1+ (point-min)) 'sort `(,by ,reverse)))
       (superman-file-list-refresh-display file-list-current-file-list))))
 
 ;;}}}
@@ -1055,8 +1061,8 @@ If ARG keep only filename at point."
   (when file-list-mode
     (let* ((c-list file-list-current-file-list)
 	   (here (point-at-bol))
-	    ;; (or (previous-single-property-change (point-min) 'superman-item-marker)
-		     ;; (save-excursion (forward-line -1) (point))))
+	   ;; (or (previous-single-property-change (point-min) 'superman-item-marker)
+	   ;; (save-excursion (forward-line -1) (point))))
 	   (filename (file-list-file-at-point))
 	   (nth-in-list (file-list-nth-in-list filename file-list-current-file-list)))
       (if arg (progn
