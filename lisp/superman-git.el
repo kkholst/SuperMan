@@ -561,7 +561,10 @@ see M-x manual-entry RET git-diff RET.")
   (interactive)
   (let* ((file (or file (superman-filename-at-point)))
 	 (dir (or dir (superman-git-toplevel file)))
-	 (hash (or hash (get-text-property (point-at-bol) 'hash)))
+	 (hash (or hash
+		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")
+		   ;; (get-text-property (point-at-bol) 'hash)
+		   ))
 	 (ref (if hash (or ref (concat hash "^")) "HEAD"))
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
@@ -1334,7 +1337,10 @@ repository of PROJECT which is located at DIR."
       (goto-char next)
       (let* ((commit (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit"))
 	     (ref (if (string= commit "Workspace") "HEAD" (concat commit "^")))
-	     (cmd `(lambda () (superman-git-display-diff ,commit ,ref ,dir ,file ,nickname))))
+	     (cmd
+	      (if file
+		  `(lambda () (superman-git-log-open-commit-at-point ,file ,commit))
+		`(lambda () (superman-git-display-diff ,commit ,ref ,dir ,file ,nickname)))))
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'superman-choice cmd)))))
 
 (defvar superman-git-show-ignored nil
@@ -1583,8 +1589,8 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defvar superman-git-log-mode-map (copy-keymap superman-view-mode-map)
   "Keymap used for `superman-git-log-mode' commands.")
 
-(define-key superman-git-log-mode-map [return] 'superman-git-revision-at-point)
-(define-key superman-git-log-mode-map "D" (lambda () (interactive) (superman-git-revision-at-point 1)))
+(define-key superman-git-log-mode-map [return] 'superman-git-log-open-commit-at-point)
+(define-key superman-git-log-mode-map "D" (lambda () (interactive) (superman-git-log-open-commit-at-point 1)))
 (define-key superman-git-log-mode-map "t" 'superman-git-tag)
 (define-key superman-git-log-mode-map "?" 'superman-git-show-help)
 (define-key superman-git-log-mode-map "q" 'kill-this-buffer)
@@ -1809,15 +1815,16 @@ the git directory."
       (goto-char (point-min))
       (forward-line (1- linenum)))))
 
-(defun superman-git-revision-at-point (&optional diff)
+(defun superman-git-log-open-commit-at-point (&optional file commit diff)
   "Shows version of the document at point "
   (interactive)
-  (superman-git-revision (get-text-property (point-at-bol) 'hash) diff))
-
-(defun superman-git-revision (pom &optional diff)
-  "Shows version of the document at point "
-  (let* ((file (get-text-property (point-min) 'filename))
-	 (hash (get-text-property (point-at-bol) 'hash))
+  ;; (superman-git-revision (get-text-property (point-at-bol) 'hash) diff))
+  ;; (defun superman-git-revision (pom &optional diff)
+  ;; "Shows version of the document at point "
+  (let* ((file (or file (get-text-property (point-min) 'filename)
+		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "filename")))
+	 (hash (or commit
+		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
 	 (ext (file-name-extension file))
 	 (filehash
 	  (concat
