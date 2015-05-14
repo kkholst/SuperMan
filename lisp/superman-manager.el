@@ -458,13 +458,17 @@ we find the `supermanual' and other helpful materials.")
 	       (lastvisit (superman-get-property nil "LastVisit" 'inherit))
 	       (config (superman-get-property nil (superman-property 'config) 'inherit))
 	       (todo (or (org-get-todo-state) ""))
-	       (index (or (superman-get-property nil (superman-property 'index) nil)
-			  (let ((default-org-home
-				  (concat (file-name-as-directory loc)
-					  name
-					  superman-org-location)))
-			    ;; (make-directory default-org-home t)
-			    (concat (file-name-as-directory default-org-home) name ".org")))))
+	       (index (or
+		       (let ((link (superman-get-property nil (superman-property 'index) nil)))
+			 (when (and (stringp link) (string-match org-bracket-link-regexp link))
+			   (setq link (org-match-string-no-properties 1 link)))
+			 link)
+		       (let ((default-org-home
+			       (concat (file-name-as-directory loc)
+				       name
+				       superman-org-location)))
+			 ;; (make-directory default-org-home t)
+			 (concat (file-name-as-directory default-org-home) name ".org")))))
 	  (set-text-properties 0 (length hdr) nil hdr)
 	  ;; (add-text-properties
 	  ;; 0 (length hdr)
