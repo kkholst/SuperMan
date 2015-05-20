@@ -753,6 +753,13 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
     (unless (stringp sub-file-list)
       (unless dont-display
 	(let ((sorted (get-text-property (point-min) 'sort)))
+	  (when sorted
+	    (setq sub-file-list
+		  (file-list-sort-internal
+		   sub-file-list
+		   (nth 0 sorted)
+		   (nth 1 sorted)
+		   'dont)))
 	  (superman-display-file-list
 	   dir
 	   sub-file-list
@@ -760,10 +767,7 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 	   sorted
 	   nil
 	   display-buffer
-	   nil t)
-	  (when sorted
-	    (file-list-sort-internal sub-file-list (nth 0 sorted)
-				     (nth 1 sorted))))
+	   nil t))
 	(setq file-list-current-file-list sub-file-list))
       sub-file-list)))
 
