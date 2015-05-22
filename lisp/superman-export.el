@@ -190,7 +190,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
 				     (superman-org-export-change-target)))
 	   " "
 	   (header-button-format "export" :action
-				 #'(lambda (&optional arg) e(interactive)
+				 #'(lambda (&optional arg) (interactive)
 				     (superman-org-export-as nil)))
 	   (when (string= superman-org-export-target "pdf")
 	     (concat
