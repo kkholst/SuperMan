@@ -420,7 +420,8 @@ Else return FILE as it is."
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir nil nil)
     (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename)
-    (superman-view-redo-line)))
+    (superman-view-redo-line)
+    (forward-line 1)))
 
 (defun superman-git-commit-file ()
   "Add and commit the file given by the filename property
@@ -770,7 +771,7 @@ see M-x manual-entry RET git-diff RET.")
     ("untracked"
      (concat "ls-files --full-name " (unless superman-git-show-ignored "--exclude-standard") " --others")
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+      (hdr ("width" 44) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-untracked-pre-display-hook
