@@ -278,7 +278,8 @@ given in superman notation."
   (interactive)
   (let ((pro (or project
 		 superman-current-project
-		 (superman-switch-to-project nil t))))
+		 (and (not config)
+		      (superman-switch-to-project nil t)))))
     (if config
 	(superman-smash-windows
 	 (superman-distangle-config config)

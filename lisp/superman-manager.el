@@ -514,8 +514,9 @@ we find the `supermanual' and other helpful materials.")
     (superman-view-project pro t)
     ;; (assoc name superman-project-alist))
     (if (superman-git-p dir) (superman-git-display)
-      (superman-display-file-list dir
-				  nil nil nil nil nil nil nil
+      (superman-display-file-list dir (file-list-select nil "." nil nil dir)
+				  nil nil nil
+				  nil nil
 				  'no-project))))
 	 
 
