@@ -549,9 +549,9 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 			  (concat
 			   unison-cmd
 			   " "
-			   (superman-get-property (point) "ROOT-1")
+			   (expand-file-name (superman-get-property (point) "ROOT-1"))
 			   " "
-			   (superman-get-property (point) "ROOT-2")
+			   (expand-file-name (superman-get-property (point) "ROOT-2"))
 			   " "
 			   (if (string= (superman-get-property (point) "SWITCHES") "default")
 			       superman-unison-switches
@@ -1220,7 +1220,7 @@ in a special way by `superman-play-ball'")
 	 (current-col (nth 2 dim))
 	 (n (get-text-property (superman-cat-point) 'n-items))
 	 (pos (superman-current-subcat-pos))
-	 (reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse))
+	 (reverse (or reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse)))
 	 irregular
 	 next
 	 beg
@@ -2753,16 +2753,20 @@ The value is non-nil unless the user regretted and the entry is not deleted.
     propval))
 
 (defun superman-filename-at-point (&optional noerror)
-  "If property FileName exists at point return its value."
-  (let* ((file-or-link
-	  (cond ((superman-property-at-point
-		  (superman-property 'filename) noerror))
-		;; e.g. for superman-git-log-mode
-		((get-text-property (point-min) 'filename)))))
-    (if (not (stringp file-or-link))
-	(unless noerror
-	  (error "No proper(ty) FileName at point."))
-      (org-link-display-format file-or-link))))
+  "If property FileName exists at point return its value. In file-list mode
+apply `file-list-file-at-point'."
+  (cond (file-list-mode
+	 (file-list-file-at-point))
+	(t
+	(let* ((file-or-link
+		(cond ((superman-property-at-point
+			(superman-property 'filename) noerror))
+		      ;; e.g. for superman-git-log-mode
+		      ((get-text-property (point-min) 'filename)))))
+	  (if (not (stringp file-or-link))
+	      (unless noerror
+		(error "No proper(ty) FileName at point."))
+	    (org-link-display-format file-or-link))))))
 
 (defun superman-filename-with-pom (&optional noerror)
   "Return property `superman-filename-at-point' at point,

@@ -30,11 +30,16 @@
     (superman-file-list (superman-view-current-project))))
 
 (defun superman-file-list (project &optional ext)
-  "List files in project's location that match extension EXT"
+  "List files in project's location that match extension EXT.
+If project has a publish directory (property publish in project definition)
+add files from down under that one as well.
+"
   (if (featurep 'superman-file-list)
       (let ((dir (superman-project-home project)))
 	(cond ((file-list-select nil (or ext ".")
-					  nil nil dir (concat "*File-list-" (car project) "*")))
+				 nil nil dir (concat "*File-list-" (car project) "*"))
+	       (when (superman-get-publish-directory project)
+		 (file-list-add nil (superman-get-publish-directory project) (or ext "."))))
 	      (t
 	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
 	       (toggle-read-only -1)
@@ -278,26 +283,35 @@
 	(insert "\n")
 	(when superman-empty-line-after-cat (insert "\n"))
 	;; (insert (superman-column-names balls))
-	(insert "Sort:\t"
+	(insert (superman-make-button "Sort:" 'file-list-sort-file-list
+				      'file-list-action-button-face "Sort the file-list. Press 'S' followed by 'f' ('p', 't', 's') to sort by file-name ('file-path', 'time', 'size').")
+		"\t"
 		(superman-make-button "file-name" 'file-list-button-sort-by-name
-				      'superman-column-name-face
+				      'superman-header-button-face
 				      "Sort by file name")
 		" "
 		(superman-make-button "path" 'file-list-button-sort-by-path
-				      'superman-column-name-face
+				      'superman-header-button-face
 				      "Sort by directory name")
 		" "
 		(superman-make-button "time" 'file-list-button-sort-by-time
-				      'superman-column-name-face
+				      'superman-header-button-face
 				      "Sort by last modified")
 		" "
 		(superman-make-button "size" 'file-list-button-sort-by-time
-				      'superman-column-name-face
+				      'superman-header-button-face
 				      "Sort by size"))
 	(put-text-property (point-at-bol) (point-at-eol) 'column-names t)
 	(beginning-of-line))
       (run-hooks 'superman-file-list-pre-display-hook))))
 
+(defun file-list-sort-file-list ()
+  (interactive)
+  (let ((by (completing-read "Sort file-list by: " '(("name") ("path") ("time") ("size"))))
+	(reverse (y-or-n-p "Sort descending?")))
+    (file-list-sort-internal file-list-current-file-list
+			     by reverse)))
+  
 (defun file-list-button-sort-by-name ()
   (interactive)
   (let ((buffer-read-only nil)
