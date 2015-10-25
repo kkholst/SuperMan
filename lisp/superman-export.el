@@ -166,6 +166,23 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	   (list (car superman-babel-target-list))))
   (superman-org-headline-mode))
 
+;;{{{ find not existing pdfs and other links
+(defun superman-check-links ()
+  (interactive)
+  (goto-char (point-min))
+  (while (re-search-forward org-bracket-link-regexp nil t)
+    (let* ((fulllink (org-match-string-no-properties 1))
+	   (link (if (string-match org-link-re-with-space3 fulllink)
+		     (match-string 2 fulllink)
+		   fulllink)))
+      (if (or (org-babel-get-src-block-info)
+	      (file-exists-p link))
+	  (end-of-line)
+	(error (concat "File " link " does not exist."))))))
+
+;;}}}
+
+
 (defun superman-org-export-as (&optional arg)
   (cond ((string= superman-org-export-target "pdf")
 	 (superman-export-as-latex arg))
@@ -435,33 +452,26 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
 (defun superman-find-latex-error ()
   (interactive)
   (let ((tex-file (buffer-file-name))
-	(control-buf (buffer-name (current-buffer)))
-	(last-pos (get-text-property (point-min) 'latex-pos))
+	(last-pos (next-single-property-change (point-min) 'latex-error-finder-pos))
 	tex-buf
 	pos)
     (if (get-file-buffer tex-file)
 	(set-buffer (get-file-buffer tex-file))
       (find-file tex-file))
     (setq tex-buf (current-buffer))
-    (goto-char (or last-pos (point-min)))
-    (re-search-forward "\\\\\\(sub\\)*section{" nil t)
-    (previous-line 1)
+    (set-buffer tex-buf)
+    (goto-char (or last-pos (point)))
+    (when last-pos (goto-char last-pos) (beginning-of-line) (kill-line))
+    (re-search-forward "\\\\\\(sub\\)*section{\\|\\\\end{frame}" nil t)
     (end-of-line)
     (insert "\n\\end{document}")
+    (put-text-property (point-at-bol) (point-at-eol) 'latex-error-finder-pos t)
     (save-buffer)
     (save-excursion
       (TeX-command "LaTeX" 'TeX-master-file nil))
-    (beginning-of-line)
-    (kill-line)
-    (save-buffer)
-    (forward-line 1)
-    (setq pos (point))
     (superman-switch-config
      nil nil
-     (concat tex-file " | *TeX Help* / " control-buf))
-    (with-current-buffer control-buf
-      (let ((buffer-read-only nil))
-      (put-text-property (point-min) (1+ (point-min)) 'latex-pos pos)))))
+     (concat tex-file " / *TeX Help* | *Backtrace*"))))
     
 ;; (defun superman-latex-export ()
   ;; (interactive)
