@@ -1075,7 +1075,7 @@ which holds the point of the heading."
     (save-excursion
       (let ((case-fold-search t)
 	    (beg (point))
-	    (end (if (boundp 'org-end-of-meta-data)
+	    (end (if (fboundp 'org-end-of-meta-data)
 		     (org-end-of-meta-data)
 		   (org-end-of-meta-data-and-drawers)))
 	    (kill-whole-line t)
@@ -1558,7 +1558,7 @@ to VIEW-BUF."
 	(let ((text
 	       (buffer-substring
 		(progn
-		  (if (boundp 'org-end-of-meta-data)
+		  (if (fboundp 'org-end-of-meta-data)
 		      (org-end-of-meta-data)
 		    (org-end-of-meta-data-and-drawers))
 		  (point))
@@ -2191,7 +2191,7 @@ movements permant."
 	(if (not down)
 	    (beginning-of-line)
 	  (if (< next-level current-level)
-	      (if (boundp 'org-end-of-meta-data)
+	      (if (fboundp 'org-end-of-meta-data)
 		  (org-end-of-meta-data)
 		(org-end-of-meta-data-and-drawers))
 	    (org-end-of-subtree t t))
