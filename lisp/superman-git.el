@@ -568,6 +568,7 @@ see M-x manual-entry RET git-diff RET.")
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")
 		   ;; (get-text-property (point-at-bol) 'hash)
 		   ))
+	 (hash (if (string= hash "Workspace") nil hash))
 	 (ref (if hash (or ref (concat hash "^")) "HEAD"))
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
@@ -1218,7 +1219,11 @@ repository of PROJECT which is located at DIR."
 	  (kill-buffer (current-buffer))
 	  (switch-to-buffer pbuf)
 	  (superman-redo))
-      (superman-view-project))))
+      (if (condition-case nil (superman-view-project)
+	    (error t))
+	  (progn ;; superman-view-project failed (i.e. view via superman-git-log-file)
+	    (kill-buffer (current-buffer))
+	    )))))
 
 ;;}}}
 ;;{{{ preparing git displays
@@ -1529,6 +1534,7 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "#" 'superman-git-ignore-file)
 (define-key superman-git-mode-map " " 'superman-git-last-log-file) 
 (define-key superman-git-mode-map "/" 'superman-git-set-filter)
+
 ;;}}}
 ;;{{{ superman-git-keyboard
 
@@ -1834,6 +1840,7 @@ the git directory."
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "filename")))
 	 (hash (or commit
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
+	 (hash (if (string= hash "Workspace") "HEAD" hash))
 	 (ext (file-name-extension file))
 	 (filehash
 	  (concat
