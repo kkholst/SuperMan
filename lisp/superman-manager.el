@@ -776,9 +776,12 @@ is always the first choice."
           (concat "Project: " (or (car superman-current-project) "No active project") " " keep))))
 
 (defun superman-activate-project (project)
-  "Sets the current project.
-            Start git, if the project is under git control, and git is not up and running yet."
+  "Sets the current project and updates the LastVisit field of the project manager.
+ Also, adds the project location to `file-name-history'"
   (setq superman-current-project project)
+  (let ((pdir  (concat (superman-get-location project) (car project))))
+    (add-to-history 'file-name-history pdir nil nil))
+  ;; (setq default-directory pdir))
   (if superman-frame-title-format (superman-set-frame-title))
   (with-current-buffer (or (find-buffer-visiting superman-profile)
 			   (find-file-noselect superman-profile))
