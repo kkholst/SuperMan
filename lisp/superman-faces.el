@@ -38,6 +38,31 @@
 	       ("CANCELED" :foreground "slate grey" :weight bold)))))
 
 ;;}}}
+;;{{{
+(defface superman-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     ;; :background "Yellow"
+     ;; :foreground "red"
+     ;; :box (:line-width 6 :color "CornflowerBlue" :style released-button)
+     :foreground "black"
+     :background "gray93"
+     ;; :box (:line-width 0 :color "gray55" :style released-button)
+     :inverse-video nil
+     :height 1.3)
+    (t
+     :inherit superman-default-button-face
+     :foreground "black"
+     :background "gray93"
+     ;; :box (:line-width 0 :color "gray66" :style released-button)
+     ;; :foreground "red"
+     ;; :background "Yellow"
+     ;; :box (:line-width 6 :color "CornflowerBlue" :style released-button)
+     :inverse-video nil
+     :height 1.3))
+  "Face for superman button."
+  :group 'superman)
+;;}}}
 ;;{{{ file-list faces
 (defface superman-file-name-face
   '((t (:inherit font-lock-variable-name-face :underline nil)))
@@ -170,13 +195,13 @@
   '((((class color) (min-colors 88) (background light))
      :inherit superman-default-button-face
      :height 1.0
-     :foreground "darkblue"
-     :background "mintcream")
+     :foreground "gray11"
+     :background "gray93")
     (((class color) (min-colors 88) (background dark))
      :inherit superman-default-button-face
-     :height 1.0
-     :foreground "mintcream"
-     :background "darkblue")
+     :height 1.1
+     :foreground "gray93"
+     :background "gray11")
     (((class color) (min-colors 8) (background light))
      :inherit superman-default-button-face
      :height 1.0

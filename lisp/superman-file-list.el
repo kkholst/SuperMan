@@ -702,7 +702,6 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 				      (t "filename"))
 				(cond ((not by) (format "is%s matched by regexp" (if inverse " *not*" "")))
 				      ((string= by "time") (format "exceeds%s " (if (not inverse) " *not*" "")))
-				      ((string= by "ext") (format "is%s equal" (if (not inverse) " *not*" "")))
 				      ((string= by "size") (format "exceeds%s " (if inverse " *not*" "")))
 				      (t (format "is%s matched by regexp" (if inverse " *not*" ""))))))
 	 (regexp (or regexp (read-string
@@ -727,10 +726,8 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 		 '(lambda (entry) (string-match regexp (cadr entry))))
 		((string= by "ext") 
 		 '(lambda (entry)
-		    ;; (string-match 
-		    (string= 
-		     regexp
-		     (or (file-name-extension (car entry)) ""))))
+		    (string-match regexp
+				  (or (file-name-extension (car entry)) ""))))
 		((string= by "size")
 		 '(lambda (entry)
 		    (< (string-to-int regexp)
@@ -1206,7 +1203,7 @@ Switches to the corresponding directory of each file."
 		     (expand-file-name
 		      (file-name-as-directory
 		       (read-directory-name
-			(concat "Copy " (int-to-string (length file-list-intern)) " file(s) to directory: ")
+			"Copy all files to directory: "
 			nil nil nil)))))
 	 (use-path (if ask (yes-or-no-p "Use path as part of file-name? "))))
     (cond ((file-directory-p target) nil)
@@ -1609,7 +1606,6 @@ Switches to the corresponding directory of each file."
 (define-key file-list-mode-map "f" 'file-list-choose-file)
 (define-key file-list-mode-map "F" 'file-list-find)
 (define-key file-list-mode-map "g" 'file-list-grep)
-(define-key file-list-mode-map "G" 'superman-git-add-file)
 (define-key file-list-mode-map "k" 'file-list-remove-file-at-point)
 (define-key file-list-mode-map "K" 'file-list-remove)
 (define-key file-list-mode-map "l" 'file-list-attributes)

@@ -549,9 +549,9 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 			  (concat
 			   unison-cmd
 			   " "
-			   (expand-file-name (superman-get-property (point) "ROOT-1"))
+			   (superman-get-property (point) "ROOT-1")
 			   " "
-			   (expand-file-name (superman-get-property (point) "ROOT-2"))
+			   (superman-get-property (point) "ROOT-2")
 			   " "
 			   (if (string= (superman-get-property (point) "SWITCHES") "default")
 			       superman-unison-switches
@@ -1075,15 +1075,16 @@ which holds the point of the heading."
     (save-excursion
       (let ((case-fold-search t)
 	    (beg (point))
-	    (end (if (fboundp 'org-end-of-meta-data)
+	    (end (if (boundp 'org-end-of-meta-data)
 		     (org-end-of-meta-data)
-		   (org-end-of-meta-data-and-drawers)))
+		   (org-end-of-meta-data 't)
+		   (point)))
 	    (kill-whole-line t)
 	    balls)
 	(save-excursion
 	  (goto-char beg)
-	  (when (re-search-forward "PROPERTIES" end t)
-	    (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end t)
+	  (when (re-search-forward "PROPERTIES" end 't)
+	    (while (re-search-forward "^[\t ]+:Ball[0-9]+:" end 't)
 	      (beginning-of-line)
 	      (kill-line)
 	      (goto-char (point-at-bol)))
@@ -1220,7 +1221,7 @@ in a special way by `superman-play-ball'")
 	 (current-col (nth 2 dim))
 	 (n (get-text-property (superman-cat-point) 'n-items))
 	 (pos (superman-current-subcat-pos))
-	 (reverse (or reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse)))
+	 (reverse (get-text-property (previous-single-property-change (point) 'button) 'reverse))
 	 irregular
 	 next
 	 beg
@@ -1412,10 +1413,10 @@ to refresh the view.
 					       "^[ \t]*\\|[ \t]$" "" b-string) "," t)) "nil")))))
 	     ;; maybe disable config buttons
 	     (config-buttons nil)
-	      ;; (with-current-buffer
-		  ;; (goto-char (point-min))
-		;; (when (re-search-forward ":ConfigButtons:" nil t))))
-		  ;; (superman-get-property (point) "ConfigButtons" nil))))
+	     ;; (with-current-buffer
+	     ;; (goto-char (point-min))
+	     ;; (when (re-search-forward ":ConfigButtons:" nil t))))
+	     ;; (superman-get-property (point) "ConfigButtons" nil))))
 	     (font-lock-global-modes nil)
 	     (org-startup-folded nil))
 	(set-text-properties 0 (length nick) nil nick)
@@ -1430,9 +1431,10 @@ to refresh the view.
 	;; (font-lock-default-function nil)
 	;; insert header, set text-properties and highlight
 	(insert (superman-make-button
-		 (concat "Project: " nick)
+		 ;; (concat "Project: " nick)
+		 (concat " " nick " ")
 		 'superman-redo
-		 'superman-project-button-face
+		 'superman-face
 		 "Refresh project view"))
 	;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
@@ -1558,9 +1560,9 @@ to VIEW-BUF."
 	(let ((text
 	       (buffer-substring
 		(progn
-		  (if (fboundp 'org-end-of-meta-data)
+		  (if (boundp 'org-end-of-meta-data)
 		      (org-end-of-meta-data)
-		    (org-end-of-meta-data-and-drawers))
+		    (org-end-of-meta-data 't))
 		  (point))
 		(point-max))))
 	  (with-current-buffer view-buf
@@ -2191,9 +2193,9 @@ movements permant."
 	(if (not down)
 	    (beginning-of-line)
 	  (if (< next-level current-level)
-	      (if (fboundp 'org-end-of-meta-data)
+	      (if (boundp 'org-end-of-meta-data)
 		  (org-end-of-meta-data)
-		(org-end-of-meta-data-and-drawers))
+		(org-end-of-meta-data 't))
 	    (org-end-of-subtree t t))
 	  (when (not (eq (point-at-bol) (point))) (insert "\n")))
 	(yank)
@@ -2749,31 +2751,26 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	       ((point))
 	       (t (error "Don't know where to look for property."))))
 	 (propval
-	  (superman-get-property pom prop t)))
+	  (superman-get-property pom prop nil)))
     propval))
 
 (defun superman-filename-at-point (&optional noerror)
-  "If property FileName exists at point return its value. In file-list mode
-apply `file-list-file-at-point'."
-  (cond (file-list-mode
-	 (file-list-file-at-point))
-	(t
-	(let* ((file-or-link
-		(cond ((superman-property-at-point
-			(superman-property 'filename) noerror))
-		      ;; e.g. for superman-git-log-mode
-		      ((get-text-property (point-min) 'filename)))))
-	  (if (not (stringp file-or-link))
-	      (unless noerror
-		(error "No proper(ty) FileName at point."))
-	    (org-link-display-format file-or-link))))))
+  "If property FileName exists at point return its value."
+  (let* ((file-or-link
+	  (cond ((superman-property-at-point "filename"
+					      noerror))
+		;; e.g. for superman-git-log-mode
+		((get-text-property (point-min) 'filename)))))
+    (if (not (stringp file-or-link))
+	(unless noerror
+	  (error "No proper(ty) FileName at point."))
+      (org-link-display-format file-or-link))))
 
 (defun superman-filename-with-pom (&optional noerror)
   "Return property `superman-filename-at-point' at point,
 if it exists and add text-property org-hd-marker."
   (let* ((file-or-link
-	  (superman-property-at-point
-	   (superman-property 'filename) noerror))
+	  (superman-property-at-point "filename" noerror))
 	 filename)
     (if (not (stringp file-or-link))
 	(unless noerror
@@ -2990,7 +2987,7 @@ turn it off."
 (defun superman-view-show-item-context (n)
   (let ((context
 	 (org-with-point-at (org-get-at-bol 'org-hd-marker)
-	   ;; (org-end-of-meta-data-and-drawers)
+	   ;; (org-end-of-meta-data 't)
 	   (let* ((beg (point))
 		  (end (progn (forward-line n)
 			      (skip-chars-backward "\n\t ")

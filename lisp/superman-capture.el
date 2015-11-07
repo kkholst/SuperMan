@@ -205,7 +205,7 @@ differnent ways:
  - quit calls `superman-quit-scene'
 
 See `superman-capture' for the other arguments."
- (let* ((level (or level superman-item-level))
+(let* ((level (or level superman-item-level))
        (kill-whole-line t)
        body-start
        (body (or body ""))
@@ -558,24 +558,21 @@ and in the first cat otherwise."
 		      nil
 		      props nil scene)))
 
-;; FIXME: this should be an edit of the project entry 
+
+
+;; FIXME: this should become an edit of the project entry 
 (defun superman-capture-others (&optional project)
   "Set the names of the OTHERS, i.e. the collaborators, for project PROJECT."
   (interactive)
-  (let* ((nick (if (stringp project) project (car project)))
-	 (pro (superman-get-project nick))
-	 (others (superman-get-others pro))
-	 (new-others (read-string (concat "Set others for project " nick ": ")
-				  others)))
-    (unless (string= others new-others)
-      (save-window-excursion
-	(superman-goto-profile (car pro))
-	(org-set-property (superman-property 'others)
-			  (replace-regexp-in-string
-			   "[,\t ]+$" ""
-			   new-others)))
-      (if superman-view-mode
-	  (superman-redo)))))
+  (let ((nick (if (stringp project) project (car project))))
+    (save-window-excursion
+      (find-file superman-profile)
+      (goto-char (point-min))
+      (re-search-forward (concat ":nickname:[ \t]*" nick) nil nil)
+      (superman-set-others (assoc nick superman-project-alist))
+      (save-buffer))
+    (if superman-view-mode
+	(superman-redo))))
 
 (fset 'superman-capture-file 'superman-capture-document)
 (defun superman-capture-document (&optional project marker ask)
@@ -795,11 +792,11 @@ index file as LEVEL headings. Then show the updated project view buffer."
 	(goto-char (+ (point) (length curprop) 2))
 	(delete-region (point) (point-at-eol))
 	(insert " [[" (read-file-name (concat curprop ": ")) "]]"))
-       ((string= (downcase curprop) (downcase (superman-property 'index)))
+       ((string= (downcase curprop) "index")
 	(goto-char (+ (point) (length curprop) 2))
 	(delete-region (point) (point-at-eol))
 	(insert " [[" (read-file-name (concat "Set " curprop ": ")) "]]"))
-       ((string= (downcase curprop) (downcase (superman-property 'location)))
+       ((string= (downcase curprop) "location")
 	(goto-char (+ (point) (length curprop) 2))
 	(delete-region (point) (point-at-eol))
 	(insert " [[" (read-directory-name (concat "Set " curprop ": ")) "]]"))))))

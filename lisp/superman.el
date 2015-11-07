@@ -59,24 +59,32 @@ the contents of the file `superman-profile'."
 	  (when (nth m cat-alist)
 	    (setcdr (nth m cat-alist) (list pro)))))
       (setq projects (cdr projects)))
-    (insert "\n")
+    ;; (insert "\n")
     ;; project directory
-    (insert (superman-make-button
-	     "Set-up:" 'superman-show-setup
-	     'superman-header-button-face "Edit superman(ager) set-up")
-	    " "
-	    (superman-make-button
-	     "Edit" 'superman-edit-setup
-	     'superman-capture-button-face "Change superman(ager) set-up")
-	    " "
-	    (superman-make-button
-	     "Diagnose" 'superman-diagnose-setup
-	     'superman-capture-button-face "Diagnose superman set-up."))
+    ;; (insert (superman-make-button
+    ;; "Set-up:" 'superman-show-setup
+    ;; 'superman-header-button-face "Edit superman(ager) set-up")
+    ;; " "
+    ;; (superman-make-button
+    ;; "Edit" 'superman-edit-setup
+    ;; 'superman-capture-button-face "Change superman(ager) set-up")
+    ;; " "
+    ;; (superman-make-button
+    ;; "Diagnose" 'superman-diagnose-setup
+    ;; 'superman-capture-button-face "Diagnose superman set-up."))
     ;; action buttons
-    (superman-view-insert-action-buttons
-     '(("New project" superman-capture-project)
-       ("Meeting" superman-capture-meeting)
-       ("Task" superman-capture-task)))
+    (insert "\n" (superman-make-button
+		  "New project" 'superman-capture-project
+		  'superman-capture-button-face
+		  "Start new project or register existing project" nil 13))
+    (insert " " (superman-make-button
+	     "Choose project" 'superman-switch-to-project
+	     'superman-capture-button-face
+	     "Select a project and turn it on" nil 15))
+    ;; (superman-view-insert-action-buttons
+    ;; '((" New project " superman-capture-project)))
+    ;; ("Meeting" superman-capture-meeting)
+    ;; ("Task" superman-capture-task)))
     (insert "\n")
     ;; loop over categories
     (while cat-alist
@@ -169,8 +177,8 @@ the contents of the file `superman-profile'."
     (superman-capture-whatever
      marker
      (superman-make-button
-      "Superman(ager) setup"
-      nil 'superman-capture-button-face)
+      "Superman setup"
+      nil 'superman-face)
      0 ;; level 0 because we are pasting a heading in
      current-set-up
      nil (not read-only) scene read-only nil clean-scene-hook nil)))
@@ -228,17 +236,26 @@ the existing properties."
     (superman-select-project-completion-format
      ,superman-select-project-completion-format)))
 
-  
-   
+     
 (defun superman-make-header ()
   "Insert header into superman project view buffer"
   (goto-char (point-min))
-  (insert "SuperMan(ager)")
+  (insert  (superman-make-button
+	    " SuperMan "
+	    nil 'superman-face))
+  ;; (insert "SuperMan(ager)")
   (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
-  (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
+  ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
   (put-text-property (point-at-bol) (point-at-eol) 'index superman-profile)
   (put-text-property (point-at-bol) (point-at-eol) 'nickname "Kal-El")
+  (when (fboundp 'eg)
+    (insert " "
+	    (superman-make-button "Home"
+				  'eg
+				  'superman-next-project-button-face
+				  "Show EmacsGenome")))
   (insert
+
    "  "
    (superman-make-button "Agenda"
 			 'superman-agenda
@@ -347,7 +364,7 @@ all dates."
 						   'superman-next-project-button-face
 						   "List of projects")
 			     "\n"
-			     (superman-make-button "\nClick here to add a Meeting\n"
+			     (superman-make-button "\nAdd a Meeting\n"
 						   '(lambda ()
 						      (interactive)
 						      (superman-capture-meeting
@@ -401,7 +418,7 @@ all dates."
 					       'superman-next-project-button-face
 					       "List of projects")
 			 "\n\n"
-			 (superman-make-button "Click here to add a new task"
+			 (superman-make-button "Add a task"
 					       '(lambda ()
 						  (interactive)
 						  (superman-capture-task
@@ -451,7 +468,7 @@ all dates."
 						   'superman-next-project-button-face
 						   "List of projects")
 			     "\n"
-			     (superman-make-button "\nClick here to add a Meeting\n"
+			     (superman-make-button "\nAdd a Meeting\n"
 						   '(lambda ()
 						      (interactive)
 						      (superman-capture-meeting
@@ -816,8 +833,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-return ()
   "Switch to project at point."
   (interactive)
-  (let ((pro (superman-property-at-point
-	      (superman-property 'nickname) nil)))
+  (let ((pro (superman-property-at-point "nickname" nil)))
     (superman-switch-to-project pro)))
 
 (define-key superman-mode-map [return] 'superman-return) 
@@ -839,18 +855,18 @@ Enabling superman mode electrifies the superman buffer for project management."
     (save-buffer)
     (goto-char (point-min))
     (while (superman-forward-project)
-      (let* ((loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory))
-	     (category (superman-get-property nil (superman-property 'category) 'inherit))
-	     (others (superman-get-property nil (superman-property 'others) nil))
-	     (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
-	     (name (or (superman-get-property nil (superman-property 'nickname) nil)
+      (let* ((loc (or (superman-get-property nil "location" 'inherit) superman-default-directory))
+	     (category (superman-get-property nil "category" 'inherit))
+	     (others (superman-get-property nil "others" nil))
+	     (publish-dir (superman-get-property nil "publish" 'inherit))
+	     (name (or (superman-get-property nil "nickname" nil)
 		       (nth 4 (org-heading-components))))
 	     (marker (copy-marker (point)))
 	     (hdr  (org-get-heading t t))
-	     (lastvisit (superman-get-property nil "LastVisit" 'inherit))
-	     (config (superman-get-property nil (superman-property 'config) 'inherit))
+	     (lastvisit (superman-get-property nil "lastvisit" 'inherit))
+	     (config (superman-get-property nil "config" 'inherit))
 	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (superman-get-property nil (superman-property 'index) nil)
+	     (index (or (superman-get-property nil "index" nil)
 			(let ((default-org-home
 				(concat (file-name-as-directory loc)
 					name

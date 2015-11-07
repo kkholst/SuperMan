@@ -83,7 +83,6 @@
 
 ;;{{{ variables and user options
 
-
 (defvar superman-item-level 3
   "Outline level for items in project column views.
 Level 1 is used to indicate sections, all levels between
@@ -98,45 +97,6 @@ before the column names.")
 
 (defvar superman-default-cat nil "Category for otherwise uncategorized projects.
  If this variable is nil, then uncategorized projects are filed under \"Krypton\".")
-
-(defvar superman-property-list 
-  '((index . "Index")
-    (nickname . "NickName")
-    (gitstatus . "GitStatus")
-    (hash . "Hash")
-    (author . "Author")
-    (decoration . "Decoration")
-    (gitpath . "GitPath")
-    (location . "Location")
-    (filename . "FileName")
-    (others . "Others")
-    (category . "Category")
-    (git . "Git")
-    (date . "Date")
-    (lastcommit . "LastCommit")
-    (capturedate . "CaptureDate")
-    (project . "Project")
-    (publish . "Publish")
-    (config . "Config")
-    (publishdirectory . "PublishDirectory")
-    (initialvisit . "InitialVisit"))  
-  "Association list with names of all superman properties.
-index: Name of the index property
-nickname: Name of the nick-name property
-gitstatus: Name of the git status property
-hash: Name of the git hash property
-author: Name of the git author property
-decoration: Name of the git decoration property
-gitpath: Name of the git path property
-location: Name of the location property
-filename: Name of the filename property
-others: Name of the others (collaborators) property
-category: Name of the category property
-")
-
-(defun superman-property (label)
-  (interactive)
-  (cdr (assoc label superman-property-list)))
 
 (defvar superman-profile "~/.SuperMan.org"
   "File for managing projects.")
@@ -160,7 +120,6 @@ category: Name of the category property
   (save-excursion
     (goto-char (point-min))
     (tooltip-show msg)))
-;;    (popup-tip msg)))
 
 (defvar superman-gitworkflow
   (expand-file-name
@@ -325,9 +284,7 @@ and an action a one-optional-argument function which must return a buffer.")
 PROJECT-OR-NICKNAME is either a project, i.e., a list whose first element is the nickname 
 or the nickname."
   (let ((case-fold-search t)
-	(nick (if (listp project-or-nickname)
-		  (car project-or-nickname)
-		project-or-nickname)))
+	(nick (if (listp project-or-nickname) (car project-or-nickname) project-or-nickname)))
     (find-file superman-profile)
     (unless (superman-manager-mode 1))
     (goto-char (point-min))
@@ -377,34 +334,27 @@ or the nickname."
 
 (defun superman-get-property (pom property &optional inherit literal-nil)
   "Read property and remove trailing whitespace."
-  (let* ((case-fold-search t)
-	 (prop
-	 (if (not (markerp pom));; pom is a point
-	     (org-entry-get pom property inherit literal-nil)
-	   (if (marker-buffer pom)
-	       ;;FIXME: maybe the following widen is unnecessary?
-	       (save-excursion
-		 (save-restriction
-		   (set-buffer (marker-buffer pom))
-		   (widen)
-		   (org-entry-get pom property inherit literal-nil)))))))
+  (let ((prop
+	 (cond ((markerp pom)
+		(org-with-point-at pom
+		  (car (org-property--local-values property literal-nil))))
+	       (pom 
+		(save-excursion (goto-char pom)
+				(car (org-property--local-values property literal-nil))))
+	       (t (car (org-property--local-values property literal-nil))))))
+    ;; (prop
+    ;; (if (not (markerp pom));; pom is a point
+    ;; (org-entry-get (or pom (point))
+    ;; property nil literal-nil)
+    ;; (if (marker-buffer pom)
+    ;; ;;FIXME: maybe the following widen is unnecessary?
+    ;; (save-excursion
+    ;; (save-restriction
+    ;; (set-buffer (marker-buffer pom))
+    ;; (widen)
+    ;; (org-entry-get pom property nil literal-nil)))))))
     (if (stringp prop)
 	(replace-regexp-in-string "[ \t]+$" "" prop))))
-
-;; (defun superman-set-property ()
-  ;; (interactive)
-  ;; (let* ((prop-list '(((superman-property 'location) . nil)
-		      ;; ((superman-property 'index) . nil)
-		      ;; ((superman-property 'category) . nil)
-		      ;; ((superman-property 'others) . nil)
-		      ;; ((superman-property 'publishdirectory) . nil)))
-	 ;; (prop (completing-read "Set property: " prop-list))
-	 ;; (pom (org-get-at-bol 'org-hd-marker))
-	 ;; (curval (org-entry-get pom prop))
-	 ;; ;; (if  (completing-read (concat "Value for " prop ": ")
-	 ;; (val (read-string (concat "Value for " prop ": ") curval)))
-    ;; (org-entry-put pom prop val))
-  ;; (superman-redo))
 
 (defvar superman-project-kal-el nil
   "If non-nil add the Kal-El project to project alist.
@@ -445,15 +395,13 @@ we find the `supermanual' and other helpful materials.")
     (goto-char (point-min))
     (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
-	(let* ((loc (let ((raw-loc (or (superman-get-property nil (superman-property 'location) 'inherit) superman-default-directory)))
-		      (if (string-match org-bracket-link-regexp raw-loc)
-			  (org-match-string-no-properties 1
-							  raw-loc) raw-loc)))
-	       ;; (org-use-property-inheritance t)
-	       (category (or (superman-get-property nil (superman-property 'category) 'inherit) "Krypton"))
-	       (others (superman-get-property nil (superman-property 'others) nil))
-	       (publish-dir (superman-get-property nil (superman-property 'publish) 'inherit))
-	       (name (or (superman-get-property nil (superman-property 'nickname) nil)
+	(let* ((loc (or (superman-get-property nil "location" nil) superman-default-directory))
+	       (category (or (superman-get-property 
+			      nil
+			      "category" nil) "Krypton"))
+	       (others (superman-get-property nil "others" nil))
+	       (publish-dir (superman-get-property nil "publish" nil))
+	       (name (or (superman-get-property nil "nickname"  nil)
 			 (nth 4 (org-heading-components))))
 	       (marker
 		;; (org-agenda-new-marker (match-beginning 0)))
@@ -461,11 +409,11 @@ we find the `supermanual' and other helpful materials.")
 		  (org-back-to-heading)
 		  (point-marker)))
 	       (hdr (org-get-heading t t))
-	       (lastvisit (superman-get-property nil "LastVisit" 'inherit))
-	       (config (superman-get-property nil (superman-property 'config) 'inherit))
+	       (lastvisit (superman-get-property nil "LastVisit" nil))
+	       (config (superman-get-property nil "config" nil))
 	       (todo (or (org-get-todo-state) ""))
 	       (index (or
-		       (let ((link (superman-get-property nil (superman-property 'index) nil)))
+		       (let ((link (superman-get-property nil "index" nil)))
 			 (when (and (stringp link) (string-match org-bracket-link-regexp link))
 			   (setq link (org-match-string-no-properties 1 link)))
 			 link)
@@ -494,7 +442,7 @@ we find the `supermanual' and other helpful materials.")
 				   (cons "config" config)
 				   (cons 'todo todo)
 				   (cons "publish-directory" publish-dir))))))
-      superman-project-alist)))
+      superman-project-alist))) 
 
 (defun superman-view-directory (&optional dir)
   (interactive)
@@ -605,7 +553,6 @@ and others."
 ;;}}}
 ;;{{{ Adding, (re-)moving, projects
 
-
 (defun superman-create-project (project &optional ask)
   "Create the index file, the project directory, and subdirectories if
                                     'superman-project-subdirectories' is set."
@@ -651,9 +598,9 @@ and others."
       (if (and new-index (yes-or-no-p (concat "Move " index " to " new-index "? ")))
 	  (rename-file index new-index))
       (superman-goto-profile pro)
-      (org-set-property (superman-property 'location)
+      (org-set-property "location"
 			(file-name-directory target))
-      (org-set-property (superman-property 'index)
+      (org-set-property "index"
 			(or new-index
 			    (replace-regexp-in-string
 			     (expand-file-name (file-name-directory dir))
@@ -716,8 +663,7 @@ project directory tree to the trash."
 
 (defun superman-set-nickname ()
   (interactive)
-  (org-set-property
-   (superman-property 'nickname)
+  (org-set-property "nickname"
    (read-string "NickName for project: "
 		(nth 4 (org-heading-components)))))
 
@@ -727,19 +673,16 @@ project directory tree to the trash."
 		  (superman-get-project project ask)))
 	 marker
 	 (others  (superman-get-others pro))
-	 (init (if others (concat others ", ") "")))
-    ;; (others (read-string (concat "Set collaborators for " (car pro) ": ") init)))
+	 (init (if others (concat others ", ") ""))
+	 (others (read-string (concat "Set collaborators for " (car pro) ": ") init)))
     (superman-goto-profile (car pro))
     (org-back-to-heading)
     (setq marker (point-marker))
-    (org-set-property (superman-property 'others)
+    (org-set-property "others"
 		      (replace-regexp-in-string
 		       "[,\t ]+$" ""
 		       others))
     (superman-view-edit-item nil marker)))
-;; (superman-capture (list "*S*" marker "bla"))))
-;; (org-set-property
-;; (superman-property 'others)
 
 
 (defun superman-fix-others ()

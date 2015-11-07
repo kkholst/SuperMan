@@ -1,6 +1,6 @@
 ;;; superman-git.el --- Summary of project contents and adding information to projects
 
-;; Copyright (C) 2012-2015  Klaus Kähler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2012-2013  Klaus Kähler Holst, Thomas Alexander Gerds
 
 ;; Authors: Klaus Kähler Holst <kkho@biostat.ku.dk>
 ;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -289,7 +289,7 @@ Else return FILE as it is."
   (let* ((status (superman-git-XY-status file))
 	 (label (superman-label-status
 		 (concat (nth 1 status) (nth 2 status)))))
-    (org-entry-put pom (superman-property 'gitstatus) label)))
+    (org-entry-put pom "gitstatus" label)))
 
 (defun superman-git-XY-status (file)
   "Finds the git status of file FILE as XY code, see M-x manual-entry RET git-status RET,
@@ -419,10 +419,8 @@ Else return FILE as it is."
 	       (y-or-n-p (concat "Save buffer " fbuf "?")))
       (with-current-buffer fbuf (save-buffer)))
     (superman-git-add (list file) dir nil nil)
-    (when  (org-get-at-bol 'org-hd-marker)
-      (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename))
-    (when superman-git-mode
-      (superman-view-redo-line))
+    (superman-git-set-status (org-get-at-bol 'org-hd-marker) filename)
+    (superman-view-redo-line)
     (forward-line 1)))
 
 (defun superman-git-commit-file ()
@@ -568,7 +566,6 @@ see M-x manual-entry RET git-diff RET.")
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")
 		   ;; (get-text-property (point-at-bol) 'hash)
 		   ))
-	 (hash (if (string= hash "Workspace") nil hash))
 	 (ref (if hash (or ref (concat hash "^")) "HEAD"))
 	 (cmd (concat "cd " (file-name-directory file)
 		      ";" superman-cmd-git " diff "
@@ -763,8 +760,7 @@ see M-x manual-entry RET git-diff RET.")
       (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-files-pre-display-hook
-     superman-git-tracked-post-display-hook)
+     superman-git-files-pre-display-hook)
     ("submodule"
      "submodule"
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
@@ -1219,11 +1215,7 @@ repository of PROJECT which is located at DIR."
 	  (kill-buffer (current-buffer))
 	  (switch-to-buffer pbuf)
 	  (superman-redo))
-      (if (condition-case nil (superman-view-project)
-	    (error t))
-	  (progn ;; superman-view-project failed (i.e. view via superman-git-log-file)
-	    (kill-buffer (current-buffer))
-	    )))))
+      (superman-view-project))))
 
 ;;}}}
 ;;{{{ preparing git displays
@@ -1232,11 +1224,6 @@ repository of PROJECT which is located at DIR."
   (cond ((string-match "Committed" str ) 'font-lock-type-face)
 	((string-match  "Modified" str) 'superman-warning-face)
 	(t 'font-lock-comment-face)))
-
-(defun superman-git-tracked-post-display-hook ()
-  (goto-char (point-min))
-  (re-search-forward "GitStatus" nil t)
-  (superman-sort-section t))
 
 (defun superman-git-untracked-pre-display-hook ()
   (let* ((git-dir (get-text-property (point-min) 'git-dir)))
@@ -1534,7 +1521,6 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (define-key superman-git-mode-map "#" 'superman-git-ignore-file)
 (define-key superman-git-mode-map " " 'superman-git-last-log-file) 
 (define-key superman-git-mode-map "/" 'superman-git-set-filter)
-
 ;;}}}
 ;;{{{ superman-git-keyboard
 
@@ -1638,10 +1624,10 @@ Enabling superman-git mode enables the git keyboard to control single files."
 		 (ntrim))
 	    (while cprops
 	      (let ((val (cdr (car cprops))))
-		(cond ((string= (downcase (caar cprops)) (downcase (superman-property 'decoration)))
+		(cond ((string= (downcase (caar cprops)) "decoration")
 		       (setq ntrim 22)
 		       (if (string= val "not set") (setq val " ")))		      
-		      ((string= (downcase (caar cprops)) (downcase (superman-property 'date)))
+		      ((string= (downcase (caar cprops)) "date")
 		       (setq ntrim 10))
 		      (t (setq ntrim 7)))
 		;; (cond ((string= (downcase (caar cprops)) (down-case)"filename")
@@ -1840,7 +1826,6 @@ the git directory."
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "filename")))
 	 (hash (or commit
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
-	 (hash (if (string= hash "Workspace") "HEAD" hash))
 	 (ext (file-name-extension file))
 	 (filehash
 	  (concat
