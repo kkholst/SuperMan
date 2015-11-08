@@ -184,7 +184,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
   (make-local-variable 'superman-org-export-target-list)
   (make-local-variable 'superman-babel-target-list)
   (setq-local
-   'header-line-format
+   header-line-format
    (concat (header-button-format (concat "Mode:" (or superman-org-export-target "not set")) :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-org-export-change-target)))
@@ -350,7 +350,7 @@ Use this map to set additional keybindings for when Superman-Latex-mode is used.
   "Minor mode for headline buttons in header line in org buffers."
   nil "" superman-latex-headline-map
   (setq-local
-   'header-line-format
+   header-line-format
    (concat "Run: "
 	   (header-button-format "LaTeX" :action 
 				 #'(lambda (&optional arg) (interactive) 
