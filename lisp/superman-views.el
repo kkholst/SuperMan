@@ -714,7 +714,7 @@ Translate the branch names into buttons."
        current-branch
        'superman-git-status
        'superman-warning-face
-       "View git status")
+       "View status of current branch")
       (insert "[" current-branch "]  ")
       (while other-branches
 	(let* ((b (car other-branches))
