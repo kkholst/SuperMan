@@ -2702,6 +2702,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	   (error "Not in property block"))))
     (with-temp-buffer
       (insert thing)
+      (backward-char 1)
       (org-open-at-point))))
   
 
