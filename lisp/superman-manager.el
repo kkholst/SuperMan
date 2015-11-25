@@ -42,6 +42,12 @@
 (require 'cl)
 
 ;; Loading extensions
+
+(defvar superman-default-directory
+  (file-name-as-directory
+   (expand-file-name (file-name-directory superman-profile)))
+  "Default place for new projects.")
+
 (require 'superman) ;; a project to manage projects
 (require 'superman-views)    ;; project views
 (require 'superman-capture)  ;; capture information
@@ -95,8 +101,6 @@ Level 1 is used to indicate sections, all levels between
   "Option for superman-view buffers: If non-nil insert an empty line after the category heading
 before the column names.")
 
-(defvar superman-default-cat nil "Category for otherwise uncategorized projects.
- If this variable is nil, then uncategorized projects are filed under \"Krypton\".")
 
 (defvar superman-profile "~/.SuperMan.org"
   "File for managing projects.")
@@ -105,6 +109,9 @@ before the column names.")
   (file-name-as-directory
    (expand-file-name (file-name-directory superman-profile)))
   "Default place for new projects.")
+
+(defvar superman-default-category "Krypton" 
+  "Default category for new projects and uncategorized projects.")
 
 (defvar superman-ual
   (expand-file-name
@@ -151,7 +158,6 @@ before the column names.")
   in a subdirectory 'org' of the project directory.
  The project directory is set by a property LOCATION in
 the `superman-profile'.")
-(defvar superman-default-category "Unsorted" "Category for new projects.")
 (defvar superman-select-project-completion-format
   "%c/%o/%n"
   "Format of the entries of the completion-list when selecting a project. ")
@@ -395,14 +401,16 @@ we find the `supermanual' and other helpful materials.")
     (goto-char (point-min))
     (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
-	(let* ((loc (or (superman-get-property nil "location" nil) superman-default-directory))
-	       (category (or (superman-get-property 
-			      nil
-			      "category" nil) "Krypton"))
+	(let* ((name (or (superman-get-property nil "nickname"  nil)
+			 (nth 4 (org-heading-components))))
+	       (loc (cond ((superman-get-property nil "location" nil))
+			  (t (message (concat "SuperMan project " name " unspecified location set to " superman-default-directory))
+			     superman-default-directory)))
+	       (category (capitalize (cond ((superman-get-property nil "category" nil))
+					   (t (message (concat "SuperMan project " name " unspecified category set to " superman-default-category))
+					      (or superman-default-category "Krypton")))))
 	       (others (superman-get-property nil "others" nil))
 	       (publish-dir (superman-get-property nil "publish" nil))
-	       (name (or (superman-get-property nil "nickname"  nil)
-			 (nth 4 (org-heading-components))))
 	       (marker
 		;; (org-agenda-new-marker (match-beginning 0)))
 		(save-excursion
@@ -424,6 +432,7 @@ we find the `supermanual' and other helpful materials.")
 			 ;; (make-directory default-org-home t)
 			 (concat (file-name-as-directory default-org-home) name ".org")))))
 	  (set-text-properties 0 (length hdr) nil hdr)
+	  (set-text-properties 0 (length todo) nil todo)
 	  ;; (add-text-properties
 	  ;; 0 (length hdr)
 	  ;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
@@ -487,9 +496,9 @@ we find the `supermanual' and other helpful materials.")
 	     (save-excursion
 	       (reverse
 		(superman-property-values "category")))))))
-      ;; (when superman-project-kal-el (add-to-list 'cats "Krypton" 'append))
-      (add-to-list 'cats (or superman-default-cat "Krypton") 'append)
-      cats))
+    (setq cats (delete-dups (mapcar 'capitalize cats)))
+    (add-to-list 'cats (or superman-default-category "Krypton") 'append)
+    cats))
 
 (defun superman-property-values (key)
   "Return a list of all values of property KEY in the current buffer or region. This
@@ -719,7 +728,7 @@ Examples:
 	      (when (and
 		     (or (not category)
 			 (not p-cat)
-			 (string= (downcase category) (downcase p-cat)))
+			 (string= category p-cat))
 		     (or (not state)
 			 (string-match state (superman-get-state p)))) p))))
 	 (palist (if (or category state)

@@ -361,7 +361,8 @@ the current sub-category and return the minimum."
   "Insert project buttons"
   (if (> (length superman-project-history) 1)
       (let* ((prev (car (reverse superman-project-history)))
-	     (next (cadr superman-project-history))
+	     (next (let ((n (cadr superman-project-history)))
+		     (unless (string-equal prev n) n)))
 	     (all-button (superman-make-button
 			  "Projects" 'superman
 			  'superman-next-project-button-face "List of projects"))
@@ -370,7 +371,7 @@ the current sub-category and return the minimum."
 				      `(lambda () (interactive)
 					 (superman-switch-to-project ,next))
 				      'superman-next-project-button-face
-				      (concat "Switch to project " next))))
+				      (concat "Switch to project " next) 17)))
 	     (prev-button (when prev
 			    (superman-make-button
 			     prev
@@ -417,6 +418,8 @@ for project views.")
 (defun superman-view-pop-actions ()
   (interactive)
   (superman-capture-item 'pop))
+
+(defvar superman-action-button-width 11 "Width of action buttons")
 
 (defun superman-view-insert-action-buttons (&optional button-list no-newline title-string column)
   "Insert capture buttons. BUTTON-LIST is an alist providing button labels, functions and help strings.
@@ -471,7 +474,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	  (insert title " "))
 	(setq b-name
 	      (superman-make-button
-	       b-name cmd b-face b-help))
+	       b-name cmd b-face b-help nil superman-action-button-width))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t b-name)
@@ -500,8 +503,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
     (when superman-sticky-displays
       (let ((sd superman-sticky-displays))
 	(while sd 
-	  (insert (apply 'superman-make-button (car sd))
-		  " ")
+	  (insert (apply 'superman-make-button (car sd)) " ")
 	  (setq sd (cdr sd)))))
     (while config-list
       (let* ((current-config (car config-list))
@@ -517,11 +519,11 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
       (setq config-list (cdr config-list)))))
 
 (defvar superman-sticky-displays
-  '(("Timeline" superman-project-timeline superman-capture-button-face)
-    ("Todo" superman-project-todo superman-capture-button-face)
-    ("Git (g)" superman-git-display superman-capture-button-face)
-    ("File-list (f)" superman-view-file-list superman-capture-button-face)
-    ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual"))
+  '(("Timeline" superman-project-timeline superman-capture-button-face "Show project time line" nil 11)
+    ("Todo" superman-project-todo superman-capture-button-face "Show project time line" nil 11)
+    ("Git (g)" superman-git-display superman-capture-button-face "Show project git repository" nil 11)
+    ("Files (f)" superman-view-file-list superman-capture-button-face "Show project files" nil 11)
+    ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual" nil 11 ))
   "Alist of displays that are shown as action buttons for all projects.")
 
 ;;}}}
@@ -1449,9 +1451,9 @@ to refresh the view.
 	;; link to previously selected projects
 	(superman-view-insert-project-buttons)
 	(insert "\n\n")
-	(let ((others (superman-view-others pro)))
-	  (unless (string= others "")
-	    (insert others "\n")))
+	;; (let ((others (superman-view-others pro)))
+	  ;; (unless (string= others "")
+	    ;; (insert others "\n")))
 	;; (when gitp
 	;; (insert (superman-view-control pro))
 	(unless config-buttons

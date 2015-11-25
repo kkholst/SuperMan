@@ -1,6 +1,6 @@
 ;;; superman.el --- org project manager
 
-;; Copyright (C) 2013-2014  Thomas Alexander Gerds
+;; Copyright (C) 2013 Thomas Alexander Gerds
 
 ;; Authors:
 ;; Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -25,7 +25,7 @@
 
 ;; SuperMan is a project which manages all your other projects
 ;; Q: Does the super project contain itself?
-;; A: Nice question. To find some answers please read logicomix. Get it here: www.logicomix.com
+;; A: Nice question. Some answers are in here: www.logicomix.com
 
 ;;; Code:
 
@@ -326,6 +326,43 @@ the existing properties."
       'org-todo))
 
 ;;}}}
+;;{{{ parse project index files
+(defvar superman-agenda-file (concat superman-default-directory "SuperAgenda.org"))
+
+;;org-diary
+;;org-agenda
+;;org-agenda-list
+;;org-timeline
+;;org-agenda-get-day-entries
+(defun superman-parse-index-files ()
+  (interactive)
+  (let ((org-agenda-buffer-name (concat "*S-TODO*"))
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands
+	 `(("P" "Projects-parser"
+	    ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
+	      ,(if superman-todo-tags superman-todo-tags "")
+	      ((org-agenda-files
+		(reverse (superman-index-list
+			  nil nil nil nil nil
+			  superman-exclude-from-todo-regexp))))))
+	    ((org-agenda-window-setup 'current-window)
+	     (org-agenda-finalize-hook
+	      'superman-parser-copy-items))))))
+    (push ?P unread-command-events)
+    (call-interactively 'org-agenda)))
+
+(defun superman-parser-copy-items ()
+  (interactive)
+  (let* ((org-agenda-files `(,superman-agenda-file))
+	 (org-refile-targets '((org-agenda-files :maxlevel . 2))))
+    (while (ignore-errors
+	     (goto-char (next-single-property-change (point) 'org-hd-marker)))
+      (org-with-point-at (get-text-property (point-at-bol) 'org-hd-marker) (org-copy))
+      (goto-char (point-at-eol)))))
+	
+
+;;}}}
 ;;{{{ Agenda
 (defun superman-make-agenda-title (string face)
   (put-text-property 0 (length string) 'face face string)
@@ -343,9 +380,9 @@ all dates."
 		   ((agenda "" ((org-agenda-files (superman-index-list)))))
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates nil)
-		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-buffer-name "*SuperMan-Agenda*")
 		    (org-agenda-this-buffer-name "*SuperMan-Agenda*")
+		    (org-agenda-window-setup 'current-window)
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
 			     "  "
@@ -380,7 +417,7 @@ all dates."
 (defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
 (defalias 'S-todo 'superman-todo)
-(defun superman-todo (&optional project)
+(defun superman-todo (&optional project read-index-files)
   "Show todo list for PROJECT."
   (interactive)
   (let ((org-agenda-buffer-name (concat "*S-TODO*"))
@@ -389,14 +426,16 @@ all dates."
 	 `(("P" "Projects-TODO"
 	    ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
 	      ,(if superman-todo-tags superman-todo-tags "")
-	      ;; ((tags-todo "PRIORITY<>\"C\"+PRIORITY<>\"B\""
-	      ;; ((tags-todo "PRIORITY<>\"C\""
 	      ((org-agenda-files
-		(reverse (superman-index-list
-			  nil nil nil nil nil
-			  superman-exclude-from-todo-regexp))))))
+		(reverse
+		 (list "~/metropolis/SuperAgenda.org")
+		 ;; (superman-index-list
+		  ;; nil nil nil nil nil
+		  ;; superman-exclude-from-todo-regexp)
+		 )))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
+	      (when nil
 	      (lambda ()
 		(superman-format-agenda
 		 superman-todolist-balls
@@ -425,7 +464,7 @@ all dates."
 						   nil nil t))
 					       'superman-capture-button-face
 					       "Add a task to one of the projects")
-			 )))))))))
+			 ))))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 ;;}}}
@@ -439,17 +478,14 @@ all dates."
 	(org-agenda-custom-commands nil))
     (add-to-list 'org-agenda-custom-commands
 		 '("C" "Superman calendar"
-		   ((agenda ""
-			    ((org-agenda-files
-			      (superman-index-list)))))
+		   ((agenda "" ((org-agenda-files (superman-index-list)))))
 		   ((org-agenda-compact-blocks nil)
 		    (org-agenda-show-all-dates t)
 		    (org-agenda-span 7)
 		    (org-agenda-buffer-name "*SuperMan-Calendar*")
 		    (org-agenda-this-buffer-name "*SuperMan-Calendar*")
 		    (org-agenda-window-setup 'current-window)
-		    (org-agenda-finalize-hook
-		     'superman-add-appointments)
+		    ;; (org-agenda-finalize-hook 'superman-add-appointments)
 		    (org-agenda-overriding-header
 		     (concat (superman-make-agenda-title "Superman calendar" 'org-level-2)
 			     "  "
@@ -692,6 +728,24 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-format-todolist ()
   (superman-format-agenda superman-todolist-balls))
 
+(defun superman-capture-appointments ()
+  "Capture today's appointments from all projects."
+  (interactive)
+  (let ((org-agenda-buffer-name "*SuperMan-Appointments*")
+	(org-agenda-sticky nil)
+	(org-agenda-custom-commands nil))
+    (add-to-list 'org-agenda-custom-commands
+		 '("A" "Superman appointments"
+		   ((agenda "" ((org-agenda-files (superman-index-list)))))
+		   ((org-agenda-compact-blocks nil)
+		    (org-agenda-span 1)
+		    (org-agenda-buffer-name "*SuperMan-Appointments*")
+		    (org-agenda-this-buffer-name "*SuperMan-Appointments**")
+		    (org-agenda-window-setup 'current-window)
+		    (org-agenda-finalize-hook 'superman-add-appointments))))
+    (push ?A unread-command-events)
+    (call-interactively 'org-agenda)))
+
 (defun superman-add-appointments ()
   "Go through calendar buffer and add today's appointments."
   (let* ((key (next-single-property-change (point-min) 'org-today))
@@ -769,7 +823,6 @@ Enabling superman mode electrifies the superman buffer for project management."
       (superman-todo-mode-on)
       ;; (setq org-agenda-this-buffer-name org-agenda-buffer-name)
       (while (ignore-errors
-	       ;; (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
 	(setq count (+ count 1))
 	(let* ((buffer-read-only nil)
