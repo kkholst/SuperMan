@@ -427,44 +427,43 @@ all dates."
 	    ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
 	      ,(if superman-todo-tags superman-todo-tags "")
 	      ((org-agenda-files
-		(reverse
-		 (list "~/metropolis/SuperAgenda.org")
-		 ;; (superman-index-list
-		  ;; nil nil nil nil nil
-		  ;; superman-exclude-from-todo-regexp)
-		 )))))
+		;; (reverse
+		;; (list "~/metropolis/SuperAgenda.org")
+		(superman-index-list
+		 nil nil nil nil nil
+		 superman-exclude-from-todo-regexp)))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
 	      (when nil
-	      (lambda ()
-		(superman-format-agenda
-		 superman-todolist-balls
-		 '(superman-todo)
-		 "* Superman: todo-list"
-		 (concat "  "
-			 (superman-make-button "Agenda"
-					       'superman-agenda
-					       'superman-next-project-button-face
-					       "Agenda across all projects")
-			 "  "
-			 (superman-make-button "Calendar"
-					       'superman-calendar
-					       'superman-next-project-button-face
-					       "Project-wide calendar")
-			 "  "
-			 (superman-make-button "Projects"
-					       'superman
-					       'superman-next-project-button-face
-					       "List of projects")
-			 "\n\n"
-			 (superman-make-button "Add a task"
-					       '(lambda ()
-						  (interactive)
-						  (superman-capture-task
-						   nil nil t))
-					       'superman-capture-button-face
-					       "Add a task to one of the projects")
-			 ))))))))))
+		(lambda ()
+		  (superman-format-agenda
+		   superman-todolist-balls
+		   '(superman-todo)
+		   "* Superman: todo-list"
+		   (concat "  "
+			   (superman-make-button "Agenda"
+						 'superman-agenda
+						 'superman-next-project-button-face
+						 "Agenda across all projects")
+			   "  "
+			   (superman-make-button "Calendar"
+						 'superman-calendar
+						 'superman-next-project-button-face
+						 "Project-wide calendar")
+			   "  "
+			   (superman-make-button "Projects"
+						 'superman
+						 'superman-next-project-button-face
+						 "List of projects")
+			   "\n\n"
+			   (superman-make-button "Add a task"
+						 '(lambda ()
+						    (interactive)
+						    (superman-capture-task
+						     nil nil t))
+						 'superman-capture-button-face
+						 "Add a task to one of the projects")
+			   ))))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 ;;}}}
