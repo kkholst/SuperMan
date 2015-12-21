@@ -108,7 +108,7 @@ This function works outside R src blocks. Inside R src block
       (if debug ;; run latex to identify problems
 	  (progn
 	    (find-file tex-file)
-	    (superman-latex-headline-mode)
+	    (superman-export-header-mode)
 	    (TeX-command "LaTeX" 'TeX-master-file nil))
 	(TeX-run-TeX "make-pdf" (concat "latexmk -pvc -pdf -f " tex-file) tex-file)))
     ;; (message "process")
@@ -338,17 +338,17 @@ Use this map to set additional keybindings for when Org-mode is used.")
   ;;}}}
 ;;{{{ superman latex header line buttons
 
-(defvar superman-latex-headline-map (make-sparse-keymap)
-  "Keymap for `superman-latex-headline-mode', a minor mode.
-Use this map to set additional keybindings for when Superman-Latex-mode is used.")
+(defvar superman-export-header-map (make-sparse-keymap)
+  "Keymap for `superman-export-header-mode', a minor mode.
+Use this map to set additional keybindings for when superman-export-header-mode is used.")
 
 
-;; (defvar superman-latex-headline-mode-hook nil
-;; "Hook for the minor `superman-latex-headline-mode'.")
+;; (defvar superman-export-header-mode-hook nil
+;; "Hook for the minor `superman-export-header-mode'.")
 
-(define-minor-mode superman-latex-headline-mode
-  "Minor mode for headline buttons in header line in org buffers."
-  nil "" superman-latex-headline-map
+(define-minor-mode superman-export-header-mode
+  "Minor mode which shows export and evaluation header buttons in org buffers."
+  nil "" superman-export-header-map
   (setq-local
    header-line-format
    (concat "Run: "
@@ -389,7 +389,7 @@ Use this map to set additional keybindings for when Superman-Latex-mode is used.
 
 ;; (add-hook 'LaTeX-mode-hook #'(lambda ()
 			       ;; (when (buffer-file-name)
-				 ;; (superman-latex-headline-mode))))
+				 ;; (superman-export-header-mode))))
 
 ;;}}}
 

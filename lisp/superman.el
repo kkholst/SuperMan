@@ -434,36 +434,35 @@ all dates."
 		 superman-exclude-from-todo-regexp)))))
 	    ((org-agenda-window-setup 'current-window)
 	     (org-agenda-finalize-hook
-	      (when nil
-		(lambda ()
-		  (superman-format-agenda
-		   superman-todolist-balls
-		   '(superman-todo)
-		   "* Superman: todo-list"
-		   (concat "  "
-			   (superman-make-button "Agenda"
-						 'superman-agenda
-						 'superman-next-project-button-face
-						 "Agenda across all projects")
-			   "  "
-			   (superman-make-button "Calendar"
-						 'superman-calendar
-						 'superman-next-project-button-face
-						 "Project-wide calendar")
-			   "  "
-			   (superman-make-button "Projects"
-						 'superman
-						 'superman-next-project-button-face
-						 "List of projects")
-			   "\n\n"
-			   (superman-make-button "Add a task"
-						 '(lambda ()
-						    (interactive)
-						    (superman-capture-task
-						     nil nil t))
-						 'superman-capture-button-face
-						 "Add a task to one of the projects")
-			   ))))))))))
+	      (lambda ()
+		(superman-format-agenda
+		 superman-todolist-balls
+		 '(superman-todo)
+		 "* Superman: todo-list"
+		 (concat "  "
+			 (superman-make-button "Agenda"
+					       'superman-agenda
+					       'superman-next-project-button-face
+					       "Agenda across all projects")
+			 "  "
+			 (superman-make-button "Calendar"
+					       'superman-calendar
+					       'superman-next-project-button-face
+					       "Project-wide calendar")
+			 "  "
+			 (superman-make-button "Projects"
+					       'superman
+					       'superman-next-project-button-face
+					       "List of projects")
+			 "\n\n"
+			 (superman-make-button "Add a task"
+					       '(lambda ()
+						  (interactive)
+						  (superman-capture-task
+						   nil nil t))
+					       'superman-capture-button-face
+					       "Add a task to one of the projects"))
+		 nil 'wait))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 ;;}}}
@@ -555,6 +554,8 @@ for git and other actions like commit, history search and pretty log-todo."
 (define-key superman-todo-mode-map "A" 'superman-todo-show-priority-A)
 (define-key superman-todo-mode-map "B" 'superman-todo-show-priority-B)
 (define-key superman-todo-mode-map "C" 'superman-todo-show-priority-C)
+(define-key superman-todo-mode-map "P" 'superman-pretty-agenda)
+
 ;;}}}
 ;;{{{ superman-mode-map
 
@@ -714,18 +715,18 @@ Enabling superman mode electrifies the superman buffer for project management."
 	;; (index ("width" 23) ("face" font-lock-keyword-face) ("name" "File"))
 	("FileName" ("fun" superman-dont-trim))))
 
-(setq superman-todolist-balls superman-more-todolist-balls)
-
 (setq superman-less-todolist-balls 
-      '((org-hd-marker ("width" 33)
+      '(
+	(priority ("width" 8) ("face" superman-get-priority-face))
+	(todo ("width" 7) ("face" superman-get-todo-face))	
+	(org-hd-marker ("width" 23)
 		       ("name" "Project")
 		       ("face" superman-next-project-button-face)
 		       ("fun" superman-trim-project-nickname))
-	(org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
-	(hdr ("width" 23) ("face" font-lock-function-name-face) ("name" "Description"))))
+	;; (org-hd-marker ("width" 23) ("name" "Cat") ("fun" superman-trim-project-cat))
+	(hdr ("width" 100) ("face" font-lock-function-name-face) ("name" "Description"))))
 
-(defun superman-format-todolist ()
-  (superman-format-agenda superman-todolist-balls))
+(setq superman-todolist-balls superman-less-todolist-balls)
 
 (defun superman-capture-appointments ()
   "Capture today's appointments from all projects."
@@ -776,11 +777,10 @@ Enabling superman mode electrifies the superman buffer for project management."
 		  (next-single-property-change marker 'org-hd-marker nil end)
 		nil))))))
 
-(defun superman-format-agenda (&optional balls redo title buttons by)
+(defun superman-format-agenda (&optional balls redo title buttons by wait)
   "Workhorse for `superman-todo'."
   (let ((balls (or balls superman-agenda-balls))
 	;; (redo-cmd org-agenda-redo-command)
-	(count 0)
 	agenda-buffers)
     (save-excursion
       (org-mode);; major
@@ -798,16 +798,42 @@ Enabling superman mode electrifies the superman buffer for project management."
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
       (end-of-line)
-      (insert "\n")
-      (superman-view-insert-action-buttons
-       `((,(concat "Last update: " (format-time-string "%r")) 'superman-redo))
-       nil
-       (superman-make-button "Refresh" 'superman-redo))
-      (superman-view-insert-action-buttons
-       '(("New project" superman-capture-project)
-	 ("Meeting" superman-capture-meeting)
-	 ("Task" superman-capture-task)))
+      (insert "\t")
+      ;; (insert (superman-make-button "Refresh" 'superman-redo))
+      ;; (insert "\n")
+      (insert (superman-make-button (concat "Refresh agenda. Last update: " (format-time-string "%r"))
+				    'superman-redo))
+      ;; (superman-view-insert-action-buttons
+      ;; `((,(concat "Last update: " (format-time-string "%r")) 'superman-redo)) nil)
+      ;; (superman-view-insert-action-buttons
+      ;; '(("New project" superman-capture-project)
+      ;; ("Meeting" superman-capture-meeting)
+      ;; ("Task" superman-capture-task)))
       (insert "\n")      
+      (superman-todo-mode-on)
+      (if (not wait) 
+	  (superman-pretty-agenda)
+	(insert "\n" (superman-make-button
+		      "Pretty display (P)" 
+		      'superman-pretty-agenda
+		      'superman-header-button-face "Prettify display using columns")
+		)
+	(put-text-property (point-at-bol) (point-at-eol) 'superman-pretty-button t)
+	(insert "\n")))))
+
+(defun superman-pretty-agenda (&optional balls)
+  (interactive)
+  (if (not superman-todo-mode)
+      (error "Works only in agenda buffers where `superman-todo-mode' is switched on.")
+    (let ((balls (or balls 
+		     (get-text-property (point-min) 'balls)
+		     superman-todolist-balls))
+	  (count 0)
+	  (buffer-read-only nil))
+      ;; delete button which involved this function
+      (when (next-single-property-change (point-min) 'superman-pretty-button)
+	  (goto-char (next-single-property-change (point-min) 'superman-pretty-button))
+	  (delete-region (point-at-bol) (point-at-eol)))
       (superman-view-insert-action-buttons
        '(("More columns" superman-todo-show-more-todo-features nil "Show more columns")
 	 ("Less columns" superman-todo-show-less-todo-features nil "Show less columns")
@@ -815,11 +841,11 @@ Enabling superman mode electrifies the superman buffer for project management."
 	 ("[#B]" superman-todo-show-priority-B nil "Limit to priority B tasks")
 	 ("[#C]" superman-todo-show-priority-C nil  "Limit to priority B tasks")
 	 ("All(a)" superman-todo-show-priority-all nil "Show all priorities"))
-       t
-       "View-S:")
-      (insert "\n\n" (superman-column-names balls))
+       t)
+      (goto-char (next-single-property-change (point) 'org-hd-marker))
+      (beginning-of-line)
+      (insert "\n" (superman-column-names balls) "\n") 
       (superman-view-mode-on) ;; minor modes
-      (superman-todo-mode-on)
       ;; (setq org-agenda-this-buffer-name org-agenda-buffer-name)
       (while (ignore-errors
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))
@@ -831,7 +857,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 	       (line
 		(org-with-point-at pom
 		  (superman-format-thing pom balls))))
-	  (setq agenda-buffers (append (list (marker-buffer pom)) agenda-buffers))
 	  (beginning-of-line)
 	  (kill-line)
 	  (insert line)
@@ -847,8 +872,8 @@ Enabling superman mode electrifies the superman buffer for project management."
       (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail 'todo-end)
       (goto-char (next-single-property-change (point-min) 'face))
       (insert " [" (int-to-string count) "]"))))
-;; (superman-clean-buffer-list agenda-buffers)))
 
+;; (superman-clean-buffer-list agenda-buffers)))
 ;; (defun superman-clean-buffer-list (list)
   ;; "Kill all buffers associated in LIST. This
 ;; function is called at the end of `superman-format-agenda'."

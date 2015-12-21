@@ -1,6 +1,6 @@
 ;;; superman-manager.el --- org project manager
 
-;; Copyright (C) 2013  Thomas Alexander Gerds
+;; Copyright (C) 2013-2015  Thomas Alexander Gerds
 
 ;; Authors:
 ;; Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -43,9 +43,11 @@
 
 ;; Loading extensions
 
-(defvar superman-default-directory
-  (file-name-as-directory
-   (expand-file-name (file-name-directory superman-profile)))
+	     
+
+(defvar superman-default-directory (expand-file-name "~")
+  ;; (file-name-as-directory
+  ;; (expand-file-name (file-name-directory superman-profile)))
   "Default place for new projects.")
 
 (require 'superman) ;; a project to manage projects

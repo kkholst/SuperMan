@@ -74,13 +74,13 @@ A ball is a special list:
 
 Examples:
 
-Column showing a property 
+Column showing property \"Foo\" 
 
- (\"Prop\" (\"fun\" superman-trim-string) (\"width\" 17) (\"face\" font-lock-function-name-face) (\"name\" \"Prop\") (required nil))
+ (\"Foo\" (\"fun\" superman-trim-string) (\"width\" 17) (\"face\" font-lock-function-name-face) (\"name\" \"Foo\") (required nil))
 
 Column showing the header
 
- (hdr (\"fun\" superman-trim-string) (\"name\" Description))
+ (hdr (\"fun\" superman-trim-string) (\"name\" \"Description\"))
 
 Column showing the todo-state 
 
@@ -89,15 +89,15 @@ Column showing the todo-state
 ")
 
 (setq superman-finalize-cat-alist
-      '(("Documents" superman-document-balls)
-	("Data" superman-data-balls)
-	("Notes" superman-note-balls)
-	("Mail" superman-mail-balls)
-	("Tasks" superman-task-balls)
-	("Bookmarks" superman-bookmark-balls)
-	("Meetings" superman-meeting-balls)
-	("Calendar" superman-meeting-balls)
-	("GitFiles" superman-document-balls)))
+      '(("documents" superman-document-balls)
+	("data" superman-data-balls)
+	("notes" superman-note-balls)
+	("mail" superman-mail-balls)
+	("tasks" superman-task-balls)
+	("bookmarks" superman-bookmark-balls)
+	("meetings" superman-meeting-balls)
+	("calendar" superman-meeting-balls)
+	("gitFiles" superman-document-balls)))
 
 (defun superman-dont-trim (x len) x)
 (setq superman-document-balls
@@ -134,13 +134,15 @@ Column showing the todo-state
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
 	("Link" ("fun" superman-trim-link) ("width" full) ("name" "Bookmark"))))
+
+
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	(priority ("width" 8) ("face" superman-get-priority-face))
 	("EmailDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
-	("Link" ("fun" superman-trim-bracketed-filename) ("width" 48))
-	(attac ("Link" ("fun" superman-trim-bracketed-filename) ("width" full)))))
+	("Link" ("fun" superman-trim-bracketed-filename) ("width" 48))))
+	;; (attac ("Link" ("fun" superman-trim-bracketed-filename) ("width" full)))))
 
 ;;}}}
 ;;{{{ faces
@@ -1511,19 +1513,23 @@ properties such as balls for the section.
 	   (index-buf (when marker (marker-buffer marker)))
 	   (buffer-read-only nil))
       (org-cut-subtree)
-      (superman-format-cat cat index-buf view-buf (get-text-property (point-min) 'git-dir))
+      (superman-format-cat 
+       cat index-buf
+       view-buf
+       (get-text-property (point-min) 'git-dir))
       (if cat-point
 	  (goto-char cat-point)))))
 
 (defun superman-format-cat (cat index-buf view-buf git-dir)
-  "Format category CAT based on information in INDEX-BUF and write the result
-to VIEW-BUF."
+  "Format category CAT based on information in buffer INDEX-BUF. Display the result
+in buffer VIEW-BUF."
   (let* ((case-fold-search t)
-	 (name (car cat))
+	 (name (downcase (car cat)))
 	 (props (cadr cat))
-	 (git (string= "git" (car cat)))
-	 (file-list (assoc "file-list" props))
-	 (cat-balls (unless (or git file-list)
+	 (git (string= "git" name))
+	 (mail (string= "mail" name))
+	 ;; prefer columns/balls specified in index buffer
+	 (cat-balls (unless git
 		      (if props
 			  (delete
 			   nil
@@ -1533,174 +1539,175 @@ to VIEW-BUF."
 				  (superman-distangle-ball (cadr x)))) props)))))
 	 (gear (cdr (assoc name superman-finalize-cat-alist)))
 	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
-	 (index-cat-point (cadr (assoc "point" props)))
+	 (index-point (cadr (assoc "point" props)))
 	 (buttons (cadr (assoc "buttons" props)))
 	 ;; (folded (cadr (assoc "startfolded") props))
 	 (free (assoc "freetext" props))
-	 (hidden (assoc "hidden" props))
-	 (count 0)
-	 index-marker
-	 cat-head)
-    ;; mark head of this category in view-buf
-    (set-buffer view-buf)
-    (setq view-cat-head (point))
-    (cond
-     ;;hidden sections 
-     ((and hidden
-	   (let ((hidden-expr (cadr hidden)))
-	     (if (string-match "not[ \t]*\\(.*\\)$" hidden-expr)
-		 (not (eval (intern (match-string-no-properties 1 hidden-expr))))
-	       (eval (intern hidden-expr))))))
-     ;; free text sections are put as they are
-     (free
-      (set-buffer index-buf)
-      (widen)
-      (goto-char index-cat-point)
-      (setq index-marker (point-marker))
-      (save-restriction
-	(org-narrow-to-subtree)
-	(let ((text
-	       (buffer-substring
-		(progn
-		  (if (boundp 'org-end-of-meta-data)
-		      (org-end-of-meta-data)
-		    (org-end-of-meta-data 't))
-		  (point))
-		(point-max))))
-	  (with-current-buffer view-buf
-	    (when superman-empty-line-before-cat (insert "\n"))
-	    (superman-view-insert-section-name
-	     (car cat)
-	     0 balls
-	     index-marker)
-	    (insert "\n")
-	    (when superman-empty-line-after-cat (insert "\n"))
-	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
-	    (insert text)
-	    (end-of-line)
-	    (insert "\n")
-	    (forward-line -1)
-	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
-	    (forward-line 1)))))
-     ;; file-list
-     (file-list
-      (with-current-buffer index-buf
-	(setq index-marker (point-marker)))
-      (set-buffer
-       (get-buffer-create
-	(concat "*File-list["
-		(get-text-property
-		 (point-min) 'nickname) "]*")))
-      (erase-buffer)
-      (insert "file-list-output:")
-      (insert "\n")
-      (org-mode)
-      ;; file-list-display
-      (superman-format-file-list-display
-       view-buf file-list props
-       view-cat-head index-buf index-cat-point
-       name))
-     ;; git control section
-     (git
-      ;; git display git control of directory 
-      (superman-git-format-display
-       view-buf git-dir props
-       view-cat-head index-buf 
-       name))
-     ;; regular sections
-     (balls
-      ;; create table view based on balls 
-      ;; move to index-buf
-      (let (countsub line)
-	(set-buffer index-buf)
-	(widen)
-	(goto-char index-cat-point)
-	(let* ((item-prop (superman-get-property (point) "item-level"))
-	       (item-level (if item-prop (string-to-number item-prop)
-			     superman-item-level))
-	       (sub-level (- item-level 1))
-	       ;; (or (superman-get-property (point) 'sub-level) 2))
-	       (attac-level (+ item-level 1))
-	       (attac-balls (cdr (assoc 'attac balls))))
-	  (org-narrow-to-subtree)
-	  (goto-char (point-min))
-	  (setq index-marker (point-marker))
-	  ;; loop over items in cat
-	  ;; format elements (if any and if wanted)
-	  ;; region is narrowed to section
-	  (while (outline-next-heading)
-	    (cond ((eq (org-current-level) sub-level)
-		   ;; sub-headings
-		   (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
-		     (setq line (concat "*** " subhdr))
-		     (put-text-property 0 (length line) 'subcat subhdr line)
-		     (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
-		     (put-text-property 0 (length line) 'face 'org-level-3 line)
-		     (put-text-property 0 (length line) 'face 'superman-subheader-face line)
-		     (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-		     (with-current-buffer view-buf (setq countsub (append countsub (list `(0 ,(point))))))
-		     ;; help superman-one-up to find the right place
-		     (when (get-text-property (point-at-bol) 'point-here)
-		       (put-text-property 0 (length line) 'point-here t line)
-		       (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
-		     (with-current-buffer view-buf (insert line " \n" ))
-		     (end-of-line)))
-		  ;; items
-		  ((eq (org-current-level) item-level)		       
-		   (if countsub
-		       (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
-		   (setq count (+ count 1))
-		   (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
-		   ;; help superman-one-up to find the right place
-		   (when (get-text-property (point-at-bol) 'point-here)
-		     (put-text-property 0 (length line) 'point-here t line)
-		     (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
-		   (with-current-buffer view-buf
-		     (insert line "\n")))
-		  ;; attachments
-		  ((and (eq (org-current-level) attac-level) attac-balls)
-		   (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
-		   (with-current-buffer view-buf (insert line "\n"))))))
-	;; add counts in sub headings
-	(set-buffer view-buf)
-	(put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
-	(save-excursion 
-	  (while countsub
-	    (let ((tempsub (car countsub)))
-	      (goto-char (nth 1 tempsub))
-	      (put-text-property
-	       (- (point-at-eol) 1) (point-at-eol) 'display
-	       (concat " [" (int-to-string (car tempsub)) "]")))
-	    (setq countsub (cdr countsub))))
-	;; (widen)
-	;; empty cats are not shown unless explicitly wanted
-	(if (or (not (member cat superman-capture-alist))
-		(member name superman-views-permanent-cats)
-		(> count 0))
-	    (progn 
-	      ;; insert the section name
-	      (set-buffer view-buf)
-	      (goto-char view-cat-head)
-	      (when (and
-		     superman-empty-line-before-cat
-		     (save-excursion (beginning-of-line 0)
-				     (not (looking-at "^[ \t]*$"))))
-		(insert "\n"))
-	      (superman-view-insert-section-name
-	       name count balls index-marker)
-	      (insert "\n")
-	      ;; insert the column names
-	      (when superman-empty-line-after-cat
-		(insert "\n"))
-	      (insert (superman-column-names balls))
-	      (when buttons
-		(beginning-of-line)
-		(funcall (intern buttons))
-		(insert "\n")))
-	  (delete-region (point) (point-max))))))
-    (goto-char (point-max))
-    (widen)))
+	 (hidden (assoc "hidden" props)))
+    (cond ((and hidden
+		;;hidden sections 
+		(let ((hidden-expr (cadr hidden)))
+		  (if (string-match "not[ \t]*\\(.*\\)$" hidden-expr)
+		      (not (eval (intern (match-string-no-properties 1 hidden-expr))))
+		    (eval (intern hidden-expr))))))
+	  ;; free text sections are shown as they are
+	  (free
+	   (superman-format-freetext index-buf index-point view-buf))
+	  ;; git control section
+	  (git
+	   ;; git display git control of directory 
+	   (superman-git-format-display
+	    view-buf git-dir props
+	    index-buf 
+	    name))
+	  ;; mail section
+	  (mail
+	   ;; git display git control of directory 
+	   (superman-format-mailbox
+	    index-buf index-point view-buf balls buttons name))
+	  ;; table view for sections with balls 
+	  (balls 
+	   (superman-format-table-view
+	    index-buf index-point view-buf
+	    balls buttons name))
+	  (goto-char (point-max))
+	  (widen))))
 ;; (when folded (hide-subtree))
+
+(defun superman-format-table-view (index-buffer index-point
+						view-buffer balls buttons name)
+  ;; create table view in view-buffer with columns characterized by balls
+  ;; and (property) values found in index-buffer 
+  (let (countsub line (count 0) 
+		 index-marker view-point)
+    (set-buffer view-buffer)
+    (setq view-point (point))
+    (set-buffer index-buffer)
+    (widen)
+    (goto-char index-point)
+    (let* ((item-prop (superman-get-property (point) "item-level"))
+	   (item-level (if item-prop (string-to-number item-prop)
+			 superman-item-level))
+	   (sub-level (- item-level 1))
+	   (attac-level (+ item-level 1))
+	   (attac-balls (cdr (assoc 'attac balls))))
+      (org-narrow-to-subtree)
+      (goto-char (point-min))
+      (setq index-marker (point-marker))
+      ;; loop over items in cat
+      ;; format elements (if any and if wanted)
+      ;; region is narrowed to section
+      (while (outline-next-heading)
+	(cond ((eq (org-current-level) sub-level)
+	       ;; sub-headings
+	       (let ((subhdr (progn (looking-at org-complex-heading-regexp) (match-string-no-properties 4))))
+		 (setq line (concat "*** " subhdr))
+		 (put-text-property 0 (length line) 'subcat subhdr line)
+		 (put-text-property 0 (length line) 'org-hd-marker (point-marker) line)
+		 (put-text-property 0 (length line) 'face 'org-level-3 line)
+		 (put-text-property 0 (length line) 'face 'superman-subheader-face line)
+		 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
+		 (with-current-buffer view-buf (setq countsub (append countsub (list `(0 ,(point))))))
+		 ;; help superman-one-up to find the right place
+		 (when (get-text-property (point-at-bol) 'point-here)
+		   (put-text-property 0 (length line) 'point-here t line)
+		   (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
+		 (with-current-buffer view-buf (insert line " \n" ))
+		 (end-of-line)))
+	      ;; items
+	      ((eq (org-current-level) item-level)		       
+	       (if countsub
+		   (setf (car (car (last countsub))) (+ (car (car (last countsub))) 1)))
+	       (setq count (+ count 1))
+	       (setq line (superman-format-thing (copy-marker (point-at-bol)) balls))
+	       ;; help superman-one-up to find the right place
+	       (when (get-text-property (point-at-bol) 'point-here)
+		 (put-text-property 0 (length line) 'point-here t line)
+		 (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
+	       (with-current-buffer view-buf
+		 (insert line "\n")))
+	      ;; attachments
+	      ((and (eq (org-current-level) attac-level) attac-balls)
+	       (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
+	       (with-current-buffer view-buf (insert line "\n"))))))
+    ;; add counts in sub headings
+    (set-buffer view-buf)
+    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+    (save-excursion 
+      (while countsub
+	(let ((tempsub (car countsub)))
+	  (goto-char (nth 1 tempsub))
+	  (put-text-property
+	   (- (point-at-eol) 1) (point-at-eol) 'display
+	   (concat " [" (int-to-string (car tempsub)) "]")))
+	(setq countsub (cdr countsub))))
+    ;; (widen)
+    ;; empty cats are not shown unless explicitly wanted
+    (if (or (not (member cat superman-capture-alist))
+	    (member name superman-views-permanent-cats)
+	    (> count 0))
+	(progn 
+	  ;; insert the section name
+	  (set-buffer view-buf)
+	  (goto-char view-point)
+	  (when (and
+		 superman-empty-line-before-cat
+		 (save-excursion (beginning-of-line 0)
+				 (not (looking-at "^[ \t]*$"))))
+	    (insert "\n"))
+	  (superman-view-insert-section-name
+	   name count balls index-marker)
+	  (insert "\n")
+	  ;; insert the column names
+	  (when superman-empty-line-after-cat
+	    (insert "\n"))
+	  (insert (superman-column-names balls))
+	  (when buttons
+	    (beginning-of-line)
+	    (funcall (intern buttons))
+	    (insert "\n")))
+      (delete-region (point) (point-max)))
+    (goto-char view-point)))
+
+(defun superman-format-freetext (index-buffer index-point view-buffer)
+  (let (index-marker view-marker)
+    ;; set mark at beginning of the category in view-buf
+    (set-buffer view-buffer)
+    (setq view-marker (point))
+    (set-buffer index-buffer)
+    (widen)
+    (goto-char index-point)
+    (setq index-marker (point-marker))
+    (save-restriction
+      (org-narrow-to-subtree)
+      (let ((text
+	     (buffer-substring
+	      (progn
+		(if (boundp 'org-end-of-meta-data)
+		    (org-end-of-meta-data)
+		  (org-end-of-meta-data 't))
+		(point))
+	      (point-max))))
+	(with-current-buffer view-buffer
+	  (when superman-empty-line-before-cat (insert "\n"))
+	  (superman-view-insert-section-name
+	   (concat (upcase (substring-no-properties  name 0 1)) (substring-no-properties  name 1 (length name) ))
+	   0 balls
+	   index-marker)
+	  (insert "\n")
+	  (when superman-empty-line-after-cat (insert "\n"))
+	  (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
+	  (insert text)
+	  (end-of-line)
+	  (insert "\n")
+	  (forward-line -1)
+	  (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
+	  (forward-line 1))))))
+  
+(defun superman-format-mailbox (index-buffer index-point view-buffer
+					     balls buttons name) 
+  (superman-format-table-view index-buffer index-point view-buffer
+			      balls buttons name))
 
 (defun superman-split-cat (&optional column)
   (interactive)

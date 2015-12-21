@@ -920,7 +920,7 @@ This function should be bound to a key or button."
 (defvar superman-git-search-limit 250)
 (defvar superman-git-log-skip 0 "Skip this many previous versions in git log view")
 
-(defun superman-git-format-display (view-buf dir props view-point index-buf name)
+(defun superman-git-format-display (view-buf dir props index-buf name)
   "Usually called via `superman-git-display' and
 `superman-redo-cat' by `superman-format-cat' to format git displays.
 
@@ -937,10 +937,11 @@ The 'active display' is the first existing thing of
 The actual git command, balls, pre- and post-hooks are obtained from value of the
 'active display' in `superman-git-display-command-list'. 
 
-VIEW-POINT is the point in VIEW-BUF at which to issue the results of the git command.
 INDEX-BUF is the buffer which contains the pre-formatted results of the git command.
 NAME is used to make the section heading.
  "
+  (set-buffer view-buf)
+  (setq view-point (point))
   (if (not (get-text-property (point-min) 'git-dir))
       (progn
 	(switch-to-buffer view-buf)

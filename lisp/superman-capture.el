@@ -935,6 +935,20 @@ index file as LEVEL headings. Then show the updated project view buffer."
 ;;}}}
 ;;{{{ capture mails
 
+;; Support for saving Gnus messages by Message-ID
+;; See ~/emacs-genome/genes/worg/org-hacks.org
+
+;; (article (gnus-summary-article-number))
+;; (header (gnus-summary-article-header article))
+;; (message-id
+;; (save-match-data
+;; (let ((mid (mail-header-id header)))
+;; (if (string-match "<\\(.*\\)>" mid)
+;; (match-string 1 mid)
+;; (error "Malformed message ID header %s" mid)))))
+;; (org-store-link-functions 'superman-store-link-to-gnus-message)
+
+
 (defun superman-capture-mail (&optional project)
   ;; (defun superman-gnus-goto-project-mailbox (project &optional arg)
   (interactive)
@@ -944,9 +958,6 @@ index file as LEVEL headings. Then show the updated project view buffer."
   ;; activate the connection with summary
   (when (eq major-mode 'gnus-article-mode)
     (gnus-article-show-summary))
-  (gnus-summary-select-article-buffer)
-  (unless (use-region-p)
-    (mark-whole-buffer))
   (let* ((buf (current-buffer))
 	 (link (org-store-link 1))
 	 (entry (superman-get-project project 'ask))
@@ -957,7 +968,10 @@ index file as LEVEL headings. Then show the updated project view buffer."
 				     (file-name-directory
 				      (superman-get-index entry))))))
 	 (index (superman-get-index entry))
-	 (region (buffer-substring (region-beginning) (region-end)))
+	 (region (progn (gnus-summary-select-article-buffer)
+			(unless (use-region-p)
+			  (mark-whole-buffer))
+			(buffer-substring (region-beginning) (region-end))))
 	 (mailbox (file-name-as-directory
 		   (concat (file-name-as-directory loc) "Mailbox")))
 	 (from (message-fetch-field "from"))
