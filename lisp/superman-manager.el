@@ -364,10 +364,10 @@ or the nickname."
     (if (stringp prop)
 	(replace-regexp-in-string "[ \t]+$" "" prop))))
 
-(defvar superman-project-kal-el nil
-  "If non-nil add the Kal-El project to project alist.
-Kal-El is the planet where superman was born. It is there
-we find the `supermanual' and other helpful materials.")
+;; (defvar superman-project-kal-el nil
+  ;; "If non-nil add the Kal-El project to project alist.
+;; Kal-El is the planet where superman was born. It is there
+;; we find the `supermanual' and other helpful materials.")
 
 (defun superman-initialize ()
   "Start the super manager."
@@ -378,23 +378,24 @@ we find the `supermanual' and other helpful materials.")
     (superman)))
 
 (defun superman-parse-projects ()
-  "Parse the file `superman-profile' and update `superman-project-alist'. If
-`superman-project-kal-el' is non-nil also add the Kal-El project."
+  "Parse the file `superman-profile' and update `superman-project-alist'. 
+;; If `superman-project-kal-el' is non-nil also add the Kal-El project.
+"
   (interactive)
   ;; add project Kal-El
   (save-excursion
-    (if superman-project-kal-el
-	(let ((superman-loc
-	       (expand-file-name
-		(concat (file-name-directory (locate-library "superman")) ".."))))
-	  (setq superman-project-alist
-		`(("Kal-El"
-		   (("location" . ,superman-loc)
-		    ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
-		    ("category" . "Krypton")
-		    ("others" . "Jor-El, SuperManual")
-		    (hdr . "Kal-El"))))))
-      (setq superman-project-alist nil))
+    ;; (if superman-project-kal-el
+    ;; (let ((superman-loc
+    ;; (expand-file-name
+    ;; (concat (file-name-directory (locate-library "superman")) ".."))))
+    ;; (setq superman-project-alist
+    ;; `(("Kal-El"
+    ;; (("location" . ,superman-loc)
+    ;; ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
+    ;; ("category" . "Krypton")
+    ;; ("others" . "Jor-El, SuperManual")
+    ;; (hdr . "Kal-El"))))))
+    (setq superman-project-alist nil)
     (set-buffer (find-file-noselect superman-profile))
     (show-all)
     (widen)
@@ -405,9 +406,14 @@ we find the `supermanual' and other helpful materials.")
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((name (or (superman-get-property nil "nickname"  nil)
 			 (nth 4 (org-heading-components))))
-	       (loc (cond ((superman-get-property nil "location" nil))
-			  (t (message (concat "SuperMan project " name " unspecified location set to " superman-default-directory))
-			     superman-default-directory)))
+	       (loc (superman-get-property nil "location" nil))
+	       (loc (if (string-match org-bracket-link-regexp loc)
+			(org-match-string-no-properties 1 loc)
+		      (or  loc
+			   (message (concat 
+				     "SuperMan project " name
+				     " unspecified location set to " superman-default-directory))
+			   superman-default-directory)))
 	       (category (capitalize (cond ((superman-get-property nil "category" nil))
 					   (t (message (concat "SuperMan project " name " unspecified category set to " superman-default-category))
 					      (or superman-default-category "Krypton")))))
@@ -435,9 +441,6 @@ we find the `supermanual' and other helpful materials.")
 			 (concat (file-name-as-directory default-org-home) name ".org")))))
 	  (set-text-properties 0 (length hdr) nil hdr)
 	  (set-text-properties 0 (length todo) nil todo)
-	  ;; (add-text-properties
-	  ;; 0 (length hdr)
-	  ;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
 	  (unless (file-name-absolute-p index)
 	    (setq index
 		  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
@@ -453,7 +456,7 @@ we find the `supermanual' and other helpful materials.")
 				   (cons "config" config)
 				   (cons 'todo todo)
 				   (cons "publish-directory" publish-dir))))))
-      superman-project-alist))) 
+      superman-project-alist)))
 
 (defun superman-view-directory (&optional dir)
   (interactive)
