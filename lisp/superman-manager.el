@@ -377,24 +377,25 @@ or the nickname."
     (superman-parse-projects)
     (superman)))
 
+;; add project Kal-El
+;; (if superman-project-kal-el
+;; (let ((superman-loc
+;; (expand-file-name
+;; (concat (file-name-directory (locate-library "superman")) ".."))))
+;; (setq superman-project-alist
+;; `(("Kal-El"
+;; (("location" . ,superman-loc)
+;; ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
+;; ("category" . "Krypton")
+;; ("others" . "Jor-El, SuperManual")
+;; (hdr . "Kal-El"))))))
+
 (defun superman-parse-projects ()
   "Parse the file `superman-profile' and update `superman-project-alist'. 
 ;; If `superman-project-kal-el' is non-nil also add the Kal-El project.
 "
   (interactive)
-  ;; add project Kal-El
   (save-excursion
-    ;; (if superman-project-kal-el
-    ;; (let ((superman-loc
-    ;; (expand-file-name
-    ;; (concat (file-name-directory (locate-library "superman")) ".."))))
-    ;; (setq superman-project-alist
-    ;; `(("Kal-El"
-    ;; (("location" . ,superman-loc)
-    ;; ("index" .  ,(concat superman-loc "/Kal-El/Kal-El.org"))
-    ;; ("category" . "Krypton")
-    ;; ("others" . "Jor-El, SuperManual")
-    ;; (hdr . "Kal-El"))))))
     (setq superman-project-alist nil)
     (set-buffer (find-file-noselect superman-profile))
     (show-all)
@@ -402,21 +403,31 @@ or the nickname."
     (superman-manager-mode 1)
     (save-buffer)
     (goto-char (point-min))
+    (unless (re-search-forward "^\\#\\+TODO:" nil t)
+      (insert "\n#+TODO: ACTIVE | PENDING WAITING SLEEPING DONE CANCELED ZOMBI\n\n")
+      (org-ctrl-c-ctrl-c))
+    (goto-char (point-min))
     (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((name (or (superman-get-property nil "nickname"  nil)
 			 (nth 4 (org-heading-components))))
-	       (loc (superman-get-property nil "location" nil))
-	       (loc (if (string-match org-bracket-link-regexp loc)
-			(org-match-string-no-properties 1 loc)
-		      (or  loc
-			   (message (concat 
-				     "SuperMan project " name
-				     " unspecified location set to " superman-default-directory))
-			   superman-default-directory)))
-	       (category (capitalize (cond ((superman-get-property nil "category" nil))
-					   (t (message (concat "SuperMan project " name " unspecified category set to " superman-default-category))
-					      (or superman-default-category "Krypton")))))
+	       (loc (let ((loc (superman-get-property nil "location" nil)))
+		      (if (string-match org-bracket-link-regexp loc)
+			  (setq loc (org-match-string-no-properties 1 loc))
+			(unless loc
+			  (message (concat 
+				    "SuperMan project " name
+				    " unspecified location set to " superman-default-directory))
+			  (setq loc superman-default-directory)))
+		      (if (string= name
+				   (file-name-nondirectory (directory-file-name loc)))
+			  (file-name-directory (directory-file-name loc))
+			loc)))
+	       (category
+		(capitalize (cond
+			     ((superman-get-property nil "category" nil))
+			     (t (message (concat "SuperMan project " name " unspecified category set to " superman-default-category))
+				(or superman-default-category "Krypton")))))
 	       (others (superman-get-property nil "others" nil))
 	       (publish-dir (superman-get-property nil "publish" nil))
 	       (marker

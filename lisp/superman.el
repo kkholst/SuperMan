@@ -30,6 +30,11 @@
 ;;; Code:
 
 ;;{{{ superman 
+
+(defvar superman-greetings 
+  "The project manager helps you to switch between your projects."
+  "Welcome text for `superman'. Set to nil or \"\" to suppress the message.")
+
 (defalias 'S 'superman)
 (defun superman ()
   "Function to control the list of active projects (`superman-project-alist'). It displays 
@@ -72,15 +77,18 @@ the contents of the file `superman-profile'."
     ;; (superman-make-button
     ;; "Diagnose" 'superman-diagnose-setup
     ;; 'superman-capture-button-face "Diagnose superman set-up."))
+    ;; welcome text
+    (when (and superman-greetings (stringp superman-greetings))
+      (insert "\n" superman-greetings "\n"))
     ;; action buttons
     (insert "\n" (superman-make-button
 		  "New project" 'superman-capture-project
 		  'superman-capture-button-face
 		  "Start new project or register existing project" nil 13))
     (insert " " (superman-make-button
-	     "Choose project" 'superman-switch-to-project
-	     'superman-capture-button-face
-	     "Select a project and turn it on" nil 15))
+		 "Choose project" 'superman-switch-to-project
+		 'superman-capture-button-face
+		 "Select a project and turn it on" nil 15))
     ;; (superman-view-insert-action-buttons
     ;; '((" New project " superman-capture-project)))
     ;; ("Meeting" superman-capture-meeting)
@@ -420,49 +428,50 @@ all dates."
 (defun superman-todo (&optional project read-index-files)
   "Show todo list for PROJECT."
   (interactive)
-  (let ((org-agenda-buffer-name (concat "*S-TODO*"))
-	(org-agenda-sticky nil)
-	(org-agenda-custom-commands
-	 `(("P" "Projects-TODO"
-	    ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
-	      ,(if superman-todo-tags superman-todo-tags "")
-	      ((org-agenda-files
-		;; (reverse
-		;; (list "~/metropolis/SuperAgenda.org")
-		(superman-index-list
-		 nil nil nil nil nil
-		 superman-exclude-from-todo-regexp)))))
-	    ((org-agenda-window-setup 'current-window)
-	     (org-agenda-finalize-hook
-	      (lambda ()
-		(superman-format-agenda
-		 superman-todolist-balls
-		 '(superman-todo)
-		 "* Superman: todo-list"
-		 (concat "  "
-			 (superman-make-button "Agenda"
-					       'superman-agenda
-					       'superman-next-project-button-face
-					       "Agenda across all projects")
-			 "  "
-			 (superman-make-button "Calendar"
-					       'superman-calendar
-					       'superman-next-project-button-face
-					       "Project-wide calendar")
-			 "  "
-			 (superman-make-button "Projects"
-					       'superman
-					       'superman-next-project-button-face
-					       "List of projects")
-			 "\n\n"
-			 (superman-make-button "Add a task"
-					       '(lambda ()
-						  (interactive)
-						  (superman-capture-task
-						   nil nil t))
-					       'superman-capture-button-face
-					       "Add a task to one of the projects"))
-		 nil 'wait))))))))
+  (let* ((org-agenda-buffer-name (concat "*S-TODO*"))
+	 (org-agenda-sticky nil)
+	 (org-agenda-custom-commands
+	  `(("P" "Projects-TODO"
+	     ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
+	       ,(if superman-todo-tags superman-todo-tags "")
+	       ((org-agenda-files
+		 ;; (reverse
+		 ;; (list "~/metropolis/SuperAgenda.org")
+		 (superman-index-list
+		  nil nil nil nil nil
+		  superman-exclude-from-todo-regexp)))))
+	     (pretty superman-pretty-agenda)
+	     ((org-agenda-window-setup 'current-window)
+	      (org-agenda-finalize-hook
+	       (lambda ()
+		 (superman-format-agenda
+		  superman-todolist-balls
+		  '(superman-todo)
+		  "* Superman: todo-list"
+		  (concat "  "
+			  (superman-make-button "Agenda"
+						'superman-agenda
+						'superman-next-project-button-face
+						"Agenda across all projects")
+			  "  "
+			  (superman-make-button "Calendar"
+						'superman-calendar
+						'superman-next-project-button-face
+						"Project-wide calendar")
+			  "  "
+			  (superman-make-button "Projects"
+						'superman
+						'superman-next-project-button-face
+						"List of projects")
+			  "\n\n"
+			  (superman-make-button "Add a task"
+						'(lambda ()
+						   (interactive)
+						   (superman-capture-task
+						    nil nil t))
+						'superman-capture-button-face
+						"Add a task to one of the projects"))
+		  nil pretty))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
 ;;}}}
@@ -777,7 +786,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 		  (next-single-property-change marker 'org-hd-marker nil end)
 		nil))))))
 
-(defun superman-format-agenda (&optional balls redo title buttons by wait)
+(defun superman-format-agenda (&optional balls redo title buttons by pretty)
   "Workhorse for `superman-todo'."
   (let ((balls (or balls superman-agenda-balls))
 	;; (redo-cmd org-agenda-redo-command)
@@ -811,7 +820,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       ;; ("Task" superman-capture-task)))
       (insert "\n")      
       (superman-todo-mode-on)
-      (if (not wait) 
+      (if pretty 
 	  (superman-pretty-agenda)
 	(insert "\n" (superman-make-button
 		      "Pretty display (P)" 
@@ -820,6 +829,10 @@ Enabling superman mode electrifies the superman buffer for project management."
 		)
 	(put-text-property (point-at-bol) (point-at-eol) 'superman-pretty-button t)
 	(insert "\n")))))
+
+
+(defvar superman-pretty-agenda t
+ "If non-nil turn on `superman-pretty-agenda' else show a button which turns it on.") 
 
 (defun superman-pretty-agenda (&optional balls)
   (interactive)
