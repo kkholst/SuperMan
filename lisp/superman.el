@@ -237,7 +237,7 @@ the existing properties."
   `((superman-default-directory ,superman-default-directory)
     (superman-default-category ,(or superman-default-directory "Krypton"))
     (superman-org-location ,superman-org-location)
-    (superman-project-kal-el ,superman-project-kal-el)
+    ;; (superman-project-kal-el ,superman-project-kal-el)
     (superman-cmd-git ,superman-cmd-git)
     ;; (superman-switch-to-project [f2])
     (superman-save-buffers ,superman-save-buffers)
@@ -596,7 +596,6 @@ Enabling superman mode electrifies the superman buffer for project management."
       (S))
     (superman-redo)))
 
-(fset 'superman-new-project 'superman-capture-project)
 
 (defun superman-clean-up ()
   (save-excursion

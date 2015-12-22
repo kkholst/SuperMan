@@ -659,6 +659,7 @@ Creates the project directory and index file."
      nil ;; quit-hook
      )))
 
+(fset 'superman-new-project 'superman-capture-project)
 (defun superman-capture-project (&optional nickname category loc)
   "Create a new project. If CATEGORY is nil prompt for project category
 with completion in existing categories. If NICKNAME is nil prompt for nickname.
@@ -667,12 +668,12 @@ defines the project.
 
 The following steps are performed:
 
-Step (1) a new entry is added to the file `superman-profile' and the latter is saved.
+Step (1) a new entry is added to the file `superman-profile' and the file saved.
 Step (2) The project directory is created (unless it exists).
 Step (3) The index file is initialized (unless it exists).
 Step (4) The new project is visited.
 
-Note that saving the superman-profile alters your current `superman-project-alist'.
+Note that saving the file `superman-profile' also updates the `superman-project-alist'.
 
 To undo all this, enter the supermanager (shortcut: M-x `superman'), navigate to
 the new project and call `superman-delete-project' (shortcut: x)
