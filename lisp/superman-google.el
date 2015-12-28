@@ -1,6 +1,6 @@
 ;;; superman-google.el --- superman has google
 
-;; Copyright (C) 2013-2015  Thomas Alexander Gerds
+;; Copyright (C) 2013-2016  Thomas Alexander Gerds
 
 ;; Author: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;; Keywords: convenience

@@ -2,7 +2,7 @@
 
 ;;; superman-file-list.el --- working with alist of filenames
 ;;
-;; Copyright (C) 2002-2014, Thomas A. Gerds <tag@biostat.ku.dk>
+;; Copyright (C) 2002-2016, Thomas A. Gerds <tag@biostat.ku.dk>
 ;; Version: 1.1.3 (31 Jan 2014)
 ;;
 ;; This program is free software; you can redistribute it and/or

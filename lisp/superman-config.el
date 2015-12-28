@@ -1,6 +1,6 @@
 ;;; superman-config.el --- Project specific window configurations
 
-;; Copyright (C) 2012  Thomas Alexander Gerds
+;; Copyright (C) 2012-2016  Thomas Alexander Gerds
 
 ;; Author: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;; Keywords: tools
@@ -58,7 +58,7 @@ Returns the corresponding buffer."
 	(find-file
 	 (expand-file-name
 	  thing
-	  (concat (superman-get-location project) (car project)))))
+	  (superman-get-location project))))
        (t (switch-to-buffer thing))))
     (current-buffer)))
 ;;}}}
@@ -70,7 +70,7 @@ Returns the corresponding buffer."
     (superman-capture
      pro
      "Configuration"
-     "Configuration"
+     "The window configuration is saved."
      nil
      `(("Config" ,(superman-current-config))))))
      
@@ -107,7 +107,7 @@ Returns the corresponding buffer."
 (defun superman-read-config (project)
   (let* ((config (superman-get-config project))
 	 (config (if superman-sticky-config
-		   (if config 
+		     (if config 
 		       (concat superman-sticky-config " : " config)
 		     superman-sticky-config)
 		   config))
@@ -313,8 +313,7 @@ given in superman notation."
 
 
 (defun superman-location (project)
-  (let ((loc (concat (superman-get-location project) (car project))))
-    (find-file loc)))
+  (find-file (superman-get-location project)))
 
 (defun superman-project-timeline (&optional project)
   "Display a project specific timeline based on the index file."
@@ -361,8 +360,8 @@ given in superman notation."
 
 (defun superman-recent-org (project)
   (car (superman-list-files
-	(concat (superman-get-location project)
-		(car project)) "^[^\\.].*\\.org$" "time")))
+	(superman-get-location project)
+	"^[^\\.].*\\.org$" "time")))
 
 
 (setq superman-project-todolist-balls

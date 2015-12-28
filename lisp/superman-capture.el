@@ -1,6 +1,6 @@
 ;;; superman-capture.el --- superman captures stuff
 
-;; Copyright (C) 2013-2014  Klaus Kähler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2013-2016  Klaus Kähler Holst, Thomas Alexander Gerds
 
 ;; Authors: Klaus Kähler Holst <kkho@biostat.ku.dk>
 ;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -35,6 +35,7 @@ just before the capture buffer is given to the user.")
 (defvar superman-capture-mode-map (make-sparse-keymap)
   "Keymap used for `superman-view-mode' commands.")
 (define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
+(define-key superman-capture-mode-map [(tab)] 'superman-complete-property)
 (define-key superman-capture-mode-map  "q" 'superman-quit-scene)
 (define-key superman-capture-mode-map  "\C-x\C-s" 'superman-clean-scene)
 (define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
@@ -110,14 +111,16 @@ If JABBER is non-nil (and CREATE is nil) be talkative about non-existing heading
 ;;}}}
 ;;{{{ superman capture
 
-(defun superman-capture (project heading-or-marker object &optional body plist level scene quit-scene clean-hook quit-hook)
+(defun superman-capture (project heading-or-marker welcome-text 
+				 &optional body plist level scene
+				 quit-scene clean-hook quit-hook)
   "Superman captures entries, i.e., the contents of an outline-headings,
 to be added to the index file of a PROJECT at a given HEADING-OR-MARKER.
 
 HEADING-OR-MARKER can be the name of the outline heading-or-marker which is found
 in the project view buffer or a marker pointing to the project index file.
 
-If OBJECT is a string it is used to construct the first line of the capture buffer.
+WELCOME-TEXT is a string which should help the user fill the form.
 
 If LEVEL is given it is the level of the new heading (default is `superman-item-level').
 LEVEL can be 0 in which case no heading is created.
@@ -139,13 +142,9 @@ and by `superman-quit-scene' just before killing the buffer.
 See also `superman-capture-whatever' for the other arguments."
   (interactive)
   (let* ((scene (or scene (current-window-configuration)))
-	 (what (or object "thing"))
-	 (title (superman-make-button
-		 (concat "Superman captures "
-			 what
-			 " for project "
-			 (car project))
-		 nil 'superman-capture-button-face))
+	 (welcome-text
+	  (or welcome-text
+	      (concat "\nType a title (max one line) in line starting with stars *** \nPress [TAB] on a property for help and completions.")))
 	 (destination (if heading-or-marker
 			  (cond ((stringp heading-or-marker)
 				 (superman-goto-project
@@ -171,162 +170,203 @@ See also `superman-capture-whatever' for the other arguments."
 			(goto-char (point-max))
 			(point-marker))))
     (superman-capture-whatever
-     destination title level body plist nil scene nil
+     destination welcome-text level body plist nil scene nil
      quit-scene clean-hook quit-hook)))
 
-(defun superman-capture-whatever (destination title level body plist edit scene read-only &optional quit-scene clean-hook quit-hook)
-"This function is the work-horse of `superman-capture' and `superman-view-edit-item'.
+(defun superman-capture-whatever (destination 
+				  welcome-text level body fields
+				  edit scene read-only
+				  &optional quit-scene clean-hook quit-hook)
+  " This function is the work-horse of `superman-capture' and `superman-view-edit-item'.
 
-DESTINATION is a marker which indicates where to place the result.
+ DESTINATION is a marker which indicates where to place the result.
 
-TITLE is a string which is shown in the first line of the capture buffer.
+ TITLE is a string which is shown in the first line of the capture buffer.
 
-PLIST is an alist which contains elements are transformed into property fields. The elements
-have the form (key value required) where key can be:
+ FIELDS is an alist which contains elements are transformed into property fields. The elements
+ have the form (key . plist) where key can be:
 
- - a string: the name of a property for the new entry in which case value
-   is a inserted as the default value.
+ - a string: the name of a property for the new entry in which case value is a inserted as the default value.
  - equal 'body: then value is inserted after the properties. 
- - equal 'fun: then value is called via `funcall'
+ - equal 'fun: then value is called via `funcall'. 
  - equal 'hdr: then value is used as heading for this capture
+  
+ and plist is a property list which can have the following elements:
 
-If required is non-nil, then the capture will force a value for the field.
+ :value an initial input value, e.g., set :value ,(format-time-string \"<%Y-%m-%d %a>\") to initialize a date field 
+ :hidden if non-nil capture will not show this field. Makes most sense when there also is a value.
+ :complete decide about what should happen when `superman-complete-property' is involved (tab key).
+ :test a function is evaluated without arguments, but the current value of the field can be obtained by calling `superman-get-property'. 
+       if the function returns nil nothing happens, otherwise an error is produced. If the value of the function is a string 
+       this is the error message otherwise the value of :message.
+ :if-empty decide what to do when field is empty. Possible values are 'delete (whole line is delete) and 'complain (produce an error)
+ :message message shown when an error occurs.
 
-If EDIT is non-nil then saving the capture will erase the subtree at
-destination before saving the capture.
+ Note: plist is ignored when key is not a string.
 
-If READ-ONLY is non-nil then the capture will neither be editable nor savable.
+ If EDIT is non-nil then saving the capture will erase the subtree at
+ destination before saving the capture.
 
-Runs `superman-setup-scene-hook' just before the capture
-buffer is handed over. The capture buffer can be left in two
-differnent ways:
+ If READ-ONLY is non-nil then the capture will neither be editable nor savable.
+
+ Runs `superman-setup-scene-hook' just before the capture
+ buffer is handed over. The capture buffer can be left in two
+ differnent ways:
 
  - save calls `superman-clean-scene' 
  - quit calls `superman-quit-scene'
 
-See `superman-capture' for the other arguments."
-(let* ((level (or level superman-item-level))
-       (kill-whole-line t)
-       body-start
-       (body (or body ""))
-       (S-buf (generate-new-buffer-name "*Capture of SuperMan*"))
-       dest-heading)
-  (switch-to-buffer S-buf)
-  ;; (make-indirect-buffer (current-buffer) S-buf) 'clone)
-  (delete-other-windows)
-  (org-mode)
-  (font-lock-mode -1) 
-  (show-all)
-  (when (> level 0) (progn
-		      (insert "\n"
-			      (make-string level (string-to-char "*"))
-			      " NIX \n")
-		      (forward-line -1))
-	(org-narrow-to-subtree)
-	(unless (= level 0) (progn 
-			      (skip-chars-forward "[* ]")
-			      (kill-line))))
-  (goto-char (point-min))
-  (insert title)
-  (when scene  
-    (put-text-property (point-min) (1+ (point-min)) 'scene scene))
-  (when quit-scene
-    (put-text-property (point-min) (1+ (point-min)) 'quit-scene quit-scene))
-  (when edit
-    (put-text-property (point-min) (1+ (point-min)) 'edit t))
-  (put-text-property (point-min) (1+ (point-min)) 'type 'capture)
-  (insert "\n\n")
-  (unless read-only
+ See `superman-capture' for the other arguments."
+  (let* ((level (or level superman-item-level))
+	 (kill-whole-line t)
+	 body-start
+	 (body (or body ""))
+	 (S-buf (generate-new-buffer-name "*Capture of SuperMan*"))
+	 dest-heading)
+    (switch-to-buffer S-buf)
+    (delete-other-windows)
+    (org-mode)
+    (font-lock-mode -1) 
+    (show-all)
+    (when (> level 0) (progn
+			(insert "\n"
+				(make-string level (string-to-char "*"))
+				" NIX \n")
+			(forward-line -1))
+	  (org-narrow-to-subtree)
+	  (unless (= level 0) (progn 
+				(skip-chars-forward "[* ]")
+				(kill-line))))
+    ;; stuff point-min with text properties
+    (goto-char (point-min))
+    (insert "Superman captured: ")
+    (put-text-property (point-min) (1+ (point-min)) 'destination destination)
+    (when scene  
+      (put-text-property (point-min) (1+ (point-min)) 'scene scene))
+    (when quit-scene
+      (put-text-property (point-min) (1+ (point-min)) 'quit-scene quit-scene))
+    (when edit
+      (put-text-property (point-min) (1+ (point-min)) 'edit t))
+    (put-text-property (point-min) (1+ (point-min)) 'type 'capture)
+    ;; destination
+    (org-with-point-at destination
+      (ignore-errors (setq dest-heading (org-get-heading t t))))
+    (set-text-properties 0 (length dest-heading) nil dest-heading)
+    (if (> (length dest-heading) 25)
+	(setq dest-heading (concat (substring dest-heading 0 22) "...")))
+    (superman-insert-destination-line destination dest-heading nil)
+    (insert "\n\n" (superman-make-button
+		    "Show context"
+		    'superman-capture-show-context
+		    'superman-header-button-face "Show the context\naround destination" nil 21))
+    (insert " " (superman-make-button
+		 "Change destination"
+		 'superman-change-destination
+		 'superman-header-button-face "Change position and file\nwhere text will be saved" nil 21))
+    ;; welcome text
+    (insert "\n\n")
+    (insert welcome-text)
+    (insert "\n\n -------------------- Exit by using one of two commands:\n\n")
+    (unless read-only
+      (insert (superman-make-button
+	       "Save (C-c C-c)"
+	       'superman-clean-scene
+	       ;; 'superman-next-project-button-face
+	       'superman-save-button-face
+	       "Save the current text at the destination" 
+	       nil 21)
+	      " "))
     (insert (superman-make-button
-	     "Save (C-c C-c)"
-	     'superman-clean-scene
-	     'superman-next-project-button-face
-	     "Save the current body add the destination")
-	    "\t"))
-  (insert (superman-make-button
-	   (if read-only
-	       "back (q)"
-	     "Cancel (C-c C-q)")
-	   'superman-quit-scene
-	   'superman-next-project-button-face
-	   (if read-only "Back" "Cancel")))
-  (insert "\n\n")
-  (org-with-point-at destination
-    (ignore-errors (setq dest-heading (org-get-heading t t))))
-  (if (> (length dest-heading) 25)
-      (setq dest-heading (concat (substring dest-heading 0 22) "...")))
-  (insert (superman-make-button
-	   "Destination:"
-	   'superman-change-destination
-	   'superman-header-button-face "Change destination")
-	  (concat " Line " (int-to-string
-			    (org-with-point-at destination
-			      (count-lines 1 (point))))
-		  (when (stringp dest-heading) (concat " just below " dest-heading))
-		  " in buffer " (buffer-name (marker-buffer destination))))
-  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'destination destination)
-  (insert "\t" (superman-make-button
-		"Show context"
-		'superman-capture-show-context
-		'superman-header-button-face "Show some context around destination"))
-  ;; end of non-editable header
-  (insert "\n\n")
-  (forward-line -1)    
-  (put-text-property (point-min) (point-at-eol) 'read-only t)
-  (forward-line 1)
-  (end-of-line)
-  (insert "\n")
-  (if (= level 0)
-      (goto-char (point-max))
-    (end-of-line))
-  ;; 
-  (setq body-start (point))
-  (when (and (> level 0) plist)
-    (insert ":PROPERTIES:")
-    (while plist
-      (let* ((el (car plist))
-	     (key (car el))
-	     (val (ignore-errors (nth 1 el)))
-	     (req (nth 2 el)))
-	(cond ((stringp key)
-	       (ignore-errors
-		 (insert "\n:" key ": ")
-		 ;; (put-text-property (point-at-bol) (- (point) 1) 'read-only t)
-		 (put-text-property (- (point) 1) (point) 'prop-marker (point))
-		 (if req 
-		     (put-text-property (- (point) 1) (point) 'required "required-field"))
-		 (when val (insert (superman-make-value val)))))
-	      ((eq key 'fun) (ignore-errors (funcall (cadr el))))
-	      ((eq key 'hdr) (ignore-errors
-			       (save-excursion
-				 (org-back-to-heading)
-				 (end-of-line)
-				 (insert (superman-make-value val)))))
-	      ((eq key 'body) (setq body (concat body (superman-make-value val)))))
-	(setq plist (cdr plist))))
-    (insert "\n:END:\n"))
-  (when (stringp body) (insert body))
-  ;; (put-text-property (point-at-bol) (point-at-eol) 'read-only t)
-  (unless (= level 0) (insert "\n"))
-  (goto-char body-start) 
-  (superman-capture-mode)
-  (when read-only
-    (setq buffer-read-only t))
-  (run-hooks 'superman-setup-scene-hook)
-  (let ((inhibit-read-only t))
-    (when clean-hook
-      (put-text-property (point-min) (1+ (point-min)) 'clean-hook clean-hook))
-    (when quit-hook
-      (put-text-property (point-min) (1+ (point-min)) 'quit-hook quit-hook)))))
+	     (if read-only
+		 "back (q)"
+	       "Cancel (C-c C-q)")
+	     'superman-quit-scene
+	     'superman-quit-button-face
+	     (if read-only "Back without saving" "Cancel the capture") 
+	     nil 21))
+    (insert "\n")
+    ;; end of non-editable header
+    (insert "\n -------------------- Editable text to be saved below this line:")
+    (insert "\n\n")
+    (forward-line -1)    
+    (put-text-property (1+ (point-min)) (point-at-eol) 'read-only t)
+    (forward-line 1)
+    (end-of-line)
+    (insert "\n")
+    (if (= level 0) (goto-char (point-max)) (end-of-line))
+    ;; insert property drawer
+    (when (and (> level 0) plist)
+      (insert ":PROPERTIES:")
+      (while plist
+	(let* ((el (car plist))
+	       (key (car el))
+	       (value (plist-get (cdr el) :value))
+	       (test (plist-get  (cdr el) :test))
+	       (complete (plist-get  (cdr el) :complete))
+	       (hidden (plist-get  (cdr el) :hidden))
+	       (message (plist-get (cdr el) :message))
+	       (if-empty (plist-get (cdr el) :if-empty)))
+	  (cond ((stringp key)
+		 (if hidden 
+		     (put-text-property (point-min) (1+ (point-min)) 'hidden-properties 
+					(append (get-text-property (point-min) 'hidden-properties)
+						`((,key ,value))))
+		   (ignore-errors
+		     (insert "\n:" key ": ")
+		     (put-text-property (point-at-bol) (1+ (point-at-bol)) 'prop-marker (point-at-bol))
+		     (put-text-property  (point-at-bol) (- (point) 1) 'property key)
+		     (when complete (put-text-property  (point-at-bol) (- (point) 1) 'complete complete))
+		     (when test (put-text-property  (point-at-bol) (- (point) 1) 'test test))
+		     (when hidden (put-text-property  (point-at-bol) (- (point) 1) 'hidden hidden))
+		     (when message (put-text-property  (point-at-bol) (- (point) 1) 'message message))
+		     (when if-empty (put-text-property  (point-at-bol) (- (point) 1) 'if-empty if-empty))
+		     (when value (insert (superman-make-value value))))))
+		((eq key 'fun) (ignore-errors (funcall (cadr el))))
+		((eq key 'hdr)
+		 (ignore-errors
+		   (save-excursion
+		     (org-back-to-heading)
+		     (end-of-line)
+		     (when test (put-text-property  (point-at-bol) (- (point) 1) 'test test))		     
+		     (insert (superman-make-value value)))))
+		((eq key 'body) (setq body (concat body (superman-make-value value)))))
+	  (setq plist (cdr plist))))
+      (insert "\n:END:\n")
+      (org-remove-empty-drawer-at (point)))
+    (when (stringp body) (insert body))
+    (unless (= level 0) (insert "\n"))
+    ;; leave cursor at beginning of entry
+    (goto-char (previous-single-property-change (point-max) 'read-only))
+    (forward-line 1)
+    (end-of-line)
+    (insert " ")
+    (superman-capture-mode)
+    (when read-only
+      (setq buffer-read-only t))
+    (run-hooks 'superman-setup-scene-hook)
+    (let ((inhibit-read-only t))
+      (when clean-hook
+	(put-text-property (point-min) (1+ (point-min)) 'clean-hook clean-hook))
+      (when quit-hook
+	(put-text-property (point-min) (1+ (point-min)) 'quit-hook quit-hook)))))
 
+(defun superman-insert-destination-line (marker heading &optional replace)
+  "Insert first line of superman capture buffer."
+  (goto-char (point-min))
+  (when (re-search-forward "Superman captured: " nil t)
+    (when replace (delete-region (point) (point-at-eol)))
+    (insert "The captured text will be saved in " 
+	    (buffer-name (marker-buffer marker))
+	    " (line " (int-to-string (org-with-point-at marker (count-lines 1 (point))))
+	    (if (stringp heading) (concat " just below " heading) "")
+	    ")")))
 
 (defun superman-capture-show-context ()
   "Show the destination buffer and position
 in other window for this superman-capture."
   (interactive)
   (let ((capture-buffer (buffer-name (current-buffer)))
-	(context-marker (get-text-property (point-at-bol)
-					   'destination)))
+	(context-marker (get-text-property (point-min) 'destination)))
     (switch-to-buffer (marker-buffer context-marker))
     (goto-char (marker-position context-marker))
     (superman-set-config (concat capture-buffer
@@ -337,17 +377,13 @@ in other window for this superman-capture."
 
 (defun superman-change-destination ()
   (interactive)
-  (let* ((dest-marker-pos (next-single-property-change (point-min)
-						       'destination))
-	 dest-heading
+  (let* (dest-heading
 	 (inhibit-read-only t)
 	 (buffer-read-only nil)
-	 (old-marker (when dest-marker-pos
-		       (get-text-property dest-marker-pos 'destination))))
-    (if (not dest-marker-pos)
+	 (old-destination (get-text-property (point-min) 'destination)))
+    (if (not old-destination)
 	(error "Cannot find current destination.")
-      (goto-char dest-marker-pos)
-      (let* ((old-file (buffer-file-name (marker-buffer old-marker)))
+      (let* ((old-file (buffer-file-name (marker-buffer old-destination)))
 	     (new-file (read-file-name "New destination in file: "
 				       (file-name-directory old-file)
 				       nil t nil nil))
@@ -370,27 +406,8 @@ in other window for this superman-capture."
 	  (ignore-errors (setq dest-heading (org-get-heading t t))))
 	(if (> (length dest-heading) 25)
 	    (setq dest-heading (concat (substring dest-heading 0 22) "...")))
-	(goto-char dest-marker-pos)
-	(beginning-of-line)
-	(kill-whole-line)
-	(insert (superman-make-button
-		 "Destination:"
-		 'superman-change-destination
-		 'superman-header-button-face "Change destination")
-		(concat " Line " (int-to-string
-				  (org-with-point-at new-pos
-				    (count-lines 1 (point))))
-			(when (stringp dest-heading) (concat " just below " dest-heading))
-			" in buffer " (buffer-name (marker-buffer new-pos))))
-	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'destination new-pos)
-	(insert "\t" (superman-make-button
-		      "Show context"
-		      'superman-capture-show-context
-		      'superman-header-button-face "Show some context around destination"))
-	;; end of non-editable header
-	(insert "\n")
-	(forward-line -1)
-	(put-text-property (point-min) (point-at-eol) 'read-only t)))))
+	(superman-insert-destination-line new-pos dest-heading t)
+	(put-text-property (point-min) (1+ (point-min)) 'destination new-pos)))))
       
 
 (define-minor-mode superman-capture-mode
@@ -416,6 +433,8 @@ turn it off."
 		 ((functionp thing)
 		  (funcall thing (cdr val))))))))
 
+;;}}}
+;;{{{ Clean or quit the scene
 (defun superman-clean-scene ()
   "Cleaning the capture scene. First save the capture
 at the requested destination and then reset the window configuration."
@@ -426,59 +445,107 @@ at the requested destination and then reset the window configuration."
 	   (kill-whole-line t)
 	   (edit (get-text-property (point-min) 'edit))
 	   req
+	   (n-error 0)
 	   next
 	   catch
 	   hidden-hook
-	   ;; (capture-start (previous-single-property-change (point-max) 'read-only))
-	   (pos-dest (next-single-property-change (point-min) 'destination))
-	   (dest (when pos-dest (get-text-property pos-dest 'destination))))
+	   (dest (get-text-property (point-min) 'destination)))
+      ;; remove previous warnings
       (goto-char (point-min))
-      (while (setq next (next-single-property-change
-			 (point-at-eol)
-			 'prop-marker))
+      (while (setq next (next-single-property-change (point) 'superman-error))
 	(goto-char next)
+	(kill-whole-line 1))
+      ;; see if hdr is filled correctly
+      (goto-char (point-min))
+      (ignore-errors (outline-next-heading))
+      (when (org-at-heading-p)
+	(let ((test (or (get-text-property (point-at-bol) 'test)))
+	      (message (or (get-text-property (point-at-bol) 'message) "Error"))
+	      test-message)
+	  (when (and test (setq test-message (funcall test)))
+	    (beginning-of-line) (insert "<" (if (stringp test-message) test-message message) ">\n")
+	    (forward-line -1)
+	    (put-text-property (point-at-bol) (point-at-eol) 'superman-error 'yes)
+	    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-warning-face)
+	    (forward-line 1)
+	    (setq n-error (1+ n-error)))))
+      ;; move through form and test if filled correctly
+      (goto-char (point-min))
+      (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
+	(goto-char next)
+	(re-search-forward ":[a-zA-Z0-9]+:" nil t)
 	;;
-	(if (looking-at "[ \t]*\n")
-	    (if (setq req (get-text-property (point) 'required))
-		(progn
-		  (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-warning-face)
-		  (error (concat (or req "This is a required field"))))
-	      (beginning-of-line)
-	      (let ((kill-whole-line t))
-		(kill-line))
-	      (forward-line -1))
-	  (end-of-line)))
-      (when (superman-get-property (point) "GoogleCalendar" t nil)
-	(save-restriction
-	  (superman-google-export-appointment)))
-      ;; run hidden hook 
-      (when (setq hidden-hook (get-text-property (point-min) 'clean-hook))
-	(funcall hidden-hook))
-      (goto-char (next-single-property-change (point-min) 'read-only))
-      (skip-chars-forward "\n\t ")
-      (setq catch (buffer-substring (point-at-bol)
-				    (point-max)))
-      ;; say by by to capture buffer
-      (kill-buffer (current-buffer))
-      (set-buffer (marker-buffer dest))
-      (goto-char (marker-position dest))
-      (if edit
-	  (progn (org-narrow-to-subtree)
-		 ;; if this is an edit replace the heading at destination
-		 (delete-region (point-min) (point-max)))
-	(ignore-errors (org-narrow-to-subtree))
-	(goto-char (point-max))
-	(insert "\n"))
-      (insert catch)
-      (save-buffer)
-      (widen)
-      (cond ((window-configuration-p scene)
-	     ;; set window-configuration
-	     (set-window-configuration scene))
-	    ;; call function
-	    ((functionp scene) (funcall scene))
-	    (t nil))
-      (when (or superman-view-mode superman-mode) (superman-redo)))))
+	(let* ((if-empty (get-text-property (point-at-bol) 'if-empty))
+	       (test (or (get-text-property (point-at-bol) 'test)))
+	       test-message
+	       (message (or (get-text-property (point-at-bol) 'message) "Error"))
+	       (kill-whole-line t))
+	  (cond ((and test (setq test-message (funcall test)))
+		 (beginning-of-line) (insert "<" (if (stringp test-message) test-message message) ">\n")
+		 (forward-line -1)
+		 (put-text-property (point-at-bol) (point-at-eol) 'superman-error 'yes)
+		 (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-warning-face)
+		 (forward-line 1)
+		 (insert "\n")
+		 (re-search-forward ":[a-zA-Z0-9]+:" nil t)
+		 (setq n-error (1+ n-error)))
+		;; empty field
+		((looking-at "[ \t]*\n")
+		 (cl-case if-empty 
+		   ('delete (kill-whole-line 1))
+		   ('complain 
+		    (beginning-of-line) (insert " <" (or message "Cannot be empty") ">\n")
+		    (forward-line -1)
+		    (put-text-property (point-at-bol) (point-at-eol) 'superman-error 'yes)
+		    (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-warning-face)
+		    (forward-line 1)
+		    (setq n-error (1+ n-error)))
+		   (t (goto-char (point-at-eol))))))))
+      (if (> n-error 0)
+	  (progn (message (concat (int-to-string n-error) " fields are not filled correctly."))
+		 (goto-char (next-single-property-change (point-min) 'superman-error))
+		 (forward-line 1)
+		 (end-of-line))
+	;; google calendar hook (could be replaced by a button)
+	(when (superman-get-property (point) "GoogleCalendar" t nil)
+	  (save-restriction
+	    (superman-google-export-appointment)))
+	;; run hidden hook 
+	(when (setq hidden-hook (get-text-property (point-min) 'clean-hook))
+	  (funcall hidden-hook))
+	(goto-char (previous-single-property-change (point-max) 'read-only))
+	(skip-chars-forward "\n\t ")
+	;; put hidden properties
+	(save-excursion
+	  (when (org-at-heading-p)
+	    (let ((hidden-props (get-text-property (point-min) 'hidden-properties)))
+	      (when hidden-props
+		(while hidden-props
+		  (org-set-property (caar hidden-props) (cadar hidden-props))
+		  (setq hidden-props (cdr hidden-props)))))))
+	;; catch the thing
+	(setq catch (buffer-substring (point-at-bol) (point-max)))
+	;; say by by to capture buffer
+	(kill-buffer (current-buffer))
+	(set-buffer (marker-buffer dest))
+	(goto-char (marker-position dest))
+	(if edit
+	    (progn (org-narrow-to-subtree)
+		   ;; if this is an edit replace the heading at destination
+		   (delete-region (point-min) (point-max)))
+	  (ignore-errors (org-narrow-to-subtree))
+	  (goto-char (point-max))
+	  (insert "\n"))
+	(insert catch)
+	(save-buffer)
+	(widen)
+	(cond ((window-configuration-p scene)
+	       ;; set window-configuration
+	       (set-window-configuration scene))
+	      ;; call function
+	      ((functionp scene) (funcall scene))
+	      (t nil))
+	(when (or superman-view-mode superman-mode) (superman-redo))))))
 
 (defun superman-quit-scene ()
   "Cancel `superman-capture'
@@ -496,10 +563,151 @@ If a file is associated with the current-buffer save it.
     (kill-buffer (current-buffer))
     (when (window-configuration-p scene)
       (set-window-configuration scene))))
-
-
 ;;}}}
+;;{{{ completion and test- functions
+
+(defun superman-read-category ()
+  (completing-read "Choose a category: " 
+		   superman-project-categories 
+		   nil nil nil))
+(defun superman-read-index-file ()
+  (concat "[[" (read-file-name "Choose index file: ") "]]"))
+
+(defun superman-read-file-name ()
+  (concat "[[" (read-file-name "Choose file: ") "]]"))
+
+(defun superman-read-directory-name ()
+  (concat "[[" (read-directory-name "Choose a location: ") "]]"))
+
+(defun superman-complete-property ()
+  "Read text properties at beginning of line to help finding a value for this property."
+  (interactive)
+  (save-excursion
+    (if (org-at-heading-p)
+	(message "Type a title after ***, activate todo: C-c C-t, change priority Shift-up")
+    (let* ((prop (get-text-property (point-at-bol) 'property))
+	   (text-props (text-properties-at (point-at-bol)))
+	   (complete (get-text-property (point-at-bol) 'complete))
+	   value)
+      (when (and (symbolp complete) (not (symbol-function complete))) 
+	(setq complete (eval complete)))
+      (cond ((functionp complete) (setq value (funcall complete)))
+	    ((stringp complete) (message complete))
+	    (t (message "Don't know what to do here")))
+      (when value
+	(delete-region (point-at-bol) (point-at-eol))
+	(insert ":" prop ": " value)
+	(set-text-properties (point-at-bol) (1+ (point-at-bol)) text-props))))))
+
+(defun superman-capture-change-priority ()
+  (interactive) 
+  (save-excursion
+    (goto-char (point-max))
+    (outline-previous-heading)
+    (org-shiftup)))
+
+(defun superman-capture-add-timeline ()
+  (interactive) 
+  (save-excursion
+    (goto-char (point-max))
+    (outline-previous-heading)
+    (org-deadline)))
+
+(defun superman-capture-change-todo ()
+  (interactive) 
+  (save-excursion
+    (goto-char (point-max))
+    (outline-previous-heading)
+    (org-todo)))
+
+(defun superman-test-nickname ()
+  ;; check if nickname exists 
+  (when (assoc  (superman-get-property (point) "nickname") superman-project-alist)
+    "Name already in use"))
+
+(defun superman-test-hdr (&optional message)
+  (let ((hdr (ignore-errors (org-get-heading t t))))
+    (unless hdr 
+      (or message "Please type a title for this capture"))))
+;;}}}
+
 ;;{{{ capture documents, notes, etc.
+    
+(defun superman-capture-note (&optional project marker ask)
+  (interactive)
+  (let ((pro (superman-get-project project ask))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+    (superman-capture
+     pro
+     (or marker "Notes")
+     "Note"
+     nil
+     `((hdr :test superman-test-hdr)
+       ("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))))))
+
+(defun superman-capture-text (&optional project marker ask)
+  (interactive)
+  (let ((pro (superman-get-project project ask))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+    (save-excursion
+      (superman-goto-project project "Text" 'create nil nil nil ":FreeText: t"))
+    (superman-capture
+     pro
+     (or marker "Text")
+     "free text"
+     nil nil 0)))
+
+(defun superman-capture-bookmark (&optional project marker ask)
+  (interactive)
+  (let ((pro (superman-get-project project ask))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+    (superman-capture
+     pro
+     (or marker "Bookmarks")
+     "A bookmark will be created to the link specified by property \"Link\" below.\nTo change the file put cursor in this line and press TAB."
+     nil
+     `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))
+       (hdr :test superman-test-hdr)
+       ("Link" :if-empty complain :message "Need a link to url or something else")))))
+
+(fset 'superman-capture-todo 'superman-capture-task)
+(defun superman-capture-task (&optional project marker ask)
+  (interactive)
+  (let ((pro (superman-get-project project ask))
+	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+    (superman-capture
+     pro
+     (or marker "Tasks")
+     (concat "A task will be created.\n\n"
+	     (superman-make-button "Change priority" 'superman-capture-change-priority
+				   'superman-capture-button-face
+				   "Change the priority."
+				   nil 
+				   21)
+	     " "
+	     (superman-make-button "Change todo" 'superman-capture-change-todo
+				   'superman-capture-button-face
+				   "Change the todo status."
+				   nil 
+				   21)
+	     " "
+	     (superman-make-button "Add timeline" 'superman-capture-add-timeline
+				   'superman-capture-button-face
+				   "Add a time at which the task should be done."
+				   nil 
+				   21))
+
+ ;; - to change the priority put cursor into header line (*** ...) and press Shift-up.
+ ;; - to change the todo status put cursor into  header lin (*** ...) and press Ctrl-c Ctrl-t
+     nil
+     `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))
+       (hdr :test superman-test-hdr)
+       (fun
+	(lambda ()
+	  (save-excursion
+	    (org-todo)
+	    (org-back-to-heading)
+	    (org-shiftup))))))))
 
 (defun superman-capture-thing (&optional project)
   "Associate a thing (file, note, task, link, meeting, etc.) with a project.
@@ -510,18 +718,11 @@ and in the first cat otherwise."
 	(scene (current-window-configuration))
 	(cat (superman-current-cat))
 	(marker (get-text-property (point-at-bol) 'org-hd-marker))
-	(superman-setup-scene-hook
-	 #'(lambda ()
-	     (define-key
-	       superman-capture-mode-map
-	       [(tab)]
-	       'superman-complete-project-property)))
 	(defaults `((hdr " TODO [A] New item")
-		    ("Link" . nil)
-		    ("FileName")
-		    ("AppointmentDate")
-		    ("Location")))
-		    ;; ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))
+		    ("Link" :complete "link to url")
+		    ("FileName" :complete superman-read-file-name)
+		    ("AppointmentDate" :complete superman-read-date)
+		    ("Location" :complete "Where to meet")))
 	props keys)
     (if superman-view-mode
 	(when (and cat (superman-get-property (superman-cat-point) "freetext"))
@@ -532,13 +733,15 @@ and in the first cat otherwise."
     (unless cat
       (superman-next-cat)
       (setq cat (or (superman-current-cat)
-		    (progn
+		    (let* ((index (superman-get-index pro))
+			   (new-section (read-string
+					 (concat "Create new section in " index ": "))))
 		      (save-excursion
-			(find-file (superman-get-index pro))
+			(find-file index)
 			(end-of-buffer)
-			(insert "\n* NewCat\n")
+			(insert "\n* " new-section " \n")
 			(save-buffer))
-		      "NewCat"))))
+		      new-section))))
     ;; supplement list of existing properties
     ;; with default properties
     (setq keys
@@ -546,10 +749,9 @@ and in the first cat otherwise."
 		  (superman-view-property-keys)))
     (if (assoc "CaptureDate" keys)
 	(setq keys
-	      (append `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a %R]")))
+	      (append `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))
 		      (delete (assoc "CaptureDate" keys) keys)))
-      (setq keys `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a %R]")))))
-    ;; (mapcar #'(lambda (x) (list x nil)) keys)))
+      (setq keys `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))))
     ;; add defaults
     (setq props (append keys defaults))
     (superman-capture pro
@@ -557,7 +759,6 @@ and in the first cat otherwise."
 		      "item"
 		      nil
 		      props nil scene)))
-
 
 
 ;; FIXME: this should become an edit of the project entry 
@@ -573,160 +774,8 @@ and in the first cat otherwise."
       (save-buffer))
     (if superman-view-mode
 	(superman-redo))))
-
-(fset 'superman-capture-file 'superman-capture-document)
-(defun superman-capture-document (&optional project marker ask)
-  "Register a file in your project-manager. At this point
-file does not need to exist."
-  (interactive)
-  (let* ((pro (superman-get-project project ask))
-	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
-	 (cat-name (get-text-property (point-at-bol) 'cat))
-	 (heading (cond (cat-name)
-			((and marker (superman-current-cat))
-			 marker)
-			(t "Documents")))
-	 (dir (expand-file-name (concat (superman-get-location pro) (car pro))))
-	 ;; FIXME: to circumvent a bug in ido-read-file-name
-	 (read-file-name-function 'read-file-name-default)
-	 (file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
-    (superman-capture
-     pro
-     heading
-     "Document"
-     nil
-     `(("FileName" ,(concat "[["  (abbreviate-file-name file) "]]"))
-       ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
-       (hdr ,(file-name-nondirectory file)))
-     nil nil)))
-
-(defun superman-view-new-project-hook ()
-  "Hook to be run when a new project is captured.
-Creates the project directory and index file."
-  (let* ((case-fold-search t)
-	 (nick
-	  (progn
-	    ;; (outline-next-heading)
-	    (org-back-to-heading)
-	    (superman-get-property (point) "nickname")))
-	 (pro (progn
-		(save-buffer)
-		(assoc nick superman-project-alist))))
-    (superman-create-project pro)
-    (superman-update-project-overview)
-    (superman-switch-to-project pro)
-    (superman-switch-config pro nil "PROJECT")))
-
-(defun superman-capture-superman ()
-  "Set up superman profile."
-  (unless superman-profile ;; user set the name but file does not exist yet.
-    (stop "You need to set the variable superman-profile to a file-name in your .emacs file."))
-  (find-file superman-profile)
-  (goto-char (point-min))
-  (let* ((profile-buffer (buffer-name (current-buffer)))
-	 (marker (point-marker))
-	 (quit-scene (current-window-configuration))
-	 (welcome
-	  (concat
-	   (superman-make-button "Initialize the SuperMan(ager)" nil 'superman-project-button-face)
-	   "\n\nCheck and adjust the setup below, then press the Save button or press C-c C-c.\nThe profile will be saved in the file:\n\n"
-	   (superman-make-button superman-profile nil 'superman-capture-button-face)))
-	 (clean-hook
-	  `(lambda ()
-	     (goto-char (point-min))
-	     (re-search-forward "*[ ]+SupermanSetup" nil t)
-	     ;; read-off value of superman-home
-	     ;; (superman-parse-setup (point) (superman-defaults) nil)
-	     ;; create directory if necessary
-	     (unless (file-exists-p (file-name-directory superman-profile))
-	       (make-directory (file-name-directory superman-profile)  't))
-	     ;; save profile
-	     (save-excursion
-	       (find-file superman-profile)
-	       (save-buffer)))))
-    (superman-capture-whatever
-     marker
-     welcome
-     1
-     (concat "\n" (superman-set-up-defaults))
-     `(("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
-       (hdr "Superman(ager)"))
-     nil ;; this is not an edit
-     'superman ;; scene
-     nil ;; read-only
-     quit-scene ;; quit-scene
-     clean-hook ;; clean-hook
-     nil ;; quit-hook
-     )))
-
-(fset 'superman-new-project 'superman-capture-project)
-(defun superman-capture-project (&optional nickname category loc)
-  "Create a new project. If CATEGORY is nil prompt for project category
-with completion in existing categories. If NICKNAME is nil prompt for nickname.
-If LOC is given it is the mother directory of the directory which
-defines the project. 
-
-The following steps are performed:
-
-Step (1) a new entry is added to the file `superman-profile' and the file saved.
-Step (2) The project directory is created (unless it exists).
-Step (3) The index file is initialized (unless it exists).
-Step (4) The new project is visited.
-
-Note that saving the file `superman-profile' also updates the `superman-project-alist'.
-
-To undo all this, enter the supermanager (shortcut: M-x `superman'), navigate to
-the new project and call `superman-delete-project' (shortcut: x)
-"
-  (interactive)
-  ;; (superman-refresh)
-  (let* ((nickname (or (and (not (string= nickname "")) nickname) (read-string "Project name (short) ")))
-	 (category (or category
-		       (let ((cat
-			      (completing-read
-			       "Category: "
-			       (mapcar (lambda (x)
-					 (list x))
-				       (superman-parse-project-categories))
-			       nil nil)))
-			 (if (string= cat "") "Krypton" cat))))
-	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
-	 (loc (or loc
-		  (save-excursion
-		    (superman-go-home category t)
-		    (superman-get-property (point) "location" 'inherit))
-		  superman-default-directory))
-	 (scene (current-window-configuration))
-	 (superman-setup-scene-hook
-	  #'(lambda ()
-	      (define-key
-		superman-capture-mode-map
-		[(tab)]
-		'superman-complete-project-property))))
-    ;; category)
-    ;; check if nickname exists 
-    (while (assoc nickname superman-project-alist)
-      (setq nickname
-	    (read-string (concat "Project " nickname " exists. Please choose a different name (C-g to exit): "))))
-    (superman-capture
-     `("*S*" (("index" . ,superman-profile)))
-     (or marker category)
-     "Project"
-     nil
-     `(("Nickname" ,nickname)
-       ("InitialVisit" ,(format-time-string "<%Y-%m-%d %a>"))
-       ("LastVisit" ,(format-time-string "<%Y-%m-%d %a>"))
-       ("Others" "")
-       ;; ("Location" ("" (required t)))
-       ("Location" ,loc)
-       (hdr ,(concat "ACTIVE " nickname))
-       ("Index" "")
-       ("Category" ,category)) 
-     superman-project-level
-     'superman-view-new-project-hook ;; sets the scene to PROJECT 
-     scene ;; when capture is canceled
-     )))
-
+;;}}}
+;;{{{ capture files
 
 (defun superman-capture-file-at-point ()
   (interactive)
@@ -741,9 +790,7 @@ the new project and call `superman-delete-project' (shortcut: x)
 index file as LEVEL headings. Then show the updated project view buffer."
   (interactive)
   (let* ((pro (superman-get-project project ask))
-	 (gitp (superman-git-toplevel (concat
-				       (superman-get-location pro)
-				       (car pro))))
+	 (gitp (superman-git-toplevel (superman-get-location pro)))
 	 (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	 (heading (if (and marker (superman-current-cat))
 		      marker
@@ -784,81 +831,144 @@ index file as LEVEL headings. Then show the updated project view buffer."
     (superman-view-project pro)
     (superman-redo)))
 
-(defun superman-complete-project-property ()
+(fset 'superman-capture-file 'superman-capture-document)
+(defun superman-capture-document (&optional project marker ask)
+  "Register a file in your project-manager. At this point
+file does not need to exist."
   (interactive)
-  (save-excursion
-    (let ((curprop (progn (beginning-of-line) (looking-at ".*:\\(.*\\):") (org-match-string-no-properties 1))))
-      (cond
-       ((string= (downcase curprop) "filename")
-	(goto-char (+ (point) (length curprop) 2))
-	(delete-region (point) (point-at-eol))
-	(insert " [[" (read-file-name (concat curprop ": ")) "]]"))
-       ((string= (downcase curprop) "index")
-	(goto-char (+ (point) (length curprop) 2))
-	(delete-region (point) (point-at-eol))
-	(insert " [[" (read-file-name (concat "Set " curprop ": ")) "]]"))
-       ((string= (downcase curprop) "location")
-	(goto-char (+ (point) (length curprop) 2))
-	(delete-region (point) (point-at-eol))
-	(insert " [[" (read-directory-name (concat "Set " curprop ": ")) "]]"))))))
-    
-(defun superman-capture-note (&optional project marker ask)
-  (interactive)
-  (let ((pro (superman-get-project project ask))
-	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
+  (let* ((pro (superman-get-project project ask))
+	 (marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
+	 (cat-name (get-text-property (point-at-bol) 'cat))
+	 (heading (cond (cat-name)
+			((and marker (superman-current-cat))
+			 marker)
+			(t "Documents")))
+	 (dir (expand-file-name (superman-get-location pro)))
+	 ;; FIXME: to circumvent a bug in ido-read-file-name
+	 (read-file-name-function 'read-file-name-default)
+	 (file (read-file-name (concat "Add document to " (car pro) ": ") (file-name-as-directory dir))))
     (superman-capture
      pro
-     (or marker "Notes")
-     "Note"
+     heading
+     "A link will be created to the file specified by property \"FileName\" below.\nTo change the file put cursor in this line and press TAB."
      nil
-     `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))))
+     `(("FileName" :value ,(concat "[["  (abbreviate-file-name file) "]]"))
+       ("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))
+       (hdr :value ,(file-name-nondirectory file)))
+     nil nil)))
 
-(defun superman-capture-text (&optional project marker ask)
+(defun superman-capture-superman ()
+  "Set up superman profile."
+  (unless superman-profile ;; user set the name but file does not exist yet.
+    (stop "You need to set the variable superman-profile to a file-name in your .emacs file."))
+  (find-file superman-profile)
+  (goto-char (point-min))
+  (let* ((profile-buffer (buffer-name (current-buffer)))
+	 (marker (point-marker))
+	 (quit-scene (current-window-configuration))
+	 (welcome
+	  (concat
+	   (superman-make-button "Initialize the SuperMan(ager)" nil 'superman-project-button-face)
+	   "\n\nCheck and adjust the setup below, then press the Save button or press C-c C-c.\nThe profile will be saved in the file:\n\n"
+	   (superman-make-button superman-profile nil 'superman-capture-button-face)))
+	 (clean-hook
+	  `(lambda ()
+	     (goto-char (point-min))
+	     (re-search-forward "*[ ]+SupermanSetup" nil t)
+	     ;; read-off value of superman-home
+	     ;; (superman-parse-setup (point) (superman-defaults) nil)
+	     ;; create directory if necessary
+	     (unless (file-exists-p (file-name-directory superman-profile))
+	       (make-directory (file-name-directory superman-profile)  't))
+	     ;; save profile
+	     (save-excursion
+	       (find-file superman-profile)
+	       (save-buffer)))))
+    (superman-capture-whatever
+     marker
+     welcome
+     1
+     (concat "\n" (superman-set-up-defaults))
+     `(("InitialVisit" :value,(format-time-string "<%Y-%m-%d %a>"))
+       (hdr :value "Superman(ager)" :test superman-test-hdr))
+     nil ;; this is not an edit
+     'superman ;; scene
+     nil ;; read-only
+     quit-scene ;; quit-scene
+     clean-hook ;; clean-hook
+     nil ;; quit-hook
+     )))
+
+(fset 'superman-new-project 'superman-capture-project)
+(defun superman-capture-project (&optional nickname category loc)
+  "Create a new project. If CATEGORY is nil prompt for project category
+  with completion in existing categories. If NICKNAME is nil prompt for nickname.
+  If LOC is given it is the mother directory of the directory which
+  defines the project. 
+
+  The following steps are performed:
+
+  Step (1) a new entry is added to the file `superman-profile' and the file saved.
+  Step (2) The project directory is created (unless it exists).
+  Step (3) The index file is initialized (unless it exists).
+  Step (4) The new project is visited.
+
+  Note that saving the file `superman-profile' also updates the `superman-project-alist'.
+
+  To undo all this, enter the supermanager (shortcut: M-x `superman'), navigate to
+  the new project and call `superman-delete-project' (shortcut: x)
+  "
   (interactive)
-  (let ((pro (superman-get-project project ask))
-	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (save-excursion
-      (superman-goto-project project "Text" 'create nil nil nil ":FreeText: t"))
+  ;; (superman-refresh)
+  (let* ((marker (get-text-property (point-at-bol) 'org-hd-marker))
+	 (scene (current-window-configuration)))
     (superman-capture
-     pro
-     (or marker "Text")
-     "free text"
-     nil nil 0)))
-
-
-(defun superman-capture-bookmark (&optional project marker ask)
-  (interactive)
-  (let ((pro (superman-get-project project ask))
-	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture
-     pro
-     (or marker "Bookmarks")
-     "Bookmark"
+     `("*S*" (("index" . ,superman-profile)))
+     marker
+     (concat "A project will be created.\n - Press [TAB] on the properties below for help and completions.
+ - \"Nickname\" is used to quickly identify project. The Header will appear in the project manager overview.
+ - \"Location\" is a folder on your computer associated with the project
+ - If \"Location\" is not an existing folder it will be created along with its parents.
+ - \"Index\" is a file which contains project information. 
+ - If \"Index\" is not specified it will be \"Nickname\".org
+ - \"Others\" are your collaborators on the project.")
      nil
-     `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
-       ("Link" nil 'required)))))
+     `(("Nickname" :if-empty complain :message "Choose a nickname" :test superman-test-nickname :complete "Type a name without blanks to identify the project.")
+       ("Category" :if-empty complain :message "Choose a category" :complete superman-read-category)
+       ("Others")
+       ("Location" :value ,loc :if-empty complain :message "Choose a location" :complete superman-read-directory-name)
+       (hdr :value "ACTIVE" :test superman-test-hdr)
+       ("Index" :complete superman-read-index-file)
+       ("InitialVisit" :value ,(format-time-string "[%Y-%m-%d %a]") :complete "This should not be changed")
+       ("LastVisit" :value ,(format-time-string "<%Y-%m-%d %a>") :complete superman-read-date))
+     superman-project-level
+     'superman-view-new-project-hook ;; sets the scene to PROJECT 
+     scene ;; when capture is canceled
+     )))
 
-(fset 'superman-capture-todo 'superman-capture-task)
-(defun superman-capture-task (&optional project marker ask)
-  (interactive)
-  (let ((pro (superman-get-project project ask))
-	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
-    (superman-capture
-     pro
-     (or marker "Tasks")
-     "Task"
-     nil
-     `(("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))
-       (fun
-	(lambda ()
-	  (save-excursion
-	    (org-todo)
+(defun superman-view-new-project-hook ()
+  "Hook to be run when a new project is captured.
+Creates the project directory and index file."
+  (let* ((case-fold-search t)
+	 (nick
+	  (progn
+	    ;; (outline-next-heading)
 	    (org-back-to-heading)
-	    (org-shiftup))))))))
+	    (superman-get-property (point) "nickname")))
+	 (pro (progn
+		(save-buffer)
+		(assoc nick superman-project-alist))))
+    (superman-create-project pro)
+    (superman-update-project-overview)
+    (superman-switch-to-project pro)
+    (superman-switch-config pro nil "PROJECT")))
 
-
-;; Capturing meetings
+;;}}}
+;;{{{ Capture meetings
 ;; Note: inactive time stamp for CaptureDate
+
+(defun superman-read-date ()
+  (with-temp-buffer (org-time-stamp t) (buffer-string)))
 
 (defun superman-capture-calendar (&optional project marker ask)
   (interactive)  
@@ -868,29 +978,27 @@ index file as LEVEL headings. Then show the updated project view buffer."
   (interactive)
   (let ((pro (superman-get-project project ask))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
-	;; (date (format-time-string  "<%Y-%m-%d %a %H:%M>" (org-read-date t t))))
-	(date (with-temp-buffer
-		(org-time-stamp t)
-		(buffer-string))))
-    ;; (org-read-date t t)))
+	(date (superman-read-date)))
     (superman-capture
      pro
      (or marker "Calendar")
      "Meeting"
      nil
-     `(("MeetingDate" ,date)
-       ("Participants" nil)
-       ("Location" nil)
+     `(("MeetingDate" :value ,date :complete superman-read-date)
+       ("Participants" :complete "Who will be attending?")
+       ("Location" :complete "Place of meeting.")
        (when superman-google-default-calendar
-	 ("GoogleReminderMinutes" nil)
+	 ("GoogleReminderMinutes")
 	 )
        ,(when superman-google-default-calendar
-	  `("GoogleCalendar" ,superman-google-default-calendar)
+	  `("GoogleCalendar" :value ,superman-google-default-calendar 
+	    :complete superman-google-calendars)
 	  )
-       ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))))
+       ("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]")
+	(hdr :test superman-test-hdr))))))
 
 ;;}}}
-;;{{{ capture synchronization commands
+;;{{{ capture unison 
 
 (defun superman-capture-unison (&optional project ask)
   (interactive)
@@ -902,13 +1010,13 @@ index file as LEVEL headings. Then show the updated project view buffer."
      "Configuration"
      "Unison"
      nil
-     `(("UNISON" "superman-unison-cmd")
-       ;; (hdr "CHANGEME")
-       ("SWITCHES" "-ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0")
+     `(("UNISON" :value "superman-unison-cmd")
+       (hdr :value "Synchonise")
+       ("SWITCHES" :value "-ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0")
        ;; :SWITCHES: -ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*' -perms 0
-       ("ROOT-1" ,root-1)
-       ("ROOT-2" ,root-2)
-       ("CaptureDate" ,(format-time-string "[%Y-%m-%d %a]"))))))
+       ("ROOT-1" :value ,root-1 :complete superman-read-directory-name)
+       ("ROOT-2" :value ,root-2 :complete superman-read-directory-name)
+       ("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))))))
 
 (defun superman-unison-insert-switches ()
   (interactive)
@@ -984,12 +1092,12 @@ index file as LEVEL headings. Then show the updated project view buffer."
      "Mail"
      "Mail"
      nil
-     `(("CaptureDate"  ,(format-time-string "<%Y-%m-%d %a>"))
-       (body ,(concat "----\n" region "\n----\n"))
-       (body ,attachments)
-       ("EmailDate" ,date)
-       (hdr ,(concat "Mail from " from " " subject ))
-       ("Link" ,link)))))
+     `(("CaptureDate"  :hidden yes :value ,(format-time-string "<%Y-%m-%d %a>"))
+       (body :value ,(concat "----\n" region "\n----\n"))
+       (body :value ,attachments)
+       ("EmailDate" :value ,date)
+       (hdr :value ,(concat "Mail from " from " " subject ) :test superman-test-hdr)
+       ("Link" :value ,link)))))
 
 (defun superman-save-attachments (project dir buf date)
   "Interactively save mail contents in project org file
@@ -1053,22 +1161,19 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
      marker 
      "Heading"
      nil
-     `(("Ball1" "todo :face superman-get-todo-face")
-       ("Ball2" "hdr :name Title :width 13 :face font-lock-function-name-face")
-       ("Ball3" ""))
+     `(("Ball1" :value "todo :face superman-get-todo-face")
+       ("Ball2" :value "hdr :name Title :width 13 :face font-lock-function-name-face")
+       ("Ball3" :value ""))
      1)))
 
 ;;}}}
+;;{{{ capture git section
 
-;;{{{ capture VC documents
-
-(defun superman-capture-git-section (&optional project git-dir level ask)
+(defun superman-capture-git-section (&optional project git-dir level Ask)
   "Capture files under version control. Delete and recreate section 'GitFiles' "
   (interactive)
   (let* ((pro (superman-get-project project ask))
-	 (gitp (superman-git-toplevel (concat
-				       (superman-get-location pro)
-				       (car pro))))
+	 (gitp (superman-git-toplevel (superman-get-location pro)))
 	 (gitdir (or git-dir
 		     (read-directory-name (concat "Directory : "))))
 	 (gittop (superman-git-toplevel gitdir))

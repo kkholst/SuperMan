@@ -1,6 +1,6 @@
 ;;; superman-deft.el --- hacking deft for org project manager 
 
-;; Copyright (C) 2012  Thomas Alexander Gerds, Klaus Kähler Holst
+;; Copyright (C) 2012-2016  Thomas Alexander Gerds, Klaus Kähler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kähler Holst <kkho@biostat.ku.dk>

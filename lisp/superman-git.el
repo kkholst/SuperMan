@@ -1,6 +1,6 @@
 ;;; superman-git.el --- Summary of project contents and adding information to projects
 
-;; Copyright (C) 2012-2013  Klaus Kähler Holst, Thomas Alexander Gerds
+;; Copyright (C) 2012-2016  Klaus Kähler Holst, Thomas Alexander Gerds
 
 ;; Authors: Klaus Kähler Holst <kkho@biostat.ku.dk>
 ;;          Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -78,7 +78,7 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
   (interactive)
   (or (get-text-property (point-min) 'git-dir)
       (let ((pro (superman-view-current-project)))
-	(superman-git-init-directory (concat (superman-get-location pro) (car pro)))
+	(superman-git-init-directory (superman-get-location pro))
 	(superman-redo))))
 
 (defun superman-git-init-project (&optional project)
@@ -86,7 +86,7 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
   (interactive)
   (let* ((pro (superman-get-project project))
 	 (index (superman-get-index pro))
-	 (loc (concat (superman-get-location pro) (car pro))))
+	 (loc (superman-get-location pro)))
     (if (not index)
 	(error (concat "Trying to superman-git-init-project: Project " (car pro) " has no index file."))
       (superman-git-init-directory loc)
@@ -540,7 +540,7 @@ commit the file to the git repository."
   (interactive)
   (let* ((dir (or dir
 		  (let ((pro (superman-get-project nil)))
-		    (concat (superman-get-location pro) (car pro)))))
+		    (superman-get-location pro))))
 	 (file-list (or file-list
 			(list (read-file-name "Git add file: " dir nil t))))
 	 (file-list-string

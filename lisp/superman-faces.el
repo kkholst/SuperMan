@@ -1,6 +1,6 @@
 ;;; superman-faces.el --- faces for superman views
 
-;; Copyright (C) 2014  Thomas Gerds
+;; Copyright (C) 2014-2016  Thomas Gerds
 
 ;; Author: Thomas Gerds <tag@biostat.ku.dk>
 ;; Keywords: convenience
@@ -61,6 +61,34 @@
      :inverse-video nil
      :height 1.3))
   "Face for superman button."
+  :group 'superman)
+;;}}}
+;;{{{ Save and quit button
+(defface superman-save-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "red"
+     :height 1.0
+     )
+    (t
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "red"
+     :height 1.0))
+  "Face for superman save button."
+  :group 'superman)
+(defface superman-quit-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "blue"
+     )
+    (t
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "blue"))
+  "Face for superman quit button."
   :group 'superman)
 ;;}}}
 ;;{{{ file-list faces
@@ -273,7 +301,7 @@
 (defface superman-header-button-face
   '((t (:inherit superman-default-button-face
 		 :box (:line-width 1 :color "gray88" :style released-button)
-		 :background "lightyellow")))
+		 :background "gray93")))
   "Face used for the selected tab."
   :group 'superman)
 
@@ -313,7 +341,7 @@
   "Face used for git-log."
   :group 'superman)
 (defface superman-git-keyboard-face-L
-  '((t (:inherit superman-git-keyboard-face-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  '((t (:inherit superman-git-keyboard-face-l :height 1.0 :box (:line-width 1 :color "gray93" :style released-button))))
   "Face used for git-log (larger box)."
   :group 'superman)
 
@@ -342,12 +370,12 @@
   :group 'superman)
 
 (defface superman-git-keyboard-face-C
-  '((t (:inherit superman-git-keyboard-face-c :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  '((t (:inherit superman-git-keyboard-face-c :height 1.0 :box (:line-width 1 :color "gray93" :style released-button))))
   "Face used for git-commit (larger box)."
   :group 'superman)
 
 (defface superman-git-keyboard-face-P
-  '((t (:inherit superman-git-keyboard-face-p :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  '((t (:inherit superman-git-keyboard-face-p :height 1.0 :box (:line-width 1 :color "gray93" :style released-button))))
   "Face used for git-commit (larger box)."
   :group 'superman)
 
@@ -359,7 +387,7 @@
   "Face used for git-rm."
   :group 'superman)
 (defface superman-git-keyboard-face-X
-  '((t (:inherit superman-git-keyboard-face-x :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  '((t (:inherit superman-git-keyboard-face-x :height 1.0 :box (:line-width 1 :color "gray93" :style released-button))))
   "Face used for git-rm (larger box)."
   :group 'superman)
 
@@ -371,7 +399,7 @@
   "Face used for git-stash."
   :group 'superman)
 (defface superman-git-keyboard-face-R
-  '((t (:inherit superman-git-keyboard-facr-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
+  '((t (:inherit superman-git-keyboard-face-l :height 1.0 :box (:line-width 1 :color "gray88" :style released-button))))
   "Face used for git-stash (larger box)."
   :group 'superman)
 

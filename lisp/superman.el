@@ -1,6 +1,6 @@
 ;;; superman.el --- org project manager
 
-;; Copyright (C) 2013 Thomas Alexander Gerds
+;; Copyright (C) 2013-2016 Thomas Alexander Gerds
 
 ;; Authors:
 ;; Thomas Alexander Gerds <tag@biostat.ku.dk>
@@ -41,7 +41,7 @@
 the contents of the file `superman-profile'."
   (interactive)
   (let* ((cats-buffer "*S*")
-	 (cats (superman-parse-project-categories))
+	 (cats (reverse superman-project-categories))
 	 (cat-alist (mapcar (lambda (x) (list x)) cats))
 	 (howmany-cats (length cats))
 	 (cat-number-one (car cats))
@@ -932,57 +932,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 (define-key superman-mode-map "N" 'superman-new-project)
 (define-key superman-mode-map "?" 'supermanual)
 ;;}}}  
-;;{{{ forgotton/not used/useful?
-
-(defun superman-categorize-projects (&optional cats balls)
-  "Parse the file `superman-profile' and return a categorized project-alist."
-  (interactive)
-  (save-excursion
-    (setq superman-project-alist nil)
-    (set-buffer (find-file-noselect superman-profile))
-    (unless (superman-manager-mode 1))
-    (save-buffer)
-    (goto-char (point-min))
-    (while (superman-forward-project)
-      (let* ((loc (or (superman-get-property nil "location" 'inherit) superman-default-directory))
-	     (category (superman-get-property nil "category" 'inherit))
-	     (others (superman-get-property nil "others" nil))
-	     (publish-dir (superman-get-property nil "publish" 'inherit))
-	     (name (or (superman-get-property nil "nickname" nil)
-		       (nth 4 (org-heading-components))))
-	     (marker (copy-marker (point)))
-	     (hdr  (org-get-heading t t))
-	     (lastvisit (superman-get-property nil "lastvisit" 'inherit))
-	     (config (superman-get-property nil "config" 'inherit))
-	     (todo (substring-no-properties (or (org-get-todo-state) "")))
-	     (index (or (superman-get-property nil "index" nil)
-			(let ((default-org-home
-				(concat (file-name-as-directory loc)
-					name
-					superman-org-location)))
-			  ;; (make-directory default-org-home t)
-			  (concat (file-name-as-directory default-org-home) name ".org")))))
-	(set-text-properties 0 (length hdr) nil hdr)
-	;; (add-text-properties
-	;; 0 (length hdr)
-	;; (list 'superman-item-marker marker 'org-hd-marker marker) hdr)
-	(unless (file-name-absolute-p index)
-	  (setq index
-		(expand-file-name (concat (file-name-as-directory loc) name "/" index))))
-	(add-to-list 'superman-project-alist
-		     (list name
-			   (list (cons "location"  loc)
-				 (cons "index" index)
-				 (cons "category" category)
-				 (cons "others" others)
-				 (cons 'hdr hdr)
-				 (cons "marker" marker)				 
-				 (cons "lastvisit" lastvisit)
-				 (cons "config" config)
-				 (cons 'todo todo)
-				 (cons "publish-directory" publish-dir))))))
-    superman-project-alist))
-;;}}}
 
 (provide 'superman)
 ;;; superman.el ends here

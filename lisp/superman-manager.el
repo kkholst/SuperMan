@@ -99,6 +99,7 @@ Level 1 is used to indicate sections, all levels between
 
 (defvar superman-empty-line-before-cat t
   "Option for superman-view buffers: If non-nil insert an empty line before the category heading.")
+
 (defvar superman-empty-line-after-cat t
   "Option for superman-view buffers: If non-nil insert an empty line after the category heading
 before the column names.")
@@ -153,12 +154,12 @@ before the column names.")
 (defvar superman-current-project nil "The currently selected project.")
 (defvar superman-project-categories nil
   "List of categories for sorting projects.")
-(defvar superman-org-location "/"
-    "Relative to the project location this defines
+(defvar superman-org-location ""
+    "Relative to the project directory this defines
   the path to the index file of a project. If set to
   'org' then the index file will be placed
   in a subdirectory 'org' of the project directory.
- The project directory is set by a property LOCATION in
+ The project directory is set by the property LOCATION in
 the `superman-profile'.")
 (defvar superman-select-project-completion-format
   "%c/%o/%n"
@@ -416,22 +417,21 @@ or the nickname."
 			  (setq loc (org-match-string-no-properties 1 loc))
 			(unless loc
 			  (message (concat 
-				    "SuperMan project " name
-				    " unspecified location set to " superman-default-directory))
+				    "project: " name
+				    " unspecified location set to " 
+				    superman-default-directory))
 			  (setq loc superman-default-directory)))
-		      (if (string= name
-				   (file-name-nondirectory (directory-file-name loc)))
-			  (file-name-directory (directory-file-name loc))
-			loc)))
+		      loc))
 	       (category
 		(capitalize (cond
 			     ((superman-get-property nil "category" nil))
-			     (t (message (concat "SuperMan project " name " unspecified category set to " superman-default-category))
+			     (t (message (concat "SuperMan project " name
+						 " unspecified category set to " 
+						 superman-default-category))
 				(or superman-default-category "Krypton")))))
 	       (others (superman-get-property nil "others" nil))
 	       (publish-dir (superman-get-property nil "publish" nil))
 	       (marker
-		;; (org-agenda-new-marker (match-beginning 0)))
 		(save-excursion
 		  (org-back-to-heading)
 		  (point-marker)))
@@ -444,17 +444,19 @@ or the nickname."
 			 (when (and (stringp link) (string-match org-bracket-link-regexp link))
 			   (setq link (org-match-string-no-properties 1 link)))
 			 link)
-		       (let ((default-org-home
-			       (concat (file-name-as-directory loc)
-				       name
-				       superman-org-location)))
-			 ;; (make-directory default-org-home t)
-			 (concat (file-name-as-directory default-org-home) name ".org")))))
+		       ;; loc/name.org
+		       (concat (file-name-as-directory loc)
+			       (file-name-as-directory superman-org-location)
+			       name ".org"))))
+	  ;; remove text properties
 	  (set-text-properties 0 (length hdr) nil hdr)
 	  (set-text-properties 0 (length todo) nil todo)
 	  (unless (file-name-absolute-p index)
 	    (setq index
-		  (expand-file-name (concat (file-name-as-directory loc) name "/" index))))
+		  (expand-file-name index (file-name-as-directory loc))))
+	  ;; categories
+	  (add-to-list 'superman-project-categories category)
+	  ;; project alist
 	  (add-to-list 'superman-project-alist
 		       (list name
 			     (list (cons "location"  loc)
@@ -480,16 +482,16 @@ or the nickname."
     (org-mode)
     ;; (add-to-list 'superman-project-alist
     (setq pro (list name
-		       (list (cons "location"  dir)
-			     (cons "index" index-buffer)
-			     (cons "category" "Temporary")
-			     (cons "others" nil)
-			     (cons 'hdr nil)
-			     (cons "marker" nil)				 
-			     (cons "lastvisit" nil)
-			     (cons "config" nil)
-			     (cons 'todo nil)
-			     (cons "publish-directory" nil))))
+		    (list (cons "location"  dir)
+			  (cons "index" index-buffer)
+			  (cons "category" "Temporary")
+			  (cons "others" nil)
+			  (cons 'hdr nil)
+			  (cons "marker" nil)				 
+			  (cons "lastvisit" nil)
+			  (cons "config" nil)
+			  (cons 'todo nil)
+			  (cons "publish-directory" nil))))
     (superman-view-project pro t)
     ;; (assoc name superman-project-alist))
     (if (superman-git-p dir) (superman-git-display)
@@ -498,23 +500,6 @@ or the nickname."
 				  nil nil
 				  'no-project))))
 	 
-
-(defun superman-parse-project-categories ()
-  "Parse the file `superman-profile' and update `superman-project-categories'."
-  (interactive)
-  (let ((cats 
-	 (progn
-	   (set-buffer (find-file-noselect superman-profile))
-	   (unless (superman-manager-mode 1))
-	   (save-restriction
-	     (widen)
-	     (show-all)
-	     (save-excursion
-	       (reverse
-		(superman-property-values "category")))))))
-    (setq cats (delete-dups (mapcar 'capitalize cats)))
-    (add-to-list 'cats (or superman-default-category "Krypton") 'append)
-    cats))
 
 (defun superman-property-values (key)
   "Return a list of all values of property KEY in the current buffer or region. This
@@ -586,7 +571,7 @@ and others."
 		 (assoc project superman-project-alist)
 	       project)))
     (when pro
-      (let ((dir (concat (superman-get-location pro) (car pro)))
+      (let ((dir (superman-get-location pro))
 	    (index (superman-get-index pro)))
 	(when (and index (not (file-exists-p index)))
 	  (unless (file-exists-p (file-name-directory index))
@@ -611,7 +596,7 @@ and others."
   (interactive)
   (let* ((pro (or project (superman-get-project project)))
 	 (index (superman-get-index pro))
-	 (dir (concat (superman-get-location pro) (car pro)))
+	 (dir (superman-get-location pro))
 	 (target  (read-directory-name (concat "Move all files below " dir " to: " )))
 	 (new-index (unless (string-match dir (file-name-directory index))
 		      (read-file-name (concat "Move " index " to ")))))
@@ -645,13 +630,13 @@ project directory tree to the trash."
 	 (scene (current-window-configuration))
 	 (pro (or project (superman-get-project project 'ask)))
 	 ;; (or project (superman-project-at-point)))
-	 (dir (concat (superman-get-location pro) (car pro)))
+	 (dir (superman-get-location pro))
 	 (index (superman-get-index pro))
 	 (ibuf (get-file-buffer index)))
     ;; switch to entry in superman-profile
     (if superman-mode
 	(superman-view-index)	
-      (superman-go-home (car pro) nil))
+      (superman-go-home (car pro)))
     (org-narrow-to-subtree)
     (when (yes-or-no-p (concat "Delete project " (car pro) " from SuperMan control? "))
       ;; remove entry from superman-profile
@@ -804,9 +789,8 @@ is always the first choice."
   "Sets the current project and updates the LastVisit field of the project manager.
  Also, adds the project location to `file-name-history'"
   (setq superman-current-project project)
-  (let ((pdir  (concat (superman-get-location project) (car project))))
-    (add-to-history 'file-name-history pdir nil nil))
-  ;; (setq default-directory pdir))
+  (let ((dir  (superman-get-location project)))
+    (add-to-history 'file-name-history dir nil nil))
   (if superman-frame-title-format (superman-set-frame-title))
   (with-current-buffer (or (find-buffer-visiting superman-profile)
 			   (find-file-noselect superman-profile))
@@ -924,7 +908,7 @@ If NOSELECT is set return the project."
     (while p-alist
       (let* ((pro  (car p-alist))
 	     (nickname (car pro))
-	     (base-directory (concat (superman-get-location pro) (car pro)))
+	     (base-directory (superman-get-location pro))
 	     (export-directory
 	      (concat base-directory "/"
 		      superman-export-subdirectory))
@@ -974,35 +958,21 @@ If NOSELECT is set return the project."
 (defun superman-get-git (project)
   (or (cdr (assoc "git" (cadr project))) ""))
 
-(defun superman-go-home (&optional nick-or-heading cat)
+(defun superman-go-home (&optional nickname)
   "Visit the file superman-profile and leave point at PROJECT."
   (find-file superman-profile)
   (goto-char (point-min))
   (let* ((case-fold-search t) 
-	 (regexp
-	  (if cat
-	      (format org-complex-heading-regexp-format
-		      (regexp-quote nick-or-heading))
-	    (concat ":nickname:[ \t]*" nick-or-heading))))
-    (re-search-forward
-     regexp
-     nil t)))
+	 (regexp (concat ":nickname:[ \t]*" nick-or-heading)))
+    (re-search-forward regexp nil t)))
   
 
 (defun superman-project-home (project)
-  (let ((loc (superman-get-location project))
-	(nick (car project)))
-    (if (string= (file-name-nondirectory (replace-regexp-in-string "/$" "" loc)) nick)
-	loc
-	(concat loc nick))))
+   (superman-get-location project))
 
 (defun superman-get-location (project)
   "Get the directory associated with PROJECT."
   (file-name-as-directory (cdr (assoc "location" (cadr project)))))
-;;  (let ((loc (cdr (assoc "location" (cadr project)))))
-;;                (if loc 
-;;                                (concat (file-name-as-directory loc)
-;;                                        (car project)))))
 
 (defun superman-get-config (project)
   (cdr (assoc "config" (cadr project))))

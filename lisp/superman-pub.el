@@ -1,6 +1,6 @@
 ;;; superman-pub.el --- Superman views of project contents 
 
-;; Copyright (C) 2013  Thomas Alexander Gerds, Klaus Kaehler Holst
+;; Copyright (C) 2013-2016  Thomas Alexander Gerds, Klaus Kaehler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>

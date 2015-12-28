@@ -1,6 +1,6 @@
 ;;; superman-views.el --- Superman views of project contents 
 
-;; Copyright (C) 2012-2014 Thomas Alexander Gerds, Klaus Kaehler Holst
+;; Copyright (C) 2012-2016 Thomas Alexander Gerds, Klaus Kaehler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>
@@ -380,12 +380,6 @@ the current sub-category and return the minimum."
 			     `(lambda () (interactive) (superman-switch-to-project ,prev))
 			     'superman-next-project-button-face
 			     (concat "Switch to project " prev)))))
-	(insert " ")
-	(superman-view-insert-action-buttons
-	 `((,(format-time-string "%r") 'superman-redo
-	    nil "Refresh project view (R)"))
-	 t
-	 "")
 	(when prev
 	  (put-text-property 0 1 'superman-header-marker t prev-button))
 	(when next
@@ -406,13 +400,13 @@ the current sub-category and return the minimum."
 for project views.")
 
 (defvar superman-default-action-buttons-outside-project
-  '(("Meeting (Calendar)" (lambda () (interactive) (superman-capture-calendar nil nil t)))
-    ("Meeting (Project)" (lambda () (interactive) (superman-capture-meeting nil nil t)))
-    ("Task" (lambda () (interactive) (superman-capture-task nil nil t)))
-    ("Document" (lambda () (interactive) (superman-capture-document nil nil t)))
-    ("Note" (lambda () (interactive) (superman-capture-note nil nil t)))
-    ("Text" (lambda () (interactive) (superman-capture-text nil nil t)))
-    ("Bookmark" (lambda () (interactive) (superman-capture-bookmark nil nil t))))
+  '(("Meeting (Calendar)" (lambda () (interactive) (superman-capture-calendar nil nil t)) superman-capture-button-face "Capture a meeting for calendar" nil 43)
+    ("Meeting (Project)" (lambda () (interactive) (superman-capture-meeting nil nil t)) superman-capture-button-face "Capture a meeting" nil 43)
+    ("Task" (lambda () (interactive) (superman-capture-task nil nil t)) superman-capture-button-face "Capture a task" nil 43)
+    ("Document" (lambda () (interactive) (superman-capture-document nil nil t)) superman-capture-button-face "Capture a document" nil 43)
+    ("Note" (lambda () (interactive) (superman-capture-note nil nil t)) superman-capture-button-face "Capture a note" nil 43)
+    ("Text" (lambda () (interactive) (superman-capture-text nil nil t)) superman-capture-button-face "Capture text" nil 43)
+    ("Bookmark" (lambda () (interactive) (superman-capture-bookmark nil nil t)) superman-capture-button-face "Capture a bookmark" nil 43))
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
@@ -435,15 +429,14 @@ If NO-NEWLINE is non-nil no new line is inserted.
 TITLE-STRING is the label of the first button and defaults to \"Action\".
 If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 "
-  (let* ((title
-	  (if (and title-string
-		   (get-text-property 0 'button title-string))
-	      title-string
-	    (superman-make-button
-	     (or title-string "Action:")
-	     'superman-view-pop-actions
-	     'superman-header-button-face
-	     "Edit action buttons")))
+  (let* (
+	 ;; (title
+	  ;; (if (and title-string (get-text-property 0 'button title-string)) title-string
+	    ;; (superman-make-button
+	     ;; (or title-string "Action:")
+	     ;; 'superman-view-pop-actions
+	     ;; 'superman-header-button-face
+	     ;; "Edit action buttons")))
 	 (b-list
 	  (or button-list superman-default-action-buttons))
 	 (i 1))
@@ -456,9 +449,6 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 			     (symbolp (car b-fun))
 			     (string= (symbol-name (car b-fun)) "quote"))
 			(nth 1 b-fun) b-fun))
-	     ;; (if (and (listp b-tail) (not (functionp b-tail)))
-	     ;; (if (eq (car b-tail) quote) (nth 1 b-tail)
-	     ;; (car b-tail) b-tail)))
 	     (cmd (cond ((functionp b-fun) b-fun)
 			((stringp b-fun) (intern b-fun))
 			(t `(lambda () (interactive)
@@ -469,14 +459,16 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 					      (symbol-name b-fun) ""))
 				       " is not defined"))))))
 	     (b-face (or (nth 2 b) 'superman-capture-button-face))
-	     (b-help (or (nth 3 b)  (concat "capture " (downcase b-name)))))
+	     (b-help (or (nth 3 b)  (concat "capture " (downcase b-name))))
+	     (b-width (or (nth 5 b) superman-action-button-width)))
 	(when (= i 1)
 	  (unless no-newline
 	    (insert "\n"))
-	  (insert title " "))
+					;	  (insert title " ")
+	  )
 	(setq b-name
 	      (superman-make-button
-	       b-name cmd b-face b-help nil superman-action-button-width))
+	       b-name cmd b-face b-help nil b-width))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t b-name)
@@ -487,21 +479,14 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 (defun superman-view-insert-config-buttons (project)
   "Insert window configuration buttons"
   (let* ((pro (or project superman-current-project))
-	 (title
-	  (superman-make-button
-	   "View-S:"
-	   'superman-capture-config
-	   'superman-header-button-face
-	   "Capture current window configuration"))
-	 (config-list (superman-view-read-config pro))
-	 (title-marker 
-	  (save-excursion
-	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
-	    (goto-char (point-min))
-	    (point-marker))))
-    (put-text-property 0 (length title) 'superman-e-marker title-marker title)
-    (when (or superman-sticky-displays config-list)
-      (insert title " "))
+	 (config-list (superman-view-read-config pro)))
+    ;; (title-marker 
+    ;; (save-excursion
+    ;; (superman-goto-project project "Configuration" nil nil 'narrow nil)
+    ;; (goto-char (point-min))
+    ;; (point-marker))))
+    ;; (put-text-property 0 (length title) 'superman-e-marker title-marker title)
+    ;; (when (or superman-sticky-displays config-list) (insert title " "))
     (when superman-sticky-displays
       (let ((sd superman-sticky-displays))
 	(while sd 
@@ -1067,11 +1052,10 @@ which holds the point of the heading."
 	  (widen))
 	(if (not with-heading)
 	    props
-	  (if (not (ignore-errors (org-back-to-heading)))
-	      `("No header" ,props)
-	    (looking-at org-complex-heading-regexp)
-	    `(,(match-string-no-properties 4) ,props)))))))
-
+	  (let ((header (ignore-errors (org-get-heading t t))))
+	    (if (not header)
+		`("Untitled section" ,props)
+	      `(,header ,props))))))))
 
 (defun superman-delete-balls (&optional pom)
   "Delete balls, i.e. column properties, at point or marker POM."
@@ -1343,7 +1327,7 @@ which locates the heading in the buffer."
 		  (cat-point (point)))
 	      (while (progn (org-forward-heading-same-level 1)
 			    (> (point) cat-point))
-		(looking-at org-complex-heading-regexp)
+		;; (looking-at org-complex-heading-regexp)
 		(setq cat-point (point)
 		      cats (append cats `(,(superman-parse-props cat-point 'p 'h)))))
 	      cats)))))))
@@ -1434,12 +1418,18 @@ to refresh the view.
 	(superman-view-mode-on)
 	;; (font-lock-default-function nil)
 	;; insert header, set text-properties and highlight
-	(insert (superman-make-button
-		 ;; (concat "Project: " nick)
-		 (concat " " nick " ")
-		 'superman-redo
-		 'superman-face
-		 "Refresh project view"))
+	(let* ((others (superman-get-others pro))
+	       (button-text (concat
+			     (if (or (not others) (string= others "")) "Project with me-myself-and-I"
+			       (concat "Project with " others))
+			     "\nlast update at: " (format-time-string "%r")
+			     "\nPress key 'R' or this button to refresh the view")))
+	  (insert (superman-make-button
+		   ;; (concat "Project: " nick)
+		   (concat " Project: " nick " ")
+		   'superman-redo
+		   'superman-face
+		   button-text)))
 	;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
 			   (or redo
@@ -1451,19 +1441,17 @@ to refresh the view.
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	(put-text-property (point-at-bol) (point-at-eol) 'index index)
 	;; link to previously selected projects
-	(superman-view-insert-project-buttons)
-	(insert "\n\n")
-	;; (let ((others (superman-view-others pro)))
-	  ;; (unless (string= others "")
-	    ;; (insert others "\n")))
-	;; (when gitp
-	;; (insert (superman-view-control pro))
+	(insert " ")
 	(unless config-buttons
 	  (superman-view-insert-config-buttons pro))
+	;; (superman-view-insert-project-buttons)
+	(insert "\n\n")
 	(superman-view-insert-unison-buttons pro)
+	;; (when gitp
+	;; (insert (superman-view-control pro))
 	;; action buttons
-	(unless (and (stringp buttons) (string= buttons "nil"))
-	  (superman-view-insert-action-buttons buttons))
+	;; (unless (and (stringp buttons) (string= buttons "nil"))
+	  ;; (superman-view-insert-action-buttons buttons))
 	;; loop over cats
 	(goto-char (point-max))
 	(insert "\n\n")
@@ -1655,12 +1643,10 @@ in buffer VIEW-BUF."
 		 (save-excursion (beginning-of-line 0)
 				 (not (looking-at "^[ \t]*$"))))
 	    (insert "\n"))
-	  (superman-view-insert-section-name
-	   name count balls index-marker)
+	  (superman-view-insert-section-name name count balls index-marker)
 	  (insert "\n")
 	  ;; insert the column names
-	  (when superman-empty-line-after-cat
-	    (insert "\n"))
+	  (when superman-empty-line-after-cat (insert "\n"))
 	  (insert (superman-column-names balls))
 	  (when buttons
 	    (beginning-of-line)
@@ -2960,6 +2946,7 @@ not in a section prompt for section first."
     (let ((c-buf (get-buffer "*Superman-Capture*")))
       (if c-buf (pop-to-buffer c-buf)
 	(pop-to-buffer "*Superman-Capture*")
+	(insert "Press one of the buttons below\n")
 	(superman-view-insert-action-buttons
 	 superman-default-action-buttons-outside-project
 	 t "" t)
@@ -2967,10 +2954,9 @@ not in a section prompt for section first."
 		      "Unison"
 		      'superman-capture-unison
 		      'superman-capture-button-face
-		      "Capture unison"))
+		      "Capture unison" nil 43))
 	(superman-view-mode)
 	(goto-char (point-min))
-	(kill-line)
 	(setq buffer-read-only t)))))
 
 ;;}}}
