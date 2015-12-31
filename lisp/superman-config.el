@@ -339,10 +339,10 @@ given in superman notation."
 	      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	      (put-text-property (point-at-bol) (point-at-eol) 'index index)
 	      (insert
-	       "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-	       "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-	       "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
-	       "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
+	       "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+	       "  " (superman-make-button "Git" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+	       "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list."))
+	       "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's todo list."))
 	       "\n")))))
     (if (file-exists-p index)
 	(progn
@@ -406,11 +406,11 @@ given in superman notation."
 			  superman-project-todolist-balls
 			  '(superman-project-todo)
 			  title
-			  (concat "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-				  "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-				  "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
-				  ;; "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
-				  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
+			  (concat "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+				  "  " (superman-make-button "Git" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+				  "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list."))
+				  ;; "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's todo list."))
+				  "  " (superman-make-button "Time-line" :fun superman-project-timeline :face superman-next-project-button-face :help "View project's timeline."))
 			  )))))))))
 	  ;; to be 100% sure that the agenda is not accidentally written
 	  ;; to the index file

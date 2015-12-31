@@ -257,12 +257,15 @@ See also `superman-capture-whatever' for the other arguments."
     (superman-insert-destination-line destination dest-heading nil)
     (insert "\n\n" (superman-make-button
 		    "Show context"
-		    'superman-capture-show-context
-		    'superman-header-button-face "Show the context\naround destination" nil 21))
+		    '(:fun superman-capture-show-context
+			   :face superman-header-button-face
+			   :help "Show the context\naround destination" 
+			   :width 21)))
     (insert " " (superman-make-button
 		 "Change destination"
-		 'superman-change-destination
-		 'superman-header-button-face "Change position and file\nwhere text will be saved" nil 21))
+		 '(:fun superman-change-destination
+			:face superman-header-button-face
+			:help "Change position and file\nwhere text will be saved" :width 21)))
     ;; welcome text
     (insert "\n\n")
     (insert welcome-text)
@@ -270,20 +273,17 @@ See also `superman-capture-whatever' for the other arguments."
     (unless read-only
       (insert (superman-make-button
 	       "Save (C-c C-c)"
-	       'superman-clean-scene
-	       ;; 'superman-next-project-button-face
-	       'superman-save-button-face
-	       "Save the current text at the destination" 
-	       nil 21)
+	       '(:fun  superman-clean-scene 
+		       :face 'superman-save-button-face
+		       :help "Save the current text at the destination" 
+		       nil 21))
 	      " "))
     (insert (superman-make-button
-	     (if read-only
-		 "back (q)"
-	       "Cancel (C-c C-q)")
-	     'superman-quit-scene
-	     'superman-quit-button-face
-	     (if read-only "Back without saving" "Cancel the capture") 
-	     nil 21))
+	     (if read-only "back (q)" "Cancel (C-c C-q)")
+	     `(:fun superman-quit-scene
+		    :face superman-quit-button-face
+		    :help ,(if read-only "Back without saving" "Cancel the capture") 
+		    :width 21)))
     (insert "\n")
     ;; end of non-editable header
     (insert "\n -------------------- Editable text to be saved below this line:")
@@ -679,26 +679,23 @@ If a file is associated with the current-buffer save it.
      pro
      (or marker "Tasks")
      (concat "A task will be created.\n\n"
-	     (superman-make-button "Change priority" 'superman-capture-change-priority
-				   'superman-capture-button-face
-				   "Change the priority."
-				   nil 
-				   21)
+	     (superman-make-button "Change priority" '(:fun superman-capture-change-priority
+							    :face superman-capture-button-face
+							    :help "Change the priority."
+							    :width 21))
 	     " "
-	     (superman-make-button "Change todo" 'superman-capture-change-todo
-				   'superman-capture-button-face
-				   "Change the todo status."
-				   nil 
-				   21)
+	     (superman-make-button "Change todo" '(:fun superman-capture-change-todo
+							:face superman-capture-button-face
+							:help "Change the todo status."
+							:width 21))
 	     " "
-	     (superman-make-button "Add timeline" 'superman-capture-add-timeline
-				   'superman-capture-button-face
-				   "Add a time at which the task should be done."
-				   nil 
-				   21))
+	     (superman-make-button "Add timeline" '(:fun superman-capture-add-timeline
+							 :face superman-capture-button-face
+							 :help "Add a time at which the task should be done."
+							 :width 21)))
 
- ;; - to change the priority put cursor into header line (*** ...) and press Shift-up.
- ;; - to change the todo status put cursor into  header lin (*** ...) and press Ctrl-c Ctrl-t
+     ;; - to change the priority put cursor into header line (*** ...) and press Shift-up.
+     ;; - to change the todo status put cursor into  header lin (*** ...) and press Ctrl-c Ctrl-t
      nil
      `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))
        (hdr :test superman-test-hdr)
@@ -868,9 +865,9 @@ file does not need to exist."
 	 (quit-scene (current-window-configuration))
 	 (welcome
 	  (concat
-	   (superman-make-button "Initialize the SuperMan(ager)" nil 'superman-project-button-face)
+	   "Initialize the SuperMan(ager)" 
 	   "\n\nCheck and adjust the setup below, then press the Save button or press C-c C-c.\nThe profile will be saved in the file:\n\n"
-	   (superman-make-button superman-profile nil 'superman-capture-button-face)))
+	   superman-profile))
 	 (clean-hook
 	  `(lambda ()
 	     (goto-char (point-min))
@@ -1232,9 +1229,9 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
     (goto-char (point-min))
     (insert (superman-make-button
 	     (concat "Git repository for project: " (car pro))
-	     `(superman-capture-git-section ,(car pro) ,gitdir)
-	     'superman-project-button-face
-	     "Refresh"))
+	     `(:fun (lambda () (interactive) (superman-capture-git-section ,(car pro) ,gitdir))
+		    :face superman-project-button-face
+		    :help "Refresh")))
     (insert "\n\n")
     (goto-char (point-min))
     (put-text-property (point-at-bol) (point-at-eol) 'git-dir gitdir)

@@ -616,15 +616,15 @@ see M-x manual-entry RET git-diff RET.")
 	(insert "*** " file "\n")
 	(insert (superman-make-button
 		 "Highlight differences"
-		 `(lambda () (interactive)
-		    (superman-compare-files
-		     ,(concat default-directory 
-			      (substring file
-					 1 (length file)))
-		     ,a
-		     ,b))
-		 'superman-next-project-button-face
-		 "Show these versions with differences highlighted")
+		 `(:fun (lambda () (interactive)
+			  (superman-compare-files
+			   ,(concat default-directory 
+				    (substring file
+					       1 (length file)))
+			   ,a
+			   ,b))
+			:face superman-next-project-button-face
+			:help "Show these versions with differences highlighted"))
 		"\n")
 	(forward-line 2)))
     (goto-char (point-min))))
@@ -714,10 +714,10 @@ see M-x manual-entry RET git-diff RET.")
       (put-text-property (point-at-bol) (point-at-eol) 'index index)
       (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
       (put-text-property (point-at-bol) (point-at-eol) 'git-dir git-dir)
-      (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-	      "  " (superman-make-button "Git overview" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-	      ;; "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
-	      "  " (superman-make-button "versions" 'superman-git-log 'superman-next-project-button-face "Show git log."))
+      (insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+	      "  " (superman-make-button "Git overview" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+	      ;; "  " (superman-make-button "annotate" '(:fun superman-git-annotate :face superman-next-project-button-face :help "Annotate."))
+	      "  " (superman-make-button "versions" '(:fun superman-git-log :face superman-next-project-button-face :help "Show git log.")))
       (insert "\n")
       (insert (shell-command-to-string (concat "cd " git-dir ";" superman-cmd-git " blame " file))))))
 
@@ -740,9 +740,9 @@ see M-x manual-entry RET git-diff RET.")
   "Balls to format git diff views.")
 
 (defun superman-trim-hash (hash &rest args)
- (superman-make-button
-  (superman-trim-string hash (car args))
-  'superman-choose-entry nil "Run git diff"))
+  (superman-make-button
+   (superman-trim-string hash (car args))
+   '(:fun superman-choose-entry :help "Run git diff")))
 
 (defvar superman-git-display-command-list
   '(("versions"
@@ -834,11 +834,11 @@ git command."
 	  (goto-char (point-min))
 	  (insert (superman-make-button
 		   (concat "* Git: " nickname)
-		   'superman-redo 'superman-project-button-face))
-	  (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-		  "  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list.")
-		  "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
-		  "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline."))
+		   '(:fun superman-redo :face superman-project-button-face)))
+	  (insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+		  "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list."))
+		  "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's todo list."))
+		  "  " (superman-make-button "Time-line" '(:fun superman-project-timeline :face superman-next-project-button-face :help "View project's timeline.")))
 	  (insert "\n\n")
 	  (when git-dir
 	    (superman-view-insert-git-branches git-dir)
@@ -911,10 +911,10 @@ This function should be bound to a key or button."
 	  "press `GI' or this button to: " 
 	  (superman-make-button
 	   "initialize git control"
-	   'superman-git-init
-	   'superman-capture-button-face
-	   (concat
-	    "Initialize git repository at " dir))))
+	   '(:fun superman-git-init
+		  :face superman-capture-button-face
+		  (concat
+		   :help "Initialize git repository at " dir)))))
 
 (defvar superman-git-log-limit 25 "Limit on number of previous versions shown by default in git log view")
 (defvar superman-git-search-limit 250)
@@ -1031,12 +1031,12 @@ NAME is used to make the section heading.
 	      (insert " >> ")
 	      (insert (superman-make-button
 		       cstring
-		       `(lambda () (interactive)
-			  (superman-set-git-cycle ,cstring)
-			  (superman-redo-cat))
-		       (if (string= cycle cstring)
-			   'superman-next-project-button-face nil)
-		       (concat "Cycle display to git " cstring)))
+		       `(:fun (lambda () (interactive)
+				(superman-set-git-cycle ,cstring)
+				(superman-redo-cat))
+			      :face ,(if (string= cycle cstring)
+					 'superman-next-project-button-face nil)
+			      :help (concat "Cycle display to git " cstring))))
 	      (setq  cycle-strings (cdr cycle-strings))))))
       (forward-line 1)
       ;; insert the column names
@@ -1047,8 +1047,9 @@ NAME is used to make the section heading.
       (goto-char (previous-single-property-change (point) 'cat))
       (beginning-of-line)
       (when (re-search-forward "\[[0-9]*\]" nil t)
-	(replace-match (superman-make-button (concat "[Set limit: " (int-to-string limit) "]")
-					     'superman-git-set-limit 'superman-default-button-face "Set limit of logs")))
+	(replace-match
+	 (superman-make-button (concat "[Set limit: " (int-to-string limit) "]")
+			       '(:fun superman-git-set-limit :face superman-default-button-face :help "Set limit of logs"))))
       (when post-hook 
 	(goto-char (point-max))
 	(funcall post-hook)))))
@@ -1092,9 +1093,9 @@ repository of PROJECT which is located at DIR."
 				   " (" (superman-get-property
 					 (get-text-property (point-at-bol) 'superman-item-marker)
 					 "date") ")"))
-			 'superman-git-diff-switch-commit
-			 'superman-capture-button-face
-			 "Change active version."))
+			 '(:fun superman-git-diff-switch-commit
+				:face superman-capture-button-face
+				:help "Change active version.")))
 	 (ref-string (superman-make-button
 		      (concat ref
 			      " (" (save-excursion
@@ -1102,8 +1103,8 @@ repository of PROJECT which is located at DIR."
 				     (or (superman-get-property
 					  (get-text-property (point-at-bol) 'superman-item-marker)
 					  "date") "unknown")) ")")
-		      'superman-git-diff-switch-ref
-		      'superman-capture-button-face "Change reference version."))
+		      '(:fun superman-git-diff-switch-ref
+			     :face superman-capture-button-face :help "Change reference version.")))
 	 (header (concat "Changes in " commit-string " since " ref-string))
 	 (index-buf (get-buffer-create (concat "*[" (if file (file-name-nondirectory file)
 						      project) ":index" "]*")))
@@ -1360,9 +1361,9 @@ repository of PROJECT which is located at DIR."
   (end-of-line)
   (insert "\n\n" (superman-make-button
 	   (if current "Hide ignored" "Show ignored")
-	   'superman-git-toggle-show-ignored
-	   'superman-capture-button-face
-	   "Toggle show/hide ignored"))))
+	   '(:fun superman-git-toggle-show-ignored
+	   :face superman-capture-button-face
+	   :help "Toggle show/hide ignored")))))
 
 ;;}}}
 ;;
@@ -1446,25 +1447,18 @@ and remove the whole line in case of no-match."
 	(end-of-line)
 	(insert "\n\n" (superman-make-button
 			"Filter:"
-			'superman-git-set-filter
-			'superman-header-button-face
-			"Set filter"))
+			'(:fun superman-git-set-filter
+			:face superman-header-button-face
+			:help "Set filter")))
 	(put-text-property (point-at-bol) (+ (point-at-bol) 1) 'git-filter t)
 	(end-of-line))
       (insert "\t" (superman-make-button
 		    filter-name
-		    `(lambda () (interactive)
-		       (superman-git-remove-filter ,filter-name))
-		    'superman-next-project-button-face
-		    "Press button to remove filter")))))
+		    `(:fun (lambda () (interactive)
+			     (superman-git-remove-filter ,filter-name))
+			   :face superman-next-project-button-face
+			   :help "Press button to remove filter"))))))
 
-    ;; (dolist (x superman-git-filter nil)
-    ;; (insert "\t" (superman-make-button
-		  ;; (car x)
-		  ;; `(lambda () (interactive)
-		     ;; (superman-git-remove-filter ,(car x)))
-		  ;; 'superman-next-project-button-face
-		  ;; "Unfilter list"))))
 
 (defun superman-git-remove-filter (filter-name)	
   (interactive)
@@ -1528,33 +1522,33 @@ Enabling superman-git mode enables the git keyboard to control single files."
 (defun superman-make-git-keyboard (f &rest args)
   (if (string-match org-bracket-link-regexp f)
       (let ((diff (superman-make-button "d"
-					'superman-git-diff-file
-					'superman-git-keyboard-face-d
-					"git diff file"))
+					'(:fun superman-git-diff-file
+					       :face superman-git-keyboard-face-d
+					       :help "git diff file")))
 	    (log (superman-make-button "l"
-				       'superman-git-log-file
-				       'superman-git-keyboard-face-l
-				       "git log file"))
+				       '(:fun superman-git-log-file
+					      :face superman-git-keyboard-face-l
+					      :help "git log file")))
 	    (add (superman-make-button "a"
-				       'superman-git-add-file
-				       'superman-git-keyboard-face-a
-				       "git add file"))
+				       '(:fun superman-git-add-file
+					      :face superman-git-keyboard-face-a
+					      :help "git add file")))
 	    (commit (superman-make-button "c"
-					  'superman-git-commit-file
-					  'superman-git-keyboard-face-c
-					  "git commit file"))
+					  '(:fun superman-git-commit-file
+						 :face superman-git-keyboard-face-c
+						 :help "git commit file")))
 	    (reset (superman-make-button "r"
-					 'superman-git-reset-file
-					 'superman-git-keyboard-face-r
-					 "git checkout (reset) file"))
+					 '(:fun superman-git-reset-file
+						:face superman-git-keyboard-face-r
+						:help "git checkout (reset) file")))
 	    (delete (superman-make-button "x"
-					  'superman-git-delete-file
-					  'superman-git-keyboard-face-x
-					  "git rm file"))
+					  '(:fun superman-git-delete-file
+						 :face superman-git-keyboard-face-x
+						 :help "git rm file")))
 	    (ignore (superman-make-button "#"
-	     				  'superman-git-ignore-file
-	     				  'superman-git-keyboard-face-i
-	     				  "add to .gitignore"))
+	     				  '(:fun superman-git-ignore-file
+						 :face superman-git-keyboard-face-i
+						 :help "add to .gitignore")))
 	    )
 	(concat diff " " log  " " add  " " delete " " reset " " commit " " ignore " " " "))
     ;; for the column name
@@ -1680,11 +1674,11 @@ the git directory."
 	(goto-char (point-min))
 	(insert (superman-make-button
 		 (concat "* Git: " file)
-		 'superman-redo 'superman-project-button-face))
-	(insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-		"  " (superman-make-button "Git overview" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-		"  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
-		"  " (superman-make-button "File-list" 'superman-view-file-list 'superman-next-project-button-face "View project's file-list."))
+		 '(:fun superman-redo :face superman-project-button-face)))
+	(insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+		"  " (superman-make-button "Git overview" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+		"  " (superman-make-button "annotate" '(:fun superman-git-annotate :face superman-next-project-button-face :help "Annotate."))
+		"  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list.")))
 	(insert "\n\n")
 	(when git-dir
 	  (superman-view-insert-git-branches git-dir)
@@ -1741,10 +1735,10 @@ the git directory."
     (put-text-property (point-at-bol) (point-at-eol) 'limit limit)
     (put-text-property (point-at-bol) (point-at-eol) 'search-string search-string)
     (put-text-property (point-at-bol) (point-at-eol) 'decoration-only decoration-only)
-    (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-	    "  " (superman-make-button "Git overview" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-	    "  " (superman-make-button "annotate" 'superman-git-annotate 'superman-next-project-button-face "Annotate.")
-	    ;; "  " (superman-make-button "versions" 'superman-git-log 'superman-next-project-button-face "Show git log.")
+    (insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+	    "  " (superman-make-button "Git overview" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+	    "  " (superman-make-button "annotate" '(:fun superman-git-annotate :face superman-next-project-button-face :help "Annotate."))
+	    ;; "  " (superman-make-button "versions" '(:fun superman-git-log :face superman-next-project-button-face :help "Show git log."))
 	    )
     (insert "\n\n")
     ;; column names

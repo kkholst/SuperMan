@@ -67,28 +67,28 @@ the contents of the file `superman-profile'."
     ;; (insert "\n")
     ;; project directory
     ;; (insert (superman-make-button
-    ;; "Set-up:" 'superman-show-setup
-    ;; 'superman-header-button-face "Edit superman(ager) set-up")
+    ;; "Set-up:" '(:fun superman-show-setup
+    ;; :face superman-header-button-face :help "Edit superman(ager) set-up"))
     ;; " "
     ;; (superman-make-button
-    ;; "Edit" 'superman-edit-setup
-    ;; 'superman-capture-button-face "Change superman(ager) set-up")
+    ;; "Edit" '(:fun superman-edit-setup
+    ;; :face superman-capture-button-face :help "Change superman(ager) set-up"))
     ;; " "
     ;; (superman-make-button
-    ;; "Diagnose" 'superman-diagnose-setup
-    ;; 'superman-capture-button-face "Diagnose superman set-up."))
+    ;; "Diagnose" '(:fun superman-diagnose-setup
+    ;; :face superman-capture-button-face :help "Diagnose superman set-up.")))
     ;; welcome text
     (when (and superman-greetings (stringp superman-greetings))
       (insert "\n" superman-greetings "\n"))
     ;; action buttons
     (insert "\n" (superman-make-button
-		  "New project" 'superman-capture-project
-		  'superman-capture-button-face
-		  "Start new project or register existing project" nil 13))
+		  "New project" '(:fun superman-capture-project
+				       :face superman-capture-button-face
+				       :help "Start new project or register existing project" :width 15)))
     (insert " " (superman-make-button
-		 "Choose project" 'superman-switch-to-project
-		 'superman-capture-button-face
-		 "Select a project and turn it on" nil 15))
+		 "Choose project" '(:fun superman-switch-to-project
+					 :face superman-capture-button-face
+					 :help "Select a project and turn it on" :width 15)))
     ;; (superman-view-insert-action-buttons
     ;; '((" New project " superman-capture-project)))
     ;; ("Meeting" superman-capture-meeting)
@@ -106,9 +106,9 @@ the contents of the file `superman-profile'."
 	(insert "\n** "
 		(superman-make-button
 		 cat-name
-		 cat-fun
-		 'superman-capture-button-face
-		 (concat "Add project in category " cat-name)))
+		 `(:fun ,cat-fun
+			:face superman-capture-button-face
+			:help ,(concat "Add project in category " cat-name))))
 	(put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
 	(put-text-property (point-at-bol) (point-at-eol) 'cat 'cat-name)
 	(put-text-property (point-at-bol) (point-at-eol) 'balls superman-balls)
@@ -184,9 +184,7 @@ the contents of the file `superman-profile'."
 	     (point))))
     (superman-capture-whatever
      marker
-     (superman-make-button
-      "Superman setup"
-      nil 'superman-face)
+     "Superman setup"
      0 ;; level 0 because we are pasting a heading in
      current-set-up
      nil (not read-only) scene read-only nil clean-scene-hook nil)))
@@ -250,7 +248,7 @@ the existing properties."
   (goto-char (point-min))
   (insert  (superman-make-button
 	    " SuperMan "
-	    nil 'superman-face))
+	    '(:fun superman-redo :face superman-face)))
   ;; (insert "SuperMan(ager)")
   (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd '(S))
   ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-1)
@@ -259,26 +257,26 @@ the existing properties."
   (when (fboundp 'eg)
     (insert " "
 	    (superman-make-button "Home"
-				  'eg
-				  'superman-next-project-button-face
-				  "Show EmacsGenome")))
+				  '(:fun eg
+					 :face superman-next-project-button-face
+					 :help "Show EmacsGenome"))))
   (insert
 
    "  "
    (superman-make-button "Agenda"
-			 'superman-agenda
-			 'superman-next-project-button-face
-			 "Agenda across all projects")
+			 '(:fun superman-agenda
+			 :face superman-next-project-button-face
+			 :help "Agenda across all projects"))
    "  "
    (superman-make-button "Calendar"
-			 'superman-calendar
-			 'superman-next-project-button-face
-			 "Project-wide calendar")
+			 '(:fun superman-calendar
+			 :face superman-next-project-button-face
+			 :help "Project-wide calendar"))
    "  "
    (superman-make-button "TodoList"
-			 'superman-todo
-			 'superman-next-project-button-face
-			 "TodoList across all projects")
+			 '(:fun superman-todo
+			 :face superman-next-project-button-face
+			 :help "TodoList across all projects"))
    "\n"))
 
 ;;}}}
@@ -395,27 +393,27 @@ all dates."
 		     (concat (superman-make-agenda-title "SupermanAgenda" 'org-level-2)
 			     "  "
 			     (superman-make-button "TodoList"
-						   'superman-todo
-						   'superman-next-project-button-face
-						   "TodoList across all projects")
+						   '(:fun superman-todo
+						   :face superman-next-project-button-face
+						   :help "TodoList across all projects"))
 			     "  "
 			     (superman-make-button "Calendar"
-						   'superman-calendar
-						   'superman-next-project-button-face
-						   "Project-wide calendar")
+						   '(:fun superman-calendar
+						   :face superman-next-project-button-face
+						   :help "Project-wide calendar"))
 			     "  "
 			     (superman-make-button "Projects"
-						   'superman
-						   'superman-next-project-button-face
-						   "List of projects")
+						   '(:fun superman
+						   :face superman-next-project-button-face
+						   :help "List of projects"))
 			     "\n"
 			     (superman-make-button "\nAdd a Meeting\n"
-						   '(lambda ()
+						   '(:fun (lambda ()
 						      (interactive)
 						      (superman-capture-meeting
 						       nil nil t))
-						   'superman-capture-button-face
-						   "Add a meeting to calendar")
+						   :face superman-capture-button-face
+						   :help "Add a meeting to calendar"))
 			     "\n")))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
@@ -450,27 +448,27 @@ all dates."
 		  "* Superman: todo-list"
 		  (concat "  "
 			  (superman-make-button "Agenda"
-						'superman-agenda
-						'superman-next-project-button-face
-						"Agenda across all projects")
+						'(:fun superman-agenda
+						       :face superman-next-project-button-face
+						       :help "Agenda across all projects"))
 			  "  "
 			  (superman-make-button "Calendar"
-						'superman-calendar
-						'superman-next-project-button-face
-						"Project-wide calendar")
+						'(:fun superman-calendar
+						       :face superman-next-project-button-face
+						       :help "Project-wide calendar"))
 			  "  "
 			  (superman-make-button "Projects"
-						'superman
-						'superman-next-project-button-face
-						"List of projects")
+						'(:fun superman
+						       :face superman-next-project-button-face
+						       :help "List of projects"))
 			  "\n\n"
 			  (superman-make-button "Add a task"
-						'(lambda ()
-						   (interactive)
-						   (superman-capture-task
-						    nil nil t))
-						'superman-capture-button-face
-						"Add a task to one of the projects"))
+						'(:fun (lambda ()
+							 (interactive)
+							 (superman-capture-task
+							  nil nil t))
+						       :face superman-capture-button-face
+						       :help "Add a task to one of the projects")))
 		  nil pretty))))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
@@ -497,27 +495,27 @@ all dates."
 		     (concat (superman-make-agenda-title "Superman calendar" 'org-level-2)
 			     "  "
 			     (superman-make-button "TodoList"
-						   'superman-todo
-						   'superman-next-project-button-face
-						   "TodoList across all projects")
+						   '(:fun superman-todo
+							  :face superman-next-project-button-face
+							  :help "TodoList across all projects"))
 			     "  "
 			     (superman-make-button "Agenda"
-						   'superman-agenda
-						   'superman-next-project-button-face
-						   "Project-wide agenda")
+						   '(:fun superman-agenda
+							  :face superman-next-project-button-face
+							  :help "Project-wide agenda"))
 			     "  "
 			     (superman-make-button "Projects"
-						   'superman
-						   'superman-next-project-button-face
-						   "List of projects")
+						   '(:fun superman
+							  :face superman-next-project-button-face
+							  :help "List of projects"))
 			     "\n"
 			     (superman-make-button "\nAdd a Meeting\n"
-						   '(lambda ()
-						      (interactive)
-						      (superman-capture-meeting
-						       nil nil t))
-						   'superman-capture-button-face
-						   "Add a meeting to calendar")
+						   '(:fun (lambda ()
+							    (interactive)
+							    (superman-capture-meeting
+							     nil nil t))
+							  :face superman-capture-button-face
+							  :help "Add a meeting to calendar"))
 			     )))))
     (push ?C unread-command-events)
     (call-interactively 'org-agenda)))
@@ -638,7 +636,6 @@ Enabling superman mode electrifies the superman buffer for project management."
       (superman-trim-string marker args))))
 
 (defun superman-make-project-button (nick &optional args)
-  
   (let* ((ismarker (markerp nick))
 	 (nickname (if ismarker
 		       (superman-get-property nick "nickname")
@@ -646,15 +643,13 @@ Enabling superman mode electrifies the superman buffer for project management."
 	 (button (superman-make-button
 		  (if ismarker
 		      (superman-trim-string nickname args)
-		      nickname)
-		  `(lambda () (interactive)
-		     (superman-switch-to-project ,(if ismarker
-						      nickname
-						    nick)))
-		  nil
-		  ;; font-lock-string-face
-		  (concat "Switch to "
-			  (if ismarker nickname nick)))))
+		    nickname)
+		  `(:fun (lambda () (interactive)
+			   (superman-switch-to-project ,(if ismarker
+							    nickname
+							  nick)))
+			 :help (concat "Switch to "
+				       (if ismarker nickname nick))))))
     button))
 
 (defun superman-trim-project-nickname  (marker &optional args)
@@ -662,12 +657,10 @@ Enabling superman mode electrifies the superman buffer for project management."
       (superman-trim-string marker args)
     (let* ((nick (superman-trim-project-attribute marker "nickname" 'dont args))
 	   (nickname (superman-trim-string nick args))
-	   (button       (superman-make-button
-			  nickname
-			  `(lambda () (interactive) (superman-switch-to-project ,nick))
-			  nil
-			  ;; font-lock-string-face
-			  (concat "Switch to " nick))))
+	   (button (superman-make-button
+		    nickname
+		    `(:fun (lambda () (interactive) (superman-switch-to-project ,nick))
+			   :help (concat "Switch to " ,nick)))))
       button)))
 				  
 
@@ -807,25 +800,18 @@ Enabling superman mode electrifies the superman buffer for project management."
       (if buttons (insert buttons))
       (end-of-line)
       (insert "\t")
-      ;; (insert (superman-make-button "Refresh" 'superman-redo))
-      ;; (insert "\n")
-      (insert (superman-make-button (concat "Refresh agenda. Last update: " (format-time-string "%r"))
-				    'superman-redo))
-      ;; (superman-view-insert-action-buttons
-      ;; `((,(concat "Last update: " (format-time-string "%r")) 'superman-redo)) nil)
-      ;; (superman-view-insert-action-buttons
-      ;; '(("New project" superman-capture-project)
-      ;; ("Meeting" superman-capture-meeting)
-      ;; ("Task" superman-capture-task)))
+      (insert (superman-make-button
+	       (concat "Refresh agenda. Last update: " 
+		       (format-time-string "%r"))
+	       '(:fun superman-redo)))
       (insert "\n")      
       (superman-todo-mode-on)
       (if pretty 
 	  (superman-pretty-agenda)
 	(insert "\n" (superman-make-button
 		      "Pretty display (P)" 
-		      'superman-pretty-agenda
-		      'superman-header-button-face "Prettify display using columns")
-		)
+		      '(:fun superman-pretty-agenda
+			     :face 'superman-header-button-face :help "Prettify display using columns")))
 	(put-text-property (point-at-bol) (point-at-eol) 'superman-pretty-button t)
 	(insert "\n")))))
 

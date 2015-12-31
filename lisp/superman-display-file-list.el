@@ -44,14 +44,14 @@
 
 (defun superman-file-capture-button (c &rest args)
   (superman-make-button "track"
-			'superman-capture-file-at-point
-			'superman-next-project-button-face
-			"Capture file for project control"))
+			'(:fun superman-capture-file-at-point
+			       :face superman-next-project-button-face
+			       :help "Capture file for project control")))
 
 (defvar superman-file-list-balls
   '(("FileName" ("fun" superman-trim-string) ("width" 88) ("face" superman-file-name-face))
     ("Path" ("fun" superman-dont-trim) ("face" superman-directory-name-face)))
-    ;; ("Capture" ("fun" superman-file-capture-button) ("width" 7) ("face" "no-face") ("face" superman-next-project-button-face))
+  ;; ("Capture" ("fun" superman-file-capture-button) ("width" 7) ("face" "no-face") ("face" superman-next-project-button-face))
   "balls used to display file-lists.")
 
   
@@ -99,9 +99,9 @@
 	    (insert (superman-make-button
 		     (concat "FileList"
 			     (concat ": " dir))
-		     'file-list-reload
-		     'superman-project-button-face
-		     "Refresh file-list"))
+		     '(:fun file-list-reload
+			    :face superman-project-button-face
+			    :help "Refresh file-list")))
 	    (unless no-project
 	      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	      (put-text-property (point-min) (1+ (point-min)) 'project-buffer pbuf)
@@ -111,43 +111,42 @@
 	    (put-text-property (point-at-bol) (point-at-eol) 'sort sort)
 	    (unless no-project
 	      (put-text-property (point-at-bol) (point-at-eol) 'index (superman-get-index project))
-	      (insert "  " (superman-make-button "Project view" 'superman-view-back 'superman-next-project-button-face  "Back to project view.")
-		      "  " (superman-make-button "Git" 'superman-git-display 'superman-next-project-button-face "Control project's git repository.")
-		      "  " (superman-make-button "Todo" 'superman-project-todo 'superman-next-project-button-face "View project's todo list.")
-		      "  " (superman-make-button "Time-line" 'superman-project-timeline 'superman-next-project-button-face "View project's timeline.")))
+	      (insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face :help "Back to :width view."))
+		      "  " (superman-make-button "Git" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's :width repository."))
+		      "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's :width list."))
+		      "  " (superman-make-button "Time-line" '(:fun superman-project-timeline :face superman-next-project-button-face :help "View project':width timeline."))))
 	    (insert "\n")
 	    (superman-view-insert-action-buttons
-	     '((" attributes   " file-list-ls file-list-info-button-face "Show file attributes")
-	       ("  ls -la      " file-list-ls file-list-info-button-face "Show output of ls -la for all files")
-	       ("  grep        " file-list-grep file-list-info-button-face "Run grep on all files")
-	       ("  search      " file-list-grep file-list-info-button-face "Search through all files"))
+	     '((" attributes   " (:fun file-list-ls :face file-list-info-button-face :help "Show file attributes"))
+	       ("  ls -la      " (:fun file-list-ls :face file-list-info-button-face :help "Show output of ls -la for all files"))
+	       ("  grep        " (:fun file-list-grep :face file-list-info-button-face :help "Run grep on all files"))
+	       ("  search      " (:fun file-list-grep :face file-list-info-button-face :help "Search through all files")))
 	     nil
 	     "Info     :")
 	    (superman-view-insert-action-buttons
-	     '((" rename files " file-list-rename file-list-action-button-face "Rename all files")
-	       (" copy files   " file-list-copy file-list-action-button-face "Copy all files to a new directory")
-	       (" delete files " file-list-remove file-list-action-button-face "Delete all files")
-	       ("find & replace" file-list-query-replace file-list-action-button-face "Run interactive query replace through all files")
-	       ("shell-command " file-list-shell-command file-list-action-button-face "Run the same shell command on all files")
+	     '((" rename files " (:fun file-list-rename :face file-list-action-button-face :help "Rename all files"))
+	       (" copy files   " (:fun file-list-copy :face file-list-action-button-face :help "Copy all files to a new directory"))
+	       (" delete files " (:fun file-list-remove :face file-list-action-button-face :help "Delete all files"))
+	       ("find & replace" (:fun file-list-query-replace :face file-list-action-button-face :help "Run interactive query replace through all files"))
+	       ("shell-command " (:fun file-list-shell-command :face file-list-action-button-face :help "Run the same shell command on all files"))
 	       ;; (" update list  " file-list-reload nil "Update file-list")
 	       )
 	     nil
 	     "Action   :")
 	    (superman-view-insert-action-buttons
-	     `(("  file-name   " file-list-by-name file-list-filter-button-face "Filter files with matching name")
-	       ("      .ext    " file-list-by-ext file-list-filter-button-face "Filter files with matching extension")
-	       ("     /path    " file-list-by-path file-list-filter-button-face "Filter files whose path do match")
-	       ("      time    " file-list-by-time file-list-filter-button-face "Filter files younger than")
-	       ("      size    " file-list-by-size file-list-filter-button-face "Filter files bigger than"))
+	     `(("  file-name   " (:fun file-list-by-name :face file-list-filter-button-face :help "Filter files with matching name"))
+	       ("      .ext    " (:fun file-list-by-ext :face file-list-filter-button-face :help "Filter files with matching extension"))
+	       ("     /path    " (:fun file-list-by-path :face file-list-filter-button-face :help "Filter files whose path do match"))
+	       ("      time    " (:fun file-list-by-time :face file-list-filter-button-face :help "Filter files younger than"))
+	       ("      size    " (:fun file-list-by-size :face file-list-filter-button-face :help "Filter files bigger than")))
 	     nil
-	     ;; (superman-make-button "Filter:" nil 'superman-filter-face))
 	     "FilterIn :")
 	    (superman-view-insert-action-buttons
-	     `(("  file-name   "  (lambda () (interactive) (file-list-by-name 1)) file-list-inverse-filter-button-face "Filter files whose name doesn't match")
-	       ("      .ext    "  (lambda () (interactive) (file-list-by-ext 1)) file-list-inverse-filter-button-face "Filter files whose extension doesn't match")
-	       ("     /path    "  (lambda () (interactive) (file-list-by-path 1)) file-list-inverse-filter-button-face "Filter files whose path doesn't match")
-	       ("      time    "  (lambda () (interactive) (file-list-by-time 1)) file-list-inverse-filter-button-face "Filter files older than")
-	       ("      size    "  (lambda () (interactive) (file-list-by-size 1)) file-list-inverse-filter-button-face "Filter files smaller than"))
+	     `(("  file-name   " (:fun (lambda () (interactive) (file-list-by-name 1)) :face file-list-inverse-filter-button-face :help "Filter files whose name doesn't match"))
+	       ("      .ext    " (:fun (lambda () (interactive) (file-list-by-ext 1)) :face file-list-inverse-filter-button-face :help "Filter files whose extension doesn't match"))
+	       ("     /path    " (:fun (lambda () (interactive) (file-list-by-path 1)) :face file-list-inverse-filter-button-face :help "Filter files whose path doesn't match"))
+	       ("      time    " (:fun (lambda () (interactive) (file-list-by-time 1)) :face file-list-inverse-filter-button-face :help "Filter files older than"))
+	       ("      size    " (:fun (lambda () (interactive) (file-list-by-size 1)) :face file-list-inverse-filter-button-face :help "Filter files smaller than")))
 	     nil
 	     "FilterOut:")
 	    ;; ("clear display" file-list-clear-display)) 
@@ -224,22 +223,22 @@
       (put-text-property (point-at-bol) (point-at-eol) 'file-list-section-start t)
       (insert " ")
       (insert (superman-make-button "Update list"
-				    'file-list-reload
-				    'superman-next-project-button-face
-				    "Update file-list")
+				    '(:fun file-list-reload
+					   :face superman-next-project-button-face
+					   :help "Update :width list"))
 	      " "
 	      (superman-make-button "Clear display"
-				    'file-list-clear-display
-				    'superman-next-project-button-face
-				    "Return to clean file-list")
+				    '(:fun file-list-clear-display
+					   :face superman-next-project-button-face
+					   :help "Return to clean :width list"))
 	      " "
 	      (superman-make-button (concat "Mode: " (cond ((= level 0) "file | path")
 							   ((= level 1) "/path/file")
 							   ((= level 2) "~/path/file")
 							   ((= level 3) "[[org-link]]")))
-				    'file-list-toggle-display-mode
-				    'superman-next-project-button-face
-				    "Change display of file-name and path-name"))
+				    '(:fun file-list-toggle-display-mode
+					   :face superman-next-project-button-face
+					   :help "Change display of file-name and path-name")))
       ;; insert updated filters		
       (if (not file-list-filter)
 	  (when (and (not new-buffer)
@@ -256,9 +255,9 @@
 	(insert 
 	 (superman-make-button
 	  "* Delete filters:" 
-	  `file-list-remove-all-filters
-	  'superman-capture-button-face
-	  "Press button to remove all filters")
+	  '(:fun file-list-remove-all-filters
+		 :face superman-capture-button-face
+		 :help "Press button to remove all filters"))
 	 (concat " [" (int-to-string (length file-list-filter)) "]"))
 	(put-text-property (1- (point)) (point) 'active-filters t)
 	(save-excursion
@@ -269,31 +268,31 @@
 	(dolist (x file-list-filter nil)
 	  (insert " " (superman-make-button
 		       (car x)
-		       `(lambda () (interactive)
-			  (file-list-remove-filter ,(car x)))
-		       'file-list-active-filter-button-face
-		       "Press button to remove this filter"))))
+		       `(:fun (lambda () (interactive)
+				(file-list-remove-filter ,(car x)))
+			      :face file-list-active-filter-button-face
+			      :help "Press button to remove this filter")))))
       ;; insert the column names
       (when new-buffer
 	(insert "\n")
 	(when superman-empty-line-after-cat (insert "\n"))
 	;; (insert (superman-column-names balls))
 	(insert "Sort:\t"
-		(superman-make-button "file-name" 'file-list-button-sort-by-name
-				      'superman-column-name-face
-				      "Sort by file name")
+		(superman-make-button "file-name" '(:fun file-list-button-sort-by-name
+							 :face superman-column-name-face
+							 :help "Sort by :width name"))
 		" "
-		(superman-make-button "path" 'file-list-button-sort-by-path
-				      'superman-column-name-face
-				      "Sort by directory name")
+		(superman-make-button "path" '(:fun file-list-button-sort-by-path
+						    :face superman-column-name-face
+						    :help "Sort by :width name"))
 		" "
-		(superman-make-button "time" 'file-list-button-sort-by-time
-				      'superman-column-name-face
-				      "Sort by last modified")
+		(superman-make-button "time" '(:fun file-list-button-sort-by-time
+						    :face superman-column-name-face
+						    :help "Sort by :width modified"))
 		" "
-		(superman-make-button "size" 'file-list-button-sort-by-time
-				      'superman-column-name-face
-				      "Sort by size"))
+		(superman-make-button "size" '(:fun file-list-button-sort-by-time
+						    :face superman-column-name-face
+						    :help "Sort :width size")))
 	(put-text-property (point-at-bol) (point-at-eol) 'column-names t)
 	(beginning-of-line))
       (run-hooks 'superman-file-list-pre-display-hook))))

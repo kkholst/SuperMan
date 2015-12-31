@@ -267,21 +267,19 @@ otherwise it is tested if the path provided by a text-property 'git-dir
 at (point-min) is git controlled."
   (let* ((loc (or git-dir (get-text-property (point-min) 'git-dir)))
 	 (button (superman-make-button "Contrl:"
-				       'superman-git-display
-				       'superman-header-button-face
-				       "Show git status"))
+				       '(:fun superman-git-display
+				       :face superman-header-button-face
+				       :help "Show git status")))
 	 (control (if (or git-dir (superman-git-p loc))
 		      (superman-make-button
 		       (concat "Git repository at " "[[" (abbreviate-file-name (superman-git-toplevel loc)) "]]")
-		       'superman-git-display
-		       nil
-		       "Control git repository")
+		       '(:fun superman-git-display
+			      :help "Control git repository"))
 		    (superman-make-button
 		     "not set. <> press button or `GI' to initialize git control"
-		     'superman-git-init
-		     nil
-		     (concat
-		      "Initialize git repository at " git-dir)))))
+		     `(:fun superman-git-init
+			    :help (concat
+				   "Initialize git repository at " ,git-dir))))))
     (put-text-property 0 1 'superman-header-marker t button)
     (put-text-property 0 1 'superman-header-marker t control)
     (concat button " " control)))
@@ -289,17 +287,17 @@ at (point-min) is git controlled."
 (defun superman-view-others (project)
   "Insert the names and emails of the others (if any)." 
   (let* ((pro (or project (superman-view-current-project)))
-	(others (superman-get-others pro)))
+	 (others (superman-get-others pro)))
     (if others
 	(let ((key
 	       (superman-make-button
 		"Others:"
-		`(lambda ()
-		   (interactive)
-		   (superman-capture-others
-		    ,(car pro)))
-		'superman-header-button-face
-		"Set names of collaborators")))
+		`(:fun (lambda ()
+			 (interactive)
+			 (superman-capture-others
+			  ,(car pro)))
+		       :face superman-header-button-face
+		       :help "Set names of collaborators"))))
 	  ;; (put-text-property 0 (length key) 'face 'org-level-2 key)
 	  (put-text-property 0 1 'superman-header-marker t key)
 	  (concat key " " others))
@@ -366,47 +364,47 @@ the current sub-category and return the minimum."
 	     (next (let ((n (cadr superman-project-history)))
 		     (unless (string-equal prev n) n)))
 	     (all-button (superman-make-button
-			  "Projects" 'superman
-			  'superman-next-project-button-face "List of projects"))
+			  "Projects" '(:fun superman
+			  :face superman-next-project-button-face :help "List of projects")))
 	     (next-button (when next (superman-make-button
 				      next
-				      `(lambda () (interactive)
-					 (superman-switch-to-project ,next))
-				      'superman-next-project-button-face
-				      (concat "Switch to project " next) 17)))
+				      `(:fun (lambda () (interactive)
+					       (superman-switch-to-project ,next))
+					     :face superman-next-project-button-face
+					     :help (concat "Switch to project " next) 17))))
 	     (prev-button (when prev
 			    (superman-make-button
 			     prev
-			     `(lambda () (interactive) (superman-switch-to-project ,prev))
-			     'superman-next-project-button-face
-			     (concat "Switch to project " prev)))))
+			     `(:fun (lambda () (interactive) (superman-switch-to-project ,prev))
+				    :face superman-next-project-button-face
+				    :help (concat "Switch to project " prev))))))
 	(when prev
 	  (put-text-property 0 1 'superman-header-marker t prev-button))
 	(when next
 	  (put-text-property 0 1 'superman-header-marker t next-button))
 	(put-text-property 0 1 'superman-header-marker t all-button)
 	(insert (concat " " prev-button " " next-button " " all-button)))
-    (insert "  " (superman-make-button "Projects" 'superman 'superman-next-project-button-face "List of projects"))))
+    (insert "  " (superman-make-button "Projects" '(:fun superman :face superman-next-project-button-face :help "List of projects")))))
 
 (defvar superman-default-action-buttons
-'(("Documents" (lambda () (interactive) (superman-capture-document nil nil nil)))
-  ("Notes" (lambda () (interactive) (superman-capture-note nil nil nil)))
-	("Tasks" (lambda () (interactive) (superman-capture-task nil nil nil)))
-	("Text" (lambda () (interactive) (superman-capture-text nil nil nil)))
-	("Meetings" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
-	("Calendar" (lambda () (interactive) (superman-capture-meeting nil nil nil)))
-	("Bookmarks" (lambda () (interactive) (superman-capture-bookmark nil nil nil))))
+'(("Documents" :fun (lambda () (interactive) (superman-capture-document )))
+  ("Notes" :fun (lambda () (interactive) (superman-capture-note )))
+	("Tasks" :fun (lambda () (interactive) (superman-capture-task )))
+	("Text" :fun (lambda () (interactive) (superman-capture-text )))
+	("Meetings" :fun (lambda () (interactive) (superman-capture-meeting )))
+	("Calendar" :fun (lambda () (interactive) (superman-capture-meeting )))
+	("Bookmarks" :fun (lambda () (interactive) (superman-capture-bookmark ))))
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
 (defvar superman-default-action-buttons-outside-project
-  '(("Meeting (Calendar)" (lambda () (interactive) (superman-capture-calendar nil nil t)) superman-capture-button-face "Capture a meeting for calendar" nil 43)
-    ("Meeting (Project)" (lambda () (interactive) (superman-capture-meeting nil nil t)) superman-capture-button-face "Capture a meeting" nil 43)
-    ("Task" (lambda () (interactive) (superman-capture-task nil nil t)) superman-capture-button-face "Capture a task" nil 43)
-    ("Document" (lambda () (interactive) (superman-capture-document nil nil t)) superman-capture-button-face "Capture a document" nil 43)
-    ("Note" (lambda () (interactive) (superman-capture-note nil nil t)) superman-capture-button-face "Capture a note" nil 43)
-    ("Text" (lambda () (interactive) (superman-capture-text nil nil t)) superman-capture-button-face "Capture text" nil 43)
-    ("Bookmark" (lambda () (interactive) (superman-capture-bookmark nil nil t)) superman-capture-button-face "Capture a bookmark" nil 43))
+  '(("Meeting (Calendar)" :fun (lambda () (interactive) (superman-capture-calendar nil nil t)) :face superman-capture-button-face :help  "Capture a meeting for calendar" :width 43)
+    ("Meeting (Project)" :fun (lambda () (interactive) (superman-capture-meeting nil nil t)) :face superman-capture-button-face :help  "Capture a meeting" :width 43)
+    ("Task" :fun (lambda () (interactive) (superman-capture-task nil nil t)) :face superman-capture-button-face :help  "Capture a task" :width 43)
+    ("Document" :fun (lambda () (interactive) (superman-capture-document nil nil t)) :face superman-capture-button-face :help  "Capture a document" :width 43)
+    ("Note" :fun (lambda () (interactive) (superman-capture-note nil nil t)) :face superman-capture-button-face :help  "Capture a note" :width 43)
+    ("Text" :fun (lambda () (interactive) (superman-capture-text nil nil t)) :face superman-capture-button-face :help  "Capture text" :width 43)
+    ("Bookmark" :fun (lambda () (interactive) (superman-capture-bookmark nil nil t)) :face superman-capture-button-face :help  "Capture a bookmark" :width 43))
   "Default action buttons as used by `superman-view-insert-action-buttons'
 for project views.")
 
@@ -431,20 +429,15 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 "
   (let* (
 	 ;; (title
-	  ;; (if (and title-string (get-text-property 0 'button title-string)) title-string
-	    ;; (superman-make-button
-	     ;; (or title-string "Action:")
-	     ;; 'superman-view-pop-actions
-	     ;; 'superman-header-button-face
-	     ;; "Edit action buttons")))
+	 ;; (if (and title-string (get-text-property 0 'button title-string)) title-string
 	 (b-list
 	  (or button-list superman-default-action-buttons))
 	 (i 1))
     (while b-list
       (let* ((b (car b-list))
 	     (b-name (nth 0 b))
-	     ;; (b-tail (nth 1 b))
-	     (b-fun (nth 1 b))
+	     (b-tail (nth 1 b))
+	     (b-fun (plist-get b-tail :fun))
 	     (b-fun (if (and (listp b-fun)
 			     (symbolp (car b-fun))
 			     (string= (symbol-name (car b-fun)) "quote"))
@@ -458,17 +451,15 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 					  (if (symbolp b-fun)
 					      (symbol-name b-fun) ""))
 				       " is not defined"))))))
-	     (b-face (or (nth 2 b) 'superman-capture-button-face))
-	     (b-help (or (nth 3 b)  (concat "capture " (downcase b-name))))
-	     (b-width (or (nth 5 b) superman-action-button-width)))
+	     (b-face (or (plist-get b-tail :face) 'superman-capture-button-face))
+	     (b-help (or (plist-get b-tail :help)  (concat "capture " (downcase b-name))))
+	     (b-width (or (plist-get b-tail :width) superman-action-button-width)))
 	(when (= i 1)
 	  (unless no-newline
-	    (insert "\n"))
-					;	  (insert title " ")
-	  )
+	    (insert "\n")))
 	(setq b-name
 	      (superman-make-button
-	       b-name cmd b-face b-help nil b-width))
+	       b-name `(:fun ,cmd :face ,b-face :help ,b-help :width ,b-width)))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t b-name)
@@ -492,25 +483,27 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	(while sd 
 	  (insert (apply 'superman-make-button (car sd)) " ")
 	  (setq sd (cdr sd)))))
+    (when config-list 
+      (insert "\n\nSaved window configurations: "))
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
 	     (config-cmd (cdr current-config)))
 	(insert "[" (superman-make-button
 		     config-name
-		     `(lambda () (interactive)
+		     `(:fun (lambda () (interactive)
 			(superman-switch-config nil nil ,config-cmd))
-		     'superman-warning-face
-		     config-cmd)
+		     :face superman-warning-face
+		     :help config-cmd))
 		"]  "))
       (setq config-list (cdr config-list)))))
 
 (defvar superman-sticky-displays
-  '(("Timeline" superman-project-timeline superman-capture-button-face "Show project time line" nil 11)
-    ("Todo" superman-project-todo superman-capture-button-face "Show project time line" nil 11)
-    ("Git (g)" superman-git-display superman-capture-button-face "Show project git repository" nil 11)
-    ("Files (f)" superman-view-file-list superman-capture-button-face "Show project files" nil 11)
-    ("Help (h)" superman-ual superman-capture-button-face "Open the superman-ual" nil 11 ))
+  '(("Timeline" (:fun superman-project-timeline :face superman-capture-button-face :help "Show project time line" :width 11))
+    ("Todo" (:fun superman-project-todo :face superman-capture-button-face :help "Show project time line" :width 11))
+    ("Git (g)" (:fun superman-git-display :face superman-capture-button-face :help "Show project git repository" :width 11))
+    ("Files (f)" (:fun superman-view-file-list :face superman-capture-button-face :help "Show project files" :width 11))
+    ("Help (h)" (:fun superman-ual :face superman-capture-button-face :help "Open the superman-ual" :width 11 )))
   "Alist of displays that are shown as action buttons for all projects.")
 
 ;;}}}
@@ -555,9 +548,9 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	 (title
 	  (superman-make-button
 	   "Unison:"
-	   'superman-capture-unison
-	   'superman-header-button-face
-	   "Capture unison"
+	   '(:fun superman-capture-unison
+		  :face superman-header-button-face
+		  :help "Capture unison")
 	   ))
 	 (title-marker 
 	  (save-excursion
@@ -581,20 +574,20 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	(insert "["
 		(superman-make-button
 		 unison-name 
-		 `(lambda () (interactive)
-		    ;; prevents from synchronizing
-		    ;; unsaved buffers
-		    (save-some-buffers nil t)
-		    (async-shell-command ,unison-cmd))
-		 'superman-warning-face
-		 unison-name
-		 'superman-view-delete-entry) "] "))
+		 `(:fun (lambda () (interactive)
+			  ;; prevents from synchronizing
+			  ;; unsaved buffers
+			  (save-some-buffers nil t)
+			  (async-shell-command ,unison-cmd))
+			:face superman-warning-face
+			:help unison-name
+			:fun-3 superman-view-delete-entry)) "] "))
       (setq i (+ i 1) unison-list (cdr unison-list)))))
 
 ;;}}}
 ;;{{{ superman-buttons
 
-(defun superman-make-button (string &optional fun face help fun-3 width)
+(defun superman-make-button (string &optional properties)
   "Create a button with label STRING and FACE.
  If FUN is a function then it is bound to mouse-2 and RETURN events.  
  HELP is a string which is shown when the mouse over the button.
@@ -602,16 +595,20 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 Width determines the amount of white-space around string to achieve
 a fixed button width. This is useful to align a series of buttons.
 "
-  (let ((map (make-sparse-keymap))
-	(help (or help "Superman-button"))
-	(string (if (not width) string
-		  (let* ((len (length string))
-			 (diff (- width len))
-			 (rest (/ diff 2)))
-		    (if (< diff 0)
-			(substring string 0 width)
-		      (concat (make-string rest (string-to-char " "))
-			      string (make-string (- width (+ len rest)) (string-to-char " "))))))))
+  (let* ((map (make-sparse-keymap))
+	 (help (or (plist-get properties :help) "Superman-button"))
+	 (width (plist-get properties :width))
+	 (face (plist-get properties :face))	 
+	 (fun (plist-get properties :fun))	 
+	 (fun-3 (plist-get properties :fun-3))	 
+	 (string (if (not width) string
+		   (let* ((len (length string))
+			  (diff (- width len))
+			  (rest (/ diff 2)))
+		     (if (< diff 0)
+			 (substring string 0 width)
+		       (concat (make-string rest (string-to-char " "))
+			       string (make-string (- width (+ len rest)) (string-to-char " "))))))))
     (unless (functionp fun)
       (setq fun #'(lambda () (interactive)
 		    (message
@@ -692,18 +689,18 @@ Translate the branch names into buttons."
       (insert
        (superman-make-button
 	title
-	'superman-git-new-branch
-	'superman-header-button-face
-	"Create new git branch")
+	'(:fun superman-git-new-branch
+	:face superman-header-button-face
+	:help "Create new git branch"))
        " ")
       (put-text-property
        0 1
        'superman-header-marker t current-branch)
       (superman-make-button
        current-branch
-       'superman-git-status
-       'superman-warning-face
-       "View status of current branch")
+       '(:fun superman-git-status
+       :face superman-warning-face
+       :help "View status of current branch"))
       (insert "[" current-branch "]  ")
       (while other-branches
 	(let* ((b (car other-branches))
@@ -717,8 +714,8 @@ Translate the branch names into buttons."
 			nil
 			,(buffer-name view-buf))))
 	       (button (superman-make-button
-			b fun 'font-lock-comment-face
-			"Checkout branch")))
+			b `(:fun fun :face font-lock-comment-face
+				 :help "Checkout branch"))))
 	  (setq other-branches (cdr other-branches))
 	  (put-text-property 0 1 'superman-header-marker t button)
 	  (insert "[" button "]  ")))
@@ -727,10 +724,10 @@ Translate the branch names into buttons."
 	  (put-text-property 0 1 'superman-header-marker t merge-string)	    
 	  (insert (superman-make-button
 		   merge-string
-		   `(lambda () (interactive)
-		      (superman-git-merge-branches ,loc))
-		   'font-lock-type-face
-		   "Merge two branches"))))
+		   `(:fun (lambda () (interactive)
+			    (superman-git-merge-branches ,loc))
+			  :face font-lock-type-face
+			  :help "Merge two branches")))))
       (when remote
 	(let* ((title "Remote:")
 	       (svn-p (member-if
@@ -754,102 +751,102 @@ Translate the branch names into buttons."
 	  (insert "\n"
 		  (superman-make-button
 		   title
-		   `(lambda ()
-		      (interactive)
-		      (superman-run-cmd
-		       (concat "cd " ,loc ";"
-			       ,superman-cmd-git " " ,remote-cmd "\n")
-		       "*Superman-returns*"
-		       (concat "`" ,superman-cmd-git " " ,remote-cmd
-			       " run below \n" ,loc "' returns:\n\n")))
-		   'superman-header-button-face
-		   "Show origin of remote repository"))
+		   `(:fun (lambda ()
+			    (interactive)
+			    (superman-run-cmd
+			     (concat "cd " ,loc ";"
+				     ,superman-cmd-git " " ,remote-cmd "\n")
+			     "*Superman-returns*"
+			     (concat "`" ,superman-cmd-git " " ,remote-cmd
+				     " run below \n" ,loc "' returns:\n\n")))
+			  :face superman-header-button-face
+			  :help "Show origin of remote repository")))
 	  ;; fetch git
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      " fetch origin "
-	      `(lambda () (interactive)
-		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " fetch origin\n")
-				   "*Superman-returns*"
-				   (concat "`" ,superman-cmd-git " fetch origin' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-action-button-face
-	      "Fetch changes from remote git repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " fetch origin\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " fetch origin' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Fetch changes from remote git repository"))))
 	  ;; fetch svn
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      "svn fetch"
-	      `(lambda () (interactive)
-		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn fetch\n")
-				   "*Superman-returns*"
-				   (concat "`" ,superman-cmd-git " svn fetch' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-info-button-face
-	      "Fetch changes from remote svn repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn fetch\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " svn fetch' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-info-button-face
+		     :help "Fetch changes from remote svn repository"))))
 	  ;; merge
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      " merge "
-	      `(lambda () (interactive)
-		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " merge origin/master\n")
-				   "*Superman-returns*"
-				   (concat "`" ,superman-cmd-git " merge origin/master' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-inverse-filter-button-face
-	      "Merge origin/master and master repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " merge origin/master\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " merge origin/master' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-inverse-filter-button-face
+		     :help "Merge origin/master and master repository"))))
 	  ;; pull
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      "  pull  "
-	      `(lambda () (interactive)
-		 (superman-run-cmd
-		  (concat "cd " ,loc  ";" ,superman-cmd-git " pull\n")
-		  "*Superman-returns*"
-		  (concat "`" ,superman-cmd-git " pull' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-filter-button-face
-	      "Pull changes from remote git repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd
+			(concat "cd " ,loc  ";" ,superman-cmd-git " pull\n")
+			"*Superman-returns*"
+			(concat "`" ,superman-cmd-git " pull' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-filter-button-face
+		     :help "Pull changes from remote git repository"))))
 	  ;; push
 	  (when git-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      "  push  "
-	      `(lambda () (interactive)
-		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " push\n")
-				   "*Superman-returns*"
-				   (concat "`" ,superman-cmd-git " ' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-action-button-face
-	      "Push changes to remote git repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " push\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " ' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Push changes to remote git repository"))))
 	  ;; rebase
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      " rebase "
-	      `(lambda () (interactive)
-		 (superman-run-cmd
-		  (concat "cd " ,loc  ";" ,superman-cmd-git " svn rebase\n")
-		  "*Superman-returns*"
-		  (concat "`" ,superman-cmd-git " svn rebase' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-info-button-face
-	      "Rebase with remote svn repository")))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd
+			(concat "cd " ,loc  ";" ,superman-cmd-git " svn rebase\n")
+			"*Superman-returns*"
+			(concat "`" ,superman-cmd-git " svn rebase' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-info-button-face
+		     :fun "Rebase with remote svn repository"))))
 	  ;; dcommit
 	  (when svn-p
 	    (insert
 	     " "
 	     (superman-make-button
 	      " dcommit "
-	      `(lambda () (interactive)
-		 (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn dcommit\n")
-				   "*Superman-returns*"
-				   (concat "`" ,superman-cmd-git " svn dcommit' run below \n" ,loc "' returns:\n\n")))
-	      'file-list-action-button-face
-	      "Push changes to remote svn repository"))))))))
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn dcommit\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " svn dcommit' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Push changes to remote svn repository")))))))))
 
 
 ;;}}}
@@ -991,9 +988,9 @@ Return the formatted string with text-properties."
 	(setq name
 	      (superman-make-button
 	       col-name
-	       'superman-sort-section
-	       'superman-next-project-button-face
-	       sort-cmd))
+	       `(:fun superman-sort-section
+		      :face superman-next-project-button-face
+		      :help sort-cmd)))
 	;; replace trim function
 	;; (setcdr (assoc "fun" b) 'superman-trim-string)
 	(setq b (remove-if
@@ -1010,12 +1007,6 @@ Return the formatted string with text-properties."
 	(setq column-names (concat column-names name))
 	(set-text-properties 0 (length col-name) nil col-name)
 	(setq names (append names (list col-name)))
-	;; (superman-make-button
-	;; (char-to-string #x25b3)
-	;; 'superman-sort-section
-	;; nil
-	;; "Sort section")
-	;; name))
 	(setq copy-balls (cdr copy-balls))))
     ;; add text properties: columns and column-names
     (put-text-property 0 (length column-names) 'columns column-widths column-names)
@@ -1425,11 +1416,10 @@ to refresh the view.
 			     "\nlast update at: " (format-time-string "%r")
 			     "\nPress key 'R' or this button to refresh the view")))
 	  (insert (superman-make-button
-		   ;; (concat "Project: " nick)
 		   (concat " Project: " nick " ")
-		   'superman-redo
-		   'superman-face
-		   button-text)))
+		   `(:fun superman-redo
+			  :face superman-face
+			  :help ,button-text))))
 	;; (put-text-property (point-at-bol) (point-at-eol) 'face 'superman-project-button-face)
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
 			   (or redo
@@ -1451,7 +1441,7 @@ to refresh the view.
 	;; (insert (superman-view-control pro))
 	;; action buttons
 	;; (unless (and (stringp buttons) (string= buttons "nil"))
-	  ;; (superman-view-insert-action-buttons buttons))
+	;; (superman-view-insert-action-buttons buttons))
 	;; loop over cats
 	(goto-char (point-max))
 	(insert "\n\n")
@@ -1736,9 +1726,9 @@ in buffer VIEW-BUF."
 	      ;; (cadr (assoc name superman-capture-alist))
 	      'superman-capture-item)))
     (insert
-     (superman-make-button (concat "** " name) fun
-			   'superman-capture-button-face
-			   (or help "Add new item"))
+     (superman-make-button (concat "** " name) `(:fun ,fun
+						      :face superman-capture-button-face
+						      :help (or help "Add new item")))
      "\n"))
   (forward-line -1)
   (beginning-of-line)
@@ -1752,14 +1742,14 @@ in buffer VIEW-BUF."
   (unless (or (not superman-view-mode) superman-git-mode)
     (insert (superman-make-button
 	     "column+"
-	     'superman-new-ball
-	     'superman-git-keyboard-face-i
-	     "Add a column")
-    " " (superman-make-button
-	     "item+"
-	     'superman-capture-thing
-	     'superman-git-keyboard-face-i
-	     "Add an item"))))
+	     '(:fun superman-new-ball
+		    :face superman-git-keyboard-face-i
+		    :help "Add a column"))
+	    " " (superman-make-button
+		 "item+"
+		 '(:fun superman-capture-thing
+			:face superman-git-keyboard-face-i
+			:help "Add an item")))))
 
 ;;}}}
 ;;{{{ Formatting items and column names
@@ -2325,9 +2315,7 @@ disable editing."
       (unless (buffer-file-name)
 	(setq read-only t))
       (setq title
-	    (superman-make-button
-	     (concat "Superman " (if read-only "view item (read-only)"  "edit") " mode")
-	     nil 'superman-capture-button-face))
+	    (concat "Superman " (if read-only "view item (read-only)"  "edit") " mode"))
       (goto-char marker)
       (widen)
       (show-all)
@@ -2339,9 +2327,7 @@ disable editing."
        (t (error "dont know what to copy")))
       (superman-capture-whatever
        marker
-       (superman-make-button
-	(concat  "Superman " (if read-only "views" "edits") " item")
-	nil 'superman-capture-button-face)
+       (concat  "Superman " (if read-only "views" "edits") " item")
        0 ;; level 0 because we are pasting a heading in
        item
        nil 'edit scene read-only nil nil nil))))
@@ -2447,7 +2433,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		"e: edit item\n"
 		"v: view item\n"
 		"N: Capture new item\n"
-		"t: toggle todo status"
+		"t: toggle todo status\n"
 		"i: visit index file\n\n"
 		"f: file-list\n"
 		"g: git repository\n"))
@@ -2952,9 +2938,9 @@ not in a section prompt for section first."
 	 t "" t)
 	(insert "\n" (superman-make-button
 		      "Unison"
-		      'superman-capture-unison
-		      'superman-capture-button-face
-		      "Capture unison" nil 43))
+		      '(:fun superman-capture-unison
+		      :face superman-capture-button-face
+		      :help "Capture unison" nil 43)))
 	(superman-view-mode)
 	(goto-char (point-min))
 	(setq buffer-read-only t)))))
