@@ -654,15 +654,15 @@ a fixed button width. This is useful to align a series of buttons.
   "Insert the git buttons
 Translate the branch names into buttons."
   (superman-view-insert-action-buttons
-   '(("[Diff project]" superman-git-diff superman-default-button-face "Git diff")
-     ("[Commit project]" superman-git-commit-project superman-default-button-face "Git all project")
-     ("[Commit marked]" superman-git-commit-marked superman-default-button-face "Git commit marked files")
-     ("[Status]" superman-git-status superman-default-button-face "Git status")
-     ("[Delete marked]" superman-view-delete-marked superman-default-button-face "Delete marked files")))
+   '(("[Diff project]" :fun superman-git-diff :face superman-default-button-face :help "Git diff" :width 23)
+     ("[Commit project]" :fun superman-git-commit-project :face superman-default-button-face :help "Git all project" :width 23)
+     ("[Commit marked]" :fun superman-git-commit-marked :face superman-default-button-face :help "Git commit marked files" :width 23)
+     ("[Status]" :fun superman-git-status :face superman-default-button-face :help "Git status" :width 23)
+     ("[Delete marked]" :fun superman-view-delete-marked :face superman-default-button-face :help "Delete marked files" :width 23)))
   (put-text-property (point-at-bol) (1+ (point-at-bol)) 'git-buttons t))
 
 (defun superman-view-insert-git-branches (&optional dir)
-  "Insert the git branch(es) if project is git controlled.
+  :help "Insert the git branch(es) if project is git controlled.
 Translate the branch names into buttons."
   (let ((loc (or dir
 		 (get-text-property (point-min) 'git-dir)))
