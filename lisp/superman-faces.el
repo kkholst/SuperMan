@@ -62,6 +62,15 @@
      :height 1.3))
   "Face for superman button."
   :group 'superman)
+
+(defface superman-high-face
+  '((t (:height 2.3
+		:foreground "gray22"
+		:background "gray90"
+		:box (:line-width 1 :color "gray88" :style released-button))))
+  "Default face used for superman capture item buttons."
+  :group 'superman)
+
 ;;}}}
 ;;{{{ Save and quit button
 (defface superman-save-button-face
@@ -106,6 +115,8 @@
   '((t (:inherit font-lock-comment-face :underline nil)))
   "Face used for directory names."
   :group 'superman)
+
+
 
 (defface file-list-action-button-face
   '((((class color) (background dark))

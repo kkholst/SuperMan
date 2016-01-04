@@ -507,10 +507,11 @@ at the requested destination and then reset the window configuration."
 		 (forward-line 1)
 		 (end-of-line))
 	;; google calendar hook (could be replaced by a button)
-	(when (superman-get-property (point) "GoogleCalendar" t nil)
-	  (save-restriction
-	    (superman-google-export-appointment)))
-	;; run hidden hook 
+	(let ((calendar (superman-get-property (point) "GoogleCalendar" t nil)))
+	  (when (and calendar (not (string= calendar "")))
+	    (save-restriction
+	      (superman-google-export-appointment))))
+	;; run-hooks hidden hook 
 	(when (setq hidden-hook (get-text-property (point-min) 'clean-hook))
 	  (funcall hidden-hook))
 	(goto-char (previous-single-property-change (point-max) 'read-only))

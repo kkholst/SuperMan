@@ -405,24 +405,20 @@ for project views.")
     ("Note" :fun (lambda () (interactive) (superman-capture-note nil nil t)) :face superman-capture-button-face :help  "Capture a note" :width 43)
     ("Text" :fun (lambda () (interactive) (superman-capture-text nil nil t)) :face superman-capture-button-face :help  "Capture text" :width 43)
     ("Bookmark" :fun (lambda () (interactive) (superman-capture-bookmark nil nil t)) :face superman-capture-button-face :help  "Capture a bookmark" :width 43))
-  "Default action buttons as used by `superman-view-insert-action-buttons'
-for project views.")
+  "Default action buttons as used by `superman-capture-item' via `superman-view-insert-action-buttons' to capture
+items to be shown in project view.")
 
 
 (defun superman-view-pop-actions ()
   (interactive)
   (superman-capture-item 'pop))
 
-(defvar superman-action-button-width 11 "Width of action buttons")
+(defvar superman-action-button-width 13 "Width of action buttons")
 
 (defun superman-view-insert-action-buttons (&optional button-list no-newline title-string column)
   "Insert capture buttons. BUTTON-LIST is an alist providing button labels, functions and help strings.
- If omitted, it is set to
-  '((\"Document\" 'superman-capture-document)
-    (\"Task\" 'superman-capture-task)
-    (\"Note\" 'superman-capture-note)
-    (\"Bookmark\" 'superman-capture-bookmark)
-    (\"Meeting\" 'superman-capture-meeting))
+ If omitted, it is set to `superman-default-action-buttons-outside-project'.
+
 If NO-NEWLINE is non-nil no new line is inserted.
 TITLE-STRING is the label of the first button and defaults to \"Action\".
 If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
@@ -436,7 +432,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
     (while b-list
       (let* ((b (car b-list))
 	     (b-name (nth 0 b))
-	     (b-tail (nth 1 b))
+	     (b-tail (cdr b))
 	     (b-fun (plist-get b-tail :fun))
 	     (b-fun (if (and (listp b-fun)
 			     (symbolp (car b-fun))
@@ -2929,18 +2925,16 @@ not in a section prompt for section first."
 	(if fun (funcall (cadr fun) pro)
 	  (superman-capture-thing pro)))
     ;; behave similar to org-capture outside superman-view-mode
-    (let ((c-buf (get-buffer "*Superman-Capture*")))
+    (let ((c-buf (get-buffer "*Superman-Capture*"))
+	  (buttons (mapcar (lambda (x) (let ((item x)) 
+					 (plist-put (cdr item) :width 23)
+					 (plist-put (cdr item) :face 'superman-high-face)
+					 item)) 
+			   superman-default-action-buttons-outside-project)))
       (if c-buf (pop-to-buffer c-buf)
 	(pop-to-buffer "*Superman-Capture*")
-	(insert "Press one of the buttons below\n")
-	(superman-view-insert-action-buttons
-	 superman-default-action-buttons-outside-project
-	 t "" t)
-	(insert "\n" (superman-make-button
-		      "Unison"
-		      '(:fun superman-capture-unison
-		      :face superman-capture-button-face
-		      :help "Capture unison" nil 43)))
+	(insert "At the press one of the buttons below an item will be added to one of your projects.\n")
+	(superman-view-insert-action-buttons buttons t "" t)
 	(superman-view-mode)
 	(goto-char (point-min))
 	(setq buffer-read-only t)))))
