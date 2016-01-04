@@ -408,20 +408,34 @@ or the nickname."
       (insert "\n#+TODO: ACTIVE | PENDING WAITING SLEEPING DONE CANCELED ZOMBI\n\n")
       (org-ctrl-c-ctrl-c))
     (goto-char (point-min))
+    (let ((error-buf (get-buffer-create "*Superman-parse-errors*")))
+      (save-excursion (set-buffer error-buf) (erase-buffer))
+      (kill-buffer error-buf))
     (while (superman-forward-project)
       (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
 	(let* ((name (or (superman-get-property nil "nickname"  nil)
 			 (nth 4 (org-heading-components))))
 	       (loc (let ((loc (superman-get-property nil "location" nil)))
-		      (if (string-match org-bracket-link-regexp loc)
-			  (setq loc (org-match-string-no-properties 1 loc))
-			(unless loc
-			  (message (concat 
-				    "project: " name
-				    " unspecified location set to " 
-				    superman-default-directory))
-			  (setq loc superman-default-directory)))
-		      loc))
+		      (if (not loc) 
+			  (let ((error-buf (get-buffer-create "*Superman-parse-errors*")))
+			    (save-excursion
+			      (set-buffer error-buf)
+			      (goto-char (point-max))
+			      (insert
+			       "\n"
+			       (superman-make-button
+				(concat "Project " name " does not have a location")
+				`(lambda () (interactive) (superman-goto-profile ,name))) "\n"))
+			    (setq loc ""))
+			(if (string-match org-bracket-link-regexp loc)
+			    (setq loc (org-match-string-no-properties 1 loc))
+			  (unless loc
+			    (message (concat 
+				      "project: " name
+				      " unspecified location set to " 
+				      superman-default-directory))
+			    (setq loc superman-default-directory)))
+			loc)))
 	       (category
 		(capitalize (cond
 			     ((superman-get-property nil "category" nil))
@@ -469,7 +483,9 @@ or the nickname."
 				   (cons "config" config)
 				   (cons 'todo todo)
 				   (cons "publish-directory" publish-dir))))))
-      superman-project-alist)))
+      superman-project-alist)
+    (when (get-buffer "*Superman-parse-errors*")
+      (pop-to-buffer  "*Superman-parse-errors*"))))
 
 (defun superman-view-directory (&optional dir)
   (interactive)
