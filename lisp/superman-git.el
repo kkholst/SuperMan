@@ -88,7 +88,7 @@ result. PRE-HOOK and POST-HOOK are functions that are called before and after CM
 	 (index (superman-get-index pro))
 	 (loc (superman-get-location pro)))
     (if (not index)
-	(error (concat "Trying to superman-git-init-project: Project " (car pro) " has no index file."))
+	(error (concat "Trying to superman-git-init-project: Project " (car pro) " has no index file"))
       (superman-git-init-directory loc)
       (if (string-match loc index)
 	  (superman-git-add
@@ -1058,7 +1058,7 @@ NAME is used to make the section heading.
   "Re-set limit on number of items and redisplay"
   (interactive)
   (if (not (or superman-git-mode superman-git-log-mode))
-      (error "Currently this works only in `superman-git-log-mode' and `superman-git-mode'.")
+      (error "Currently this works only in `superman-git-log-mode' and `superman-git-mode'")
     (let ((buffer-read-only nil)
 	  (new-limit (string-to-int
 		      (read-string "Limit on number of revisions (leave empty to cancel): ")))
@@ -1651,55 +1651,59 @@ Enabling superman-git mode enables the git keyboard to control single files."
   "Similar to `superman-git-display' but here for a single file instead of
 the git directory."
   (interactive)
-  (let* ((file (or file
-		   (condition-case nil (superman-filename-at-point) (error nil))
-		   (get-text-property (point-min) 'filename)
-		   (buffer-file-name)))
-	 (git-dir (or (get-text-property (point-min) 'git-dir)
-		      (superman-git-root file)))
-	 (rel-file (superman-relative-name file git-dir))
-	 (index (or (get-text-property (point-min) 'index) rel-file))
-	 (git-log-display-buf (concat "*git-log[" (file-name-nondirectory file) "]*"))
-	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
-	 log-strings)
-    (unless (get-buffer git-log-display-buf)
-      (get-buffer-create git-log-display-buf))
-    (switch-to-buffer git-log-display-buf)
-    (setq buffer-read-only t)
-    (let ((buffer-read-only nil))
-      (if (get-text-property (point-min) 'git-display)
-	  nil ;; buffer already showing git-log
-	;; insert header
-	(erase-buffer) ;; probably unnecessary
-	(goto-char (point-min))
-	(insert (superman-make-button
-		 (concat "* Git: " file)
-		 '(:fun superman-redo :face superman-project-button-face)))
-	(insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
-		"  " (superman-make-button "Git overview" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
-		"  " (superman-make-button "annotate" '(:fun superman-git-annotate :face superman-next-project-button-face :help "Annotate."))
-		"  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list.")))
-	(insert "\n\n")
-	(when git-dir
-	  (superman-view-insert-git-branches git-dir)
-	  (superman-view-insert-git-buttons)
-	  (insert "\n"))
-	(insert "\n")
-	(put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
-	(put-text-property (point-min) (1+ (point-min)) 'region-start t)
-	(put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
-	(put-text-property (point-min) (1+ (point-min)) 'git-display "versions")
-	;; (put-text-property (point-min) (1+ (point-min)) 'face 'org-level-1)
-	(put-text-property (point-min) (1+ (point-min)) 'filename file)
-	(put-text-property (point-min) (1+ (point-min)) 'index index)
-	(put-text-property (point-min) (1+ (point-min)) 'limit limit)
-	(put-text-property (point-min) (1+ (point-min)) 'search-string search-string)
-	(put-text-property (point-min) (1+ (point-min)) 'decoration-only decoration-only)
-	(superman-view-mode-on)
-	(superman-git-mode-on)
-	(insert "** Git")
-	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
-	(superman-redo-cat)))))
+  (catch 'no-file
+    (let* ((file (cond (file)
+		       ((condition-case nil (superman-filename-at-point) (error nil)))
+		       ((get-text-property (point-min) 'filename))
+		       ((buffer-file-name))
+		       (t (throw 'no-file (message "No file-name at point and buffer not associated with a file.")))))
+	   (git-dir (or (get-text-property (point-min) 'git-dir)
+			(superman-git-root file)))
+	   (rel-file (superman-relative-name file git-dir))
+	   (index (or (get-text-property (point-min) 'index) rel-file))
+	   (git-log-display-buf (concat "*git-log[" (file-name-nondirectory file) "]*"))
+	   (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
+	   log-strings)
+      (unless (get-buffer git-log-display-buf)
+	(get-buffer-create git-log-display-buf))
+      (switch-to-buffer git-log-display-buf)
+      (setq buffer-read-only t)
+      (let ((buffer-read-only nil))
+	(if (get-text-property (point-min) 'git-display)
+	    nil ;; buffer already showing git-log
+	  ;; insert header
+	  (erase-buffer) ;; probably unnecessary
+	  (goto-char (point-min))
+	  (insert (superman-make-button
+		   (concat "* Git-log: " (file-name-nondirectory file))
+		   `(:fun superman-redo :face superman-project-button-face
+			  :help (concat "Git-directory: " ,(superman-git-root file)
+					"\nPress this button to reload\nPress q to go back"))))
+	  (insert "  " (superman-make-button "Project view" '(:fun superman-view-back :face superman-next-project-button-face  :help "Back to project view."))
+		  "  " (superman-make-button "Git overview" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
+		  "  " (superman-make-button "annotate" '(:fun superman-git-annotate :face superman-next-project-button-face :help "Annotate."))
+		  "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list.")))
+	  (insert "\n\n")
+	  (when git-dir
+	    (superman-view-insert-git-branches git-dir)
+	    (superman-view-insert-git-buttons)
+	    (insert "\n"))
+	  (insert "\n")
+	  (put-text-property (point-min) (1+ (point-min)) 'redo-cmd '(superman-redo-git-display))
+	  (put-text-property (point-min) (1+ (point-min)) 'region-start t)
+	  (put-text-property (point-min) (1+ (point-min)) 'git-dir git-dir)
+	  (put-text-property (point-min) (1+ (point-min)) 'git-display "versions")
+	  ;; (put-text-property (point-min) (1+ (point-min)) 'face 'org-level-1)
+	  (put-text-property (point-min) (1+ (point-min)) 'filename file)
+	  (put-text-property (point-min) (1+ (point-min)) 'index index)
+	  (put-text-property (point-min) (1+ (point-min)) 'limit limit)
+	  (put-text-property (point-min) (1+ (point-min)) 'search-string search-string)
+	  (put-text-property (point-min) (1+ (point-min)) 'decoration-only decoration-only)
+	  (superman-view-mode-on)
+	  (superman-git-mode-on)
+	  (insert "** Git")
+	  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
+	  (superman-redo-cat))))))
 
 (defun superman-git-log-1 (&optional file limit search-string decoration-only)
   (interactive)
@@ -1721,7 +1725,7 @@ the git directory."
 	 (log-buf  (concat "*Log[" (file-name-nondirectory file) "]*"))
 	 log-strings)
     (when (string= gitlog "")
-      (error (concat "No search results in file history or file " rel-file " not (not yet) git controlled.")))
+      (error (concat "No search results in file history or file " rel-file " not (not yet) git controlled")))
     (switch-to-buffer log-buf)
     (setq buffer-read-only nil)
     (erase-buffer)
@@ -1823,10 +1827,12 @@ the git directory."
 		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
 	 (ext (file-name-extension file))
 	 (filehash
+	  (if (string= hash "Workspace")
+	      file
 	  (concat
 	   (file-name-sans-extension
 	    (file-name-nondirectory file))
-	   "_" hash (if ext (concat "." ext))))
+	   "_" hash (if ext (concat "." ext)))))
 	 (str (shell-command-to-string 
 	       (concat "cd " (file-name-directory file)
 		       ";" superman-cmd-git

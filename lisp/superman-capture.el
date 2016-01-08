@@ -74,7 +74,7 @@ If JABBER is non-nil (and CREATE is nil) be talkative about non-existing heading
 	     (unless (file-exists-p (file-name-directory index))
 	       (make-directory (file-name-directory index) 'with-parents))
 	     (find-file index)))
-	  (t (error (concat "Project " (car pro) " does not have an index."))))
+	  (t (error (concat "Project " (car pro) " does not have an index"))))
     (widen)
     (show-all)
     (goto-char (point-min))
@@ -382,7 +382,7 @@ in other window for this superman-capture."
 	 (buffer-read-only nil)
 	 (old-destination (get-text-property (point-min) 'destination)))
     (if (not old-destination)
-	(error "Cannot find current destination.")
+	(error "Cannot find current destination")
       (let* ((old-file (buffer-file-name (marker-buffer old-destination)))
 	     (new-file (read-file-name "New destination in file: "
 				       (file-name-directory old-file)
@@ -440,7 +440,7 @@ turn it off."
 at the requested destination and then reset the window configuration."
   (interactive)
   (if buffer-read-only
-      (error "Cannot save in read-only mode.")
+      (error "Cannot save in read-only mode")
     (let* ((scene (get-text-property (point-min) 'scene))
 	   (kill-whole-line t)
 	   (edit (get-text-property (point-min) 'edit))

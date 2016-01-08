@@ -40,7 +40,7 @@
 	       (toggle-read-only -1)
 	       (erase-buffer)
 	       (insert "FILE-LIST: No files in project"))))
-    (error "superman-file-list.el not loaded.")))
+    (error "superman-file-list.el not loaded")))
 
 (defun superman-file-capture-button (c &rest args)
   (superman-make-button "track"

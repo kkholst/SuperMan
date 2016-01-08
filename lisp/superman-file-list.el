@@ -362,7 +362,7 @@ subdirectories below DIR are excluded depending on what file-list-exclude-p retu
   ;; check if dir is assessable 
   (when (not (and (file-readable-p dir)
 		  (file-accessible-directory-p dir)))
-    (error "Directory %s is either not accessible or not readable." dir))
+    (error "Directory %s is either not accessible or not readable" dir))
   ;; initialize the file-list-alist 
   (when  (not file-list-alist)
     (setq file-list-alist

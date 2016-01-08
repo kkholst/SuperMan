@@ -479,8 +479,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	(while sd 
 	  (insert (apply 'superman-make-button (car sd)) " ")
 	  (setq sd (cdr sd)))))
-    (when config-list 
-      (insert "\n\nSaved window configurations: "))
+    (when config-list (insert "\n\nWindow configurations: "))
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
@@ -610,7 +609,18 @@ a fixed button width. This is useful to align a series of buttons.
 		    (message
 		     "Not bound to a command"))))
     (define-key map [return] fun)
-    (when fun-3
+    (if fun-3
+	(define-key map [mouse-3]
+	  `(lambda ()
+	     (interactive)
+	     ;; switch to the current window/buffer
+	     (let* ((pos last-command-event)
+		    (posn (event-start pos)))
+	       (with-current-buffer (window-buffer (posn-window posn))
+		 (goto-char (posn-point posn))
+		 ;; to see where we are:
+		 ;; (message (concat (buffer-name) (int-to-string (point))))
+		 (funcall ',fun-3)))))
       (define-key map [mouse-3]
 	`(lambda ()
 	   (interactive)
@@ -618,10 +628,7 @@ a fixed button width. This is useful to align a series of buttons.
 	   (let* ((pos last-command-event)
 		  (posn (event-start pos)))
 	     (with-current-buffer (window-buffer (posn-window posn))
-	       (goto-char (posn-point posn))
-	       ;; to see where we are:
-	       ;; (message (concat (buffer-name) (int-to-string (point))))
-	       (funcall ',fun-3))))))
+	       (describe-text-properties (posn-point posn)))))))
     (define-key map [mouse-2]
       `(lambda ()
 	 (interactive)
@@ -654,11 +661,11 @@ a fixed button width. This is useful to align a series of buttons.
   "Insert the git buttons
 Translate the branch names into buttons."
   (superman-view-insert-action-buttons
-   '(("[Diff project]" :fun superman-git-diff :face superman-default-button-face :help "Git diff" :width 23)
-     ("[Commit project]" :fun superman-git-commit-project :face superman-default-button-face :help "Git all project" :width 23)
-     ("[Commit marked]" :fun superman-git-commit-marked :face superman-default-button-face :help "Git commit marked files" :width 23)
-     ("[Status]" :fun superman-git-status :face superman-default-button-face :help "Git status" :width 23)
-     ("[Delete marked]" :fun superman-view-delete-marked :face superman-default-button-face :help "Delete marked files" :width 23)))
+   '(("[Diff project]" :fun superman-git-diff :face superman-default-button-face :help "Git diff" :width 17)
+     ("[Commit project]" :fun superman-git-commit-project :face superman-default-button-face :help "Git all project" :width 17)
+     ("[Commit marked]" :fun superman-git-commit-marked :face superman-default-button-face :help "Git commit marked files" :width 17)
+     ("[Status]" :fun superman-git-status :face superman-default-button-face :help "Git status" :width 17)
+     ("[Delete marked]" :fun superman-view-delete-marked :face superman-default-button-face :help "Delete marked files" :width 17)))
   (put-text-property (point-at-bol) (1+ (point-at-bol)) 'git-buttons t))
 
 (defun superman-view-insert-git-branches (&optional dir)
@@ -1353,15 +1360,15 @@ to refresh the view.
 	 (vbuf (concat "*Project[" (car pro) "]*")))
     (if (and (not refresh) (get-buffer vbuf))
 	;; find existing buffer
-	(progn
-	  (switch-to-buffer vbuf)
-	  (let ((buffer-read-only nil))
-	    (widen)
-	    (goto-char (next-single-property-change
-			(point-min) 'nickname))
-	    (when (looking-at ".*$")
-	      (replace-match "")
-	      (superman-view-insert-project-buttons))))
+	;; (progn
+	(switch-to-buffer vbuf)
+      ;; (let ((buffer-read-only nil))
+      ;; (widen)
+      ;; (goto-char (next-single-property-change
+      ;; (point-min) 'nickname))
+      ;; (when (looking-at ".*$")
+      ;; (replace-match "")
+      ;; (superman-view-insert-project-buttons))))
       ;; refresh
       (let* ((nick (car pro))
 	     (loc (superman-project-home pro))
@@ -1428,16 +1435,16 @@ to refresh the view.
 	(put-text-property (point-at-bol) (point-at-eol) 'index index)
 	;; link to previously selected projects
 	(insert " ")
-	(unless config-buttons
+	(unless config-buttons 
 	  (superman-view-insert-config-buttons pro))
 	;; (superman-view-insert-project-buttons)
-	(insert "\n\n")
-	(superman-view-insert-unison-buttons pro)
-	;; (when gitp
-	;; (insert (superman-view-control pro))
 	;; action buttons
 	;; (unless (and (stringp buttons) (string= buttons "nil"))
 	;; (superman-view-insert-action-buttons buttons))
+	(insert "\n\n")
+	(superman-view-insert-unison-buttons pro)
+	;; Make sure that we have some Welcome text
+	
 	;; loop over cats
 	(goto-char (point-max))
 	(insert "\n\n")
@@ -2727,7 +2734,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (let* ((pom (cond
 	       ((org-get-at-bol 'org-hd-marker))
 	       ((point))
-	       (t (error "Don't know where to look for property."))))
+	       (t (error "Don't know where to look for property"))))
 	 (propval
 	  (superman-get-property pom prop nil)))
     propval))
@@ -2741,7 +2748,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 		((get-text-property (point-min) 'filename)))))
     (if (not (stringp file-or-link))
 	(unless noerror
-	  (error "No proper(ty) FileName at point."))
+	  (error "No proper(ty) FileName at point"))
       (org-link-display-format file-or-link))))
 
 (defun superman-filename-with-pom (&optional noerror)
@@ -2752,7 +2759,7 @@ if it exists and add text-property org-hd-marker."
 	 filename)
     (if (not (stringp file-or-link))
 	(unless noerror
-	  (error "No proper(ty) FileName at point."))
+	  (error "No proper(ty) FileName at point"))
       (setq filename (org-link-display-format file-or-link))
       (put-text-property 0 (length filename) 'org-hd-marker
 			 (org-get-at-bol 'org-hd-marker) filename)

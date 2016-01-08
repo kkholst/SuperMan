@@ -822,7 +822,7 @@ Enabling superman mode electrifies the superman buffer for project management."
 (defun superman-pretty-agenda (&optional balls)
   (interactive)
   (if (not superman-todo-mode)
-      (error "Works only in agenda buffers where `superman-todo-mode' is switched on.")
+      (error "Works only in agenda buffers where `superman-todo-mode' is switched on")
     (let ((balls (or balls 
 		     (get-text-property (point-min) 'balls)
 		     superman-todolist-balls))
