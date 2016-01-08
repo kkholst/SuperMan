@@ -450,7 +450,18 @@ or the nickname."
 		  (org-back-to-heading)
 		  (point-marker)))
 	       (hdr (org-get-heading t t))
-	       (lastvisit (superman-get-property nil "LastVisit" nil))
+	       (lastvisit (let ((lvisit (superman-get-property nil "LastVisit" nil)))
+			    (if lvisit lvisit
+			      (let ((error-buf (get-buffer-create "*Superman-parse-errors*")))
+				(save-excursion
+				  (set-buffer error-buf)
+				  (goto-char (point-max))
+				  (insert
+				   "\n"
+				   (superman-make-button
+				    (concat "Project " name " does not have a time-stamp")
+				    `(lambda () (interactive) (superman-goto-profile ,name))) "\n"))
+				"<2013-09-01 Sun 08:>"))))
 	       (config (superman-get-property nil "config" nil))
 	       (todo (or (org-get-todo-state) ""))
 	       (index (or
@@ -483,9 +494,18 @@ or the nickname."
 				   (cons "config" config)
 				   (cons 'todo todo)
 				   (cons "publish-directory" publish-dir))))))
-      superman-project-alist)
+      )
+    ;; sort by last visit
+    (setq superman-project-alist
+	  (sort superman-project-alist (lambda (x y)
+					 (> 
+					  (org-time-stamp-to-now (cdr (assoc "lastvisit" (cadr x))) 'seconds)
+					  (org-time-stamp-to-now (cdr (assoc "lastvisit" (cadr y))) 'seconds)))))
+
     (when (get-buffer "*Superman-parse-errors*")
-      (pop-to-buffer  "*Superman-parse-errors*"))))
+      (pop-to-buffer  "*Superman-parse-errors*"))
+    superman-project-alist))
+
 
 (defun superman-view-directory (&optional dir)
   (interactive)

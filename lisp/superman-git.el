@@ -1821,32 +1821,33 @@ the git directory."
   ;; (superman-git-revision (get-text-property (point-at-bol) 'hash) diff))
   ;; (defun superman-git-revision (pom &optional diff)
   ;; "Shows version of the document at point "
-  (let* ((file (or file (get-text-property (point-min) 'filename)
-		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "filename")))
-	 (hash (or commit
-		   (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
-	 (ext (file-name-extension file))
-	 (filehash
-	  (if (string= hash "Workspace")
-	      file
-	  (concat
-	   (file-name-sans-extension
-	    (file-name-nondirectory file))
-	   "_" hash (if ext (concat "." ext)))))
-	 (str (shell-command-to-string 
-	       (concat "cd " (file-name-directory file)
-		       ";" superman-cmd-git
-		       " show " hash ":./"
-		       (file-name-nondirectory file)))))
-    (if diff (find-file file))
-    (switch-to-buffer-other-window filehash) 
-    (setq buffer-file-name filehash)
-    (normal-mode) ;; Get default major-mode 
-    (erase-buffer)  
-    (insert str)
-    (setq buffer-file-name nil)
-    (goto-char (point-min))
-    (if diff (ediff-buffers (file-name-nondirectory file) filehash))))
+  (catch 'work-space
+    (let* ((file (or file (get-text-property (point-min) 'filename)
+		     (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "filename")))
+	   (hash (or commit
+		     (superman-get-property (get-text-property (point-at-bol) 'superman-item-marker) "commit")))
+	   (ext (if (string= hash "Workspace")
+		    (throw 'work-space (find-file-other-window file))
+		  (file-name-extension file)))
+	   (filehash
+	    (concat
+	     (file-name-sans-extension
+	      (file-name-nondirectory file))
+	     "_" hash (if ext (concat "." ext))))
+	   (str (shell-command-to-string 
+		 (concat "cd " (file-name-directory file)
+			 ";" superman-cmd-git
+			 " show " hash ":./"
+			 (file-name-nondirectory file)))))
+      (if diff (find-file file))
+      (switch-to-buffer-other-window filehash) 
+      (setq buffer-file-name filehash)
+      (normal-mode) ;; Get default major-mode 
+      (erase-buffer)  
+      (insert str)
+      (setq buffer-file-name nil)
+      (goto-char (point-min))
+      (if diff (ediff-buffers (file-name-nondirectory file) filehash)))))
 
 ;;}}}
 ;;{{{ git grep
