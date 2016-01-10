@@ -394,26 +394,26 @@ all dates."
 			     "  "
 			     (superman-make-button "TodoList"
 						   '(:fun superman-todo
-						   :face superman-next-project-button-face
-						   :help "TodoList across all projects"))
+							  :face superman-next-project-button-face
+							  :help "TodoList across all projects"))
 			     "  "
 			     (superman-make-button "Calendar"
 						   '(:fun superman-calendar
-						   :face superman-next-project-button-face
-						   :help "Project-wide calendar"))
+							  :face superman-next-project-button-face
+							  :help "Project-wide calendar"))
 			     "  "
 			     (superman-make-button "Projects"
 						   '(:fun superman
-						   :face superman-next-project-button-face
-						   :help "List of projects"))
+							  :face superman-next-project-button-face
+							  :help "List of projects"))
 			     "\n"
 			     (superman-make-button "\nAdd a Meeting\n"
 						   '(:fun (lambda ()
-						      (interactive)
-						      (superman-capture-meeting
-						       nil nil t))
-						   :face superman-capture-button-face
-						   :help "Add a meeting to calendar"))
+							    (interactive)
+							    (superman-capture-meeting
+							     nil nil t))
+							  :face superman-capture-button-face
+							  :help "Add a meeting to calendar"))
 			     "\n")))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
@@ -422,6 +422,8 @@ all dates."
 ;;{{{ Todo lists
 (defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
 (defvar superman-exclude-from-todo-regexp nil "Regexp to match index-files that should not contribute todo lists")
+
+
 (defalias 'S-todo 'superman-todo)
 (defun superman-todo (&optional project read-index-files)
   "Show todo list for PROJECT."
@@ -433,45 +435,45 @@ all dates."
 	     ((,(intern (if superman-todo-tags "tags-todo" "alltodo"))
 	       ,(if superman-todo-tags superman-todo-tags "")
 	       ((org-agenda-files
-		 ;; (reverse
-		 ;; (list "~/metropolis/SuperAgenda.org")
 		 (superman-index-list
 		  nil nil nil nil nil
 		  superman-exclude-from-todo-regexp)))))
-	     (pretty superman-pretty-agenda)
 	     ((org-agenda-window-setup 'current-window)
-	      (org-agenda-finalize-hook
-	       (lambda ()
-		 (superman-format-agenda
-		  superman-todolist-balls
-		  '(superman-todo)
-		  "* Superman: todo-list"
-		  (concat "  "
-			  (superman-make-button "Agenda"
-						'(:fun superman-agenda
-						       :face superman-next-project-button-face
-						       :help "Agenda across all projects"))
-			  "  "
-			  (superman-make-button "Calendar"
-						'(:fun superman-calendar
-						       :face superman-next-project-button-face
-						       :help "Project-wide calendar"))
-			  "  "
-			  (superman-make-button "Projects"
-						'(:fun superman
-						       :face superman-next-project-button-face
-						       :help "List of projects"))
-			  "\n\n"
-			  (superman-make-button "Add a task"
-						'(:fun (lambda ()
-							 (interactive)
-							 (superman-capture-task
-							  nil nil t))
-						       :face superman-capture-button-face
-						       :help "Add a task to one of the projects")))
-		  nil pretty))))))))
+	      (pretty superman-pretty-agenda)
+	      (org-agenda-finalize-hook 'superman-pretty-todolist))))))
     (push ?P unread-command-events)
     (call-interactively 'org-agenda)))
+
+(defun superman-pretty-todolist ()
+  (superman-format-agenda
+   superman-todolist-balls
+   '(superman-todo)
+   "* Superman: todo-list"
+   (concat "  "
+	   (superman-make-button "Agenda"
+				 '(:fun superman-agenda
+					:face superman-next-project-button-face
+					:help "Agenda across all projects"))
+	   "  "
+	   (superman-make-button "Calendar"
+				 '(:fun superman-calendar
+					:face superman-next-project-button-face
+					:help "Project-wide calendar"))
+	   "  "
+	   (superman-make-button "Projects"
+				 '(:fun superman
+					:face superman-next-project-button-face
+					:help "List of projects"))
+	   "\n\n"
+	   (superman-make-button "Add a task"
+				 '(:fun (lambda ()
+					  (interactive)
+					  (superman-capture-task
+					   nil nil t))
+					:face superman-capture-button-face
+					:help "Add a task to one of the projects")))
+   nil pretty))
+
 ;;}}}
 ;;{{{ Calendar
 

@@ -410,7 +410,7 @@ given in superman notation."
 				  "  " (superman-make-button "Git" '(:fun superman-git-display :face superman-next-project-button-face :help "Control project's git repository."))
 				  "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list."))
 				  ;; "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's todo list."))
-				  "  " (superman-make-button "Time-line" :fun superman-project-timeline :face superman-next-project-button-face :help "View project's timeline."))
+				  "  " (superman-make-button "Time-line" '(:fun superman-project-timeline :face superman-next-project-button-face :help "View project's timeline.")))
 			  )))))))))
 	  ;; to be 100% sure that the agenda is not accidentally written
 	  ;; to the index file

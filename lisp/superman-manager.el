@@ -351,19 +351,11 @@ or the nickname."
 		(save-excursion (goto-char pom)
 				(car (org-property--local-values property literal-nil))))
 	       (t (car (org-property--local-values property literal-nil))))))
-    ;; (prop
-    ;; (if (not (markerp pom));; pom is a point
-    ;; (org-entry-get (or pom (point))
-    ;; property nil literal-nil)
-    ;; (if (marker-buffer pom)
-    ;; ;;FIXME: maybe the following widen is unnecessary?
-    ;; (save-excursion
-    ;; (save-restriction
-    ;; (set-buffer (marker-buffer pom))
-    ;; (widen)
-    ;; (org-entry-get pom property nil literal-nil)))))))
     (if (stringp prop)
-	(replace-regexp-in-string "[ \t]+$" "" prop))))
+	(progn
+	  (setq prop (replace-regexp-in-string "[ \t]+$" "" prop))
+	  (if (string= prop "") nil prop))
+      nil)))
 
 ;; (defvar superman-project-kal-el nil
   ;; "If non-nil add the Kal-El project to project alist.
@@ -698,7 +690,7 @@ project directory tree to the trash."
       (when (yes-or-no-p (concat "Are you sure? "))
 	(move-file-to-trash dir)))
     (when (and (file-exists-p index)
-	       (yes-or-no-p (concat "Remove index file? " index)))
+	       (yes-or-no-p (concat "Remove index file? " index " ")))
       (move-file-to-trash index))
     (set-window-configuration scene)))
 
