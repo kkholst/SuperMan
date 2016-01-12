@@ -467,24 +467,19 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
   "Insert window configuration buttons"
   (let* ((pro (or project superman-current-project))
 	 (config-list (superman-view-read-config pro)))
-    ;; (title-marker 
-    ;; (save-excursion
-    ;; (superman-goto-project project "Configuration" nil nil 'narrow nil)
-    ;; (goto-char (point-min))
-    ;; (point-marker))))
-    ;; (put-text-property 0 (length title) 'superman-e-marker title-marker title)
-    ;; (when (or superman-sticky-displays config-list) (insert title " "))
     (when superman-sticky-displays
       (let ((sd superman-sticky-displays))
 	(while sd 
 	  (insert (apply 'superman-make-button (car sd)) " ")
 	  (setq sd (cdr sd)))))
-    (when config-list (insert "\n\nWindow configurations: "))
+    (superman-view-insert-unison-buttons project)
+    ;; (when config-list
+    ;; (insert "\n\nWindow configurations: "))
     (while config-list
       (let* ((current-config (car config-list))
 	     (config-name (car current-config))
 	     (config-cmd (cdr current-config)))
-	(insert "[" (superman-make-button
+	(insert " [" (superman-make-button
 		     config-name
 		     `(:fun (lambda () (interactive)
 			(superman-switch-config nil nil ,config-cmd))
@@ -560,9 +555,7 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
       (let* ((current-unison (car unison-list))
 	     (unison-name (car current-unison))
 	     (unison-cmd (cdr current-unison)))
-	(when (= i 1)
-	  (insert "\n")
-	  (insert title " "))
+	;; (when (= i 1) (insert "\n") (insert title " "))
 	(put-text-property
 	 0 1
 	 'superman-header-marker t unison-name)
@@ -1017,39 +1010,52 @@ Return the formatted string with text-properties."
     column-names))
 
 
-(defun superman-parse-props (&optional pom add-point with-heading)
+(defun superman-parse-properties (&optional pom with-heading with-body)
   "Read properties at point or marker POM and return
-them in an alist where the key is the name of the property
-in lower case.
-
-If ADD-POINT augment the list by an element
-which holds the point of the heading."
+a plist where the keys are the names of the properties
+in lower case. Special elements are in capitals: The point-marker is stored as
+:POINT-MARKER, :HEADING stores the heading (if WITH-HEADING is non-nil)
+and :BODY stores the body (if WITH-BODY is non-nil)
+"
   (org-with-point-at pom
     (save-excursion
       (let ((case-fold-search t)
 	    (pblock (org-get-property-block))
-	    props
+	    (props `(:POINT-MARKER ,(point-marker)))
 	    (next 0))
-	(when add-point
-	  (setq props `(("point" ,(point)))))
+	(when with-heading
+	  (let ((header (ignore-errors (org-get-heading t t))))
+	    (if (not header)
+		(setq props (plist-put props :HEADING "Untitled section"))
+	      (set-text-properties 0 (length header) nil header)
+	      (setq props (plist-put props :HEADING header)))))
 	(when pblock
 	  (narrow-to-region (car pblock) (cdr pblock))
 	  (goto-char (point-min))
 	  (while (= next 0)
 	    (when (looking-at "^[ \t]*:\\([^:]+\\):[ \t]*\\(.*\\)[ \t]*$")
 	      (setq props
-		    (append
+		    (plist-put
 		     props
-		     `((,(downcase (match-string-no-properties 1)) ,(match-string-no-properties 2))))
-		    ))
+		     (intern (concat ":" (downcase (match-string-no-properties 1))))
+		     (match-string-no-properties 2))))
 	    (setq next (forward-line 1)))
 	  (widen))
-	(if (not with-heading)
-	    props
-	  (let ((header (ignore-errors (org-get-heading t t))))
-	    (if (not header)
-		`("Untitled section" ,props)
-	      `(,header ,props))))))))
+	(when with-body
+	  (let* ((beg (if pblock
+			  (save-excursion
+			    (goto-char (cdr pblock))
+			    (point-at-eol))
+			(save-excursion
+			  (org-back-to-heading)
+			  (point-at-eol))))
+		 (end (progn (outline-next-heading) (point)))
+		 (body (buffer-substring beg end)))
+	    (setq body (replace-regexp-in-string "^[\n \t]+" "" body))
+	    (setq body (replace-regexp-in-string "[\n \t]+$" "" body))
+	    (set-text-properties 0 (length body) nil body)
+	    (setq props (plist-put props :BODY body))))
+	props))))
 
 (defun superman-delete-balls (&optional pom)
   "Delete balls, i.e. column properties, at point or marker POM."
@@ -1310,20 +1316,19 @@ which locates the heading in the buffer."
 	  (goto-char (point-min))
 	  ;; move to first heading
 	  ;; with the correct level
-	  ;; (let ((org-outline-regexp "\\*+ "))
 	  (while (and (not (and
 			    (looking-at org-complex-heading-regexp)
 			    (org-current-level)
 			    (= (org-current-level) level)))
 		      (outline-next-heading)))
 	  (when (and (org-current-level) (= (org-current-level) level))
-	    (let ((cats `(,(superman-parse-props (point) 'p 'h)))
+	    (let ((cats `(,(superman-parse-properties (point) 'p 'h)))
 		  (cat-point (point)))
 	      (while (progn (org-forward-heading-same-level 1)
 			    (> (point) cat-point))
 		;; (looking-at org-complex-heading-regexp)
 		(setq cat-point (point)
-		      cats (append cats `(,(superman-parse-props cat-point 'p 'h)))))
+		      cats (append cats `(,(superman-parse-properties cat-point 'p 'h)))))
 	      cats)))))))
 
 (defun superman-get-project (object &optional ask)
@@ -1360,15 +1365,7 @@ to refresh the view.
 	 (vbuf (concat "*Project[" (car pro) "]*")))
     (if (and (not refresh) (get-buffer vbuf))
 	;; find existing buffer
-	;; (progn
 	(switch-to-buffer vbuf)
-      ;; (let ((buffer-read-only nil))
-      ;; (widen)
-      ;; (goto-char (next-single-property-change
-      ;; (point-min) 'nickname))
-      ;; (when (looking-at ".*$")
-      ;; (replace-match "")
-      ;; (superman-view-insert-project-buttons))))
       ;; refresh
       (let* ((nick (car pro))
 	     (loc (superman-project-home pro))
@@ -1393,12 +1390,9 @@ to refresh the view.
 				    (split-string x "|"))
 				(split-string (replace-regexp-in-string
 					       "^[ \t]*\\|[ \t]$" "" b-string) "," t)) "nil")))))
-	     ;; maybe disable config buttons
 	     (config-buttons nil)
-	     ;; (with-current-buffer
-	     ;; (goto-char (point-min))
-	     ;; (when (re-search-forward ":ConfigButtons:" nil t))))
-	     ;; (superman-get-property (point) "ConfigButtons" nil))))
+	     ;; welcome text or project description
+	     description
 	     (font-lock-global-modes nil)
 	     (org-startup-folded nil))
 	(set-text-properties 0 (length nick) nil nick)
@@ -1433,18 +1427,23 @@ to refresh the view.
 	(put-text-property (point-at-bol) (point-at-eol) 'project-view t) ;; to identify project-view buffer, do not copy to other views
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
 	(put-text-property (point-at-bol) (point-at-eol) 'index index)
-	;; link to previously selected projects
 	(insert " ")
+	;; first superman-sticky-displays then unison (if any) and config (if any)
 	(unless config-buttons 
 	  (superman-view-insert-config-buttons pro))
-	;; (superman-view-insert-project-buttons)
-	;; action buttons
-	;; (unless (and (stringp buttons) (string= buttons "nil"))
-	;; (superman-view-insert-action-buttons buttons))
-	(insert "\n\n")
-	(superman-view-insert-unison-buttons pro)
-	;; Make sure that we have some Welcome text
-	
+	(insert "\n")
+	;; Project description or welcome text
+	(set-buffer ibuf)
+	(goto-char (point-min))
+	(unless (re-search-forward ":ProjectStart:" nil t)
+	  (insert "*** Index of project bla\n:PROPERTIES:\n:ProjectStart: Unknown\n:END:\n")
+	  (insert "Project " nick " welcome message.\n"))
+	(org-back-to-heading)
+	(setq description
+	      (plist-put (superman-parse-properties (point) 'header 'body)
+			 :freetext t))
+	(setq cats 
+	      (append cats `(,description)))
 	;; loop over cats
 	(goto-char (point-max))
 	(insert "\n\n")
@@ -1481,14 +1480,14 @@ properties such as balls for the section.
 		    (point-at-bol) 'org-hd-marker))
 	   (cat (cond (cat)
 		      (marker
-		       (superman-parse-props
-			(get-text-property (point-at-bol) 'org-hd-marker)
-			'p 'h))
+		       ;; (superman-parse-properties
+		       (get-text-property (point-at-bol) 'org-hd-marker))
+		      ;; 'p 'h))
 		      ((string= (get-text-property (point-at-bol) 'cat) "git")
-		       `("git"
-			 (("git-cycle" ,superman-git-default-displays)
-			  ("git-display"  ,(car superman-git-default-displays))
-			  ("point" ,(point-at-bol)))))
+		       `(:HEADING "git"
+			 :git-cycle ,superman-git-default-displays
+			 :git-display ,(car superman-git-default-displays)
+			 :POINT-MARKER ,(point-at-bol)))
 		      (t (error "Don't know how to do this cat"))))
 	   (view-buf (current-buffer))
 	   (index-buf (when marker (marker-buffer marker)))
@@ -1505,32 +1504,26 @@ properties such as balls for the section.
   "Format category CAT based on information in buffer INDEX-BUF. Display the result
 in buffer VIEW-BUF."
   (let* ((case-fold-search t)
-	 (name (downcase (car cat)))
-	 (props (cadr cat))
+	 (name (downcase (plist-get cat :HEADING)))
 	 (git (string= "git" name))
 	 (mail (string= "mail" name))
 	 ;; prefer columns/balls specified in index buffer
 	 (cat-balls (unless git
-		      (if props
-			  (delete
-			   nil
-			   (mapcar
-			    #'(lambda (x)
-				(when (string-match "^Ball[0-9]+$" (car x))
-				  (superman-distangle-ball (cadr x)))) props)))))
+		      (let (out bb (i 0))
+			(while (setq bb (plist-get cat (intern (concat ":ball" (int-to-string i)))))
+			  (setq out (append-out (superman-distangle-ball bb)))
+			  (setq i (1+ i)))))) 
 	 (gear (cdr (assoc name superman-finalize-cat-alist)))
 	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
-	 (index-point (cadr (assoc "point" props)))
-	 (buttons (cadr (assoc "buttons" props)))
-	 ;; (folded (cadr (assoc "startfolded") props))
-	 (free (assoc "freetext" props))
-	 (hidden (assoc "hidden" props)))
+	 (index-point (plist-get cat :POINT-MARKER))
+	 (buttons (plist-get cat :buttons))
+	 (free (plist-get cat :freetext))
+	 (hidden (plist-get cat :hidden)))
     (cond ((and hidden
 		;;hidden sections 
-		(let ((hidden-expr (cadr hidden)))
-		  (if (string-match "not[ \t]*\\(.*\\)$" hidden-expr)
-		      (not (eval (intern (match-string-no-properties 1 hidden-expr))))
-		    (eval (intern hidden-expr))))))
+		(if (string-match "not[ \t]*\\(.*\\)$" hidden)
+		    (not (eval (intern (match-string-no-properties 1 hidden))))
+		  (eval (intern hidden)))))
 	  ;; free text sections are shown as they are
 	  (free
 	   (superman-format-freetext index-buf index-point view-buf))
@@ -1538,7 +1531,7 @@ in buffer VIEW-BUF."
 	  (git
 	   ;; git display git control of directory 
 	   (superman-git-format-display
-	    view-buf git-dir props
+	    view-buf git-dir cat
 	    index-buf 
 	    name))
 	  ;; mail section
@@ -1670,9 +1663,14 @@ in buffer VIEW-BUF."
 	(with-current-buffer view-buffer
 	  (when superman-empty-line-before-cat (insert "\n"))
 	  (superman-view-insert-section-name
-	   (concat (upcase (substring-no-properties  name 0 1)) (substring-no-properties  name 1 (length name) ))
+	   (concat (upcase (substring-no-properties name 0 1)) (substring-no-properties  name 1 (length name) ))
 	   0 balls
 	   index-marker)
+	  ;; (insert "\n\nDescription: "
+	  ;; (superman-make-button 
+	  ;; "Edit" '(:fun superman-view-edit-item
+	  ;; :face superman-edit-button-face 
+	  ;; :help "Edit the project description"))
 	  (insert "\n")
 	  (when superman-empty-line-after-cat (insert "\n"))
 	  (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
@@ -1729,9 +1727,10 @@ in buffer VIEW-BUF."
 	      ;; (cadr (assoc name superman-capture-alist))
 	      'superman-capture-item)))
     (insert
-     (superman-make-button (concat "** " name) `(:fun ,fun
-						      :face superman-capture-button-face
-						      :help (or help "Add new item")))
+     (superman-make-button (concat "** " name) 
+			   `(:fun ,fun 
+				  :face superman-capture-button-face
+				  :help ,(or help "Edit this section")))
      "\n"))
   (forward-line -1)
   (beginning-of-line)
@@ -1741,18 +1740,18 @@ in buffer VIEW-BUF."
   (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker index-marker)
   (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " name))
   (end-of-line)
-  (insert " [" (int-to-string count) "]")
-  (unless (or (not superman-view-mode) superman-git-mode)
-    (insert (superman-make-button
-	     "column+"
-	     '(:fun superman-new-ball
-		    :face superman-git-keyboard-face-i
-		    :help "Add a column"))
-	    " " (superman-make-button
-		 "item+"
-		 '(:fun superman-capture-thing
-			:face superman-git-keyboard-face-i
-			:help "Add an item")))))
+  (when (> count 0) (insert " [" (int-to-string count) "]")))
+;; (unless (or (not superman-view-mode) superman-git-mode)
+;; (insert (superman-make-button
+;; "column+"
+;; '(:fun superman-new-ball
+;; :face superman-git-keyboard-face-i
+;; :help "Add a column"))
+;; " " (superman-make-button
+;; "item+"
+;; '(:fun superman-capture-thing
+;; :face superman-git-keyboard-face-i
+;; :help "Add an item")))))
 
 ;;}}}
 ;;{{{ Formatting items and column names
@@ -1803,7 +1802,6 @@ a formatted string with faces."
 	 (fun (or (cadr (assoc "fun" (cdr ball))) 'superman-trim-string))
 	 (width (or (cdr (assoc "width" (cdr ball))) (list 23)))
 	 (args (cdr (assoc "args" (cdr ball))))
-	 ;; (preserve-props (assoc "preserve" (cdr ball)))
 	 (trim-args (nconc width args))
 	 (trimmed-string
 	  (concat

@@ -758,16 +758,16 @@ Enabling superman mode electrifies the superman buffer for project management."
     (while key
       (setq marker (next-single-property-change key 'org-hd-marker nil end))
       (when marker
-	(setq props (superman-parse-props
+	(setq props (superman-parse-properties
 		     (get-text-property marker 'org-hd-marker)
-		     nil
-		     'with))
+		     t
+		     nil))
 	(let* ((case-fold-search t)
-	       (meetingdate (cadr (assoc "meetingdate" (cadr props))))
+	       (meetingdate (plist-get props :meetingdate))
 	       (time (when meetingdate (org-parse-time-string meetingdate 'no)))
 	       (hour (nth 2 time))
 	       (minutes (nth 1 time))
-	       (msg (car props)))
+	       (msg (plist-get props :HEADING)))
 	  (when (and hour minutes)
 	    (setq minutes (int-to-string minutes))
 	    (setq hour (int-to-string hour))

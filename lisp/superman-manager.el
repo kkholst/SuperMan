@@ -417,7 +417,7 @@ or the nickname."
 			       "\n"
 			       (superman-make-button
 				(concat "Project " name " does not have a location")
-				`(lambda () (interactive) (superman-goto-profile ,name))) "\n"))
+				`(:fun (lambda () (interactive) (superman-goto-profile ,name)))) "\n"))
 			    (setq loc ""))
 			(if (string-match org-bracket-link-regexp loc)
 			    (setq loc (org-match-string-no-properties 1 loc))
@@ -452,7 +452,7 @@ or the nickname."
 				   "\n"
 				   (superman-make-button
 				    (concat "Project " name " does not have a time-stamp")
-				    `(lambda () (interactive) (superman-goto-profile ,name))) "\n"))
+				    `(:fun (lambda () (interactive) (superman-goto-profile ,name)))) "\n"))
 				"<2013-09-01 Sun 08:>"))))
 	       (config (superman-get-property nil "config" nil))
 	       (todo (or (org-get-todo-state) ""))

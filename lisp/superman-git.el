@@ -927,7 +927,7 @@ This function should be bound to a key or button."
 If directory is not yet git controlled provide a button which when pressed initializes git control.
 
 Argument VIEW-BUF is the buffer which shows the results. DIR is a directory, the git repository.
-PROPS is an alist with properties which should contain the keywords git-cycle and git-display.
+PROPS is a plist with properties which should contain the keywords git-cycle and git-display.
 The 'active display' is the first existing thing of 
  a) text-property 'git-display at point-min in VIEW-BUF
  b) the value of keyword 'git-display' in PROPS 
@@ -950,7 +950,7 @@ NAME is used to make the section heading.
 	(put-text-property (point-at-bol) (1+ (point-at-bol)) 'cat 'git)
 	(insert (superman-initialize-git-control-string dir)))
     (let* ((git-dir (get-text-property (point-min) 'git-dir))
-	   (cycles-given (cadr (assoc "git-cycle" props)))
+	   (cycles-given (plist-get props :git-cycle))
 	   (cycles (cond ((listp cycles-given) cycles-given)
 			 (t (split-string
 			     cycles-given
@@ -958,7 +958,7 @@ NAME is used to make the section heading.
 	   (cycle (or
 		   (with-current-buffer view-buf
 		     (get-text-property (point-min) 'git-display))
-		   (cadr (assoc "git-display" props))
+		   (plist-get props :git-display)
 		   (car cycles)))
 	   (limit (with-current-buffer view-buf
 		    (or (get-text-property (point-min) 'limit) superman-git-log-limit)))

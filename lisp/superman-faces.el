@@ -73,6 +73,20 @@
 
 ;;}}}
 ;;{{{ Save and quit button
+(defface superman-edit-button-face
+  '((((class color) (background dark))
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "darkgreen"
+     :height 1.0
+     )
+    (t
+     :inherit superman-default-button-face
+     :background "gray93"
+     :foreground "darkgreen"
+     :height 1.0))
+  "Face for superman save button."
+  :group 'superman)
 (defface superman-save-button-face
   '((((class color) (background dark))
      :inherit superman-default-button-face

@@ -720,6 +720,7 @@ and in the first cat otherwise."
 		    ("Link" :complete "link to url")
 		    ("FileName" :complete superman-read-file-name)
 		    ("AppointmentDate" :complete superman-read-date)
+		    ("ProjectStart" :complete superman-read-date)
 		    ("Location" :complete "Where to meet")))
 	props keys)
     (if superman-view-mode
