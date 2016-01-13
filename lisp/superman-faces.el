@@ -71,6 +71,14 @@
   "Default face used for superman capture item buttons."
   :group 'superman)
 
+(defface superman-free-text-face
+  '((t (:height 1.0
+		:foreground "white"
+		:background "aquamarine"
+		:box (:line-width 1 :color "gray88" :style released-button))))
+  "Default face used to mark free text regions."
+  :group 'superman)
+
 ;;}}}
 ;;{{{ Save and quit button
 (defface superman-edit-button-face

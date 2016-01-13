@@ -329,29 +329,7 @@ the current sub-category and return the minimum."
       (if subp subcat-pos cat-pos))))
 
 ;;}}}
-;;{{{ window configuration
-
-(defun superman-view-read-config (project)
-  (let (configs
-	(case-fold-search t))
-    (save-window-excursion
-      (when (superman-goto-project project "Configuration" nil nil 'narrow nil)
-	  (goto-char (point-min))
-	  (while (outline-next-heading)
-	    (let ((config (or (superman-get-property (point) "Config")
-			      (cdr (assoc
-				    (downcase
-				     (or (org-get-heading t t) "Untitled"))
-				     superman-config-alist))))
-		  (hdr (or (org-get-heading t t) "NoHeading")))
-	      (when config 
-		(setq
-		 configs
-		 (append
-		  configs
-		  (list (cons hdr config)))))))
-	  (widen)))
-      configs))
+;;{{{ project buttons
 
 (defun superman-ual (&optional project)
   (interactive)
@@ -463,114 +441,417 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
 	(insert "" b-name " "))
       (setq i (+ i 1) b-list (cdr b-list)))))
 
-(defun superman-view-insert-config-buttons (project)
+(defun superman-view-insert-buttons (project)
   "Insert window configuration buttons"
   (let* ((pro (or project superman-current-project))
-	 (config-list (superman-view-read-config pro)))
+	 (unison-list  (superman-view-read-unison pro)))
     (when superman-sticky-displays
       (let ((sd superman-sticky-displays))
 	(while sd 
 	  (insert (apply 'superman-make-button (car sd)) " ")
 	  (setq sd (cdr sd)))))
+    ;; window configurations
+    ;; (insert " ")
+    (superman-view-insert-make-buttons project)
+    (insert " ")
     (superman-view-insert-unison-buttons project)
-    ;; (when config-list
-    ;; (insert "\n\nWindow configurations: "))
-    (while config-list
-      (let* ((current-config (car config-list))
-	     (config-name (car current-config))
-	     (config-cmd (cdr current-config)))
-	(insert " [" (superman-make-button
-		     config-name
-		     `(:fun (lambda () (interactive)
-			(superman-switch-config nil nil ,config-cmd))
-		     :face superman-warning-face
-		     :help config-cmd))
-		"]  "))
-      (setq config-list (cdr config-list)))))
+    (insert " ")
+    (superman-view-insert-config-buttons project)))
 
 (defvar superman-sticky-displays
-  '(("Timeline" (:fun superman-project-timeline :face superman-capture-button-face :help "Show project time line" :width 11))
-    ("Todo" (:fun superman-project-todo :face superman-capture-button-face :help "Show project time line" :width 11))
+  '(("Todo/Tline" (:fun (lambda () (interactive) (delete-other-windows) (superman-project-timeline) (split-window-vertically) (superman-project-todo)) :face superman-capture-button-face :help "Show project time line" :width 11))
+    ;; ("Todo" (:fun superman-project-todo :face superman-capture-button-face :help "Show project time line" :width 11))
     ("Git (g)" (:fun superman-git-display :face superman-capture-button-face :help "Show project git repository" :width 11))
     ("Files (f)" (:fun superman-view-file-list :face superman-capture-button-face :help "Show project files" :width 11))
     ("Help (h)" (:fun superman-ual :face superman-capture-button-face :help "Open the superman-ual" :width 11 )))
   "Alist of displays that are shown as action buttons for all projects.")
 
 ;;}}}
+;;{{{ window configurations
+
+
+(defun superman-view-read-config (project)
+  (let (configs
+	(case-fold-search t))
+    (save-window-excursion
+      (when (superman-goto-project project "Configuration" nil nil 'narrow nil)
+	(goto-char (point-min))
+	(while (re-search-forward ":config:" nil t)
+	  (org-back-to-heading t)
+	  (setq configs
+		(append configs
+			(list 
+			 (superman-parse-properties (point) 'with-heading 'with-body))))
+	  (outline-next-heading))
+	configs))))
+
+
+(defvar superman-configuration-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-configuration-mode' commands.")
+   
+(define-minor-mode superman-configuration-mode
+     "Toggle superman configuration mode.
+With argument ARG turn superman-configuration-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-configuration mode enables the configuration keyboard to control single files."
+     :lighter " *SupermanConfiguration*"
+     :group 'org
+     :keymap 'superman-configuration-mode-map)
+
+(defun superman-configuration-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-configuration-mode t))
+
+
+(define-key superman-configuration-mode-map "n" 
+  #'(lambda () (interactive)
+      (ignore-errors (goto-char (next-single-property-change (point-at-eol) 'config)))))
+(define-key superman-configuration-mode-map "p" 
+  #'(lambda () (interactive)
+      (ignore-errors (goto-char (previous-single-property-change (point-at-bol) 'config)))
+      (beginning-of-line)))
+(define-key superman-configuration-mode-map "e" 
+  #'(lambda () (interactive) 
+      (goto-char (or (next-single-property-change (point) 'config) 
+		     (previous-single-property-change (point) 'config)))
+      (superman-view-edit-item)))
+(define-key superman-configuration-mode-map "R" 'superman-redo)
+(define-key superman-configuration-mode-map [(return)] 
+  `(lambda () (interactive) (superman-choose-entry)))
+
+(defun superman-view-insert-config-buttons (project)
+  (let ((config-list (superman-view-read-config pro)))
+    (when (> (length config-list) 0)
+      (insert (superman-make-button
+	       "Config (c)"
+	       '(:fun superman-view-show-configurations
+		      :face superman-capture-button-face
+		      :help "Choose a window configuration"))))))
+
+(defun superman-view-show-configurations (&optional refresh)
+  (interactive)
+  (let* ((nick (get-text-property (point-min) 'nickname))
+	 (config-buf (concat "*Configurations[" nick "]*"))
+	 (buffer-read-only nil)
+	 (config-list  (superman-view-read-config nick))
+	 (i 0))
+    (if (and (or (not refresh)
+		 (and (integerp refresh)
+		      (= refresh 1)))
+	     (get-buffer config-buf))
+	(pop-to-buffer config-buf)
+      (get-buffer-create config-buf)
+      (pop-to-buffer config-buf)
+      (erase-buffer)
+      ;; major-mode
+      (org-mode)
+      (font-lock-mode -1)
+      ;; minor-mode
+      (superman-configuration-mode)
+      (insert (superman-make-button
+	       "Superman configuration"
+	       '(:fun superman-redo
+		      :face superman-face
+		      :help "Read configuration(s) and update this buffer")))
+      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
+			 `(superman-view-show-configurations 'refresh))
+      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+      (insert "\n\n")
+      (insert "* Edit Configuration setup")
+      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+      (put-text-property (point-at-bol) (point-at-eol) 'superman-choice 
+			 `(lambda () (interactive) 
+			    (superman-goto-project ,nick "Configuration" nil )))
+      (put-text-property (point-at-bol) (point-at-eol) 'display "★ Configuration" )
+      (insert "\n\nSaved window configurations (press digit to restore the corresponding window configuration):\n\n")
+      (while config-list
+	(let* ((config (car config-list))
+	       (name (plist-get config :HEADING))
+	       (marker (plist-get config :POINT-MARKER))
+	       (cmd (plist-get config :config)))
+	  (insert (int-to-string i) ": "
+		  (superman-make-button
+		   name
+		   '(:fun superman-choose-entry
+			  :face superman-capture-button-face
+			  :help "Set window configuration")))
+	  (put-text-property (point-at-bol) (point-at-eol) 'config i)
+	  (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker marker)
+	  (put-text-property (point-at-bol) (point-at-eol) 
+			     'superman-choice 
+			     `(lambda  () (interactive)
+				(superman-switch-config nil nil ,cmd)))
+	  (insert "\n\n" "Windows: " cmd "\n\n")
+	  (define-key superman-configuration-mode-map
+	    (int-to-string i)
+	    `(lambda () (interactive) (goto-char (point-min)) 
+	       (re-search-forward ,(concat "^" (int-to-string i) ": ") nil t)
+	       (superman-choose-entry)))
+	  (setq  i (+ i 1) config-list (cdr config-list))))))
+  (setq buffer-read-only t))
+
+;;{{{ make
+
+(defun superman-view-insert-make-buttons (project)
+  "Insert make buttons"
+  (let* ((pro (or project superman-current-project))
+	 (make-list (superman-view-read-make pro)))
+    (when (> (length make-list) 0)
+      (insert (superman-make-button
+	       "Make (C-m)"
+	       '(:fun superman-view-show-make 
+		      :face superman-capture-button-face
+		      :help "Apply a make command"))))))
+
+(defvar superman-make-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-make-mode' commands.")
+   
+(define-minor-mode superman-make-mode
+     "Toggle superman make mode.
+With argument ARG turn superman-make-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-make mode enables the make keyboard to control single files."
+     :lighter " *SupermanMake*"
+     :group 'org
+     :keymap 'superman-make-mode-map)
+
+(defun superman-make-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-make-mode t))
+
+
+(define-key superman-make-mode-map "R" 'superman-redo)
+(define-key superman-make-mode-map "e"
+  `(lambda () (interactive) 
+     (ignore-errors (org-back-to-heading))
+     (superman-choose-entry)))
+
+(define-key superman-make-mode-map [(return)] 
+  `(lambda () (interactive) (superman-choose-entry)))
+
+(defun superman-view-show-make (&optional refresh)
+  (interactive "p")
+  (let* ((nick (get-text-property (point-min) 'nickname))
+	 (make-buf (concat "*Make[" nick "]*"))
+	 (make-list (superman-view-read-make nick)))
+    (if (< (length make-list) 1)
+	(message "no MakeFile in project directory")
+      (if (and (or (not refresh)
+		   (and (integerp refresh)
+			(= refresh 1)))
+	       (get-buffer make-buf))
+	  (pop-to-buffer make-buf)
+	(get-buffer-create make-buf)
+	;; (set-buffer make-buf)
+	(pop-to-buffer make-buf)
+	(let ((buffer-read-only nil))
+	  (erase-buffer)
+	  ;; major-mode
+	  (org-mode)
+	  (font-lock-mode -1)
+	  ;; minor-mode
+	  (superman-make-mode)
+	  (insert (superman-make-button
+		   "Superman make"
+		   '(:fun superman-redo
+			  :face superman-face
+			  :help "Read makefile(s) and update this buffer")))
+	  (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
+			     `(superman-view-show-make 'refresh))
+	  (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+	  (insert "\n\n")
+	  (while make-list
+	    (let* ((make (car make-list))
+		   (targets (cdr make))
+		   (i 0)
+		   cmd)
+	      (insert "* " (car make))
+	      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+	      (put-text-property (point-at-bol) (point-at-eol) 'superman-choice `(lambda () (interactive) (find-file-other-window ,(car make))))
+	      (put-text-property (point-at-bol) (point-at-eol) 'display (concat "★ " (file-name-nondirectory (car make))))
+	      (insert " " (superman-make-button "Edit (e)" `(:fun superman-choose-entry
+								  :face superman-edit-button-face 
+								  :width 10 :help (concat "Edit make file " ,(car make)))))
+	      (insert " Location: " (file-name-directory (car make)))
+	      (insert "\n\nTargets (press target digit to run corresponding make command):\n\n")
+	      (while targets 
+		(setq cmd (concat "make -k " (car targets)))
+		(insert (int-to-string i) ": "
+			(superman-make-button
+			 cmd
+			 '(:fun superman-choose-entry
+				:face superman-capture-button-face
+				:help "Apply make command as shell-command"
+				)))
+		(put-text-property (point-at-bol) (point-at-eol) 
+				   'superman-choice 
+				   `(lambda  () (interactive)
+				      (async-shell-command
+				       ,cmd "*Superman-Make-Output*" "*Superman-Make-Error*")))
+		(insert "\n")
+		(define-key superman-make-mode-map
+		  (int-to-string i)
+		  `(lambda () (interactive) (goto-char (point-min)) 
+		     (re-search-forward ,(concat "^" (int-to-string i) ": ") nil t)
+		     (superman-choose-entry)))
+		(setq i (+ i 1) targets (cdr targets)))
+	      (setq make-list (cdr make-list)))))
+	(setq buffer-read-only t)))))
+
+(defun superman-view-read-make (project)
+  "Find Makefiles and read corresponding targets"
+  (let* ((project (superman-get-project project))
+	 (mfiles (directory-files (superman-get-location project) t "^Makefile" t)))
+    (when mfiles
+      (mapcar (lambda (x) 
+		(let ((targets))
+		  (save-window-excursion
+		    (find-file x)
+		    (goto-char (point-min))
+		    (while (re-search-forward "^\\([a-zA-Z]+\\)::?" nil t)
+		      (setq targets (append targets (list (match-string-no-properties 1))))))
+		  (cons x targets))) mfiles))))
+
+;;}}}
 ;;{{{ unison
+
+(defvar superman-unison-mode-map (make-sparse-keymap)
+  "Keymap used for `superman-unison-mode' commands.")
+   
+(define-minor-mode superman-unison-mode
+     "Toggle superman unison mode.
+With argument ARG turn superman-unison-mode on if ARG is positive, otherwise
+turn it off.
+                   
+Enabling superman-unison mode enables the unison keyboard to control single files."
+     :lighter " *SupermanUnison*"
+     :group 'org
+     :keymap 'superman-unison-mode-map)
+
+(defun superman-unison-mode-on ()
+  (interactive)
+  (when superman-hl-line (hl-line-mode 1))
+  (superman-unison-mode t))
+
+
+(define-key superman-unison-mode-map "n" 
+  #'(lambda () (interactive)
+      (ignore-errors (goto-char (next-single-property-change (point-at-eol) 'unison)))))
+(define-key superman-unison-mode-map "p" 
+  #'(lambda () (interactive)
+      (ignore-errors (goto-char (previous-single-property-change (point-at-bol) 'unison)))
+      (beginning-of-line)))
+(define-key superman-unison-mode-map "e" 
+  #'(lambda () (interactive) 
+      (goto-char (or (next-single-property-change (point) 'unison) 
+		     (previous-single-property-change (point) 'unison)))
+      (superman-view-edit-item)))
+(define-key superman-unison-mode-map "R" 'superman-redo)
+(define-key superman-unison-mode-map [(return)] 
+  #'(lambda () (interactive) (superman-choose-entry)))
 
 (defun superman-view-read-unison (project)
   (let (unisons)
     (save-window-excursion
       (when (superman-goto-project project "Configuration" nil nil t nil)
-	;; (org-narrow-to-subtree)
 	(goto-char (point-min))
 	(while (re-search-forward ":UNISON:" nil t)
 	  (org-back-to-heading t)
-	  (let ((hdr (progn 
-		       (looking-at org-complex-heading-regexp)
-		       (or (match-string-no-properties 4) "Untitled")))
-		(unison-cmd (superman-get-property (point) "UNISON")))
-	    (when (string= unison-cmd "superman-unison-cmd")
-	      (setq unison-cmd superman-unison-cmd))
-	    (setq
-	     unisons
-	     (append
-	      unisons
-	      (list (cons hdr
-			  (concat
-			   unison-cmd
-			   " "
-			   (superman-get-property (point) "ROOT-1")
-			   " "
-			   (superman-get-property (point) "ROOT-2")
-			   " "
-			   (if (string= (superman-get-property (point) "SWITCHES") "default")
-			       superman-unison-switches
-			     (superman-get-property (point) "SWITCHES"))))))))
+	  (setq unisons
+		(append unisons
+			(list 
+			 (superman-parse-properties (point) 'with-heading 'with-body))))
 	  (outline-next-heading))
-	(widen)))
-    unisons))
+	unisons))))
 
 (defun superman-view-insert-unison-buttons (project)
   "Insert unison buttons"
   (let* ((pro (or project superman-current-project))
-	 (title
-	  (superman-make-button
-	   "Unison:"
-	   '(:fun superman-capture-unison
-		  :face superman-header-button-face
-		  :help "Capture unison")
-	   ))
-	 (title-marker 
-	  (save-excursion
-	    (superman-goto-project project "Configuration" nil nil 'narrow nil)
-	    (goto-char (point-min))
-	    (point-marker)))
-	 (unison-list (superman-view-read-unison pro))
-	 (i 1))
-    (put-text-property 0 (length title) 'superman-e-marker title-marker title)
-    (put-text-property 0 1 'superman-header-marker t title)
-    (while unison-list
-      (let* ((current-unison (car unison-list))
-	     (unison-name (car current-unison))
-	     (unison-cmd (cdr current-unison)))
-	;; (when (= i 1) (insert "\n") (insert title " "))
-	(put-text-property
-	 0 1
-	 'superman-header-marker t unison-name)
-	(insert "["
-		(superman-make-button
-		 unison-name 
-		 `(:fun (lambda () (interactive)
-			  ;; prevents from synchronizing
-			  ;; unsaved buffers
-			  (save-some-buffers nil t)
-			  (async-shell-command ,unison-cmd))
-			:face superman-warning-face
-			:help unison-name
-			:fun-3 superman-view-delete-entry)) "] "))
-      (setq i (+ i 1) unison-list (cdr unison-list)))))
+	 (unison-list (superman-view-read-unison pro)))
+    (when (> (length unison-list) 0)
+      (insert (superman-make-button
+	       "Unison (u)"
+	       '(:fun superman-view-show-unison 
+		      :face superman-capture-button-face
+		      :help "Choose a unison synchronisation"))))))
+
+
+(defun superman-view-show-unison (&optional refresh)
+  (interactive)
+  (let* ((nick (get-text-property (point-min) 'nickname))
+	 (unison-buf (concat "*Unison[" nick "]*"))
+	 (buffer-read-only nil)
+	 (unison-list (superman-view-read-unison nick))
+	 (i 0))
+    (if (and (or (not refresh)
+		 (and (integerp refresh)
+		      (= refresh 1)))
+	     (get-buffer unison-buf))
+	(pop-to-buffer unison-buf)
+      (get-buffer-create unison-buf)
+      (pop-to-buffer unison-buf)
+      (erase-buffer)
+      ;; major-mode
+      (org-mode)
+      (font-lock-mode -1)
+      ;; minor-mode
+      (superman-unison-mode)
+      (insert (superman-make-button
+	       "Superman unison"
+	       '(:fun superman-redo
+		      :face superman-face
+		      :help "Read unison(s) and update this buffer")))
+      (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
+			 `(superman-view-show-unison 'refresh))
+      (put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
+      (insert "\n\n")
+      (insert "* Edit Unison setup")
+      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+      (put-text-property (point-at-bol) (point-at-eol) 'superman-choice 
+			 `(lambda () (interactive) 
+			    (superman-goto-project ,nick "Configuration" nil )))
+      (put-text-property (point-at-bol) (point-at-eol) 'display "★ Unison" )
+      (insert "\nUnison file synchronizing (press digit to run corresponding unison command):\n\n")
+      (while unison-list
+	(let* ((unison (car unison-list))
+	       (name (plist-get unison :HEADING))
+	       (marker (plist-get unison :POINT-MARKER))
+	       (cmd (concat (or (plist-get unison :unison) superman-unison-cmd "unison-gtk")
+			    " "
+			    (plist-get unison :root-1)
+			    " "
+			    (plist-get unison :root-2)
+			    " "
+			    (if (string= (plist-get unison :switches) "default")
+				superman-unison-switches
+			      (plist-get unison :switches)))))
+	  (insert (int-to-string i) ": "
+		  (superman-make-button
+		   name
+		   '(:fun superman-choose-entry
+			  :face superman-capture-button-face
+			  :help "Set window unison")))
+	  (put-text-property (point-at-bol) (point-at-eol) 'unison i)
+	  (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker marker)
+	  (put-text-property (point-at-bol) (point-at-eol) 
+			     'superman-choice 
+			     `(lambda  () (interactive)
+				;; prevents from synchronizing
+				;; unsaved buffers
+				(save-some-buffers nil t)
+				(async-shell-command ,cmd)))
+	  (insert "\n\n" "Command: " cmd "\n\n")
+	  (define-key superman-unison-mode-map
+	    (int-to-string i)
+	    `(lambda () (interactive) (goto-char (point-min)) 
+	       (re-search-forward ,(concat "^" (int-to-string i) ": ") nil t)
+	       (superman-choose-entry))))
+	(setq  i (+ i 1) unison-list (cdr unison-list)))
+      (setq buffer-read-only t))))
 
 ;;}}}
 ;;{{{ superman-buttons
@@ -1430,25 +1711,30 @@ to refresh the view.
 	(insert " ")
 	;; first superman-sticky-displays then unison (if any) and config (if any)
 	(unless config-buttons 
-	  (superman-view-insert-config-buttons pro))
+	  (superman-view-insert-buttons pro))
 	(insert "\n")
 	;; Project description or welcome text
 	(set-buffer ibuf)
+	(widen)
 	(goto-char (point-min))
 	(unless (re-search-forward ":ProjectStart:" nil t)
-	  (insert "*** Index of project bla\n:PROPERTIES:\n:ProjectStart: Unknown\n:END:\n")
-	  (insert "Project " nick " welcome message.\n"))
+	  (insert "*** Project Welcome Message\n:PROPERTIES:\n:ProjectStart: Unknown\n:END:\n")
+	  (insert "Project description. To edit, put cursor in this region and type `e'\n"))
 	(org-back-to-heading)
 	(setq description
 	      (plist-put (superman-parse-properties (point) 'header 'body)
 			 :freetext t))
+	(setq description
+	      (plist-put description
+			 :HEADING ""))
 	(setq cats 
 	      (append cats `(,description)))
 	;; loop over cats
 	(goto-char (point-max))
 	(insert "\n\n")
 	(while cats
-	  (superman-format-cat (car cats) ibuf vbuf loc)
+	  (unless (string= (plist-get (car cats) :HEADING) "Configuration")
+	    (superman-format-cat (car cats) ibuf vbuf loc))
 	  (setq cats (cdr cats)))
 	;; leave index buffer widened
 	(set-buffer ibuf)
@@ -1526,7 +1812,7 @@ in buffer VIEW-BUF."
 		  (eval (intern hidden)))))
 	  ;; free text sections are shown as they are
 	  (free
-	   (superman-format-freetext index-buf index-point view-buf))
+	   (superman-format-freetext index-buf index-point view-buf name))
 	  ;; git control section
 	  (git
 	   ;; git display git control of directory 
@@ -1641,11 +1927,11 @@ in buffer VIEW-BUF."
       (delete-region (point) (point-max)))
     (goto-char view-point)))
 
-(defun superman-format-freetext (index-buffer index-point view-buffer)
+(defun superman-format-freetext (index-buffer index-point view-buffer name)
   (let (index-marker view-marker)
     ;; set mark at beginning of the category in view-buf
     (set-buffer view-buffer)
-    (setq view-marker (point))
+    (setq view-point (point))
     (set-buffer index-buffer)
     (widen)
     (goto-char index-point)
@@ -1659,27 +1945,38 @@ in buffer VIEW-BUF."
 		    (org-end-of-meta-data)
 		  (org-end-of-meta-data 't))
 		(point))
-	      (point-max))))
+	      (point-max)))
+	    text-start text-end)
 	(with-current-buffer view-buffer
-	  (when superman-empty-line-before-cat (insert "\n"))
-	  (superman-view-insert-section-name
-	   (concat (upcase (substring-no-properties name 0 1)) (substring-no-properties  name 1 (length name) ))
-	   0 balls
-	   index-marker)
-	  ;; (insert "\n\nDescription: "
-	  ;; (superman-make-button 
-	  ;; "Edit" '(:fun superman-view-edit-item
-	  ;; :face superman-edit-button-face 
-	  ;; :help "Edit the project description"))
-	  (insert "\n")
-	  (when superman-empty-line-after-cat (insert "\n"))
-	  (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name)
+	  (if (= (length name) 0)
+	      (insert "\n")
+	    (when superman-empty-line-before-cat (insert "\n"))
+	    (superman-view-insert-section-name
+	     (concat (upcase (substring-no-properties name 0 1)) (substring-no-properties  name 1 (length name) ))
+	     0 balls
+	     index-marker)
+	    (insert "\n")
+	    (when superman-empty-line-after-cat (insert "\n"))
+	    (put-text-property (- (point-at-eol) 1) (point-at-eol) 'head name))
+	  (setq text-start (point))
+	  (setq text (replace-regexp-in-string "^[\n \t]+" "" text))
+	  (setq text (replace-regexp-in-string "[\n \t]+$" "" text))
+	  (set-text-properties 0 (length text) nil text)
 	  (insert text)
 	  (end-of-line)
+	  (setq text-end (point))
 	  (insert "\n")
 	  (forward-line -1)
 	  (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
-	  (forward-line 1))))))
+	  (while (not (< (point) text-start))
+	    (insert (superman-make-button " " '(:fun superman-view-edit-item
+						     :face superman-free-text-face
+						     :help "Edit text")) " ")
+	    (put-text-property (point-at-bol) (1+ (point-at-bol)) 'free-text index-marker)
+	    (forward-line -1))
+	  )))
+    (set-buffer view-buffer)
+    (goto-char view-point)))
   
 (defun superman-format-mailbox (index-buffer index-point view-buffer
 					     balls buttons name) 
@@ -2281,36 +2578,20 @@ disable editing."
 	      (get-text-property (point-at-bol) 'superman-e-marker)))
 	 (catp (get-text-property (point-at-bol) 'cat))
 	 (columnsp (get-text-property (point-at-bol) 'column-names))
-	 ;; (E-buf (generate-new-buffer-name "*Edit by SuperMan*"))
 	 (scene (current-window-configuration))
-	 ;; (all-props
-	 ;; (if (or (not marker) catp) nil
-	 ;; (ignore-errors (superman-view-property-keys))))
-	 ;; range
-	 ;; (title)
 	 (cat-point (superman-cat-point))
-	 (free
-	  (when cat-point
-	    (superman-get-property
-	     (get-text-property cat-point 'org-hd-marker) "freetext")))
-	 ;; (balls (when cat-point
-	 ;; (get-text-property (superman-cat-point) 'balls)))
-	 ;; prop
-	 ;; edit-point
-	 ;; used-props
+	 (free (get-text-property (point-at-bol) 'free-text))
+	 ;; (when cat-point
+	 ;; (superman-get-property
+	 ;; (get-text-property cat-point 'org-hd-marker) "freetext")))
 	 )
     (when (and free (not marker))
-      (setq marker (get-text-property cat-point 'org-hd-marker)))
+      (setq marker free))
+    ;; (get-text-property cat-point 'org-hd-marker)))
     (when columnsp
       (setq marker (get-text-property (superman-cat-point) 'org-hd-marker)))
     (if (not marker)
 	(message "Nothing editable here")
-      ;; add properties defined by balls to all-props
-      ;; (unless free
-      ;; (while balls
-      ;; (when (stringp (setq prop (caar balls)))
-      ;; (add-to-list 'all-props prop))
-      ;; (setq balls (cdr balls))))
       (set-buffer (marker-buffer marker))
       ;; do not edit dynamic buffers
       (unless (buffer-file-name)
@@ -2599,6 +2880,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   ;; (superman-choose-entry))
 
 (defun superman-choose-entry ()
+  "Call function stored in text property 'superman-choice' at beginning of line."
   (interactive)
   (let ((choice (get-text-property (point-at-bol) 'superman-choice)))
     (when choice
@@ -2841,6 +3123,9 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "q" 'superman-view-quit-help)
 (define-key superman-view-mode-map "h" 'superman-view-help)
+(define-key superman-view-mode-map "\C-m" 'superman-view-show-make)
+(define-key superman-view-mode-map "c" 'superman-view-show-configurations)
+(define-key superman-view-mode-map "u" 'superman-view-show-unison)
 (define-key superman-view-mode-map "H" 'superman-ual)
 (define-key superman-view-mode-map "t" 'superman-view-toggle-todo)
 (define-key superman-view-mode-map "x" 'superman-view-delete-entry)
