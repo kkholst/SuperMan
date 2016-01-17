@@ -151,6 +151,19 @@ write the result to buffer INDEX-BUF."
 	(pos -1))
     (set-buffer index-buf)
     (erase-buffer)
+    (insert "*** Contents of BibTeX file " (buffer-file-name bib-buf) ": \n:PROPERTIES:\n:ProjectStart: now\n:END:\n")
+    (insert "To add a new entry press `N'\n\n")
+    (insert "* BibTeX\n"
+	    ":PROPERTIES:\n"
+	    ":CaptureButtons: New entry|superman-capture-bibtex,Visit bibtex|superman-visit-bibtex\n"
+	    ":ConfigButtons: nil\n"
+	    ;; ":Ball1: org-hd-marker :fun superman-show-plain\n"
+	    ":Ball1:    year  :width 4\n"
+	    ":Ball2:    author  :width 13\n"
+	    ":Ball3:    journal :width 30\n"
+	    ":Ball4:    title  :width 50\n"
+	    ;; ":buttons: superman-pub-make-sort-buttons\n"
+	    ":END:\n\n")
     (org-mode)
     (set-buffer bib-buf)
     ;; (insert-buffer bib-buf)
@@ -176,18 +189,7 @@ write the result to buffer INDEX-BUF."
       (insert ":END:\n")
       (set-buffer bib-buf))
     (set-buffer index-buf)
-    (goto-char (point-min))
-    (insert "* BibTeX\n"
-	    ":PROPERTIES:\n"
-	    ":CaptureButtons: New entry|superman-capture-bibtex,Visit bibtex|superman-visit-bibtex\n"
-	    ":ConfigButtons: nil\n"
-	    ;; ":Ball1: org-hd-marker :fun superman-show-plain\n"
-	    ":Ball2:    year  :width 4\n"
-	    ":Ball3:    author  :width 13\n"
-	    ":Ball4:    journal :width 30\n"
-	    ":Ball5:    title  :width 50\n"
-	    ;; ":buttons: superman-pub-make-sort-buttons\n"
-	    ":END:\n\n")))
+    (goto-char (point-min))))
 
 (defun superman-visit-bibtex ()
   (interactive)

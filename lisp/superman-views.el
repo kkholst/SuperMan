@@ -1795,10 +1795,11 @@ in buffer VIEW-BUF."
 	 (mail (string= "mail" name))
 	 ;; prefer columns/balls specified in index buffer
 	 (cat-balls (unless git
-		      (let (out bb (i 0))
+		      (let (out bb (i 1))
 			(while (setq bb (plist-get cat (intern (concat ":ball" (int-to-string i)))))
-			  (setq out (append-out (superman-distangle-ball bb)))
-			  (setq i (1+ i)))))) 
+			  (setq out (append out (list (superman-distangle-ball bb))))
+			  (setq i (1+ i)))
+			out)))
 	 (gear (cdr (assoc name superman-finalize-cat-alist)))
 	 (balls (or cat-balls (eval (nth 0 gear)) superman-default-balls))
 	 (index-point (plist-get cat :POINT-MARKER))
