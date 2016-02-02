@@ -792,10 +792,11 @@ Examples:
 	 (string (replace-regexp-in-string "%n" (car entry) string)))
     (cons string (car entry))))
 
-(defun superman-select-project ()
+(defun superman-select-project (&optional prompt)
   "Select a project from the project alist, 
 The list is re-arranged such that 'superman-current-project'
-is always the first choice."
+is always the first choice. 
+If PROMPT is a string use it to ask for project."
   (let* ((plist superman-project-alist)
 	 (project-array (mapcar 'superman-format-project
 				(if (not superman-current-project)
@@ -803,7 +804,8 @@ is always the first choice."
 				  (setq plist (append (list superman-current-project)
 						      (remove superman-current-project plist))))))
 	 (completion-ignore-case t)
-	 (key (ido-completing-read "Project: " (mapcar 'car project-array)))
+	 (key (ido-completing-read (if (stringp prompt) prompt "Project: ")
+				   (mapcar 'car project-array)))
 	 (nickname (cdr (assoc key project-array))))
     (assoc nickname superman-project-alist)))
 

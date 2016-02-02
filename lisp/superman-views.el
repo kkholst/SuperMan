@@ -820,7 +820,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 	(let* ((unison (car unison-list))
 	       (name (plist-get unison :HEADING))
 	       (marker (plist-get unison :POINT-MARKER))
-	       (cmd (concat (or (plist-get unison :unison) superman-unison-cmd "unison-gtk")
+	       (cmd (concat (cond ((plist-get unison :unison)) (superman-unison-cmd (eval superman-unison-cmd)) (t "unison-gtk"))
 			    " "
 			    (plist-get unison :root-1)
 			    " "
@@ -857,12 +857,20 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 ;;{{{ superman-buttons
 
 (defun superman-make-button (string &optional properties)
-  "Create a button with label STRING and FACE.
- If FUN is a function then it is bound to mouse-2 and RETURN events.  
- HELP is a string which is shown when the mouse over the button.
- If FUN-3 is a command it gets bound to mouse-3.
-Width determines the amount of white-space around string to achieve
-a fixed button width. This is useful to align a series of buttons.
+  "Create a button labelled STRING.
+ PROPERTIES is a p-list which can contain the following keyword actions: 
+ :fun command gets bound to mouse-2 and return events
+ :fun-3 command gets bound to mouse-3 (default is `describe-text-properties')
+ :face the face of the button 
+ :help string shown when the mouse over the button.
+ :width integer the width of the button
+
+Example: 
+
+ (superman-make-button 'Branch'
+	'(:fun superman-git-new-branch
+          :face superman-header-button-face
+	  :help 'Create new git branch'))
 "
   (let* ((map (make-sparse-keymap))
 	 (help (or (plist-get properties :help) "Superman-button"))
@@ -1609,7 +1617,8 @@ which locates the heading in the buffer."
 			    (> (point) cat-point))
 		;; (looking-at org-complex-heading-regexp)
 		(setq cat-point (point)
-		      cats (append cats `(,(superman-parse-properties cat-point 'p 'h)))))
+		      cats (append  `(,(superman-parse-properties cat-point 'p 'h)) 
+				    cats)))
 	      cats)))))))
 
 (defun superman-get-project (object &optional ask)
@@ -1624,7 +1633,7 @@ neither object nor the current buffer identify a project."
       object) ;; assume object is a project
      ((and superman-mode ;; in superman-buffer
 	   (superman-project-at-point)))
-     (ask (superman-select-project))
+     (ask (superman-select-project ask))
      ((setq nick (get-text-property (point-min) 'nickname))
       (assoc nick superman-project-alist))
      ((not ask) superman-current-project)

@@ -136,7 +136,6 @@ the contents of the file `superman-profile'."
 	(goto-char (point-max))
 	(setq cat-alist (cdr cat-alist)))))
   (goto-char (point-min))
-  ;; (superman-view-mode-on)
   (superman-on)
   (setq buffer-read-only t))
 
@@ -411,9 +410,9 @@ all dates."
 						   '(:fun (lambda ()
 							    (interactive)
 							    (superman-capture-meeting
-							     nil nil t))
+							     nil nil "Capture meeting for project: "))
 							  :face superman-capture-button-face
-							  :help "Add a meeting to calendar"))
+							  :help "Add a meeting to project"))
 			     "\n")))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
@@ -448,7 +447,12 @@ all dates."
   (superman-format-agenda
    superman-todolist-balls
    '(superman-todo)
-   "* Superman: todo-list"
+   (superman-make-button 
+    "Todo-list (all projects)"
+    '(:fun superman-redo
+	   :face superman-face
+	   :help (concat "Refresh agenda. Last update: " 
+			 (format-time-string "%r"))))
    (concat "  "
 	   (superman-make-button "Agenda"
 				 '(:fun superman-agenda
@@ -465,11 +469,10 @@ all dates."
 					:face superman-next-project-button-face
 					:help "List of projects"))
 	   "\n\n"
-	   (superman-make-button "Add a task"
+	   (superman-make-button "New task"
 				 '(:fun (lambda ()
 					  (interactive)
-					  (superman-capture-task
-					   nil nil t))
+					  (superman-capture-task nil nil "Capture task for project: "))
 					:face superman-capture-button-face
 					:help "Add a task to one of the projects")))
    nil pretty))
@@ -515,7 +518,7 @@ all dates."
 						   '(:fun (lambda ()
 							    (interactive)
 							    (superman-capture-meeting
-							     nil nil t))
+							     nil nil "Capture meeting for project: "))
 							  :face superman-capture-button-face
 							  :help "Add a meeting to calendar"))
 			     )))))
@@ -563,6 +566,23 @@ for git and other actions like commit, history search and pretty log-todo."
 (define-key superman-todo-mode-map "A" 'superman-todo-show-priority-A)
 (define-key superman-todo-mode-map "B" 'superman-todo-show-priority-B)
 (define-key superman-todo-mode-map "C" 'superman-todo-show-priority-C)
+
+(define-key superman-todo-mode-map "n" 'superman-next-entry)
+(define-key superman-todo-mode-map "p" 'superman-previous-entry)
+(define-key superman-todo-mode-map [(up)] 'superman-previous-entry)
+(define-key superman-todo-mode-map [(down)] 'superman-next-entry)
+(define-key superman-todo-mode-map "e" 'superman-todo-edit-item)
+(define-key superman-todo-mode-map [return] 'superman-hot-return)
+(define-key superman-todo-mode-map "R" 'superman-redo)
+
+(define-key superman-todo-mode-map "t" 'superman-view-toggle-todo)
+(define-key superman-todo-mode-map  [(shift up)] 'superman-view-priority-up)
+(define-key superman-todo-mode-map [(shift down)] 'superman-view-priority-down)
+(define-key superman-todo-mode-map "N" #'(lambda () (interactive)
+					   (if (eq (car (get-text-property (point-min) 'redo-cmd))
+						   'superman-todo)
+					       (superman-capture-task nil nil "Capture task for project: ")
+					     (superman-capture-meeting nil nil "Capture meeting for project: "))))
 (define-key superman-todo-mode-map "P" 'superman-pretty-agenda)
 
 ;;}}}
@@ -719,9 +739,9 @@ Enabling superman mode electrifies the superman buffer for project management."
 	("FileName" ("fun" superman-dont-trim))))
 
 (setq superman-less-todolist-balls 
-      '(
+      '((".*Date" ("fun" superman-trim-date) ("width" 12) ("regexp" t) ("face" font-lock-string-face) ("name" "Date"))
 	(priority ("width" 8) ("face" superman-get-priority-face))
-	(todo ("width" 7) ("face" superman-get-todo-face))	
+	(todo ("width" 7) ("face" superman-get-todo-face))
 	(org-hd-marker ("width" 23)
 		       ("name" "Project")
 		       ("face" superman-next-project-button-face)
@@ -795,18 +815,13 @@ Enabling superman mode electrifies the superman buffer for project management."
       (insert "\n")
       (goto-char (point-min))
       (insert (or title "* SupermanAgenda"))
-      (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
+      ;; (put-text-property (point-at-bol) (point-at-eol) 'face 'org-level-2)
       (put-text-property (point-at-bol) (point-at-eol) 'redo-cmd redo)
       (put-text-property (point-at-bol) (point-at-eol) 'cat t)
       (put-text-property (point-at-bol) (point-at-eol) 'balls balls)
       (if buttons (insert buttons))
       (end-of-line)
-      (insert "\t")
-      (insert (superman-make-button
-	       (concat "Refresh agenda. Last update: " 
-		       (format-time-string "%r"))
-	       '(:fun superman-redo)))
-      (insert "\n")      
+      (insert "\n\n") 
       (superman-todo-mode-on)
       (if pretty 
 	  (superman-pretty-agenda)
@@ -816,7 +831,6 @@ Enabling superman mode electrifies the superman buffer for project management."
 			     :face 'superman-header-button-face :help "Prettify display using columns")))
 	(put-text-property (point-at-bol) (point-at-eol) 'superman-pretty-button t)
 	(insert "\n")))))
-
 
 (defvar superman-pretty-agenda t
  "If non-nil turn on `superman-pretty-agenda' else show a button which turns it on.") 
@@ -845,7 +859,7 @@ Enabling superman mode electrifies the superman buffer for project management."
       (goto-char (next-single-property-change (point) 'org-hd-marker))
       (beginning-of-line)
       (insert "\n" (superman-column-names balls) "\n") 
-      (superman-view-mode-on) ;; minor modes
+      ;; (superman-view-mode-on) ;; minor modes
       ;; (setq org-agenda-this-buffer-name org-agenda-buffer-name)
       (while (ignore-errors
 	       (goto-char (next-single-property-change (point) 'org-hd-marker)))

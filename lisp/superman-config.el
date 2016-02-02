@@ -376,10 +376,10 @@ given in superman notation."
   "Display a project specific todo-list based on all org files."
   (interactive)
   (let* ((project (superman-get-project project))
-	 (title  "Project ToDo list")
+	 (nick (car project))
+	 (title  (concat nick ": Todo-list"))
 	 (loc (superman-project-home project))
-	 (index (superman-get-index project))
-	 (nick (car project)))
+	 (index (superman-get-index project)))
     (put-text-property 0 (length title) 'git-dir (superman-git-toplevel loc) title)
     (put-text-property 0 (length title) 'dir loc title)
     (put-text-property 0 (length title) 'nickname nick title)
@@ -411,7 +411,7 @@ given in superman notation."
 				  "  " (superman-make-button "File-list" '(:fun superman-view-file-list :face superman-next-project-button-face :help "View project's file-list."))
 				  ;; "  " (superman-make-button "Todo" '(:fun superman-project-todo :face superman-next-project-button-face :help "View project's todo list."))
 				  "  " (superman-make-button "Time-line" '(:fun superman-project-timeline :face superman-next-project-button-face :help "View project's timeline.")))
-			  )))))))))
+			  nil 'pretty)))))))))
 	  ;; to be 100% sure that the agenda is not accidentally written
 	  ;; to the index file
 	  (switch-to-buffer (get-buffer-create org-agenda-buffer-name))

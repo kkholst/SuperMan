@@ -673,6 +673,9 @@ If a file is associated with the current-buffer save it.
 
 (fset 'superman-capture-todo 'superman-capture-task)
 (defun superman-capture-task (&optional project marker ask)
+  "Capture a task for todo-list of PROJECT. MARKER is a marker which 
+defaults to the value of text-property org-hd-marker at bol. If ASK 
+is non-nil prompt for project."
   (interactive)
   (let ((pro (superman-get-project project ask))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
@@ -751,8 +754,11 @@ and in the first cat otherwise."
 	      (append `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))
 		      (delete (assoc "CaptureDate" keys) keys)))
       (setq keys `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))))
-    ;; add defaults
-    (setq props (append keys defaults))
+    ;; add defaults (when needed)
+    (while defaults
+      (unless (assoc (caar defaults) keys)
+	(setq props (append (list (car defaults)) keys)))
+      (setq defaults (cdr defaults)))
     (superman-capture pro
 		      (or marker cat)
 		      "item"
@@ -974,6 +980,9 @@ Creates the project directory and index file."
   (superman-capture-meeting "Calendar" marker ask))
   
 (defun superman-capture-meeting (&optional project marker ask)
+  "Capture a meeting for PROJECT. MARKER is a marker or the name of a section 
+which defaults to 'Calendar'. If ASK 
+is non-nil prompt for project."
   (interactive)
   (let ((pro (superman-get-project project ask))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker)))
@@ -1092,7 +1101,7 @@ Creates the project directory and index file."
      "Mail"
      nil
      `(("CaptureDate"  :hidden yes :value ,(format-time-string "<%Y-%m-%d %a>"))
-       (body :value ,(concat "----\n" region "\n----\n"))
+       (body :value ,(concat "----\n#+BEGIN_EXAMPLE\n" region "#+END_EXAMPLE\n----\n"))
        (body :value ,attachments)
        ("EmailDate" :value ,date)
        (hdr :value ,(concat "Mail from " from " " subject ) :test superman-test-hdr)
