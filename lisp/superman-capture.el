@@ -580,25 +580,36 @@ If a file is associated with the current-buffer save it.
 (defun superman-read-directory-name ()
   (concat "[[" (read-directory-name "Choose a location: ") "]]"))
 
+(defvar superman-capture-completion-plist
+  '(:filename superman-read-file-name
+	      :link :complete "link to url"
+	      :appointmentdate superman-read-date
+	      :location superman-read-directory-name)
+  "Property with methods used to complete fields during capture, 
+ i.e., define what would happen when user calls `superman-complete-property'
+ or presses the <tab> key. The keys have to be lower-case.")
+
 (defun superman-complete-property ()
   "Read text properties at beginning of line to help finding a value for this property."
   (interactive)
   (save-excursion
     (if (org-at-heading-p)
 	(message "Type a title after ***, activate todo: C-c C-t, change priority Shift-up")
-    (let* ((prop (get-text-property (point-at-bol) 'property))
-	   (text-props (text-properties-at (point-at-bol)))
-	   (complete (get-text-property (point-at-bol) 'complete))
-	   value)
-      (when (and (symbolp complete) (not (symbol-function complete))) 
-	(setq complete (eval complete)))
-      (cond ((functionp complete) (setq value (funcall complete)))
-	    ((stringp complete) (message complete))
-	    (t (message "Don't know what to do here")))
-      (when value
-	(delete-region (point-at-bol) (point-at-eol))
-	(insert ":" prop ": " value)
-	(set-text-properties (point-at-bol) (1+ (point-at-bol)) text-props))))))
+      (let* ((prop (get-text-property (point-at-bol) 'property))
+	     (text-props (text-properties-at (point-at-bol)))
+	     (complete (or (get-text-property (point-at-bol) 'complete)
+			   (plist-get superman-capture-completion-plist
+				      (intern (concat ":" (downcase prop))))))
+	     value)
+	(when (and (symbolp complete) (not (symbol-function complete))) 
+	  (setq complete (eval complete)))
+	(cond ((functionp complete) (setq value (funcall complete)))
+	      ((stringp complete) (message complete))
+	      (t (message "Don't know what to do here")))
+	(when value
+	  (delete-region (point-at-bol) (point-at-eol))
+	  (insert ":" prop ": " value)
+	  (set-text-properties (point-at-bol) (1+ (point-at-bol)) text-props))))))
 
 (defun superman-capture-change-priority ()
   (interactive) 
