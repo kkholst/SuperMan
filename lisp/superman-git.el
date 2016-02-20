@@ -730,8 +730,8 @@ see M-x manual-entry RET git-diff RET.")
 (make-variable-buffer-local 'superman-git-display-cycles)
 (setq superman-git-display-cycles nil)
 (setq superman-git-default-displays
-      '("versions" "modified" "tracked" "submodule" "untracked" "stash"))
-
+      '("versions" "modified" "tracked" "untracked" "stash"))
+;; "submodule"
 (defvar superman-git-display-diff-balls
   '(("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
     ("GitStatus" ("width" 20) ("face" superman-get-git-status-face) ("name" "What happened"))
@@ -761,13 +761,13 @@ see M-x manual-entry RET git-diff RET.")
       ("Directory" ("width" 25) ("face" superman-subheader-face))
       ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
      superman-git-files-pre-display-hook)
-    ("submodule"
-     "submodule"
-     (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
-      (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
-      ("Directory" ("width" 25) ("face" superman-subheader-face))
-      ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
-     superman-git-submodule-pre-display-hook)
+    ;; ("submodule"
+     ;; "submodule"
+     ;; (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
+      ;; (hdr ("width" 34) ("face" font-lock-function-name-face) ("name" "Filename"))
+      ;; ("Directory" ("width" 25) ("face" superman-subheader-face))
+      ;; ("GitStatus" ("width" 20) ("face" superman-get-git-status-face)))
+     ;; superman-git-submodule-pre-display-hook)
     ("untracked"
      (concat "ls-files --full-name " (unless superman-git-show-ignored "--exclude-standard") " --others")
      (("filename" ("width" 14) ("fun" superman-make-git-keyboard) ("name" "git-keyboard") ("face" "no-face"))
@@ -820,7 +820,7 @@ git command."
     (let* ((index (get-text-property (point-min) 'index))
 	   (pbuf (buffer-name))
 	   (nickname (get-text-property (point-min) 'nickname))
-	   (git-display-buf (concat (buffer-name) " :Git-repository"))
+	   (git-display-buf (concat "*Git[" nickname "]*"))
 	   (dir (get-text-property (point-min) 'dir))
 	   (git-dir (get-text-property (point-min) 'git-dir)))
       (unless (get-buffer git-display-buf)

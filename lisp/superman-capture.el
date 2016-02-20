@@ -1,4 +1,4 @@
-;;; superman-capture.el --- superman captures stuff
+;;; superman-capture.el --- superman captures stuff in superman style
 
 ;; Copyright (C) 2013-2016  Klaus Kähler Holst, Thomas Alexander Gerds
 
@@ -49,7 +49,8 @@ just before the capture buffer is given to the user.")
 
 ;;{{{ superman goto project
 
-(defun superman-goto-project (&optional project heading create end-of leave-narrowed jabber propertystring)
+(defun superman-goto-project (&optional project heading create end-of 
+					leave-narrowed jabber property-string)
   "Goto project index file call `widen' and then search for HEADING
 and narrow the buffer to this subtree. 
 
@@ -87,9 +88,9 @@ If JABBER is non-nil (and CREATE is nil) be talkative about non-existing heading
 		   (insert "\n")
 		   (setq marker (point-marker))
 		   (insert "* " head "\n")
-		   (when propertystring  
+		   (when property-string  
 		     (insert ":PROPERTIES:\n")
-		     (insert propertystring)
+		     (insert property-string)
 		     (insert "\n:END:\n\n")
 		     (forward-line -1))
 		   (point-marker)))
@@ -144,7 +145,8 @@ See also `superman-capture-whatever' for the other arguments."
   (let* ((scene (or scene (current-window-configuration)))
 	 (welcome-text
 	  (or welcome-text
-	      (concat "\nType a title (max one line) in line starting with stars *** \nPress [TAB] on a property for help and completions.")))
+	      (concat "\nType a title (max one line) in line starting with stars *** "
+		      "\nPress [TAB] on a property for help and completions.")))
 	 (destination (if heading-or-marker
 			  (cond ((stringp heading-or-marker)
 				 (superman-goto-project
@@ -170,12 +172,12 @@ See also `superman-capture-whatever' for the other arguments."
 			(goto-char (point-max))
 			(point-marker))))
     (superman-capture-whatever
-     destination welcome-text level body plist nil scene nil
-     quit-scene clean-hook quit-hook)))
+     destination welcome-text level body plist nil scene (car project) 
+     nil quit-scene clean-hook quit-hook)))
 
 (defun superman-capture-whatever (destination 
 				  welcome-text level body fields
-				  edit scene read-only
+				  edit scene nick read-only
 				  &optional quit-scene clean-hook quit-hook)
   " This function is the work-horse of `superman-capture' and `superman-view-edit-item'.
 
@@ -243,6 +245,8 @@ See also `superman-capture-whatever' for the other arguments."
     (put-text-property (point-min) (1+ (point-min)) 'destination destination)
     (when scene  
       (put-text-property (point-min) (1+ (point-min)) 'scene scene))
+    (when nick  
+      (put-text-property (point-min) (1+ (point-min)) 'nickname nick))
     (when quit-scene
       (put-text-property (point-min) (1+ (point-min)) 'quit-scene quit-scene))
     (when edit
@@ -442,6 +446,7 @@ at the requested destination and then reset the window configuration."
   (if buffer-read-only
       (error "Cannot save in read-only mode")
     (let* ((scene (get-text-property (point-min) 'scene))
+	   (nick (get-text-property (point-min) 'nickname))
 	   (kill-whole-line t)
 	   (edit (get-text-property (point-min) 'edit))
 	   req
@@ -540,6 +545,15 @@ at the requested destination and then reset the window configuration."
 	(insert catch)
 	(save-buffer)
 	(widen)
+	;; update buffers
+	(when nick
+	  (let ((pro-buffers (superman-get-project-buffers nick)))
+	    (while pro-buffers 
+	      (when (get-buffer (car pro-buffers))
+		(switch-to-buffer (car pro-buffers))
+		(superman-redo))
+	      (setq pro-buffers (cdr pro-buffers)))))
+	;; perform action according to scene
 	(cond ((window-configuration-p scene)
 	       ;; set window-configuration
 	       (set-window-configuration scene))
@@ -584,6 +598,7 @@ If a file is associated with the current-buffer save it.
   '(:filename superman-read-file-name
 	      :link :complete "link to url"
 	      :appointmentdate superman-read-date
+	      :meetingdate superman-read-date
 	      :location superman-read-directory-name)
   "Property with methods used to complete fields during capture, 
  i.e., define what would happen when user calls `superman-complete-property'
@@ -734,7 +749,8 @@ and in the first cat otherwise."
 		    ("Link" :complete "link to url")
 		    ("FileName" :complete superman-read-file-name)
 		    ("AppointmentDate" :complete superman-read-date)
-		    ("ProjectStart" :complete superman-read-date)
+		    ("MeetingDate" :complete superman-read-date)
+		    ;; ("ProjectStart" :complete superman-read-date)
 		    ("Location" :complete "Where to meet")))
 	props keys)
     (if superman-view-mode
@@ -743,38 +759,39 @@ and in the first cat otherwise."
       ;; activate project view
       (superman-switch-config pro nil "PROJECT"))
     ;; now we are in project view
-    (unless cat
-      (superman-next-cat)
-      (setq cat (or (superman-current-cat)
-		    (let* ((index (superman-get-index pro))
-			   (new-section (read-string
-					 (concat "Create new section in " index ": "))))
-		      (save-excursion
-			(find-file index)
-			(end-of-buffer)
-			(insert "\n* " new-section " \n")
-			(save-buffer))
-		      new-section))))
-    ;; supplement list of existing properties
-    ;; with default properties
-    (setq keys
-	  (mapcar 'list
-		  (superman-view-property-keys)))
-    (if (assoc "CaptureDate" keys)
-	(setq keys
-	      (append `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))
-		      (delete (assoc "CaptureDate" keys) keys)))
-      (setq keys `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))))
-    ;; add defaults (when needed)
-    (while defaults
-      (unless (assoc (caar defaults) keys)
-	(setq props (append (list (car defaults)) keys)))
-      (setq defaults (cdr defaults)))
-    (superman-capture pro
-		      (or marker cat)
-		      "item"
-		      nil
-		      props nil scene)))
+    (cond ((or (not cat) (not (stringp cat)))
+	   (superman-capture-item pro))
+	  ((string-match "calendar" cat)
+	   (superman-capture-meeting pro cat nil))
+	  ((string-match "document\\|file" cat)
+	   (superman-capture-document pro cat nil))
+	  ((string-match "bookmark" cat)
+	   (superman-capture-bookmark pro cat nil))
+	  ((string-match "task" cat)
+	   (superman-capture-task pro cat nil))
+	  ((string-match "note" cat)
+	   (superman-capture-note pro cat nil))
+	  (t
+	   ;; supplement list of existing properties
+	   ;; with default properties
+	   (setq keys
+		 (mapcar 'list
+			 (superman-view-property-keys)))
+	   (if (assoc "CaptureDate" keys)
+	       (setq keys
+		     (append `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))
+			     (delete (assoc "CaptureDate" keys) keys)))
+	     (setq keys `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))))
+	   ;; add defaults (when needed)
+	   (while defaults
+	     (unless (assoc (caar defaults) keys)
+	       (setq props (append (list (car defaults)) keys)))
+	     (setq defaults (cdr defaults)))
+	   (superman-capture pro
+			     (or marker cat)
+			     "item"
+			     nil
+			     props nil scene)))))
 
 
 ;; FIXME: this should become an edit of the project entry 
@@ -909,6 +926,7 @@ file does not need to exist."
        (hdr :value "Superman(ager)" :test superman-test-hdr))
      nil ;; this is not an edit
      'superman ;; scene
+     nil ;; no nick name 
      nil ;; read-only
      quit-scene ;; quit-scene
      clean-hook ;; clean-hook

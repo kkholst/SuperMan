@@ -121,20 +121,22 @@ Column showing the todo-state
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	("NoteDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" full) ("face" font-lock-function-name-face))))
+
 (setq superman-data-balls
       '(("CaptureDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" 23) ("face" font-lock-function-name-face))
 	("DataFileName" ("fun" superman-dont-trim))))
+
 (setq superman-task-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
 	(priority ("width" 8) ("face" superman-get-priority-face))
 	("TaskDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("width" full) ("face" font-lock-function-name-face))))
+
 (setq superman-bookmark-balls
       '(("BookmarkDate" ("fun" superman-trim-date) ("width" 13) ("face" font-lock-string-face))
 	(hdr ("face" font-lock-function-name-face) ("name" "Description") ("width" 45))
 	("Link" ("fun" superman-trim-link) ("width" full) ("name" "Bookmark"))))
-
 
 (setq superman-mail-balls
       '((todo ("width" 7) ("face" superman-get-todo-face))
@@ -386,10 +388,15 @@ for project views.")
   "Default action buttons as used by `superman-capture-item' via `superman-view-insert-action-buttons' to capture
 items to be shown in project view.")
 
+(defun superman-default-action-buttons-inside-project (pro)
+  `(("Meeting (Calendar)" :fun (lambda () (interactive) (superman-capture-calendar ,pro nil t)) :face superman-capture-button-face :help  "Capture a meeting for calendar" :width 43)
+    ("Meeting (Project)" :fun (lambda () (interactive) (superman-capture-meeting ,pro nil t)) :face superman-capture-button-face :help  "Capture a meeting" :width 43)
+    ("Task" :fun (lambda () (interactive) (superman-capture-task ,pro nil t)) :face superman-capture-button-face :help  "Capture a task" :width 43)
+    ("Document" :fun (lambda () (interactive) (superman-capture-document ,pro nil t)) :face superman-capture-button-face :help  "Capture a document" :width 43)
+    ("Note" :fun (lambda () (interactive) (superman-capture-note ,pro nil t)) :face superman-capture-button-face :help  "Capture a note" :width 43)
+    ("Text" :fun (lambda () (interactive) (superman-capture-text ,pro nil t)) :face superman-capture-button-face :help  "Capture text" :width 43)
+    ("Bookmark" :fun (lambda () (interactive) (superman-capture-bookmark ,pro nil t)) :face superman-capture-button-face :help  "Capture a bookmark" :width 43)))
 
-(defun superman-view-pop-actions ()
-  (interactive)
-  (superman-capture-item 'pop))
 
 (defvar superman-action-button-width 13 "Width of action buttons")
 
@@ -1639,6 +1646,16 @@ neither object nor the current buffer identify a project."
      ((not ask) superman-current-project)
      (t (superman-select-project)))))
 
+(defun superman-get-project-buffers (nickname)
+  `(,(concat "*Project[" nickname "]*")
+    ,(concat "*Configurations[" nickname "]*")
+    ,(concat "*Make[" nickname "]*")
+    ,(concat "*Unison[" nickname "]*")
+    ,(concat "*Timeline[" nickname "]*")
+    ,(concat "*Todo[" nickname "]*")
+    ,(concat "*Git[" nickname "]*")
+    ,(concat "*FileList[" nickname "]*")))
+
 (defun superman-view-project (&optional project refresh redo) 
   "Display project in a special view buffer. Optional
 argument PROJECT can be the nickname of a project or the
@@ -1762,6 +1779,7 @@ to refresh the view.
       (setq default-directory
 	    (superman-project-home pro))
       (setq buffer-read-only t))))
+
 
 (defun superman-redo-cat (&optional cat)
   "Redo the current section in a superman view buffer.
@@ -2582,6 +2600,7 @@ disable editing."
 	      (append '(superman-view-item-mode)
 		      'superman-setup-scene-hook)
 	    superman-setup-scene-hook))
+	 (nick (get-text-property (point-min) 'nickname))
 	 (marker
 	  (or marker
 	      (get-text-property (point-at-bol) 'org-hd-marker)
@@ -2622,7 +2641,7 @@ disable editing."
        (concat  "Superman " (if read-only "views" "edits") " item")
        0 ;; level 0 because we are pasting a heading in
        item
-       nil 'edit scene read-only nil nil nil))))
+       nil 'edit scene nick read-only nil nil nil))))
 
 (defun superman-view-delete-entry (&optional dont-prompt dont-kill-line)
   "Delete entry at point. Prompt user unless DONT-PROMT is non-nil.
@@ -3132,6 +3151,7 @@ for git and other actions like commit, history search and pretty log-view."
 (define-key superman-view-mode-map "M" 'superman-view-mark-all)
 (define-key superman-view-mode-map "r" 'superman-view-redo-line)
 (define-key superman-view-mode-map "q" 'superman-view-quit-help)
+(define-key superman-view-mode-map "Q" 'superman-view-quit-project)
 (define-key superman-view-mode-map "h" 'superman-view-help)
 (define-key superman-view-mode-map "\C-m" 'superman-view-show-make)
 (define-key superman-view-mode-map "c" 'superman-view-show-configurations)
@@ -3196,44 +3216,37 @@ for git and other actions like commit, history search and pretty log-view."
 	("Bookmarks" (lambda (&optional pro) (interactive) (superman-capture-bookmark pro nil nil)))))
 
 (fset 'superman-new-item 'superman-capture-item)
-(defun superman-capture-item (&optional pop)
-  "Add a new document, note, task or other item to a project. If called
-from superman project view, assoc a capture function from `superman-capture-alist'.
-If non exists create a new item based on balls and properties in current section. If point is
-not in a section prompt for section first."
-  (interactive "p")
-  (if (and (or (not pop) (= pop 1)) superman-view-mode)
-      (let* ((pro (when superman-view-mode (superman-view-current-project t)))
-	     (marker (get-text-property (point-at-bol) 'org-hd-marker))
-	     (index (superman-get-index pro))
-	     (index-buf (cond
-			 ((stringp index)
-			  (get-file-buffer index))
-			 ((bufferp index) index)))
-	     (cat (cond ((superman-current-cat))
-			((get-text-property (point-min) 'bibtex-file)
-			 "BibTeX")
-			(index-buf
-			 (let ((cats (superman-parse-cats index-buf 1)))
-			   (cond ((> (length cats) 1)
-				  (completing-read
-				   (concat "Choose category for new item in project " (car  pro) ": ")
-				   (append cats superman-capture-alist)))
-				 ((eq (length cats) 1) (caar cats))
-				 (t nil))))))
-	     (fun (if cat (assoc cat superman-capture-alist))))
-	(if fun (funcall (cadr fun) pro)
-	  (superman-capture-thing pro)))
-    ;; behave similar to org-capture outside superman-view-mode
-    (let ((c-buf (get-buffer "*Superman-Capture*"))
-	  (buttons (mapcar (lambda (x) (let ((item x)) 
-					 (plist-put (cdr item) :width 23)
-					 (plist-put (cdr item) :face 'superman-high-face)
-					 item)) 
-			   superman-default-action-buttons-outside-project)))
-      (if c-buf (pop-to-buffer c-buf)
-	(pop-to-buffer "*Superman-Capture*")
-	(insert "At the press one of the buttons below an item will be added to one of your projects.\n")
+(defun superman-capture-item (&optional project extern buffer buttons help)
+  "Add a new document, note, task, bookmark or other item to a project. If called
+from superman project view and EXTERN is nil assoc a capture function from `superman-capture-alist'.
+If EXTERN is non-nil or if no capture function is found, pop to buffer *Superman-Capture* which shows capture buttons."
+  (interactive)
+  (if (get-text-property (point-min) 'bibtex-file)
+      (superman-capture-bibtex (superman-view-current-project t) nil nil)
+    (if (and (not extern) superman-view-mode)
+	(let* ((pro (or project (superman-view-current-project t)))
+	       (marker (get-text-property (point-at-bol) 'org-hd-marker))
+	       (cat (superman-current-cat))
+	       (fun (if cat (assoc-string cat superman-capture-alist t))))
+	  (if fun (funcall (cadr fun) pro)
+	    (superman-capture-item project t
+				   (concat "*Superman-Capture " (car pro) "*")
+				   (superman-default-action-buttons-inside-project (car pro))
+				   (concat "Press one of the buttons below to add an item to project " 
+					   (car pro) " .\n"))))
+      ;; behave similar to org-capture outside superman-view-mode
+      (let ((c-buf 
+	     (if buffer (get-buffer-create buffer)
+	       (get-buffer "*Superman-Capture*")))
+	    (buttons (or buttons (mapcar (lambda (x) (let ((item x)) 
+						       (plist-put (cdr item) :width 23)
+						       (plist-put (cdr item) :face 'superman-high-face)
+						       item))
+					 superman-default-action-buttons-outside-project))))
+	(if buffer (pop-to-buffer c-buf)
+	  (if c-buf (pop-to-buffer c-buf)
+	    (pop-to-buffer "*Superman-Capture*")))
+	(insert (or help "Press one of the buttons below to add an item to one of your projects.\n"))
 	(superman-view-insert-action-buttons buttons t "" t)
 	(superman-view-mode)
 	(goto-char (point-min))

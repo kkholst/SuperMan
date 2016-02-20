@@ -34,9 +34,9 @@
   (if (featurep 'superman-file-list)
       (let ((dir (superman-project-home project)))
 	(cond ((file-list-select nil (or ext ".")
-					  nil nil dir (concat "*File-list-" (car project) "*")))
+				 nil nil dir (concat "*FileList[" (car project) "]*")))
 	      (t
-	       (switch-to-buffer (concat "*File-list-" (car project) "*"))
+	       (switch-to-buffer (concat "*FileList[" (car project) "]*"))
 	       (toggle-read-only -1)
 	       (erase-buffer)
 	       (insert "FILE-LIST: No files in project"))))
@@ -69,7 +69,7 @@
 		  (when project
 		    (superman-project-home project))
 		  (error "Missing location")))
-	 (view-buf (or view-buffer (get-buffer-create (concat "*FileList: " nick "*"))))
+	 (view-buf (or view-buffer (get-buffer-create (concat "*FileList[ " nick "]*"))))
 	 (list (or list file-list-current-file-list))
 	 ;; when balls are specified force level 0
 	 ;; and provide file-name and directory name

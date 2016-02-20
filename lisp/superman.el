@@ -186,7 +186,8 @@ the contents of the file `superman-profile'."
      "Superman setup"
      0 ;; level 0 because we are pasting a heading in
      current-set-up
-     nil (not read-only) scene read-only nil clean-scene-hook nil)))
+     nil (not read-only) scene nil 
+     read-only nil clean-scene-hook nil)))
 
 (defun superman-parse-setup (pom list &optional fill)
   "Parse properties at point or marker POM and loop over 

@@ -341,6 +341,31 @@ or the nickname."
       (message "Cannot see a marker here")
       nil)))
 
+(defun org-property--local-values (property literal-nil)
+  "Return value for PROPERTY in current entry.
+Value is a list whose care is the base value for PROPERTY and cdr
+a list of accumulated values.  Return nil if neither is found in
+the entry.  Also return nil when PROPERTY is set to \"nil\",
+unless LITERAL-NIL is non-nil."
+  (let ((range (org-get-property-block)))
+    (when range
+      (goto-char (car range))
+      (let* ((case-fold-search t)
+            (end (cdr range))
+            (value
+             ;; Base value.
+             (save-excursion
+               (let ((v (and (re-search-forward
+                              (org-re-property property nil t) end t)
+                             (org-match-string-no-properties 3))))
+                 (list (if literal-nil v (org-not-nil v)))))))
+       ;; Find additional values.
+       (let* ((property+ (org-re-property (concat property "+") nil t)))
+         (while (re-search-forward property+ end t)
+           (push (org-match-string-no-properties 3) value)))
+       ;; Return final values.
+       (and (not (equal value '(nil))) (nreverse value))))))
+
 (defun superman-get-property (pom property &optional inherit literal-nil)
   "Read property and remove trailing whitespace."
   (let ((prop
