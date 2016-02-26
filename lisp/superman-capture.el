@@ -684,9 +684,10 @@ If a file is associated with the current-buffer save it.
      "free text"
      nil nil 0)))
 
-(defun superman-capture-bookmark (&optional project marker ask)
+(defun superman-capture-bookmark (&optional project marker ask bookmark)
   (interactive)
   (let ((pro (superman-get-project project ask))
+	(bookmark (or bookmark ""))
 	(marker (or marker (get-text-property (point-at-bol) 'org-hd-marker))))
     (superman-capture
      pro
@@ -695,7 +696,7 @@ If a file is associated with the current-buffer save it.
      nil
      `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a]"))
        (hdr :test superman-test-hdr)
-       ("Link" :if-empty complain :message "Need a link to url or something else")))))
+       ("Link" :value ,bookmark :if-empty complain :message "Need a link to url or something similar")))))
 
 (fset 'superman-capture-todo 'superman-capture-task)
 (defun superman-capture-task (&optional project marker ask)
@@ -1281,6 +1282,22 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
     (superman-view-mode)))
 
 
+;;}}}
+
+;;{{{ yank
+
+(defun superman-yank ()
+  (interactive)
+  (let* ((yank (replace-regexp-in-string "^[ \t]*\\|[ \t]*$" "" (current-kill 0)))
+	 (yank-text (cadr (split-string yank "//")))
+	 (pro (superman-get-project (get-text-property (point-min) 'nickname)))
+	 ;; (marker ))
+	 )
+    (cond ((string-match (regexp-opt thing-at-point-uri-schemes) yank)
+	   (superman-capture-bookmark pro nil nil yank)
+	   (insert yank-text)
+	   (superman-clean-scene))
+	  (t (message "Superman: SoSorry, don't know how to yank this.")))))
 ;;}}}
 
 (provide 'superman-capture)

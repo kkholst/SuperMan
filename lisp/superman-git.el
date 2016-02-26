@@ -503,11 +503,7 @@ given by the filename property of the item at point."
       (save-some-buffers nil)
       (when dir
 	(superman-git-add files dir nil nil)
-	;; move point inside cat to the first marked entry
-	;; FIXME: it would be safer to have a property 'marked
-	(goto-char (next-single-property-change (point-min) 'type)) ;; org-marked-entry-overlay
-	(goto-char (previous-single-property-change (point) 'cat))
-	(superman-redo-cat)))))
+	(superman-redo)))))
 
 (defun superman-git-commit-marked (&optional commit)
   "Call git commit on the list of marked files."

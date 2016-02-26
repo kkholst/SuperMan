@@ -3173,11 +3173,18 @@ for git and other actions like commit, history search and pretty log-view."
 
 (define-key superman-view-mode-map "Bn" 'superman-new-ball)
 (define-key superman-view-mode-map "Bx" 'superman-delete-ball)
-(define-key superman-view-mode-map "Bs" 'superman-save-balls)
+(define-key superman-view-mode-map "Bs" 'superman-Capture)
 
 ;; view context
 (define-key superman-view-mode-map "V" 'superman-toggle-context-view)
 (define-key superman-view-mode-map "v" 'superman-view-item)
+
+;; yank-capture
+(define-key superman-view-mode-map "Y" 'superman-yank)
+;; (define-key superman-view-mode-map [(mouse-2)] 'superman-mouse-yank)
+(define-key superman-view-mode-map "\M-y" 'superman-yank)
+(define-key superman-view-mode-map "\C-y" 'superman-yank)
+
 ;; Git control
 (define-key superman-view-mode-map "g" 'superman-git-display)
 (define-key superman-view-mode-map "G " 'superman-git-last-log-file)
