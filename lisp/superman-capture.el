@@ -1286,17 +1286,25 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 
 ;;{{{ yank
 
-(defun superman-yank ()
-  (interactive)
-  (let* ((yank (replace-regexp-in-string "^[ \t]*\\|[ \t]*$" "" (current-kill 0)))
+(defun superman-yank (arg)
+  "Yank content directly into superman buffer. 
+   With prefix [C-u C-y] org-links can be captured."
+  (interactive "P")
+  (if arg (progn ;; Insert org-link into kill-ring
+	    (with-temp-buffer
+	      (org-insert-link)
+	      (kill-ring-save (point-min) (point-max))
+	      )))
+    (let* ((yank (replace-regexp-in-string "^[ \t]*\\|[ \t]*$" "" (current-kill 0)))
 	 (yank-text (cadr (split-string yank "//")))
 	 (pro (superman-get-project (get-text-property (point-min) 'nickname)))
 	 ;; (marker ))
 	 )
-    (cond ((string-match (regexp-opt thing-at-point-uri-schemes) yank)
-	   (superman-capture-bookmark pro nil nil yank)
-	   (insert yank-text)
-	   (superman-clean-scene))
+      (cond ((or (string-match (regexp-opt thing-at-point-uri-schemes) yank)
+		 (string-match org-bracket-link-regexp yank))
+	     (superman-capture-bookmark pro nil nil yank)
+	     (insert yank-text)
+	     (superman-clean-scene))
 	  (t (message "Superman: SoSorry, don't know how to yank this.")))))
 ;;}}}
 
