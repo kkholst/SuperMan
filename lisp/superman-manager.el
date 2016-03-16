@@ -518,7 +518,7 @@ unless LITERAL-NIL is non-nil."
 					 (> 
 					  (org-time-stamp-to-now (cdr (assoc "lastvisit" (cadr x))) 'seconds)
 					  (org-time-stamp-to-now (cdr (assoc "lastvisit" (cadr y))) 'seconds)))))
-
+    
     (when (get-buffer "*Superman-parse-errors*")
       (pop-to-buffer  "*Superman-parse-errors*"))
     superman-project-alist))
@@ -760,6 +760,10 @@ project directory tree to the trash."
 ;;}}}
 ;;{{{ listing projects
 
+(defvar superman-ignore-index-buffers t "If non-nil add index buffers to `ido-ignore-buffers'.")
+(defvar superman-has-ignored-index-buffers nil "User should not set this variable. Function `superman-index-list' sets this variable to avoid
+ checking index buffers multiple times into `ido-ignore-buffers'.")
+
 (defun superman-index-list (&optional category state extension not-exist-ok update exclude-regexp)
   "Return a list of project specific indexes.
 Projects are filtered by CATEGORY unless CATEGORY is nil.
@@ -801,7 +805,14 @@ Examples:
 					 (string= extension (file-name-extension f))))
 			    f))))
 		  palist)))))
+    (when (and superman-ignore-index-buffers 
+	       (not superman-has-ignored-index-buffers))
+      ;; (setq ido-ignore-buffers  '("\\` "))
+      (mapcar #'(lambda (file) (add-to-list 'ido-ignore-buffers
+					    (file-name-nondirectory file)))
+	      index-list))
     index-list))
+
 
 ;;}}}
 ;;{{{ selecting projects

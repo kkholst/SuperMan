@@ -373,9 +373,13 @@ Use this map to set additional keybindings for when superman-export-header-mode 
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-next-latex-error 1)))
 	   " "
-	   (header-button-format "find" :action 
+	   (header-button-format "find-sec" :action 
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-find-latex-error)))
+	   " "
+	   (header-button-format "find-frame" :action 
+				 #'(lambda (&optional arg) (interactive)
+				     (superman-find-latex-error 'frame)))
 	   " View: "
 	   (header-button-format "Start viewer" :action 
 				 #'(lambda (&optional arg) (interactive)
@@ -432,36 +436,52 @@ If EXT is given then turn name.xxx into name.ext. EXT must be a string like '.te
   
 
 
-(defun superman-find-latex-error ()
+(defun superman-find-latex-error (&optional by-frame)
   (interactive)
   (let ((tex-file (buffer-file-name))
 	(control-buf (buffer-name (current-buffer)))
+	(log-buf (concat (file-name-sans-extension 
+			  (buffer-name (current-buffer)))
+			 ".log"))
 	(last-pos (get-text-property (point-min) 'latex-pos))
 	tex-buf
 	pos)
     (if (get-file-buffer tex-file)
 	(set-buffer (get-file-buffer tex-file))
       (find-file tex-file))
+    (save-excursion (goto-char (point-min))
+		    (while (re-search-forward "\\\\end{document}" nil t)
+		      (replace-match "")))
     (setq tex-buf (current-buffer))
     (goto-char (or last-pos (point-min)))
-    (re-search-forward "\\\\\\(sub\\)*section{" nil t)
-    (previous-line 1)
+    (if by-frame
+	(re-search-forward "\\\\\\(end\\){frame" nil t)
+      (re-search-forward "\\\\\\(sub\\)*section{" nil t)
+      (previous-line 1))
     (end-of-line)
     (insert "\n\\end{document}")
+    (when (get-buffer "*TeX Help*")
+      (save-excursion (set-buffer "*TeX Help*")
+		      (setq buffer-read-only nil)
+		      (erase-buffer)))
     (save-buffer)
     (save-excursion
       (TeX-command "LaTeX" 'TeX-master-file nil))
     (beginning-of-line)
-    (kill-line)
+    ;; (kill-line)
     (save-buffer)
     (forward-line 1)
     (setq pos (point))
+    (if (get-buffer log-buf)
+	(save-excursion 
+	  (set-buffer log-buf)
+	  (revert-buffer t t t)))
     (superman-switch-config
      nil nil
-     (concat tex-file " | *TeX Help* / " control-buf))
+     (concat tex-file " / " log-buf " | *TeX Help* / " control-buf))
     (with-current-buffer control-buf
       (let ((buffer-read-only nil))
-      (put-text-property (point-min) (1+ (point-min)) 'latex-pos pos)))))
+	(put-text-property (point-min) (1+ (point-min)) 'latex-pos pos)))))
     
 ;; (defun superman-latex-export ()
   ;; (interactive)

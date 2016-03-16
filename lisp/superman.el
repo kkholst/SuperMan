@@ -417,7 +417,7 @@ all dates."
 			     "\n")))))
     (push ?A unread-command-events)
     (call-interactively 'org-agenda)))
-;; (superman-clean-buffer-list S-index-list)))
+
 ;;}}}
 ;;{{{ Todo lists
 (defvar superman-todo-tags nil "Regexp to match todo-tags that should popup in the global todo list")
