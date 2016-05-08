@@ -822,16 +822,43 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 			 `(lambda () (interactive) 
 			    (superman-goto-project ,nick "Configuration" nil )))
       (put-text-property (point-at-bol) (point-at-eol) 'display "★ Unison" )
-      (insert "\nUnison file synchronizing (press digit to run corresponding unison command):\n\n")
+      (insert "\tPress digit to run corresponding command\n")
+      (insert "\n\n" (int-to-string i) ": "
+	      (superman-make-button "Capture directories for synchronisation"
+				    '(:fun superman-capture-unison :face superman-capture-button-face
+					   :help "Set directories for unison synchronisation.")))
+      (put-text-property (point-at-bol) (point-at-eol) 'unison i)
+      ;; (put-text-property (point-at-bol) (point-at-eol) 'org-hd-marker marker)
+      (put-text-property (point-at-bol) (point-at-eol) 
+			 'superman-choice 'superman-capture-unison)
+      (define-key superman-unison-mode-map
+	(int-to-string i)
+	`(lambda () (interactive) (goto-char (point-min)) 
+	   (re-search-forward ,(concat "^" (int-to-string i) ": ") nil t)
+	   (superman-choose-entry)))
+      (setq  i (+ i 1))
+      (insert "\n\n")
       (while unison-list
 	(let* ((unison (car unison-list))
 	       (name (plist-get unison :HEADING))
 	       (marker (plist-get unison :POINT-MARKER))
-	       (cmd (concat (cond ((plist-get unison :unison)) (superman-unison-cmd (eval superman-unison-cmd)) (t "unison-gtk"))
+	       (r1 (plist-get unison :root-1))
+	       (r2 (plist-get unison :root-2))
+	       (cmd (concat (cond ((let ((tmp-cmd (plist-get unison :unison)))
+				     (when tmp-cmd
+				       (if (stringp tmp-cmd)
+					   (if (string= tmp-cmd "superman-unison-cmd")
+					       (eval (intern tmp-cmd)) tmp-cmd)))))
+				  ((boundp 'superman-unison-cmd) (eval superman-unison-cmd))
+				  (t "unison-gtk"))
 			    " "
-			    (plist-get unison :root-1)
+			    (if (string-match org-bracket-link-regexp r1)
+				(org-match-string-no-properties 1 r1)
+			      r1)
 			    " "
-			    (plist-get unison :root-2)
+			    (if (string-match org-bracket-link-regexp r2)
+				(org-match-string-no-properties 1 r2)
+			      r2)
 			    " "
 			    (if (string= (plist-get unison :switches) "default")
 				superman-unison-switches
@@ -3223,7 +3250,7 @@ for git and other actions like commit, history search and pretty log-view."
 	("Bookmarks" (lambda (&optional pro) (interactive) (superman-capture-bookmark pro nil nil)))))
 
 (fset 'superman-new-item 'superman-capture-item)
-(defun superman-capture-item (&optional project extern buffer buttons help)
+(defun superman-capture-item (&optional project extern buffer buttons help refresh)
   "Add a new document, note, task, bookmark or other item to a project. If called
 from superman project view and EXTERN is nil assoc a capture function from `superman-capture-alist'.
 If EXTERN is non-nil or if no capture function is found, pop to buffer *Superman-Capture* which shows capture buttons."
@@ -3235,12 +3262,43 @@ If EXTERN is non-nil or if no capture function is found, pop to buffer *Superman
 	       (marker (get-text-property (point-at-bol) 'org-hd-marker))
 	       (cat (superman-current-cat))
 	       (fun (if cat (assoc-string cat superman-capture-alist t))))
+	  ;; in a section but name of section not associated
 	  (if fun (funcall (cadr fun) pro)
-	    (superman-capture-item project t
-				   (concat "*Superman-Capture " (car pro) "*")
-				   (superman-default-action-buttons-inside-project (car pro))
-				   (concat "Press one of the buttons below to add an item to project " 
-					   (car pro) " .\n"))))
+	    (let ((buttons (superman-default-action-buttons-inside-project (car pro)))
+		  (defaults `((hdr " TODO [A] New item")
+			      ("Link" :complete "link to url")
+			      ("FileName" :complete superman-read-file-name)
+			      ("AppointmentDate" :complete superman-read-date)
+			      ("MeetingDate" :complete superman-read-date)
+			      ;; ("ProjectStart" :complete superman-read-date)
+			      ("Location" :complete "Where to meet")))
+		  (keys (mapcar 'list (superman-view-property-keys)))
+		  props)
+	      (if (assoc "CaptureDate" keys)
+		  (setq keys
+			(append `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))
+				(delete (assoc "CaptureDate" keys) keys)))
+		(setq keys `(("CaptureDate" :hidden yes :value ,(format-time-string "[%Y-%m-%d %a %R]")))))
+	      
+	      (while defaults
+		(unless (assoc (caar defaults) keys)
+		  (setq props (append (list (car defaults)) keys)))
+		(setq defaults (cdr defaults)))
+	      (if (and cat (not fun))
+		  (setq buttons 
+			(append `((,cat :fun (lambda nil (interactive) 
+					       (superman-capture ,(car pro) 
+								 ,marker
+								 (concat "A new item will be added to category: " ,cat)
+								 nil
+								 (quote ,props))) :width 43))
+				buttons)))
+	      (superman-capture-item project t
+				     (concat "*Superman-Capture " (car pro) "*")
+				     buttons
+				     (concat "Press one of the buttons below to add an item to project " 
+					     (car pro) " .\n")
+				     t))))
       ;; behave similar to org-capture outside superman-view-mode
       (let ((c-buf 
 	     (if buffer (get-buffer-create buffer)
@@ -3253,11 +3311,14 @@ If EXTERN is non-nil or if no capture function is found, pop to buffer *Superman
 	(if buffer (pop-to-buffer c-buf)
 	  (if c-buf (pop-to-buffer c-buf)
 	    (pop-to-buffer "*Superman-Capture*")))
-	(insert (or help "Press one of the buttons below to add an item to one of your projects.\n"))
-	(superman-view-insert-action-buttons buttons t "" t)
-	(superman-view-mode)
-	(goto-char (point-min))
-	(setq buffer-read-only t)))))
+	(when (or refresh (not buffer-read-only))
+	  (let ((buffer-read-only nil))
+	    (erase-buffer)
+	    (insert (or help "Press one of the buttons below to add an item to one of your projects.\n"))
+	    (superman-view-insert-action-buttons buttons t "" t)
+	    (superman-view-mode)
+	    (goto-char (point-min)))
+	  (setq buffer-read-only t))))))
 
 ;;}}}
 ;;{{{ View-item-mode

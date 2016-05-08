@@ -129,8 +129,10 @@ Use this map to set additional keybindings for when Org-mode is used.")
 
 (defvar superman-org-export-target-list '("pdf" "html" "docx")
   "Export targets.")
-
 (defvar superman-org-export-target "pdf" "current export target")
+(defvar superman-babel-target-list '("this-block" "all-blocks")
+  "Babel R-block targets.")
+(defvar superman-babel-target "all-blocks" "Either 'all-blocks': action on all R-blocks\n or 'this-block': action on current R-block.")
 
 (defun superman-org-export-change-target ()
   (interactive)
@@ -142,19 +144,6 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	   (list (car superman-org-export-target-list))))
   (superman-org-headline-mode))
 
-(defun superman-org-export-as (&optional arg)
-  (cond ((string= superman-org-export-target "pdf")
-	 (superman-export-as-latex arg))
-	((string= superman-org-export-target "docx")
-	 (superman-export-as-docx))
-	((string= superman-org-export-target "html")
-	 (org-html-export-to-html)
-	 (superman-browse-this-file))))
-
-(defvar superman-babel-target-list '("this-block" "all-blocks")
-  "Babel R-block targets.")
-
-(defvar superman-babel-target "all-blocks" "Either 'all-blocks': action on all R-blocks\n or 'this-block': action on current R-block.")
 
 (defun superman-babel-change-target ()
   (interactive)
@@ -166,6 +155,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	   (list (car superman-babel-target-list))))
   (superman-org-headline-mode))
 
+
 (defun superman-org-export-as (&optional arg)
   (cond ((string= superman-org-export-target "pdf")
 	 (superman-export-as-latex arg))
@@ -173,8 +163,8 @@ Use this map to set additional keybindings for when Org-mode is used.")
 	 (superman-export-as-docx))
 	((string= superman-org-export-target "html")
 	 (org-html-export-to-html)
-	 (superman-browse-this-file))))
-
+	 ;;(superman-browse-this-file)
+	 )))
 
 (define-minor-mode superman-org-headline-mode
   "Minor mode for headline buttons in header line in org buffers."
@@ -185,7 +175,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
   (make-local-variable 'superman-babel-target-list)
   (setq-local
    header-line-format
-   (concat (header-button-format (concat "Mode:" (or superman-org-export-target "not set")) :action
+   (concat (header-button-format (concat "M-J:" (or superman-org-export-target "not set")) :action
 				 #'(lambda (&optional arg) (interactive)
 				     (superman-org-export-change-target)))
 	   " "
