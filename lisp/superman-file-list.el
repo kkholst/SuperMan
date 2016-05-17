@@ -737,8 +737,8 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 		((string= by "time")
 		 '(lambda (entry)
 		    (file-list-time-less-p
-		     (subtract-time (current-time) (days-to-time
-						    (string-to-int regexp)))
+		     (file-list-time-subtract (current-time) (file-list-days-to-time
+							      (string-to-int regexp)))
 		     (nth 5 (file-attributes (file-list-make-file-name entry))))))
 		(t nil)))
 	 (sub-file-list
@@ -901,7 +901,7 @@ See also file-list-select."
 	(and (= (car t1) (car t2))
 	     (< (nth 1 t1) (nth 1 t2))))))
 
-(defun days-to-time (days)
+(defun file-list-days-to-time (days)
   "Convert DAYS into a time value."
   (let* ((seconds (* 1.0 days 60 60 24))
 	 (rest (expt 2 16))
@@ -910,9 +910,9 @@ See also file-list-select."
     (list ms (condition-case nil (round (- seconds (* ms rest)))
 	       (range-error (expt 2 16))))))
 
-(defalias 'subtract-time 'time-subtract)
+;; (defalias 'subtract-time 'time-subtract)
 
-(defun time-subtract (t1 t2)
+(defun file-list-time-subtract (t1 t2)
   "Subtract two time values.
 Return the difference in the format of a time value."
   (let ((borrow (< (cadr t1) (cadr t2))))

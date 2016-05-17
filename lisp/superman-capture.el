@@ -42,6 +42,7 @@ just before the capture buffer is given to the user.")
 
 (defvar superman-unison-switches "-ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*'")
       ;; "-ignore 'Regex .*' -ignorenot 'Regexp *.(org|R|tex|Rd)$'")
+
 (defvar superman-unison-cmd "unison-gtk")
 
 ;;}}}
@@ -172,7 +173,7 @@ See also `superman-capture-whatever' for the other arguments."
 			(goto-char (point-max))
 			(point-marker))))
     (superman-capture-whatever
-     destination welcome-text level body plist nil scene (car project) 
+     destination welcome-text level body plist nil scene (if (stringp project) project (car project))
      nil quit-scene clean-hook quit-hook)))
 
 (defun superman-capture-whatever (destination 
@@ -596,13 +597,13 @@ If a file is associated with the current-buffer save it.
 
 (defvar superman-capture-completion-plist
   '(:filename superman-read-file-name
-	      :link :complete "link to url"
+	      :link "link to url"
 	      :appointmentdate superman-read-date
 	      :meetingdate superman-read-date
 	      :location superman-read-directory-name)
-  "Property with methods used to complete fields during capture, 
- i.e., define what would happen when user calls `superman-complete-property'
- or presses the <tab> key. The keys have to be lower-case.")
+  "P-list to associate a function with a property name. The function is used 
+ by `superman-complete-property' to complete property fields during capture.
+ Note: by convention the keys of the list (property names with trailing colon) are in lower-case.")
 
 (defun superman-complete-property ()
   "Read text properties at beginning of line to help finding a value for this property."
@@ -610,7 +611,11 @@ If a file is associated with the current-buffer save it.
   (save-excursion
     (if (org-at-heading-p)
 	(message "Type a title after ***, activate todo: C-c C-t, change priority Shift-up")
-      (let* ((prop (get-text-property (point-at-bol) 'property))
+      (let* ((prop (cond ((get-text-property (point-at-bol) 'property))
+			 ((save-excursion (beginning-of-line)
+					  (when (looking-at org-property-re)
+					    (match-string 2))))
+			 (t (error "superman-complete-property: Cannot see a property at point."))))
 	     (text-props (text-properties-at (point-at-bol)))
 	     (complete (or (get-text-property (point-at-bol) 'complete)
 			   (plist-get superman-capture-completion-plist
@@ -1048,7 +1053,7 @@ is non-nil prompt for project."
      "Configuration"
      "Unison"
      nil
-     `(("UNISON" :value "superman-unison-cmd")
+     `(("UNISON" :value ,superman-unison-cmd)
        (hdr :value "Synchonise")
        ("SWITCHES" :value "-ignore 'Path .git' -ignore 'Regex ^(\\.|#).*' -ignore 'Regex .*~$' -perms 0")
        ;; :SWITCHES: -ignore 'Regex .*(~|te?mp|rda)$' -ignore 'Regex ^(\\.|#).*' -perms 0
@@ -1109,11 +1114,7 @@ is non-nil prompt for project."
 	 (link (org-store-link 1))
 	 (entry (superman-get-project project 'ask))
 	 (pro (car entry))
-	 (loc (expand-file-name
-	       (file-name-directory (replace-regexp-in-string
-				     "/$" ""
-				     (file-name-directory
-				      (superman-get-index entry))))))
+	 (loc (expand-file-name (superman-get-location entry)))
 	 (index (superman-get-index entry))
 	 (region (progn (gnus-summary-select-article-buffer)
 			(unless (use-region-p)
