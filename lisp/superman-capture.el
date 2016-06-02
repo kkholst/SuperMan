@@ -36,7 +36,7 @@ just before the capture buffer is given to the user.")
   "Keymap used for `superman-view-mode' commands.")
 (define-key superman-capture-mode-map  "\C-c\C-c" 'superman-clean-scene)
 (define-key superman-capture-mode-map [(tab)] 'superman-complete-property)
-(define-key superman-capture-mode-map  "q" 'superman-quit-scene)
+;;(define-key superman-capture-mode-map  "q" 'superman-quit-scene)
 (define-key superman-capture-mode-map  "\C-x\C-s" 'superman-clean-scene)
 (define-key superman-capture-mode-map  "\C-c\C-q" 'superman-quit-scene)
 
