@@ -510,8 +510,7 @@ unless LITERAL-NIL is non-nil."
 				   (cons "lastvisit" lastvisit)
 				   (cons "config" config)
 				   (cons 'todo todo)
-				   (cons "publish-directory" publish-dir))))))
-      )
+				   (cons "publish-directory" publish-dir)))))))
     ;; sort by last visit
     (setq superman-project-alist
 	  (sort superman-project-alist (lambda (x y)
@@ -867,6 +866,11 @@ If PROMPT is a string use it to ask for project."
 		       (format-time-string "<%Y-%m-%d %a %H:%M>"))
 	(save-buffer)))))
 
+(defun superman-save-some-buffers (&optional arg pred)
+  "Wrapper for `save-some-buffers' which does the same as `save-some-buffers' but never fails."
+  (interactive)
+  (ignore-errors (save-some-buffers arg pred)))
+
 (defun superman-save-project (project)
   (interactive)
   (unless
@@ -881,9 +885,9 @@ If PROMPT is a string use it to ask for project."
     (cond ((functionp superman-save-buffers)
 	   (funcall superman-save-buffers))
 	  ((string= superman-save-buffers "no-questions-asked")
-	   (save-some-buffers t))
+	   (superman-save-some-buffers t))
 	  (superman-save-buffers 
-	   (save-some-buffers nil)))))
+	   (superman-save-some-buffers nil)))))
 
 ;;}}}
 ;;{{{ switching projects (see also superman-config)

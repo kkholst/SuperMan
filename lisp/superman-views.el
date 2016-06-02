@@ -876,7 +876,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 			     `(lambda  () (interactive)
 				;; prevents from synchronizing
 				;; unsaved buffers
-				(save-some-buffers nil t)
+				(superman-save-some-buffers nil t)
 				(async-shell-command ,cmd)))
 	  (insert "\n\n" "Command: " cmd "\n\n")
 	  (define-key superman-unison-mode-map

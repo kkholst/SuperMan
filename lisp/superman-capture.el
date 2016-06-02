@@ -1075,7 +1075,7 @@ is non-nil prompt for project."
 	     (unison-list (superman-view-read-unison pro))
 	     (ulen (length unison-list)))
 	;; prevent synchronizing unsaved buffers
-	(save-some-buffers nil t)
+	(superman-save-some-buffers nil t)
 	(cond ((= ulen 1)
 	       (async-shell-command (cdar unison-list)))
 	      ((> ulen 1)

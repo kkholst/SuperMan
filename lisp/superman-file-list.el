@@ -681,7 +681,10 @@ Return  the sublist of the existing files. Does not re-display selected list."
 Changes the variable `file-list-current-file-list'. See also `file-list-add'."
   (setq file-list-reference-buffer (current-buffer))
   (let* ((display-buffer (or display-buffer
-			     (if file-list-mode (current-buffer)
+			     (if (and file-list-mode (or (not dir)
+							 (string= (expand-file-name dir) 
+								  (expand-file-name (get-text-property (point-min) 'dir)))))
+				 (current-buffer)
 			       file-list-display-buffer)))
 	 (file-list (cond (file-list)
 			  (dir (when file-list-update
