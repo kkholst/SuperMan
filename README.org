@@ -33,6 +33,6 @@ Add the following lines to your .emacs:
 (superman-parse-projects)
 #+END_SRC
   
-* Usage
+
 
 
