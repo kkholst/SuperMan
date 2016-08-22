@@ -1016,7 +1016,7 @@ NAME is used to make the section heading.
 	(insert "\n"))
       (superman-view-insert-section-name
        name count balls nil 
-       'superman-cycle-git-display "Cycle git display")
+       'superman-cycle-git-display "Cycle git display (TAB)")
       (insert "\n")
       (end-of-line 0)
       (unless file

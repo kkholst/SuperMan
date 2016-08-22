@@ -429,7 +429,7 @@ unless LITERAL-NIL is non-nil."
       (save-excursion (set-buffer error-buf) (erase-buffer))
       (kill-buffer error-buf))
     (while (superman-forward-project)
-      (unless (and (org-get-todo-state) (string= (org-get-todo-state) "ZOMBI"))
+      (unless (and (org-get-todo-state) (string-match (org-get-todo-state) "ZOMBI") )
 	(let* ((name (or (superman-get-property nil "nickname"  nil)
 			 (nth 4 (org-heading-components))))
 	       (loc (let ((loc (superman-get-property nil "location" nil)))
@@ -787,7 +787,8 @@ Examples:
 			 (not p-cat)
 			 (string= category p-cat))
 		     (or (not state)
-			 (string-match state (superman-get-state p)))) p))))
+			 (string-match state (superman-get-state p))))
+		p))))
 	 (palist (if (or category state)
 		     (delq nil (mapcar testfun superman-project-alist))
 		   superman-project-alist))
@@ -804,11 +805,12 @@ Examples:
 					 (string= extension (file-name-extension f))))
 			    f))))
 		  palist)))))
+    ;; see if user want's to hide the index buffers
     (when (and superman-ignore-index-buffers 
 	       (not superman-has-ignored-index-buffers))
       ;; (setq ido-ignore-buffers  '("\\` "))
       (mapcar #'(lambda (file) (add-to-list 'ido-ignore-buffers
-					    (file-name-nondirectory file)))
+					    (concat "^" (file-name-nondirectory file))))
 	      index-list))
     index-list))
 

@@ -735,7 +735,7 @@ With argument ARG turn superman-unison-mode on if ARG is positive, otherwise
 turn it off.
                    
 Enabling superman-unison mode enables the unison keyboard to control single files."
-     :lighter " *SupermanUnison*"
+     :lighter " *S-Unison*"
      :group 'org
      :keymap 'superman-unison-mode-map)
 
@@ -744,6 +744,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
   (when superman-hl-line (hl-line-mode 1))
   (superman-unison-mode t))
 
+(define-key superman-unison-mode-map "q" 'superman-view-back)
 
 (define-key superman-unison-mode-map "n" 
   #'(lambda () (interactive)
@@ -760,6 +761,8 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 (define-key superman-unison-mode-map "R" 'superman-redo)
 (define-key superman-unison-mode-map [(return)] 
   #'(lambda () (interactive) (superman-choose-entry)))
+
+
 
 (defun superman-view-read-unison (project)
   (let (unisons)
@@ -806,6 +809,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
       (org-mode)
       (font-lock-mode -1)
       ;; minor-mode
+      (superman-view-mode)
       (superman-unison-mode)
       (insert (superman-make-button
 	       "Superman unison"
@@ -898,6 +902,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
  :face the face of the button 
  :help string shown when the mouse over the button.
  :width integer the width of the button
+ :props plist of further text-properties for the button
 
 Example: 
 
@@ -911,15 +916,17 @@ Example:
 	 (width (plist-get properties :width))
 	 (face (plist-get properties :face))	 
 	 (fun (plist-get properties :fun))	 
-	 (fun-3 (plist-get properties :fun-3))	 
-	 (string (if (not width) string
-		   (let* ((len (length string))
-			  (diff (- width len))
-			  (rest (/ diff 2)))
-		     (if (< diff 0)
-			 (substring string 0 width)
-		       (concat (make-string rest (string-to-char " "))
-			       string (make-string (- width (+ len rest)) (string-to-char " "))))))))
+	 (fun-3 (plist-get properties :fun-3))
+	 (extra-props (plist-get properties :props))
+	 props
+	 (b-string (cl-copy-seq (if (not width) string
+				  (let* ((len (length string))
+					 (diff (- width len))
+					 (rest (/ diff 2)))
+				    (if (< diff 0)
+					(substring string 0 width)
+				      (concat (make-string rest (string-to-char " "))
+					      string (make-string (- width (+ len rest)) (string-to-char " ")))))))))
     (unless (functionp fun)
       (setq fun #'(lambda () (interactive)
 		    (message
@@ -956,19 +963,19 @@ Example:
 	     ;; to see where we are:
 	     ;; (message (concat (buffer-name) (int-to-string (point))))
 	     (funcall ',fun)))))
-    (add-text-properties
-     0 (length string) 
-     (list
-      'button (list t)
-      'category 'default-button
-      'face (or face 'superman-default-button-face)
-      'keymap map
-      'superman-header-marker t
-      'mouse-face 'highlight
-      'follow-link t
-      'help-echo help)
-     string)
-    string))
+    ;; add properties
+    (setq props (list
+		 'button (list t)
+		 'category 'default-button
+		 'face (or face 'superman-default-button-face)
+		 'keymap map
+		 'superman-header-marker t
+		 'mouse-face 'highlight
+		 'follow-link t
+		 'help-echo help))
+    (when extra-props (setq props (append props extra-props)))
+    (add-text-properties 0 (length b-string) props b-string)
+    b-string))
 
   
 ;;}}}
