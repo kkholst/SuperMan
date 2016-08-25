@@ -685,9 +685,13 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 				 (current-buffer)
 			       file-list-display-buffer)))
 	 (file-list (cond (file-list)
-			  (dir (when file-list-update
-				 (file-list-update dir nil))
-			       (file-list-list dir nil nil 'recursive nil))
+			  ((superman-file-list-display-buffer-p dir)
+			   ;; same directory as shown in current buffer
+			   file-list-current-file-list)
+			  (dir
+			   (when file-list-update
+			     (file-list-update dir nil))
+			   (file-list-list dir nil nil 'recursive nil))
 			  (file-list-mode file-list-current-file-list)
 			  (t (if file-list-update
 				 (file-list-update dir nil))
@@ -814,7 +818,7 @@ This changes the value of file-list-current-file-list."
   (let ((dir (read-directory-name (format
 				   "%s of files by name below directory: "
 				   (if arg "Inverse selection" "Selection")))))
-  (file-list-select file-list nil nil arg dir)))
+    (file-list-select file-list nil nil arg dir)))
 
 (defun file-list-by-ext-below-directory (&optional arg file-list)
   "Reads directory name and returns sublist of filenames below directory whose
