@@ -480,6 +480,8 @@ at the requested destination and then reset the window configuration."
       (while (setq next (next-single-property-change (point-at-eol) 'prop-marker))
 	(goto-char next)
 	(re-search-forward ":[a-zA-Z0-9]+:" nil t)
+	;; make sure that there is a space between : and the value
+	(unless (looking-at " ") (insert " "))
 	;;
 	(let* ((if-empty (get-text-property (point-at-bol) 'if-empty))
 	       (test (or (get-text-property (point-at-bol) 'test)))
