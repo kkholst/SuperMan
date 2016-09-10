@@ -478,9 +478,8 @@ given by the filename property of the item at point."
   "Delete the file at point by calling `git rm'."
   (interactive)
   (when (superman-view-delete-entry 'dont 'dont)
-  (let ((buffer-read-only nil))
-    (beginning-of-line)
-    (kill-line))))
+    (let ((buffer-read-only nil))
+      (delete-region (point-at-bol) (1+ (point-at-eol))))))
 
 ;;}}}
 ;;{{{ actions add/commit/delete on all marked files
@@ -1421,7 +1420,7 @@ and remove the whole line in case of no-match."
 	(setq catch (append catch
 			    (list
 			     (buffer-substring (point) (point-at-eol)))))
-	(kill-line)
+	(delete-region (point-at-bol) (1+ (point-at-eol)))
 	(forward-line -1)))
     ;; in case we remove the last line
     (unless (next-single-property-change (point-min) 'tail)
@@ -1444,8 +1443,8 @@ and remove the whole line in case of no-match."
 	(insert "\n\n" (superman-make-button
 			"Filter:"
 			'(:fun superman-git-set-filter
-			:face superman-header-button-face
-			:help "Set filter")))
+			       :face superman-header-button-face
+			       :help "Set filter")))
 	(put-text-property (point-at-bol) (+ (point-at-bol) 1) 'git-filter t)
 	(end-of-line))
       (insert "\t" (superman-make-button

@@ -239,7 +239,7 @@ See also `superman-capture-whatever' for the other arguments."
 	  (org-narrow-to-subtree)
 	  (unless (= level 0) (progn 
 				(skip-chars-forward "[* ]")
-				(kill-line))))
+				(delete-region (point-at-bol) (1+ (point-at-eol))))))
     ;; stuff point-min with text properties
     (goto-char (point-min))
     (insert "Superman captured: ")
