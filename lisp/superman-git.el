@@ -158,7 +158,7 @@ passed to `superman-run-cmd'."
   (let* ((dir (get-text-property (point-min) 'git-dir))
 	 (message
 	  (read-string 
-	   (concat "Commit message"  ": ")))
+	   (concat "Commit message" ": ")))
 	 (action (concat " commit -m \"" message "\" ")))
     (when dir
       (superman-git-action action dir)
@@ -539,7 +539,7 @@ commit the file to the git repository."
 			(list (read-file-name "Git add file: " dir nil t))))
 	 (file-list-string
 	  (apply 'concat
-		 (mapcar `(lambda (f) (concat (superman-relative-name f ,dir) " ")) file-list)))
+		 (mapcar `(lambda (f) (concat " " (superman-relative-name f ,dir))) file-list)))
 	 (cmd (concat "cd " dir ";" superman-cmd-git " add -f " file-list-string))
 	 (message (if commit (or message (read-string (concat "Commit message for " file-list-string ": "))))))
     (if message (setq cmd (concat cmd  ";" superman-cmd-git " commit -m \"" message "\" " file-list-string)))

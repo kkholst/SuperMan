@@ -709,9 +709,9 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 	 (regexp (cond (regexp)
 		       ((string= by "user-omit") nil)
 		       (t (read-string
-			     prompt-string
-			     nil
-			     'file-list-regexp-history))))
+			   prompt-string
+			   nil
+			   'file-list-regexp-history))))
 	 (filter-name (cond ((string= by "time")
 			     (format (concat "" "%s '%s' day%s")
 				     (if inverse
@@ -720,10 +720,10 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 			    ((string= by "size")
 			     (format "size %s '%s'" (if inverse "<" ">") regexp))
 			    ((string= by "path")
-			     (format "dir %s '%s'" (if inverse " no-match:" "match:") regexp))
+			     (format "dir %s '%s'" (if inverse "not match:" "match:") regexp))
 			    ((string= by "ext")
-			     (format "ext %s '%s'" (if inverse " no-match:" "match:") regexp))
-			    (t (format "file %s '%s'" (if inverse " no-match:" "match:") regexp))))
+			     (format "ext %s '%s'" (if inverse "not match:" "match:") regexp))
+			    (t (format "file %s '%s'" (if inverse "not match:" "match:") regexp))))
 	 (test (cond 
 		((not by) nil)
 		((string= by "path")
