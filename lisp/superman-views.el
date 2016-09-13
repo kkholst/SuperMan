@@ -1397,7 +1397,6 @@ and :BODY stores the body (if WITH-BODY is non-nil)
 		     (org-end-of-meta-data)
 		   (org-end-of-meta-data 't)
 		   (point)))
-	    (kill-whole-line t)
 	    balls)
 	(save-excursion
 	  (goto-char beg)
@@ -2841,7 +2840,6 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   "Refresh view of all lines in current category inclusive column names."
   (interactive)
   (let ((start (superman-cat-point))
-	(kill-whole-line t)
 	(end (or (next-single-property-change (point) 'cat) (point-max))))
     (if (not start)
 	(message "Point is not in category.")

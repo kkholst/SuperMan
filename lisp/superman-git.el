@@ -470,9 +470,8 @@ given by the filename property of the item at point."
 	  (append-to-file (concat  (replace-regexp-in-string (concat dir "/") "" (expand-file-name filename)) "\n") nil gitignore)
 	  (let ((buffer-read-only nil))
 	    (beginning-of-line)
-	    (kill-whole-line)))
-      (find-file gitignore)
-      )))
+	    (delete-region (point-at-bol) (1+ (point-at-eol)))))
+      (find-file gitignore))))
 
 (defun superman-git-delete-file ()
   "Delete the file at point by calling `git rm'."
@@ -886,10 +885,10 @@ This function should be bound to a key or button."
 	  (goto-char (point-min))
 	  (forward-line 2))
       (goto-char branch-start)
-      (kill-whole-line))
+      (delete-region (point-at-bol) (1+ (point-at-eol))))
     (when remote-start
       (goto-char remote-start)
-      (kill-whole-line))
+      (delete-region (point-at-bol) (1+ (point-at-eol))))
     (when git-dir
       (superman-view-insert-git-branches git-dir)
       (if buttons

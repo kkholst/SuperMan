@@ -137,11 +137,13 @@ file-list display buffers unless DIR matches the directories associated with
       ;; tools
       (when new-buffer
 	(file-list-tools-button)
-	(insert "\n\n"))
+	(insert "\n\n")
+	(file-list-show-tools)
+	(forward-line 2))
       ;; set filter at point-min
       (put-text-property (point-min) (1+ (point-min)) 'filter-list filter)
       ;; insert or update filter 
-      (file-list-update-filter-line filter)
+      (file-list-update-filter-line filter (length list))
       (if new-buffer
 	  (progn
 	    (forward-line 1)
@@ -149,26 +151,40 @@ file-list display buffers unless DIR matches the directories associated with
 	(goto-char (previous-single-property-change (point-max) 'point-file-list-start))
 	(delete-region (point-at-bol) (1+ (point-at-eol))))
       ;; set file list section header
-      (insert "* File list (n=" (int-to-string (length list)) ")")
+      (insert  (superman-make-button  "File list"
+				      '(:fun file-list-reload
+					     :face superman-capture-button-face
+					     :width 13
+					     :help "Update files in mother directory and reload file-list")))
       ;; set sorted
-      (if sort (insert ". Sorted by " (nth 0 sort) " "
+      (if sort (insert " Sorted by " (nth 0 sort) " "
 		       (if (nth 1 sort) 
 			   (superman-make-button "(decending)"
 						 `(:fun file-list-sort-ascending
-							:face file-list-active-filter-button-face
+							:face file-list-action-button-face
+							:width 13
 							:help ,(concat "Change order to ascending by " 
 								       (nth 0 sort) "\n" 
 								       file-list-sort-keys-help-string)))
 			 (superman-make-button "(ascending)"
 					       `(:fun file-list-sort-descending
-						      :face file-list-active-filter-button-face
+						      :face file-list-action-button-face
+						      :width 13
 						      :help ,(concat "Change order to descending by " 
 								     (nth 0 sort) "\n"
 								     file-list-sort-keys-help-string)))))
-	(insert ". " (superman-make-button " unsorted"
-					   '(:fun file-list-sort-descending
-						  :face file-list-active-filter-button-face
-						  :help (concat "Change to ascending file name order.\n" file-list-sort-keys-help-string)))))
+	(insert " " (superman-make-button "(unsorted)"
+					  '(:fun file-list-sort-descending
+						 :face file-list-action-button-face
+						 :width 13
+						 :help (concat "Change to ascending file name order.\n" file-list-sort-keys-help-string)))))
+      (insert " ")
+      ;; display mode button
+      (insert (superman-make-button (concat "[mode " (int-to-string level) "]")
+				    '(:fun file-list-toggle-display-mode
+					   :face file-list-action-button-face
+					   :width 13
+					   :help "Toggle display mode")))
       (put-text-property (point-at-bol) (point-at-eol) 'point-file-list-start t)
       (end-of-line)
       (insert "\n")
@@ -177,6 +193,8 @@ file-list display buffers unless DIR matches the directories associated with
 	(let ((maxfile (apply 'max (mapcar #'(lambda (x) (length (car x))) list))))
 	  (setcdr (assoc "width" (assoc "FileName" balls)) `(,maxfile))))
       ;; insert the file-list 
+      (when (= level 5)
+	(setq list (file-list-attributes list t)))
       (dolist (el list)
 	(let* ((file (car el))
 	       (path (cadr el))
@@ -186,7 +204,7 @@ file-list display buffers unless DIR matches the directories associated with
 	       appendix)
 	  (put-text-property 0 (length file) 'face 'superman-file-name-face file)
 	  (put-text-property 0 (length path) 'face 'superman-directory-name-face path)
-	  (setq file-path (cond ((= level 0)
+	  (setq file-path (cond ((or (= level 0) (= level 5))
 				 `(list (("FileName" . ,file)
 					 ("Path" . ,path))))
 				((= level 1)
@@ -219,6 +237,20 @@ file-list display buffers unless DIR matches the directories associated with
 	  (when appendix
 	    (insert appendix))
 	  (insert "\n")))
+      ;; clear appendix button
+      (goto-char (next-single-property-change (point-min) 'point-file-list-start))
+      (if (next-single-property-change (point-min) 'appendix)
+	  (unless  (next-single-property-change (point-min) 'clear-appendix)
+	    (goto-char (point-at-eol))
+	    (insert " "(superman-make-button "Clear appendix" 
+					  '(:fun file-list-clear-display
+						 :face file-list-clear-button-face
+						 :props '(clear-appendix t)
+						 :help "Remove search results and file attributes from display.")))
+	    (put-text-property  (point-at-bol) (point-at-eol) 'point-file-list-start t))
+	(when (next-single-property-change (point-min) 'clear-appendix)	
+	  (delete-region (next-single-property-change (point-min) 'clear-appendix) (point-at-eol))
+	  (put-text-property  (point-at-bol) (point-at-eol) 'point-file-list-start t)))
       (goto-char (1+ (or (previous-single-property-change (point-max) 'point-file-list-start) 0)))
       (run-hooks 'superman-file-list-pre-display-hook))))
 
@@ -227,10 +259,10 @@ file-list display buffers unless DIR matches the directories associated with
 
 (defun file-list-tools-button ()
   (insert (superman-make-button
-	    "Tools"
-	    '(:fun file-list-show-tools
-		   :face superman-capture-button-face
-		   :help "Show file-list tools" :width 17)))
+	   "Tools"
+	   '(:fun file-list-show-tools
+		  :face superman-capture-button-face
+		  :help "Show file-list tools" :width 13)))
   (put-text-property (point-at-bol) (point-at-eol) 'tools t))
 
 (defun file-list-hide-tools ()
@@ -246,7 +278,7 @@ file-list display buffers unless DIR matches the directories associated with
     (goto-char (next-single-property-change (point-min) 'tools))
     (delete-region (point-at-bol) (point-at-eol))
     (insert
-     (superman-make-button "Hide"  '(:fun file-list-hide-tools :face superman-capture-button-face :help "Hide tools"))
+     (superman-make-button "Tools"  '(:width 13 :fun file-list-hide-tools :face superman-capture-button-face :help "Hide tools"))
      " "
      (superman-make-button "grep" '(:fun file-list-grep :face file-list-action-button-face :help "Run `grep -n' on all files"))     
      " "
@@ -256,7 +288,7 @@ file-list display buffers unless DIR matches the directories associated with
      " "
      (superman-make-button "Copy" '(:fun file-list-copy :face file-list-action-button-face :help "Copy all files to a new directory"))
      " "
-     (superman-make-button "Delete" '(:fun file-list-remove :face file-list-action-button-face :help "Delete all files"))
+     (superman-make-button "Del" '(:fun file-list-remove :face file-list-action-button-face :help "Delete all files"))
      " "
      (superman-make-button "Find & replace" '(:fun file-list-query-replace :face file-list-action-button-face :help "Run interactive query replace through all files"))
      " "
@@ -270,12 +302,12 @@ file-list display buffers unless DIR matches the directories associated with
      ;; :face superman-default-button-face
      ;; :help "Change format used to show file-names"))
      " "
-     (superman-make-button "Clear" '(:fun file-list-clear-display :face superman-default-button-face :help "Remove search results and file attributes from display."))
-     " "
-     (superman-make-button "File attributes" '(:fun file-list-attributes :face superman-default-button-face :help "Show file attributes."))
-     " "
-     (superman-make-button "$ls -lh" '(:fun file-list-ls :face superman-default-button-face :help "Remove search results and file attributes from display.")))
-    (put-text-property (point-at-bol) (point-at-eol) 'tools t)))
+     (superman-make-button "File attributes" '(:fun file-list-attributes :face file-list-action-button-face :help "Show file attributes."))
+     ;; " "
+     ;; (superman-make-button "$ls -lh" '(:fun file-list-ls :face file-list-action-button-face :help "Remove search results and file attributes from display."))
+     )
+    (put-text-property (point-at-bol) (point-at-eol) 'tools t)
+    (goto-char (point-at-bol))))
 
 
 (defvar file-list-sort-keys-help-string
@@ -288,7 +320,8 @@ file-list display buffers unless DIR matches the directories associated with
                
                 Sort descending: Crtl-u followed by S-* key stroke")
 
-(defun file-list-update-filter-line (filter)
+(defun file-list-update-filter-line (filter n)
+  "Insert list of filters according to FILTER, and show number of files N."
   (save-excursion
     (let ((f-point (next-single-property-change (point-min) 'filter-line)))
       ;; remove existing filter line
@@ -297,10 +330,10 @@ file-list display buffers unless DIR matches the directories associated with
 	(delete-region (point-at-bol) (1+ (point-at-eol))))
       (insert 
        (superman-make-button
-	"Filters (delete):" 
+	"Filters" 
 	'(:fun file-list-remove-all-filters
 	       :face superman-capture-button-face
-	       :width 17
+	       :width 13
 	       :help "Press this button to remove all filters.
          Filter file-list
                         by name: /-f 
@@ -310,6 +343,7 @@ file-list display buffers unless DIR matches the directories associated with
                         by .ext: /-e
                
          Inverse filter: Crtl-u followed by /-* key stroke")))
+      (insert " Listed: (n=" (int-to-string n) ") ")
       (when filter
 	(let ((count 0))
 	  (dolist (x filter nil)
@@ -541,11 +575,12 @@ file-list display buffers unless DIR matches the directories associated with
 "
   (interactive)
   (setq file-list-display-level
-	(cond ((= file-list-display-level 4) 3)
+	(cond ((= file-list-display-level 5) 4)
+	      ((= file-list-display-level 4) 3)
 	      ((= file-list-display-level 3) 2)
 	      ((= file-list-display-level 2) 1)
 	      ((= file-list-display-level 1) 0)
-	      ((= file-list-display-level 0) 4)))
+	      ((= file-list-display-level 0) 5)))
   (superman-file-list-refresh-display))
 
 

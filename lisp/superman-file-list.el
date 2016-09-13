@@ -1130,22 +1130,15 @@ If ARG keep only filename at point."
 	(setq filtered-files (list this-file)
 	      file-list-current-file-list
 	      (delete this-file c-list)))
-      ;; re-set number of files
-      (save-excursion
-	(goto-char (next-single-property-change (point-min)
-						'point-file-list-start))
-	(re-search-forward "(n=[0-9]+)")
-	(replace-match (concat "(n=" (int-to-string 
-				      (length file-list-current-file-list)) ")")))
       ;; set manual filter
       (if hf (setq hf (plist-put hf :filtered-files 
 				 (append (plist-get hf :filtered-files) filtered-files)))
 	(setq hf `((:name "manual-filter" 
 			  :test nil :by "user-omit" :regexp nil :inverse nil :filtered-files ,filtered-files))))
       (if is-manual (setcar ff hf) (setq ff (append hf ff)))
-      ;; set filter
+      ;; set filter and adapt number of files
       (put-text-property (point-min) (1+ (point-min)) 'filter-list ff)
-      (file-list-update-filter-line ff)
+      (file-list-update-filter-line ff (length file-list-current-file-list))
       ;; modifiy file-list
       (if arg
 	  (superman-display-file-list
@@ -1431,7 +1424,7 @@ Switches to the corresponding directory of each file."
 				 (file-list-convert-bytes (nth 7 add)))))))
 	   file-list))
     (unless nodisplay
-      (setq file-list-display-level 2)
+      ;; (setq file-list-display-level 2)
       (superman-file-list-refresh-display
        file-list-current-file-list)))
   file-list-current-file-list)
