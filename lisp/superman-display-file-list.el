@@ -280,19 +280,19 @@ file-list display buffers unless DIR matches the directories associated with
     (insert
      (superman-make-button "Tools"  '(:width 13 :fun file-list-hide-tools :face superman-capture-button-face :help "Hide tools"))
      " "
-     (superman-make-button "grep" '(:fun file-list-grep :face file-list-action-button-face :help "Run `grep -n' on all files"))     
+     (superman-make-button "grep" '(:fun file-list-grep :width 9 :face file-list-action-button-face :help "Run `grep -n' on all files"))     
      " "
-     (superman-make-button "Rename" '(:fun file-list-rename :face file-list-action-button-face :help "Rename all files"))
+     (superman-make-button "Rename" '(:fun file-list-rename :width 9 :face file-list-action-button-face :help "Replace a substring of all files by a new string.\nUseful to remove or replace white-space or other non-letters.\n\n\nTo rename only one file. Put cursor on file-name, then press 'r'."))
      " "
-     (superman-make-button "Move" '(:fun file-list-move :face file-list-action-button-face :help "Rename all files"))
+     (superman-make-button "Move" '(:fun file-list-move :width 9 :face file-list-action-button-face :help "Move all files to a different directory"))
      " "
-     (superman-make-button "Copy" '(:fun file-list-copy :face file-list-action-button-face :help "Copy all files to a new directory"))
+     (superman-make-button "Copy" '(:fun file-list-copy :width 9 :face file-list-action-button-face :help "Copy all files to a different directory"))
      " "
-     (superman-make-button "Del" '(:fun file-list-remove :face file-list-action-button-face :help "Delete all files"))
+     (superman-make-button "Del" '(:fun file-list-remove :width 9 :face file-list-action-button-face :help "Delete all files"))
      " "
-     (superman-make-button "Find & replace" '(:fun file-list-query-replace :face file-list-action-button-face :help "Run interactive query replace through all files"))
+     (superman-make-button "Find-Repl" '(:fun file-list-query-replace :width 9 :face file-list-action-button-face :help "Run interactive query replace through all files"))
      " "
-     (superman-make-button "Shell-command" '(:fun file-list-shell-command :face file-list-action-button-face :help "Run the same shell command on all files"))
+     (superman-make-button "Shell" '(:fun file-list-shell-command :width 9 :face file-list-action-button-face :help "Run the same shell command on all files"))
      ;; (superman-make-button (concat "Format" (cond ((= level 0) "file | path")
      ;; ((= level 1) "/path/file")
      ;; ((= level 2) "~/path/file")
@@ -302,7 +302,7 @@ file-list display buffers unless DIR matches the directories associated with
      ;; :face superman-default-button-face
      ;; :help "Change format used to show file-names"))
      " "
-     (superman-make-button "File attributes" '(:fun file-list-attributes :face file-list-action-button-face :help "Show file attributes."))
+     ;; (superman-make-button "Attributes" '(:fun file-list-attributes :face file-list-action-button-face :help "Show file attributes."))
      ;; " "
      ;; (superman-make-button "$ls -lh" '(:fun file-list-ls :face file-list-action-button-face :help "Remove search results and file attributes from display."))
      )
