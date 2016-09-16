@@ -474,6 +474,7 @@ file-list display buffers unless DIR matches the directories associated with
     (dolist (entry file-list-current-file-list)
       (when (> (length (cdr entry)) 1)
 	(setcdr entry (list (car (cdr entry))))))
+    (setq file-list-display-level 0)
     (superman-file-list-refresh-display)))
 
 
