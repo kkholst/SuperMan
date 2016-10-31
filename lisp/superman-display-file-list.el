@@ -151,7 +151,7 @@ file-list display buffers unless DIR matches the directories associated with
 	(goto-char (previous-single-property-change (point-max) 'point-file-list-start))
 	(delete-region (point-at-bol) (1+ (point-at-eol))))
       ;; set file list section header
-      (insert  (superman-make-button  "File list"
+      (insert  (superman-make-button  "Update list"
 				      '(:fun file-list-reload
 					     :face superman-capture-button-face
 					     :width 13
@@ -185,6 +185,13 @@ file-list display buffers unless DIR matches the directories associated with
 					   :face file-list-action-button-face
 					   :width 13
 					   :help "Toggle display mode")))
+      (insert " ")      
+      ;; display attributes button      
+      (insert (superman-make-button "Attributes"
+				    '(:fun file-list-attributes
+					   :face file-list-action-button-face
+					   :width 13
+					   :help "Toggle attributes mode")))
       (put-text-property (point-at-bol) (point-at-eol) 'point-file-list-start t)
       (end-of-line)
       (insert "\n")
@@ -193,8 +200,8 @@ file-list display buffers unless DIR matches the directories associated with
 	(let ((maxfile (apply 'max (mapcar #'(lambda (x) (length (car x))) list))))
 	  (setcdr (assoc "width" (assoc "FileName" balls)) `(,maxfile))))
       ;; insert the file-list 
-      (when (= level 5)
-	(setq list (file-list-attributes list t)))
+      ;; (when (= level 5)
+      ;; (setq list (file-list-attributes list t)))
       (dolist (el list)
 	(let* ((file (car el))
 	       (path (cadr el))
@@ -204,9 +211,8 @@ file-list display buffers unless DIR matches the directories associated with
 	       appendix)
 	  (put-text-property 0 (length file) 'face 'superman-file-name-face file)
 	  (put-text-property 0 (length path) 'face 'superman-directory-name-face path)
-	  (setq file-path (cond ((or (= level 0) (= level 5))
-				 `(list (("FileName" . ,file)
-					 ("Path" . ,path))))
+	  (setq file-path (cond ((= level 0)
+				 `(list (("FileName" . ,file) ("Path" . ,path))))
 				((= level 1)
 				 `(list (("FileName" . ,(concat path file)))))
 				((= level 2)
@@ -243,10 +249,10 @@ file-list display buffers unless DIR matches the directories associated with
 	  (unless  (next-single-property-change (point-min) 'clear-appendix)
 	    (goto-char (point-at-eol))
 	    (insert " "(superman-make-button "Clear appendix" 
-					  '(:fun file-list-clear-display
-						 :face file-list-clear-button-face
-						 :props '(clear-appendix t)
-						 :help "Remove search results and file attributes from display.")))
+					     '(:fun file-list-clear-display
+						    :face file-list-clear-button-face
+						    :props '(clear-appendix t)
+						    :help "Remove search results and file attributes from display.")))
 	    (put-text-property  (point-at-bol) (point-at-eol) 'point-file-list-start t))
 	(when (next-single-property-change (point-min) 'clear-appendix)	
 	  (delete-region (next-single-property-change (point-min) 'clear-appendix) (point-at-eol))
@@ -434,7 +440,7 @@ file-list display buffers unless DIR matches the directories associated with
 (defun superman-file-list-refresh-display (&optional file-list)
   (interactive)
   (if (not file-list-mode)
-      (error "Works only in buffers with file-list-mode")
+      (error "Works only in file-list-mode")
     (superman-display-file-list
      (get-text-property (point-min) 'dir)
      (or file-list file-list-current-file-list)
@@ -460,7 +466,7 @@ file-list display buffers unless DIR matches the directories associated with
 	     (by (plist-get filter :by))
 	     (inverse (plist-get filter :inverse)))
 	(setq flist
-	      (file-list-select flist regexp by inverse dir (current-buffer) t)))
+	      (file-list-select flist regexp by inverse dir (current-buffer) t 'force)))
       (setq active-filter-list (cdr active-filter-list)))
     (when sort
       (setq flist (file-list-sort-internal flist (nth 0 sort) (nth 1 sort) t)))
@@ -474,9 +480,8 @@ file-list display buffers unless DIR matches the directories associated with
     (dolist (entry file-list-current-file-list)
       (when (> (length (cdr entry)) 1)
 	(setcdr entry (list (car (cdr entry))))))
-    (setq file-list-display-level 0)
+    ;; (setq file-list-display-level 0)
     (superman-file-list-refresh-display)))
-
 
 (defun file-list-remove-all-filters ()
   (interactive)
@@ -576,12 +581,13 @@ file-list display buffers unless DIR matches the directories associated with
 "
   (interactive)
   (setq file-list-display-level
-	(cond ((= file-list-display-level 5) 4)
-	      ((= file-list-display-level 4) 3)
-	      ((= file-list-display-level 3) 2)
-	      ((= file-list-display-level 2) 1)
-	      ((= file-list-display-level 1) 0)
-	      ((= file-list-display-level 0) 5)))
+	(cond 
+	 ;; ((= file-list-display-level 5) 4)
+	 ((= file-list-display-level 0) 1)
+	 ((= file-list-display-level 1) 2)
+	 ((= file-list-display-level 2) 3)
+	 ((= file-list-display-level 3) 4)
+	 ((= file-list-display-level 4) 0)))
   (superman-file-list-refresh-display))
 
 
@@ -592,21 +598,23 @@ file-list display buffers unless DIR matches the directories associated with
 		 (and
 		  (progn (backward-char 1) (looking-at "[ \t\n]"))
 		  (progn (backward-char 1) (not (looking-at "\\\\"))))))
-    (let ((found nil)
-	  (pmin (- (save-excursion
-		     (file-list-beginning-of-file-list)) 1)))
-      (if (and (= file-list-display-level 2)
-	       (save-excursion (beginning-of-line) (looking-at "[ \t\n]+")))
-	  (re-search-backward "^[^ \t\n]" pmin t)
-	(skip-chars-backward " \t\n")
-	(re-search-backward "[ \t\n]" pmin t)
-	(while (and (not found) (not (bobp)))
-	  (backward-char 1)
-	  (if (looking-at "\\\\")
-	      (re-search-backward "[ \t\n]" pmin t)
-	    (forward-char 1)
-	    (setq found 'yes)))
-	(skip-chars-forward "\t\n ")))))
+    (let ((pos (previous-single-property-change (point) 'filename)))
+      (when pos (goto-char (1+ pos))))))
+    ;; (let ((found nil)
+	  ;; (pmin (- (save-excursion
+		     ;; (file-list-beginning-of-file-list)) 1)))
+      ;; (if (and (= file-list-display-level 2)
+	       ;; (save-excursion (beginning-of-line) (looking-at "[ \t\n]+")))
+	  ;; (re-search-backward "^[^ \t\n]" pmin t)
+	;; (skip-chars-backward " \t\n")
+	;; (re-search-backward "[ \t\n]" pmin t)
+	;; (while (and (not found) (not (bobp)))
+	  ;; (backward-char 1)
+	  ;; (if (looking-at "\\\\")
+	      ;; (re-search-backward "[ \t\n]" pmin t)
+	    ;; (forward-char 1)
+	    ;; (setq found 'yes)))
+	;; (skip-chars-forward "\t\n ")))))
 
 (defun file-list-find-end-of-file-name ()
   "Find the end of file-name.

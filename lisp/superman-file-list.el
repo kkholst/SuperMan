@@ -549,7 +549,7 @@ by listings all the entries of file-list-default-directories."
 
 (defun file-list-exclude-p (subdir dir &optional regexp include)
   "Decide if the directory SUBDIR below DIR should be excluded
-from listing. If REGEXP is given then the SUBDIR is excluded if 
+when listing files. If REGEXP is given then the SUBDIR is excluded if 
 REGEXP matches the part of the path between DIR and SUBDIR.
 
 For example, SUBDIR = /home/aUser/research/oldStuff/ below DIR
@@ -672,9 +672,20 @@ Return  the sublist of the existing files. Does not re-display selected list."
   file-list-current-file-list)
 
 
-(defun file-list-select (file-list regexp by inverse dir display-buffer dont-display)
-  "Returns sublist of filenames in file-list matched by regexp.
-Changes the variable `file-list-current-file-list'. See also `file-list-add'."
+(defun file-list-select (file-list regexp by inverse dir display-buffer dont-display &optional force-update)
+  "Returns sublist of filenames in FILE-LIST matched by REGEXP according to BY. BY is either
+of file-name, path, ext, time, or size. If INVERSE is
+non-nil return the sublist which does not match.
+
+DISPLAY-BUFFER should be the buffer in which the result should appear. 
+This happens unless DONT-DISPLAY is non nil. 
+If FILE-LIST is nil, the buffer local value
+of the variable `file-list-current-file-list' will be used as input, unless FORCE-UPDATE is non nil, in which
+case the file list is updated according to the current directory and filters.
+
+This function sets the variable `file-list-current-file-list'. 
+See also `file-list-add'.
+"
   (setq file-list-reference-buffer (current-buffer))
   (let* ((fl-buffer-p (superman-file-list-display-buffer-p dir))
 	 (display-buffer (or display-buffer
@@ -682,7 +693,7 @@ Changes the variable `file-list-current-file-list'. See also `file-list-add'."
 				 (current-buffer)
 			       file-list-display-buffer)))
 	 (file-list (cond (file-list)
-			  (fl-buffer-p
+			  ((and fl-buffer-p (not force-update))
 			   ;; same directory as shown in current buffer
 			   file-list-current-file-list)
 			  (dir
@@ -1348,8 +1359,7 @@ Switches to the corresponding directory of each file."
 
 (defun file-list-ls (&optional file-list nodisplay)
   (interactive)
-  (let* ((file-list-display-level 2)
-	 (file-list (or file-list file-list-current-file-list))
+  (let* ((file-list (or file-list file-list-current-file-list))
 	 (attr-list
 	  (mapcar
 	   (lambda (attr)
@@ -1424,7 +1434,6 @@ Switches to the corresponding directory of each file."
 				 (file-list-convert-bytes (nth 7 add)))))))
 	   file-list))
     (unless nodisplay
-      ;; (setq file-list-display-level 2)
       (superman-file-list-refresh-display
        file-list-current-file-list)))
   file-list-current-file-list)
@@ -1484,8 +1493,7 @@ Switches to the corresponding directory of each file."
        (concat "grep -n " grep-regexp " "  files " " "/dev/null")
        hits-buf)
       (if (not (buffer-live-p hits-buf))
-	  (error "No grep hits for '%s'." grep-regexp)
-	(setq file-list-display-level 2))
+	  (error "No grep hits for '%s'." grep-regexp))
       (save-excursion 
 	(set-buffer hits-buf)
 	(goto-char (point-min))
