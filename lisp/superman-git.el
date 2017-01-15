@@ -1054,9 +1054,9 @@ NAME is used to make the section heading.
   (if (not (or superman-git-mode superman-git-log-mode))
       (error "Currently this works only in `superman-git-log-mode' and `superman-git-mode'")
     (let ((buffer-read-only nil)
-	  (new-limit (string-to-int
+	  (new-limit (string-to-number
 		      (read-string "Limit on number of revisions (leave empty to cancel): ")))
-	  (new-skip (string-to-int
+	  (new-skip (string-to-number
 		      (read-string "Skip this many revisions (default 0): " nil nil "0"))))
       (when (integerp new-limit)
 	(put-text-property (point-min) (+ (point-min) 1) 'limit new-limit))

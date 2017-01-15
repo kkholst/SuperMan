@@ -755,7 +755,7 @@ See also `file-list-add'.
 				  (or (file-name-extension (car entry)) ""))))
 		((string= by "size")
 		 '(lambda (entry)
-		    (< (string-to-int regexp)
+		    (< (string-to-number regexp)
 		       (or (nth 7 (file-attributes
 				   (file-list-make-file-name entry)))
 			   0))))
@@ -763,7 +763,7 @@ See also `file-list-add'.
 		 '(lambda (entry)
 		    (file-list-time-less-p
 		     (file-list-time-subtract (current-time) (file-list-days-to-time
-							      (string-to-int regexp)))
+							      (string-to-number regexp)))
 		     (nth 5 (file-attributes (file-list-make-file-name entry))))))
 		(t nil)))
 	 (new-filter (list :name filter-name
@@ -1013,7 +1013,7 @@ or by file-name if there is no sort-key yet"
      (file-list-sort-internal file-list "path" reverse)))
 
 (defun file-list-parse-size (string)
-  (let ((lst (mapcar 'string-to-int (delq "" (split-string string "G[ ]*\\|M[ ]*\\|K[ ]*\\|B[ ]*"))))
+  (let ((lst (mapcar 'string-to-number (delq "" (split-string string "G[ ]*\\|M[ ]*\\|K[ ]*\\|B[ ]*"))))
 	terra giga mega kilo byte)
     ;; terra
     (if (nth 4 lst)
@@ -1060,8 +1060,8 @@ or by file-name if there is no sort-key yet"
 			   (setq stop t)
 			   (setq res (> (nth 0 size-a) (nth 0 size-b)))))
 		       res)))
-		  ;; (> (string-to-int (cdr (assoc "size" (caddr a))))
-		  ;; (string-to-int (cdr (assoc "size" (caddr b)))))))
+		  ;; (> (string-to-number (cdr (assoc "size" (caddr a))))
+		  ;; (string-to-number (cdr (assoc "size" (caddr b)))))))
 		  (t nil)))
 	sorted-list)
     (message "Sorting file list by %s" by)
