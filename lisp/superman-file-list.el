@@ -1305,11 +1305,14 @@ Switches to the corresponding directory of each file."
 (defun file-list-move (&optional ask file-list target copy)
   (interactive "P")
   (let* ((file-list-intern (or file-list file-list-current-file-list))
+	 (nfiles (length file-list-intern))
 	 (target (or target
 		     (expand-file-name
 		      (file-name-as-directory
 		       (read-directory-name
-			"Copy all files to directory: "
+			(if (eq 1 nfiles)
+			    "Copy this file to directory: "
+			  (concat "Copy " (int-to-string nfiles) " files to directory: "))
 			nil nil nil)))))
 	 (use-path (if ask (yes-or-no-p "Use path as part of file-name? "))))
     (cond ((file-directory-p target) nil)
