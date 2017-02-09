@@ -865,7 +865,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
 					   (if (string= tmp-cmd "superman-unison-cmd")
 					       (eval (intern tmp-cmd)) tmp-cmd)))))
 				  ((boundp 'superman-unison-cmd) (eval superman-unison-cmd))
-				  (t "unison-gtk"))
+				  (t "unison"))
 			    " "
 			    (if (string-match org-bracket-link-regexp r1)
 				(org-match-string-no-properties 1 r1)
