@@ -1,6 +1,6 @@
 ;;; superman-views.el --- Superman views of project contents 
 
-;; Copyright (C) 2012-2016 Thomas Alexander Gerds, Klaus Kaehler Holst
+;; Copyright (C) 2012-2017 Thomas Alexander Gerds, Klaus Kaehler Holst
 
 ;; Authors: Thomas Alexander Gerds <tag@biostat.ku.dk>
 ;;          Klaus Kaehler Holst <kkho@biostat.ku.dk>
@@ -1162,8 +1162,8 @@ Translate the branch names into buttons."
        (superman-make-button
 	title
 	'(:fun superman-git-new-branch
-	:face superman-header-button-face
-	:help "Create new git branch"))
+	       :face superman-header-button-face
+	       :help "Create new git branch"))
        " ")
       (put-text-property
        0 1
@@ -1171,8 +1171,8 @@ Translate the branch names into buttons."
       (superman-make-button
        current-branch
        '(:fun superman-git-status
-       :face superman-warning-face
-       :help "View status of current branch"))
+	      :face superman-warning-face
+	      :help "View status of current branch"))
       (insert "[" current-branch "]  ")
       (while other-branches
 	(let* ((b (car other-branches))
