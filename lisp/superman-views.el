@@ -902,6 +902,8 @@ Enabling superman-unison mode enables the unison keyboard to control single file
       (ignore-errors (goto-char (previous-single-property-change (point-at-bol) 'unison)))
       (beginning-of-line)))
 (define-key superman-unison-mode-map "e" 'superman-unison-edit-item)
+(define-key superman-unison-mode-map "f" 'superman-view-file-list)
+(define-key superman-unison-mode-map "g" 'superman-git-display)
 (define-key superman-unison-mode-map "D" 'superman-unison-delete-item)
 (define-key superman-unison-mode-map "R" 'superman-redo)
 (define-key superman-unison-mode-map [(return)] 
@@ -955,6 +957,7 @@ Enabling superman-unison mode enables the unison keyboard to control single file
       (font-lock-mode -1)
       ;; minor-mode
       ;; (superman-view-mode)
+      (setq superman-view-mode t)
       (superman-unison-mode)
       (insert (superman-make-button
 	       "Superman unison"
