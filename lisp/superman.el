@@ -369,6 +369,10 @@ the existing properties."
 	
 
 ;;}}}
+;;{{{ black board
+(defvar superman-black-board "~/.superman-black-board.org" "File in which to save the black board")
+(defun superman-black-board () (interactive) (find-file superman-black-board))
+;;}}}
 ;;{{{ Agenda
 (defun superman-make-agenda-title (string face)
   (put-text-property 0 (length string) 'face face string)
@@ -476,7 +480,7 @@ all dates."
 					  (superman-capture-task nil nil "Capture task for project: "))
 					:face superman-capture-button-face
 					:help "Add a task to one of the projects")))
-   nil pretty))
+   nil 'pretty))
 
 ;;}}}
 ;;{{{ Calendar
@@ -915,3 +919,5 @@ Enabling superman mode electrifies the superman buffer for project management."
 
 (provide 'superman)
 ;;; superman.el ends here
+
+
