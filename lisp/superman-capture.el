@@ -81,8 +81,11 @@ If JABBER is non-nil (and CREATE is nil) be talkative about non-existing heading
     (widen)
     (show-all)
     (goto-char (point-min))
+    (unless (eq major-mode 'org-mode)
+      (org-mode))
     (setq value
-	  (cond ((re-search-forward (format org-complex-heading-regexp-format (regexp-quote head)) nil t)
+	  (cond ((re-search-forward (format org-complex-heading-regexp-format
+					    (regexp-quote head)) nil t)
 		 (point-marker))
 		(create
 		 (let (marker)
@@ -95,6 +98,7 @@ If JABBER is non-nil (and CREATE is nil) be talkative about non-existing heading
 		     (insert property-string)
 		     (insert "\n:END:\n\n")
 		     (forward-line -1))
+		   (save-buffer)
 		   (point-marker)))
 		(t (when jabber (message (concat "Heading " head " not found in index file of " (car pro))))
 		   nil)))
