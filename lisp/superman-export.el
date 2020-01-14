@@ -60,9 +60,9 @@ with `superman-org-export-as'."
 				   (point)))))
 		 (setq superman-org-export-target this))))
 	   (superman-org-export-as nil))
-	  ((string= superman-org-export-target "pdf")
+	  ((and (boundp 'superman-org-export-target) (string= superman-org-export-target "pdf"))
 	   (superman-export-as-latex 'debug))
-	  (superman-org-export-as nil))))
+	  (t (superman-org-export-as nil)))))
 
 ;; See library tex-buf for help on TeX-process.
 (defun superman-export-as-latex (&optional debug)
@@ -90,8 +90,10 @@ This function works outside R src blocks. Inside R src block
     (when tex-buf
       (save-excursion
 	(set-buffer tex-buf)
-	(revert-buffer t t t)
-	(kill-buffer (get-file-buffer tex-file))))
+	(if (not (file-exists-p tex-file))
+	    (kill-buffer tex-buf)
+	  (revert-buffer t t t)
+	  (kill-buffer (get-file-buffer tex-file)))))
     ;; find R process
     (when debug
       (switch-to-buffer org-buf)
@@ -150,6 +152,7 @@ Use this map to set additional keybindings for when Org-mode is used.")
 
 (defvar superman-org-export-target-list '("pdf" "html" "docx")
   "Export targets.")
+
 (defvar superman-org-export-target "pdf" "current export target")
 
 (defvar superman-babel-target-list '("this-block" "all-blocks")
@@ -607,7 +610,7 @@ is non-nil, search backwards within the boundery set by last call to
 	  ((string= cmd "make-html")
 	   (org-html-export-as-html-and-open 3)))))
 
-(defun superman-export-as-docx ()
+(defun superman-export-as-docx (&optional dont-open)
   "Save current buffer, then export to docx via soffice."
   (interactive)
   (save-buffer)
@@ -622,10 +625,12 @@ is non-nil, search backwards within the boundery set by last call to
     (when (get-process proc-name)
       (kill-process proc-name))
     (setq file (org-odt-export-to-odt))
+    (if dont-open
+	file
     (start-process-shell-command
      proc-name
      proc-buf
-     (concat "/usr/bin/soffice -norestore " file))))
+     (concat "/usr/bin/soffice -norestore " file)))))
 
 (provide 'superman-export)
 ;;; superman-export.el ends here

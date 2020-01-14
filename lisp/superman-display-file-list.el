@@ -29,6 +29,7 @@
   (when superman-view-mode
     (superman-file-list (superman-view-current-project))))
 
+
 (defun superman-file-list (project &optional ext)
   "List files in project's location that match extension EXT"
   (if (featurep 'superman-file-list)
@@ -514,6 +515,52 @@ file-list display buffers unless DIR matches the directories associated with
 (defun file-list-remove-filter (filter)
   (let* ((old-filter-list (get-text-property (point-min) 'filter-list))
 	 (this-filter (nth (get-text-property (point) 'filter) old-filter-list))
+	 (new-filter-list (delete this-filter old-filter-list)))
+    (unless new-filter-list
+      (setq new-filter-list  '((:name "file match '.'" :test "." :by "name" :regexp "." :inverse nil))))
+    (setq file-list-current-file-list
+	  (append file-list-current-file-list
+		  (plist-get this-filter :filtered-files)))
+    (superman-display-file-list
+     (get-text-property (point-min) 'dir)
+     file-list-current-file-list
+     new-filter-list
+     (get-text-property (point-min) 'sort-key)
+     (get-text-property (point-min) 'balls)
+     (current-buffer)
+     (not (get-text-property (point-min) 'project-buffer)))))
+
+(defun file-list-remove-filter-1 ()
+  (interactive)
+  (file-list-remove-nth-filter 0))
+
+(defun file-list-remove-filter-2 ()
+  (interactive)
+  (file-list-remove-nth-filter 1))
+
+(defun file-list-remove-filter-3 ()
+  (interactive)
+  (file-list-remove-nth-filter 2))
+
+(defun file-list-remove-filter-4 ()
+  (interactive)
+  (file-list-remove-nth-filter 3))
+
+(defun file-list-remove-filter-5 ()
+  (interactive)
+  (file-list-remove-nth-filter 4))
+
+(defun file-list-remove-filter-6 ()
+  (interactive)
+  (file-list-remove-nth-filter 5))
+
+(defun file-list-remove-filter-7 ()
+  (interactive)
+  (file-list-remove-nth-filter 6))
+
+(defun file-list-remove-nth-filter (n)
+  (let* ((old-filter-list (get-text-property (point-min) 'filter-list))
+	 (this-filter (nth n old-filter-list))
 	 (new-filter-list (delete this-filter old-filter-list)))
     (unless new-filter-list
       (setq new-filter-list  '((:name "file match '.'" :test "." :by "name" :regexp "." :inverse nil))))

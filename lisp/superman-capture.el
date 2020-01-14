@@ -1182,8 +1182,11 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
                 (message "file not saved")
               (when (or (not (file-exists-p file))
                         (y-or-n-p (concat "File " file " exists, overwrite?" )))
-                (mm-save-part-to-file data file))
-              (setq mime-line (concat "\n**** " (file-name-nondirectory file)
+		(when (not (file-exists-p (file-name-directory file)))
+		  (if (y-or-n-p (concat "Create directory "  (file-name-directory file) "? "))
+		      (make-directory  (file-name-directory file))))
+		(mm-save-part-to-file data file))
+	      (setq mime-line (concat "\n**** " (file-name-nondirectory file)
 				      "\n:PROPERTIES:\n:CaptureDate: " (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
 				      "\n:EmailDate: " date 
 				      ;; (format-time-string (car org-time-stamp-formats) (org-capture-get :default-time))
@@ -1193,8 +1196,8 @@ and MIME parts in sub-directory 'mailAttachments' of the project."
 				       "~"
 				       file)
 				      "][" (file-name-nondirectory file) "]]"
-                                      "\n:END:\n"
-                                      mime-line)))))))
+				      "\n:END:\n"
+				      mime-line)))))))
     mime-line))
 
 ;;}}}
