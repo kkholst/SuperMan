@@ -3096,12 +3096,12 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 
 (defun superman-next-entry ()
   (interactive)
-  (ignore-errors
-    (goto-char (next-single-property-change (point) 'superman-item-marker)))
-  (when (eq (point) (point-at-eol))
-    (ignore-errors
-      (goto-char (next-single-property-change (point) 'superman-item-marker)))))
-;; (forward-line 1))
+  ;; (ignore-errors
+    ;; (goto-char (next-single-property-change (point) 'superman-item-marker)))
+  ;; (when (eq (point) (point-at-eol))
+    ;; (ignore-errors
+      ;; (goto-char (next-single-property-change (point) 'superman-item-marker)))))
+ (forward-line 1))
 ;; (superman-choose-entry))
 
 (defun superman-choose-entry ()
@@ -3113,12 +3113,12 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 
 (defun superman-previous-entry ()
   (interactive)
-  (ignore-errors
-    (goto-char (previous-single-property-change (point) 'superman-item-marker)))
-  (when (eq (point) (point-at-eol))
-    (ignore-errors
-      (goto-char (previous-single-property-change (point) 'superman-item-marker)))))
-  ;; (forward-line -1))
+  ;; (ignore-errors
+    ;; (goto-char (previous-single-property-change (point) 'superman-item-marker)))
+  ;; (when (eq (point) (point-at-eol))
+    ;; (ignore-errors
+      ;; (goto-char (previous-single-property-change (point) 'superman-item-marker)))))
+   (forward-line -1))
 ;; (superman-choose-entry))
 
 (defun superman-view-filter ()
