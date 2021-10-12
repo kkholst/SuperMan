@@ -877,6 +877,212 @@ git command."
 	      (insert (superman-initialize-git-control-string dir))
 	    (superman-redo-cat)))))))
 
+(defun superman-view-insert-git-buttons ()
+  "Insert the git buttons
+Translate the branch names into buttons."
+  (superman-view-insert-action-buttons
+   '(("Diff project" :fun superman-git-diff :face superman-default-button-face :help "Git diff" :width 17)
+     ("Commit project (C)" :fun superman-git-commit-project :face superman-default-button-face :help "Git all project" :width 17)
+     ("Commit marked (GC)" :fun superman-git-commit-marked :face superman-default-button-face :help "Git commit marked files" :width 17)
+     ("Status" :fun superman-git-status :face superman-default-button-face :help "Git status" :width 17)
+     ;; ("Delete marked" :fun superman-view-delete-marked :face superman-default-button-face :help "Delete marked files" :width 17)
+     ))
+  (put-text-property (point-at-bol) (1+ (point-at-bol)) 'git-buttons t))
+
+(defun superman-view-insert-git-branches (&optional dir)
+  :help "Insert the git branch(es) if project is git controlled.
+Translate the branch names into buttons."
+  (let ((loc (or dir
+		 (get-text-property (point-min) 'git-dir)))
+	(view-buf (current-buffer)))
+    (let* ((branch-list (delq nil (superman-git-list-branches loc)))
+	   (current-branch (car branch-list))
+	   (remote (cl-member-if
+		    (lambda (x)
+		      (string-match "^remotes/" x)) branch-list))
+	   (other-branches (cdr branch-list))
+	   (title "Branch:"))
+      ;; (when remote 
+	;; (setq other-branches (delete remote other-branches)))
+	;; (setq other-branches
+	      ;; (cl-delete-if
+	       ;; (lambda (x) (string-match "remotes/" x)) other-branches)
+	      ;; ))
+      (put-text-property 0 (length title) 'face 'org-level-2 title)
+      (put-text-property 0 (length title) 'superman-header-marker t title)
+      (put-text-property 0 (length title) 'git-branches t title)
+      (insert
+       (superman-make-button
+	title
+	`(:fun (lambda () (interactive)
+		 (superman-run-cmd
+		  ,(concat "cd " loc "; "
+			   superman-cmd-git " show-branch --list --a -r --current\n")
+		  "*Superman-returns*"
+		  ,(concat "Result of git show-branch --list --a -r --current:\n")))
+	       :face superman-header-button-face
+	       :help "Status of git branches via git show-branch --list --a -r --current"))
+       " ")
+      (put-text-property
+       0 1
+       'superman-header-marker t current-branch)
+      (superman-make-button
+       current-branch
+       '(:fun superman-git-status
+	      :face superman-warning-face
+	      :help "View status of current branch"))
+      (insert "[" current-branch "]  ")
+      (while other-branches
+	(let* ((b (car other-branches))
+	       (fun `(lambda ()
+		       (interactive)
+		       (superman-run-cmd
+			,(concat "cd " loc "; "
+				 superman-cmd-git
+				 " checkout " b "\n")
+			"*Superman-returns*"
+			nil
+			,(buffer-name view-buf))))
+	       (button (superman-make-button
+			b `(:fun ,fun :face font-lock-comment-face
+				 :help "Checkout branch"))))
+	  (setq other-branches (cdr other-branches))
+	  (put-text-property 0 1 'superman-header-marker t button)
+	  (insert "[" button "]  ")))
+      (when (> (length other-branches) 0)
+	(let ((merge-string "-> merge"))
+	  (put-text-property 0 1 'superman-header-marker t merge-string)	    
+	  (insert (superman-make-button
+		   merge-string
+		   `(:fun (lambda () (interactive)
+			    (superman-git-merge-branches ,loc))
+			  :face font-lock-type-face
+			  :help "Merge two branches")))))
+      (when remote
+	(let* ((title "Remote:")
+	       (svn-p (cl-member-if
+		       (lambda (x)
+			 (string-match "remotes/git-svn" x)) remote))
+	       (git-p (cl-member-if
+		       (lambda (x)
+			 (string-match "remotes/origin/master" x)) remote))
+	       (remote-cmd (if git-p
+			       (if svn-p
+				   (concat
+				    "remote show origin;" superman-cmd-git " svn info")
+				 "remote show origin")
+			     (if svn-p "svn info" ""))))
+	  (put-text-property 0 (length title) 'git-remote t title)
+	  ;; git diff --name-status remotes/git-svn
+	  (insert "\n"
+		  (superman-make-button
+		   title
+		   `(:fun (lambda ()
+			    (interactive)
+			    (superman-run-cmd
+			     (concat "cd " ,loc ";"
+				     ,superman-cmd-git " " ,remote-cmd "\n")
+			     "*Superman-returns*"
+			     (concat "`" ,superman-cmd-git " " ,remote-cmd
+				     " run below \n" ,loc "' returns:\n\n")))
+			  :face superman-header-button-face
+			  :help "Show origin of remote repository")))
+	  ;; fetch git
+	  (when git-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      " fetch origin "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " fetch origin\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " fetch origin' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Fetch changes from remote git repository"))))
+	  ;; fetch svn
+	  (when svn-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      "svn fetch"
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn fetch\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " svn fetch' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-info-button-face
+		     :help "Fetch changes from remote svn repository"))))
+	  ;; merge
+	  (when git-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      " merge "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " merge origin/master\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " merge origin/master' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Merge origin/master and master repository"))))
+	  ;; pull
+	  (when git-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      "  pull (F)  "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd
+			(concat "cd " ,loc  ";" ,superman-cmd-git " pull\n")
+			"*Superman-returns*"
+			(concat "`" ,superman-cmd-git " pull' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Pull changes from remote git repository"))))
+	  ;; push
+	  (when git-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      "  push (P)  "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " push\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " ' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Push changes to remote git repository"))))
+	  ;; rebase
+	  (when svn-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      " rebase "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd
+			(concat "cd " ,loc  ";" ,superman-cmd-git " svn rebase\n")
+			"*Superman-returns*"
+			(concat "`" ,superman-cmd-git " svn rebase' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-info-button-face
+		     :fun "Rebase with remote svn repository"))))
+	  ;; dcommit
+	  (when svn-p
+	    (insert
+	     " "
+	     (superman-make-button
+	      " dcommit "
+	      `(:fun (lambda () (interactive)
+		       (superman-run-cmd (concat "cd " ,loc  ";" ,superman-cmd-git " svn dcommit\n")
+					 "*Superman-returns*"
+					 (concat "`" ,superman-cmd-git " svn dcommit' run below \n" ,loc "' returns:\n\n")))
+		     :face file-list-action-button-face
+		     :help "Push changes to remote svn repository"))))
+	  ;; new branch
+	  (insert
+	   " | "
+	   (superman-make-button
+	    " new "
+	    `(:fun superman-git-new-branch
+		   :face file-list-info-button-face
+		   :help "Create a new (local) branch")))
+	  )))))
+
 (defun superman-set-git-cycle (value)
   (let ((buffer-read-only nil))
     (put-text-property (point-min) (1+ (point-min)) 'git-display value)))
