@@ -65,18 +65,22 @@ Can also be set to (string-to-char \"~\") with any string in place of ~.")
   "List of functions and variables used to finalize superman-views.
 
 Elements are of the form '(cat fun balls) where cat is the name
-of the heading in which the function fun is applied with arguments given by
-balls.
+of the heading in which the function fun is applied with arguments
+given by balls.
 
 A ball is a special list:
 
- (key (\"width\" number) (\"fun\" trim-function) (\"args\" trim-argument-list) (\"face\" face-or-fun) (\"name\" string) (required t-or-nil))
+ (key (\"width\" number) (\"fun\" trim-function)
+ (\"args\" trim-argument-list) (\"face\" face-or-fun)
+ (\"name\" string) (required t-or-nil))
 
 Examples:
 
 Column showing property \"Foo\" 
 
- (\"Foo\" (\"fun\" superman-trim-string) (\"width\" 17) (\"face\" font-lock-function-name-face) (\"name\" \"Foo\") (required nil))
+ (\"Foo\" (\"fun\" superman-trim-string) (\"width\" 17)
+ (\"face\" font-lock-function-name-face) (\"name\" \"Foo\")
+ (required nil))
 
 Column showing the header
 
@@ -385,7 +389,8 @@ for project views.")
     ("Note" :fun (lambda () (interactive) (superman-capture-note nil nil t)) :face superman-capture-button-face :help  "Capture a note" :width 43)
     ("Text" :fun (lambda () (interactive) (superman-capture-text nil nil t)) :face superman-capture-button-face :help  "Capture text" :width 43)
     ("Bookmark" :fun (lambda () (interactive) (superman-capture-bookmark nil nil t)) :face superman-capture-button-face :help  "Capture a bookmark" :width 43))
-  "Default action buttons as used by `superman-capture-item' via `superman-view-insert-action-buttons' to capture
+  "Default action buttons as used by `superman-capture-item' via
+ `superman-view-insert-action-buttons' to capture
 items to be shown in project view.")
 
 (defun superman-default-action-buttons-inside-project (pro)
@@ -401,8 +406,9 @@ items to be shown in project view.")
 (defvar superman-action-button-width 13 "Width of action buttons")
 
 (defun superman-view-insert-action-buttons (&optional button-list no-newline title-string column)
-  "Insert capture buttons. BUTTON-LIST is an alist providing button labels, functions and help strings.
- If omitted, it is set to `superman-default-action-buttons-outside-project'.
+  "Insert capture buttons. BUTTON-LIST is an alist providing button
+  labels, functions and help strings. If omitted, it is set to
+ `superman-default-action-buttons-outside-project'.
 
 If NO-NEWLINE is non-nil no new line is inserted.
 TITLE-STRING is the label of the first button and defaults to \"Action\".
@@ -498,10 +504,11 @@ If COLUMN is non-nil arrange buttons in one column, otherwise in one row.
    
 (define-minor-mode superman-configuration-mode
      "Toggle superman configuration mode.
-With argument ARG turn superman-configuration-mode on if ARG is positive, otherwise
-turn it off.
+With argument ARG turn superman-configuration-mode on if ARG is positive,
+otherwise turn it off.
                    
-Enabling superman-configuration mode enables the configuration keyboard to control single files."
+Enabling superman-configuration mode enables the configuration keyboard
+ to control single files."
      :lighter " *SupermanConfiguration*"
      :group 'org
      :keymap 'superman-configuration-mode-map)
@@ -868,10 +875,11 @@ for git and other actions like commit, history search and pretty log-view."
    
 (define-minor-mode superman-unison-mode
      "Toggle superman unison mode.
-With argument ARG turn superman-unison-mode on if ARG is positive, otherwise
-turn it off.
+With argument ARG turn superman-unison-mode on if ARG is positive,
+otherwise turn it off.
                    
-Enabling superman-unison mode enables the unison keyboard to control single files."
+Enabling superman-unison mode enables the unison keyboard to control
+ single files."
      :lighter " *S-Unison*"
      :group 'org
      :keymap 'superman-unison-mode-map)
@@ -1231,7 +1239,8 @@ If MARKED is non-nil run only on marked items."
 ;;{{{ Columns and balls
 
 (defun superman-column-names (balls)
-  "Insert column names that are extracted from BALLS via `superman-format-column names'."
+  "Insert column names that are extracted from BALLS via
+ `superman-format-column-names'."
   (let ((cols (superman-format-column-names balls)))
     (put-text-property 0 (length cols) 'face 'superman-column-name-face cols)
     ;; (put-text-property 0 (length cols) 'column-names t cols)
@@ -1614,7 +1623,9 @@ which locates the heading in the buffer."
 	      cats)))))))
 
 (defun superman-get-project (object &optional ask)
-  "Identify project based on OBJECT and current buffer's text-property nickname at point-min.
+  "Identify project based on OBJECT and current buffer's text-property
+nickname at point-min.
+
 Unless optional argument ASK is non-nil use `superman-current-project' if
 neither object nor the current buffer identify a project."
   (let (nick)
@@ -1713,9 +1724,10 @@ to refresh the view.
 	(put-text-property (point-at-bol) (point-at-eol) 'redo-cmd
 			   (or redo
 			       `(superman-view-project ,nick t)))
-	(put-text-property (point-at-bol) (point-at-eol) 'git-dir
-			   (or (superman-git-toplevel loc)
-			       (car (superman-list-git-subdirs loc))))
+	(let* ((git-subs (superman-list-git-subdirs loc))
+	      (git-dir (or (superman-git-toplevel loc) (car git-subs))))
+	  (put-text-property (point-at-bol) (point-at-eol) 'git-dir git-dir)
+	  (put-text-property (point-at-bol) (point-at-eol) 'git-subs git-subs))
 	(put-text-property (point-at-bol) (point-at-eol) 'dir loc)
 	(put-text-property (point-at-bol) (point-at-eol) 'project-view t) ;; to identify project-view buffer, do not copy to other views
 	(put-text-property (point-at-bol) (point-at-eol) 'nickname nick)
@@ -1756,8 +1768,7 @@ to refresh the view.
       (goto-char (point-min))
       ;; facings
       (save-excursion
-	(while (or (org-activate-bracket-links (point-max))
-		   (org-activate-plain-links (point-max)))
+	(while (org-activate-links (point-max))
 	  (add-text-properties
 	   (match-beginning 0) (match-end 0)
 	   '(face org-link))))
@@ -1782,8 +1793,9 @@ properties such as balls for the section.
 		       ;; (superman-parse-properties
 		       (get-text-property (point-at-bol) 'org-hd-marker))
 		      ;; 'p 'h))
-		      ((string= (get-text-property (point-at-bol) 'cat) "git")
-		       `(:HEADING "git"
+		      ((or (string= (get-text-property (point-at-bol) 'cat) "git") 
+			   (string= (get-text-property (point-at-bol) 'cat) "Cycle (TAB)"))
+		       `(:HEADING "Cycle (TAB)"
 			 :git-cycle ,superman-git-default-displays
 			 :git-display ,(car superman-git-default-displays)
 			 :POINT-MARKER ,(point-at-bol)))
@@ -1804,7 +1816,7 @@ properties such as balls for the section.
 in buffer VIEW-BUF."
   (let* ((case-fold-search t)
 	 (name (downcase (plist-get cat :HEADING)))
-	 (git (string= "git" name))
+	 (git (string= "cycle (tab)" name))
 	 (mail (string= "mail" name))
 	 ;; prefer columns/balls specified in index buffer
 	 (cat-balls (unless git
@@ -1833,7 +1845,7 @@ in buffer VIEW-BUF."
 	   (superman-git-format-display
 	    view-buf git-dir cat
 	    index-buf 
-	    name))
+	    "Cycle (TAB)"))
 	  ;; mail section
 	  (mail
 	   ;; git display git control of directory 
@@ -1843,10 +1855,10 @@ in buffer VIEW-BUF."
 	  (balls 
 	   (superman-format-table-view
 	    index-buf index-point view-buf
-	    balls buttons name))
-	  (goto-char (point-max))
-	  (widen))))
-;; (when folded (hide-subtree))
+	    balls buttons name)
+	   (goto-char (point-max))
+	   (widen)))))
+  ;; (when folded (hide-subtree))
 
 (defun superman-format-table-view (index-buffer index-point
 						view-buffer balls buttons name)
@@ -1881,12 +1893,14 @@ in buffer VIEW-BUF."
 		 (put-text-property 0 (length line) 'face 'org-level-3 line)
 		 (put-text-property 0 (length line) 'face 'superman-subheader-face line)
 		 (put-text-property 0 (length line) 'display (concat "  ☆ " subhdr) line)
-		 (with-current-buffer view-buf (setq countsub (append countsub (list `(0 ,(point))))))
+		 (with-current-buffer
+		     view-buffer
+		   (setq countsub (append countsub (list `(0 ,(point))))))
 		 ;; help superman-one-up to find the right place
 		 (when (get-text-property (point-at-bol) 'point-here)
 		   (put-text-property 0 (length line) 'point-here t line)
 		   (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
-		 (with-current-buffer view-buf (insert line " \n" ))
+		 (with-current-buffer view-buffer (insert line " \n" ))
 		 (end-of-line)))
 	      ;; items
 	      ((eq (org-current-level) item-level)		       
@@ -1898,14 +1912,14 @@ in buffer VIEW-BUF."
 	       (when (get-text-property (point-at-bol) 'point-here)
 		 (put-text-property 0 (length line) 'point-here t line)
 		 (put-text-property  (point-at-bol)  (point-at-eol) 'point-here nil))
-	       (with-current-buffer view-buf
+	       (with-current-buffer view-buffer
 		 (insert line "\n")))
 	      ;; attachments
 	      ((and (eq (org-current-level) attac-level) attac-balls)
 	       (setq line (superman-format-thing (copy-marker (point-at-bol)) attac-balls))
-	       (with-current-buffer view-buf (insert line "\n"))))))
+	       (with-current-buffer view-buffer (insert line "\n"))))))
     ;; add counts in sub headings
-    (set-buffer view-buf)
+    (set-buffer view-buffer)
     (put-text-property (- (point-at-eol) 1) (point-at-eol) 'tail name)
     (save-excursion 
       (while countsub
@@ -1917,12 +1931,12 @@ in buffer VIEW-BUF."
 	(setq countsub (cdr countsub))))
     ;; (widen)
     ;; empty cats are not shown unless explicitly wanted
-    (if (or (not (member cat superman-capture-alist))
+    (if (or (not (member name superman-capture-alist))
 	    (member name superman-views-permanent-cats)
 	    (> count 0))
 	(progn 
 	  ;; insert the section name
-	  (set-buffer view-buf)
+	  (set-buffer view-buffer)
 	  (goto-char view-point)
 	  (when (and
 		 superman-empty-line-before-cat
@@ -1943,7 +1957,7 @@ in buffer VIEW-BUF."
 
 (defun superman-format-freetext (index-buffer index-point view-buffer name)
   (let (index-marker view-marker)
-    ;; set mark at beginning of the category in view-buf
+    ;; set mark at beginning of the category in view-buffer
     (set-buffer view-buffer)
     (setq view-point (point))
     (set-buffer index-buffer)
@@ -1966,8 +1980,9 @@ in buffer VIEW-BUF."
 	      (insert "\n")
 	    (when superman-empty-line-before-cat (insert "\n"))
 	    (superman-view-insert-section-name
-	     (concat (upcase (substring-no-properties name 0 1)) (substring-no-properties  name 1 (length name) ))
-	     0 balls
+	     (concat (upcase (substring-no-properties name 0 1))
+		     (substring-no-properties  name 1 (length name) ))
+	     0 nil
 	     index-marker)
 	    (insert "\n")
 	    (when superman-empty-line-after-cat (insert "\n"))
@@ -2357,7 +2372,8 @@ current section."
 
 
 (defun superman-tab (&optional arg)
-  "Move to next button in the header and call `org-cycle' in the body of the project view."
+  "Move to next button in the header and call `org-cycle' in
+the body of the project view."
   (interactive)
   (if superman-git-mode
       (progn
@@ -2373,7 +2389,8 @@ current section."
 	  (t (org-cycle arg)))))
 
 (defun superman-shifttab (&optional arg)
-  "Move to previous button in the header and call `org-shifttab' in the body of the project view."
+  "Move to previous button in the header and call `org-shifttab'
+in the body of the project view."
   (interactive)
   (cond
    ((eq (point) (point-min))
@@ -2431,7 +2448,7 @@ movements permant."
 	(first 1)
 	(n (or arg 1)))
     (if (not (or catp marker))
-	(error "Point is not on an item  or a category" )
+	(error "Point has to be on an item or a subtree/category." )
       (with-current-buffer (marker-buffer marker)
 	(widen)
 	(goto-char marker)
@@ -2510,6 +2527,10 @@ movements permant."
 	 (or (next-single-property-change (point-min) 'point-here)
 	     (point-min)))))))
 
+(defun superman-one-down (&optional arg)
+  (interactive "P")
+  (superman-one-up arg t))
+
 (defun superman-skip-headings (level backward)
   "Skip forward across headings with higher level then LEVEL and
 across headings indicated as either hidden or freetext. 
@@ -2534,9 +2555,7 @@ If BACKWARD is non-nil move backward."
       
 
 
-(defun superman-one-down (&optional arg)
-  (interactive "P")
-  (superman-one-up arg t))
+
 
 (defun superman-cut ()
   (interactive)
@@ -2594,13 +2613,9 @@ disable editing."
 	 (scene (current-window-configuration))
 	 (cat-point (superman-cat-point))
 	 (free (get-text-property (point-at-bol) 'free-text))
-	 ;; (when cat-point
-	 ;; (superman-get-property
-	 ;; (get-text-property cat-point 'org-hd-marker) "freetext")))
-	 )
+	 item)
     (when (and free (not marker))
       (setq marker free))
-    ;; (get-text-property cat-point 'org-hd-marker)))
     (when columnsp
       (setq marker (get-text-property (superman-cat-point) 'org-hd-marker)))
     (if (not marker)
@@ -2609,8 +2624,6 @@ disable editing."
       ;; do not edit dynamic buffers
       (unless (buffer-file-name)
 	(setq read-only t))
-      (setq title
-	    (concat "Superman " (if read-only "view item (read-only)"  "edit") " mode"))
       (goto-char marker)
       (widen)
       (outline-show-all)
@@ -2823,8 +2836,7 @@ The value is non-nil unless the user regretted and the entry is not deleted.
 	(insert newline)
 	(set-text-properties (point-at-bol) (+ (point-at-bol) 1) props)
 	(beginning-of-line)
-	(while (or (ignore-errors (org-activate-bracket-links (point-at-eol)))
-		   (ignore-errors (org-activate-plain-links (point-at-eol))))
+	(while (ignore-errors (org-activate-links (point-at-eol)))
 	  (add-text-properties
 	   (match-beginning 0) (match-end 0)
 	   '(face org-link)))
@@ -2917,7 +2929,8 @@ The value is non-nil unless the user regretted and the entry is not deleted.
   (interactive)
   (if (fboundp 'helm-occur)
       (helm-occur)
-    (occur)))
+    (message "Function helm-occur is not defined")))
+
 
 (defun superman-view-dired ()
   (interactive)
@@ -3086,9 +3099,13 @@ if it exists and add text-property org-hd-marker."
 
 (fset 'superman-new-item 'superman-capture-item)
 (defun superman-capture-item (&optional project extern buffer buttons help refresh)
-  "Add a new document, note, task, bookmark or other item to a project. If called
-from superman project view and EXTERN is nil assoc a capture function from `superman-capture-alist'.
-If EXTERN is non-nil or if no capture function is found, pop to buffer *Superman-Capture* which shows capture buttons."
+  "Add a new document, note, task, bookmark or other item to a project.
+
+If called from superman project view and EXTERN is nil assoc
+a capture function from `superman-capture-alist'.
+
+If EXTERN is non-nil or if no capture function is found, pop to
+ buffer *Superman-Capture* which shows capture buttons."
   (interactive)
   (if (get-text-property (point-min) 'bibtex-file)
       (superman-capture-bibtex (superman-view-current-project t) nil nil)
